@@ -1,0 +1,113 @@
+OMNI BROWSER
+
+CREDITS
+
+Omni exists because previous generations of developers chose to share their work with the world.
+
+Rather than rebuilding everything from scratch, Omni stands upon decades of open-source software, research, engineering, and community effort. We are grateful to the individuals, teams, foundations, and organizations who allowed others to learn from, use, modify, and improve their work.
+
+TO THE GIANTS BEFORE US
+
+Thank you to those who published source code.
+
+Thank you to those who opened their repositories.
+
+Thank you to those who wrote documentation.
+
+Thank you to those who fixed bugs nobody would ever notice.
+
+Thank you to those who maintained projects for years with little recognition.
+
+Thank you to those who chose to build in public so that future developers could learn from their work.
+
+Omni is another link in that chain.
+
+SPECIAL SHOUT-OUTS
+
+uBlock Origin
+
+Special thanks to Raymond Hill (gorhill) and all uBlock Origin contributors.
+
+uBlock Origin set the standard for efficient, privacy-focused content filtering and demonstrated that powerful software does not need to be bloated or wasteful.
+
+Thank you for helping create a better web.
+
+FFmpeg
+
+Special thanks to the FFmpeg team.
+
+Your work has powered countless video platforms, streaming services, media applications, creative tools, and research projects around the world.
+
+Thank you for building one of the most important multimedia projects ever created.
+
+yt-dlp
+
+Special thanks to the yt-dlp community.
+
+Your project represents the best of open-source collaboration, persistence, and community-driven development.
+
+Thank you to everyone who contributed code, testing, documentation, and support.
+
+THE OPEN-SOURCE COMMUNITY
+
+Special thanks to all developers and maintainers who shared their work through GitHub and other open development platforms.
+
+Many of the ideas, techniques, fixes, optimizations, and lessons that helped create Omni were only possible because others chose to share their knowledge.
+
+BUILT UPON
+
+WebKit
+
+JavaScriptCore
+
+Skia
+
+SDL2
+
+OpenSSL
+
+curl
+
+ICU
+
+SQLite
+
+CPython
+
+zlib
+
+FFmpeg
+
+x264
+
+OpenJDK
+
+uBlock Origin
+
+yt-dlp
+
+EasyList
+
+EasyPrivacy
+
+Noto Fonts
+
+DejaVu Fonts
+
+And countless libraries, tools, standards, repositories, examples, tutorials, bug reports, and community contributions that make the modern web possible.
+
+FINAL THANKS
+
+To every developer whose code was studied.
+
+To every maintainer who kept a project alive.
+
+To every contributor who submitted a pull request.
+
+To every person who answered a question online.
+
+To every project that allowed its work to be reused.
+
+Thank you.
+
+Without you, Omni would not exist.
