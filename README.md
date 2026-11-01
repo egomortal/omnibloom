@@ -12,6 +12,7 @@ Features
 
 - **Using Omni?** See [FEATURES.md](FEATURES.md) for what works, what's being tested, and what's coming.
 - **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) for reusable components, build steps, and open problems.
+- **Before asking for a feature or firmware support,** please read my [personal notes](personal%20notes.md).
 
 4K video support (SDR; HDR planned)
 60 FPS / 59.94 FPS playback support
