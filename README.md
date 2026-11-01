@@ -14,12 +14,11 @@ Features
 - **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) for reusable components, build steps, and open problems.
 - **Before asking for a feature or firmware support,** please read my [personal notes](personal%20notes.md).
 
-4K video support (SDR; HDR planned)
-60 FPS / 59.94 FPS playback support
-Integrated download support through:
-JDownloader
-yt-dlp
-Built-in ad blocking inspired by uBlock Origin
+4K video at 60 FPS, with HDR
+Built-in ad blocking powered by uBlock Origin rules, on by default
+Link grabber for video and media downloads (JDownloader and yt-dlp support planned)
+Full DualSense controller support, with a stick-drift fix
+Tabs, shortcuts, and page translation
 Focus on performance, usability, and media consumption
 Open-source and community driven
 Philosophy
