@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon/omni-icon-256.png" alt="Omni Browser icon" width="256">
+</p>
+
 Omni Browser
 
 Omni Browser is a community-driven browser created by a hobbyist with significant assistance from AI tools, including Claude and Astra. The goal is simple: create a true one-stop shop browser for the jailbroken PlayStation 5 community and beyond.
