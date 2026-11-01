@@ -9,7 +9,12 @@ Omni Browser is a community-driven browser created by a hobbyist with significan
 Omni was built out of necessity. What started as an effort to improve and expand the capabilities of the PS5 browser evolved into a broader project focused on modern web compatibility, media playback, convenience, and user control.
 
 Features
-4K HDR video support
+
+- **Using Omni?** See [FEATURES.md](FEATURES.md) for what works, what's being tested, and what's coming.
+- **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) for reusable components, build steps, and open problems.
+- **Before asking for a feature or firmware support,** please read my [personal notes](personal%20notes.md).
+
+4K video support (SDR; HDR planned)
 60 FPS / 59.94 FPS playback support
 Integrated download support through:
 JDownloader
