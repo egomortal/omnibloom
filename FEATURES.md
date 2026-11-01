@@ -10,6 +10,7 @@ Omni is a web browser for the PS5, built on WebKit, the same engine that powers
 Safari. It's designed for watching video and browsing without ads.
 
 This page lists what works today, what's being tested, and what's still coming.
+Developers: see [DEVELOPERS.md](DEVELOPERS.md).
 
 | Symbol | Meaning |
 | :---: | --- |

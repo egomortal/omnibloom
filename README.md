@@ -10,7 +10,8 @@ Omni was built out of necessity. What started as an effort to improve and expand
 
 Features
 
-See [FEATURES.md](FEATURES.md) for the full feature list and what's working, in progress, or planned.
+- **Using Omni?** See [FEATURES.md](FEATURES.md) for what works, what's being tested, and what's coming.
+- **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) for reusable components, build steps, and open problems.
 
 4K video support (SDR; HDR planned)
 60 FPS / 59.94 FPS playback support
