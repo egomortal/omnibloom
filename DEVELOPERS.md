@@ -144,4 +144,4 @@ log is at `/data/omni/jsc-selftest.txt`, which you can fetch over FTP.
 - A JIT feasibility probe
 - HDR output
 
-See the [README](README.md#contributions) for how contributions are handled.
+See the "Contributions" section of the [README](README.md) for how contributions are handled.
