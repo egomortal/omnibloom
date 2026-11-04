@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","en",{"action.dismiss":"Dismiss","copy.dynamic.2150d8df37e4":"Show all","copy.dynamic.6c006b5f27c9":"Could not dismiss. Try again.","copy.dynamic.a65a13b013fd":"Notifications are unavailable.","copy.static.db15e320dc5c":"Show new"});

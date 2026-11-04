@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("library","vi",{"copy.dynamic.2c1c3c0d8d5e":"Dùng địa chỉ http hoặc https.","copy.dynamic.54b4c4b0cff5":"Đã yêu cầu mở trong bản xem trước.","ui.d47d7cb0e4f8":"Thêm","ui.ed077f3d8125":"Mở"});

@@ -216,17 +216,20 @@ def make_card(app_id, app, port, icon_path):
             card[k] = v
     if icon_path:
         card["icon"] = icon_path
-    return {k: v for k, v in card.items() if v is not None}   # Bloom Core treats a null field as invalid
+    started_by = (card.get("launch") or {}).get("started_by")
+    keep_null = {"health"} if started_by and card.get("kind") != "title" else set()   # item 15: health null = no HTTP probe
+    return {k: v for k, v in card.items() if v is not None or k in keep_null}   # other null fields are dropped
 
 
 def writes_card(app_id, card=None):
     """Bloom Core doesn't take a card for itself (its port 8760 is reserved): it gets a receipt only.
-    Neither does a payload/service without a fixed port (the JDownloader 2 engine, started by downloads with a
-    per-session loopback port): Bloom Core v1.1 requires a port on every non-title card. See REPORT
-    "Standard feedback" (port-less `launch.started_by` services)."""
+    A payload/service without a fixed port gets a card only when another app starts it on demand
+    (`launch.started_by`, standard item 15, e.g. the JDownloader 2 engine): Bloom Core then reads its live
+    port from /data/hub/runtime/<id>.json."""
     if app_id == config.HUB_ID:
         return False
-    if card is not None and card.get("kind") != "title" and card.get("port") is None:
+    if card is not None and card.get("kind") != "title" and card.get("port") is None \
+            and not (card.get("launch") or {}).get("started_by"):
         return False
     return True
 
@@ -272,11 +275,18 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
         entries.append({"dest": dest, "sha256": row["sha256"], "bytes": row["bytes"], "backup": backup})
         if progress:
             progress(i, len(rows))
+    new_elf = (app["card"].get("launch") or {}).get("elf")
     for dest, old in prev_files.items():   # files an older version had: keep them covered by uninstall
         if dest not in blobs:
             if _jd_tree(dest) and console.exists(dest):   # the engine's folders must hold exactly the new file set
                 log("Moved the old engine file %s to %s" % (dest, _park(console, dest, ".omnibloom-old", stamp)))
                 continue
+            # A payload that moved folders (item 7): autoload lists bare names, so the old copy and its Payload
+            # Manager entry must not stay where the Payload Manager would still find them. Parked, never deleted;
+            # the entry stays so uninstall can still put back what was there before Omnibloom.
+            if dest.startswith(config.PLDMGR_DIR + "payloads/") and dest != (new_elf or "") + ".json" \
+                    and (dest.endswith(".elf") or dest.endswith(".elf.json")) and console.exists(dest):
+                log("Moved the old %s to %s" % (dest, _park(console, dest, ".omnibloom-moved-" + version, stamp)))
             entries.append(old)
 
     # Payload Manager entry for payloads that live in its folder.
@@ -292,7 +302,9 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
     port, note = picker.pick(app_id, app["port"], current=old_card.get("port"))
     if note:
         log(note)
-    icon = next((r["dest"] for r in rows if r["dest"].startswith(config.ICONS_DIR)), None)
+    icon = next((r["dest"] for r in rows if r["dest"].startswith(config.ICONS_DIR)), None) or next(
+        (r["dest"] for r in rows if r["dest"].startswith(config.PLDMGR_DIR + "payloads/")       # item 7: next to the ELF
+         and posixpath.basename(r["dest"]).startswith("icon") and r["dest"].endswith(".png")), None)
     card = make_card(app_id, app, port, icon)
     card_bytes = _json_bytes(card)
     if len(card_bytes) > config.CARD_MAX:

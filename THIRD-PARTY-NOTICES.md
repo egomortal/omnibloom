@@ -1,3 +1,5 @@
+> CLEAN PC/UI source selection: historical native/runtime/media sections below retain attribution context; inclusion is determined by SOURCE-MANIFEST.json, not by these descriptions. No native engine, vault, runtime or narrated audio is packaged here. Rights/provenance gaps remain release gates.
+
 # Third-party notices
 
 Omnibloom's own code is licensed under the GNU General Public License v3.0 or later (see
@@ -32,7 +34,7 @@ upstream project's source, at the version named.
 | curl / libcurl | 8.23.0 | curl License (MIT-style) | <https://curl.se> |
 | nghttp2 (libnghttp2, HTTP/2 for curl) | 1.64.0 | MIT | <https://github.com/nghttp2/nghttp2> |
 | Brotli (decoder/common, `br` content encoding for curl) | 1.1.0 | MIT | <https://github.com/google/brotli> |
-| FFmpeg (libavcodec, libavformat, libavutil, libswresample, libswscale) | 7.1.5 | LGPL-2.1-or-later (GPL-2.0-or-later if built with GPL parts) | <https://ffmpeg.org> |
+| FFmpeg (libavcodec, libavformat, libavutil, libswresample, libswscale) | 7.1.5 historical sec-job1 recipe | GPL-3.0-or-later configuration: GPL and version3 enabled, including libx264 | <https://ffmpeg.org>; recipe and build log record CONFIG_GPL=yes, CONFIG_VERSION3=yes and CONFIG_LIBX264=yes. This identifies that recipe, not an uninspected future binary. Retain corresponding source and all linked-library notices. |
 | libpng | 1.6.59 | libpng License | <http://www.libpng.org> |
 | libxml2 | 2.13.9 | MIT | <https://gitlab.gnome.org/GNOME/libxml2> |
 | libjpeg-turbo, libwebp | from the PacBrew sysroot | IJG / BSD-3-Clause; BSD-3-Clause | |
@@ -88,6 +90,9 @@ all GPL-3.0-or-later. Omnibloom doesn't include its code; Omni only talks to its
 | --- | --- | --- |
 | PS5 Payload SDK | John Törnblom | GPL-3.0 (see the SDK for library exceptions) |
 | PacBrew sysroot | PacBrew contributors | Per package |
+| PS5_Vulkan RADV link recipe | Mihawk-99 (2026) | GPL-3.0-or-later; preserve source header and GPL text |
+| PS5_Vulkan native startup / ps5-native-app-boilerplate | BlackBearReloaded (2026) | GPL-3.0-or-later; exact linked startup-object provenance remains required |
+| AnyPad-PS5 (Master Control upstream) | elmonomalvad0, also credited as sinfiltros | GPL-3.0-or-later; preserve upstream AUTHOR/README and licence |
 
 Omnibloom does not include or redistribute any Sony SDK, firmware, keys or system files.
 
@@ -112,3 +117,9 @@ Narration generated with Piper (piper-tts 1.8.0, OHF-Voice/piper1-gpl, GPL-3.0-o
 | fr | fr_FR-siwis-medium | SIWIS French Speech Synthesis Database, Junichi Yamagishi, Pierre-Edouard Honnet, Philip Garner, Alexandros Lazaridis (University of Edinburgh / Idiap) (<https://datashare.is.ed.ac.uk/handle/10283/2353>) | CC BY 4.0 |
 | de | de_DE-thorsten-high | Thorsten-Voice, Thorsten Müller (<https://github.com/thorstenMueller/Thorsten-Voice>) | CC0 |
 | it | it_IT-paola-medium | Voice-Dataset-Italian, paolapersico1 (<https://huggingface.co/datasets/paolapersico1/Voice-Dataset-Italian>) | CC0 |
+
+## Native startup and link-recipe attribution clarification
+
+The reviewed native baseline `omni/native-title/tools/radv-link.sh` identifies Copyright (C) 2026 **Mihawk-99**, SPDX **GPL-3.0-or-later**. Preserve its header and GPL text. The separately required PS5_Vulkan `tooling/native/app_crt.cpp` identifies Copyright (C) 2026 **BlackBearReloaded**, SPDX **GPL-3.0-or-later**, under the name ps5-native-app-boilerplate. Do not attribute both files to the same author. The startup source/object is not included in this staged native-title tree; a release builder must provide its exact source revision, changes, and object provenance. A nearby checkout's licence is not proof that an older object was built from that checkout.
+
+These corrections do not resolve the separate imported blocker/filter, adapted-source, narration and other provenance findings in the release licence audit. The existing tutorial paragraph describes historical Piper output; current Japanese/Korean narration and any newly restaged assets require their own exact model/output notices. Do not use this source-tree notice as approval to redistribute a new runtime or media package.

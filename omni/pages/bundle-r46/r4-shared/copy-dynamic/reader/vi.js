@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","vi",{"copy.dynamic.839a9ca74e81":"Đã yêu cầu quay lại trong bản xem trước.","copy.error.413fc4be33df":"Bản chụp bài viết quá lớn","copy.error.81b14d388e08":"Không tìm thấy bài viết có thể đọc"});

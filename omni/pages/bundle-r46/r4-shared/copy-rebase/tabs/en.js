@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","en",{"action.back":"Back","copy.static.50a3f9523122":"Close tab","copy.static.736612d4d0a9":"Move earlier","copy.static.743b9c60cda6":"Tab options","copy.static.d6e856081ebe":"Move later","ui.19766ed6ccb2":"Cancel"});

@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("address","zh-Hans",{"copy.action.type-text":"输入","copy.static.0a228369b5ad":"搜索建议：关闭","copy.static.1b1043d79093":"开启后，你输入的内容会发送给所选的搜索服务商。","copy.static.49264e8f0000":"地址或搜索","copy.static.70307501c662":"选择建议或输入地址。","copy.static.b8f768b5e8b9":"搜索书签、历史记录和已打开的标签页","copy.static.d24df8d1b41b":"地址建议","ui.6cc8519b9158":"前往","ui.c022fa542585":"您想去哪里？"});

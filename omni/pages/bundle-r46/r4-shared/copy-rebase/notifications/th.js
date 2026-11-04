@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","th",{"copy.complete.0b78998db7d7":"ไม่มีการแจ้งเตือน","copy.static.1a3302e0d2c2":"การอัปเดตแอปล่าสุดของคุณ","copy.static.788011833a5a":"การแจ้งเตือน","copy.static.db15e320dc5c":"แสดงรายการใหม่","ui.0e9161011702":"รีเฟรช","ui.9499cea73f3b":"OMNIBLOOM"});

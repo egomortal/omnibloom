@@ -1,0 +1,54 @@
+{
+  "manifest_version": 1,
+  "id": "omni-auto-theme",
+  "name": "Automatic page theme",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "description": "Automatic page theme with explicit controls and no online service.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "vendor/darkreader.js",
+    "controls.js",
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "mode",
+      "type": "choice",
+      "label": "Page appearance",
+      "default": "system",
+      "choices": [
+        "system",
+        "dark",
+        "light"
+      ],
+      "labels": [
+        "Follow system",
+        "Dark",
+        "Light"
+      ]
+    },
+    {
+      "key": "annoyances",
+      "type": "bool",
+      "label": "Hide reviewed newsletter prompts",
+      "default": false
+    }
+  ],
+  "source": "https://github.com/darkreader/darkreader"
+}

@@ -1,0 +1,125 @@
+[
+ {
+  "id": "omni-sponsorblock",
+  "from": "20261103-r5-020-sponsorblock",
+  "licence": "GPL-3.0-or-later (original adapter)",
+  "default_on": false,
+  "hosts": [
+   "sponsor.ajay.app"
+  ],
+  "matches": [
+   "https://*.youtube.com/*"
+  ],
+  "bytes": 46581
+ },
+ {
+  "id": "omni-youtube-comfort",
+  "from": "20261103-r5-023-youtube-comfort",
+  "licence": "GPL-3.0-or-later (original adapter)",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "https://*.youtube.com/*"
+  ],
+  "bytes": 46021
+ },
+ {
+  "id": "omni-clearurls",
+  "from": "20261103-r5-024-clearurls",
+  "licence": "GPL-3.0-or-later (original adapter)",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "<all_urls>"
+  ],
+  "bytes": 42563
+ },
+ {
+  "id": "consent-reject",
+  "from": "20261103-r5-040-consent-reject",
+  "licence": "MIT",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "*://*/*"
+  ],
+  "bytes": 4478
+ },
+ {
+  "id": "omni-video-speed",
+  "from": "20261103-r5-029-video-speed",
+  "licence": "MIT",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "*://*/*"
+  ],
+  "bytes": 10001
+ },
+ {
+  "id": "link-hints",
+  "from": "20261103-r5-041-link-hints",
+  "licence": "MIT",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "*://*/*"
+  ],
+  "bytes": 6496
+ },
+ {
+  "id": "image-hold-zoom",
+  "from": "20261103-r5-045-image-hold-zoom",
+  "licence": "MIT",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "*://*/*"
+  ],
+  "bytes": 4950
+ },
+ {
+  "id": "subtitle-style",
+  "from": "20261103-r5-049-subtitle-style",
+  "licence": "MIT",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "*://*/*"
+  ],
+  "bytes": 6617
+ },
+ {
+  "id": "audio-tools",
+  "from": "20261103-r5-048-audio-tools",
+  "licence": "MIT",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "*://*/*"
+  ],
+  "bytes": 6878
+ },
+ {
+  "id": "omni-auto-theme",
+  "from": "20261103-r5-031-auto-theme",
+  "licence": "MIT",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "*://*/*"
+  ],
+  "bytes": 373283
+ },
+ {
+  "id": "dark-reader",
+  "from": "omni-pages/stage-r45 (dark-reader-fix)",
+  "licence": "MIT (Dark Reader) + GPL-3.0-or-later (Omnibloom adapter)",
+  "default_on": false,
+  "hosts": [],
+  "matches": [
+   "<all_urls>"
+  ],
+  "bytes": 367130
+ }
+]

@@ -1,0 +1,68 @@
+{
+ "manifest_version": 1,
+ "id": "dark-reader",
+ "name": "Dark Reader",
+ "version": "4.9.134-omni1",
+ "licence": "MIT (Dark Reader) + GPL-3.0-or-later (Omnibloom adapter)",
+ "source": "https://github.com/darkreader/darkreader",
+ "description": "Dark pages for any site. Off by default; press the HUD switch for this site, hold it for everywhere.",
+ "matches": [
+  "<all_urls>"
+ ],
+ "run_at": "document_start",
+ "all_frames": true,
+ "js": [
+  "vendor/darkreader.js",
+  "inject.js",
+  "adapter.js"
+ ],
+ "default_on": false,
+ "private_safe": false,
+ "quick_switch": true,
+ "live_toggle": true,
+ "settings": [
+  {
+   "key": "mode",
+   "type": "choice",
+   "label": "Page treatment",
+   "default": "dynamic",
+   "choices": [
+    "dynamic",
+    "filter",
+    "cache"
+   ],
+   "labels": [
+    "Dark mode",
+    "Simple filter (lightest)",
+    "Dark mode, saved per site"
+   ]
+  },
+  {
+   "key": "brightness",
+   "type": "range",
+   "label": "Brightness",
+   "default": 100,
+   "min": 50,
+   "max": 150,
+   "step": 5
+  },
+  {
+   "key": "contrast",
+   "type": "range",
+   "label": "Contrast",
+   "default": 100,
+   "min": 50,
+   "max": 150,
+   "step": 5
+  },
+  {
+   "key": "sepia",
+   "type": "range",
+   "label": "Sepia",
+   "default": 0,
+   "min": 0,
+   "max": 100,
+   "step": 5
+  }
+ ]
+}

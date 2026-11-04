@@ -1,0 +1,20 @@
+[
+  {
+    "locale": "JP",
+    "file": "keyboard-jp.woff2",
+    "bytes": 1870912,
+    "sha256": "eb83f2e6468f64c01dca5909614ac715dc0324f6484eed2b9f22d10bc969f91e",
+    "source": "NotoSansJP_400Regular.ttf",
+    "license": "OFL-1.1",
+    "modification": "Subset, renamed internal family and WOFF2 encoding"
+  },
+  {
+    "locale": "KR",
+    "file": "keyboard-kr.woff2",
+    "bytes": 542332,
+    "sha256": "21b8f792dd5cc5aa5d555b61f7639664c4eb504bda58c873a1f76eccd178ba7c",
+    "source": "NotoSansKR_400Regular.ttf",
+    "license": "OFL-1.1",
+    "modification": "Subset, renamed internal family and WOFF2 encoding"
+  }
+]

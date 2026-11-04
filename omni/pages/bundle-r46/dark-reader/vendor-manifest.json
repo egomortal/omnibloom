@@ -1,0 +1,24 @@
+{
+  "archiveSHA256": "e3da6d984ffa830229c31f531fc9f0666910549ff74655c022bb411c70d47745",
+  "version": "4.9.134",
+  "files": [
+    {
+      "path": "vendor/darkreader.js",
+      "sha256": "9317ddede661cd6e9eeab915f632c039edbe2a0e918cccb836e6915bf3e44add",
+      "bytes": 359624
+    },
+    {
+      "path": "vendor/LICENSE",
+      "sha256": "f0a5f835174494f8981b2cbb1a34054d4f887a5c865318650d6a17afe1c7850e",
+      "bytes": 1095
+    },
+    {
+      "path": "vendor/package.json",
+      "sha256": "1d3ff90da74f9f03b2576148fc3b12f99c0dce181135c306b42fdcb3a8d38b68",
+      "bytes": 6015
+    }
+  ],
+  "archiveProvenance": "Reused existing staged r2-vendor archive",
+  "package": "darkreader",
+  "source": "https://registry.npmjs.org/darkreader/-/darkreader-4.9.134.tgz"
+}

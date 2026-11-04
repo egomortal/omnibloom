@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","hi",{"copy.static.09d6cda1b645":"कतार चल रही है · नकली परीक्षण कार्य","copy.static.4190c0c7ec72":"फ़ाइल खोलें","copy.static.670d8a3ad3e8":"आपके डाउनलोड","copy.static.7819c5101a22":"USB पर भेजें","copy.static.dafc444796fc":"कतार रोकें","ui.19766ed6ccb2":"रद्द करें"});

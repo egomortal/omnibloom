@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","tr",{"copy.static.09d6cda1b645":"Kuyruk çalışıyor · benzetim işleri","copy.static.4190c0c7ec72":"Dosyayı aç","copy.static.670d8a3ad3e8":"İndirmeleriniz","copy.static.7819c5101a22":"USB'ye gönder","copy.static.dafc444796fc":"Kuyruğu duraklat","ui.19766ed6ccb2":"İptal"});

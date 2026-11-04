@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","hi",{"copy.complete.0b78998db7d7":"कोई सूचना नहीं।","copy.static.1a3302e0d2c2":"आपके ऐप के हाल के अपडेट।","copy.static.788011833a5a":"सूचनाएँ","copy.static.db15e320dc5c":"नए दिखाएँ","ui.0e9161011702":"ताज़ा करें","ui.9499cea73f3b":"OMNIBLOOM"});

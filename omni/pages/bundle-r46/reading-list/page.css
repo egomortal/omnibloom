@@ -1,0 +1,1 @@
+.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tile h2{min-height:2rem}.tile p{color:var(--ob-muted);overflow-wrap:anywhere}textarea:focus{outline:4px solid white;outline-offset:5px}.tile .row button{flex:1}#error{color:#ffacab}

@@ -1,0 +1,11 @@
+1
+00:00:00,000 --> 00:00:02,500
+An original test pattern.
+
+2
+00:00:02,500 --> 00:00:05,500
+Move, pause and choose your pace.
+
+3
+00:00:05,500 --> 00:00:08,100
+Captions stay readable from the sofa.

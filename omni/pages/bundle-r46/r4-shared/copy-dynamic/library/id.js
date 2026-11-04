@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("library","id",{"copy.dynamic.2c1c3c0d8d5e":"Gunakan alamat http atau https.","copy.dynamic.54b4c4b0cff5":"Pembukaan diminta dalam pratinjau.","ui.d47d7cb0e4f8":"Lainnya","ui.ed077f3d8125":"Buka"});

@@ -1,0 +1,76 @@
+/* Original Omnibloom compositions; existing controls remain functional content. */
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]){--ob-ground:#101324;--ob-panel:#20253b;--ob-panel-raised:#292e48;--ob-text:#f8f2ec;--ob-muted:#d1ccde;--ob-accent:#f4b9db;--ob-accent-ink:#201126;--ob-focus:#fff0a6}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .shell{max-width:none;display:grid;gap:1rem;padding:1.1rem 2.4rem 6rem;grid-template-columns:1fr 1fr;grid-template-areas:'top top' 'hero hero' 'apps apps' 'pins recents';align-items:start}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .topline{grid-area:top;margin:0;min-width:0}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .ob-route-added{display:none}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .hero{grid-area:hero;min-width:0;margin:0}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .ob-apps-panel{grid-area:apps;min-width:0;margin:0}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .ob-library-panels{display:contents}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .ob-pins-panel{grid-area:pins}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .ob-recents-panel{grid-area:recents}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .hero-actions{background:var(--ob-panel);padding:.3rem .5rem;border-radius:.3rem;flex-wrap:wrap}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .card{padding:1rem;gap:.6rem}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) #apps{gap:1rem}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) #apps .tile{min-width:0;overflow-wrap:anywhere}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) #apps .app-icon{width:3rem;height:3rem}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) #pins{grid-template-columns:repeat(2,minmax(0,1fr))}
+body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .start-hints{padding:.65rem 2.4rem;gap:1.4rem}
+/* LOOM: upright threads become app ribbons. */
+body[data-ob-universe=loom]{background:#141427;background-image:repeating-linear-gradient(90deg,transparent 0,transparent 3.8rem,#f4b9db0a 3.8rem,#f4b9db0a 3.85rem)}
+body[data-ob-universe=loom] .shell{grid-template-columns:1.05fr 1fr 1fr;grid-template-areas:'top top top' 'hero apps apps' 'hero pins recents'}
+body[data-ob-universe=loom] .hero{align-self:stretch;min-height:32rem;border:0;border-radius:7rem 1rem 1rem 1rem;padding:2.4rem 1.4rem;background-image:linear-gradient(180deg,#19172bee 0%,#19172be8 64%,#19172b40),url('../shared/art/universes/loom.webp');background-position:65% center;display:flex;flex-direction:column;justify-content:space-between}
+body[data-ob-universe=loom] .hero>.row{flex-direction:column;align-items:stretch;gap:1.7rem}
+body[data-ob-universe=loom] .hero-title{max-width:none}
+body[data-ob-universe=loom] h1{font-family:Georgia,serif;font-weight:400;font-size:4.5rem;line-height:1;max-width:6ch}
+body[data-ob-universe=loom] .search{flex-wrap:wrap;background:#19172b;padding:.6rem;border-radius:.5rem}
+body[data-ob-universe=loom] .search input{width:100%;flex-basis:100%}
+body[data-ob-universe=loom] .search button{width:100%}
+body[data-ob-universe=loom] #apps .tile{display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;min-height:13rem;border:0;border-top:1rem solid #f4b9db;border-radius:0 0 3rem .4rem;padding:1rem .8rem;background:#512e50;box-shadow:inset .2rem 0 #ffffff24;transition:transform 160ms ease}
+body[data-ob-universe=loom] #apps .tile:nth-child(2){background:#244a51;border-top-color:#9ae1d5;min-height:15rem}
+body[data-ob-universe=loom] #apps .tile:nth-child(3){background:#653b30;border-top-color:#f5bc99;min-height:12rem}
+body[data-ob-universe=loom] #apps .tile:nth-child(4){background:#403b64;border-top-color:#c5b7ff;min-height:14rem}
+body[data-ob-universe=loom] #apps .tile:focus-visible{transform:translateY(.3rem)}
+body[data-ob-universe=loom] #apps .tile span{color:#eee7ef}
+body[data-ob-universe=loom] .ob-pins-panel,body[data-ob-universe=loom] .ob-recents-panel{border-radius:0 2rem .5rem .5rem;border-top:.3rem solid #aa8cc3}
+/* KINETIC: a suspended mobile above counterweight trays. */
+body[data-ob-universe=kinetic]{--ob-ground:#e3eee4;--ob-panel:#f6f7ea;--ob-panel-raised:#f6f7ea;--ob-text:#1c3532;--ob-muted:#36564e;--ob-accent:#b4e55d;--ob-accent-ink:#183128;--ob-focus:#8b2b55;background:var(--ob-ground)}
+body[data-ob-universe=kinetic] .shell{grid-template-columns:1.8fr 1fr;grid-template-areas:'top top' 'apps hero' 'pins recents'}
+body[data-ob-universe=kinetic] .hero{align-self:stretch;background:linear-gradient(180deg,#e7f0e6ff 4%,#e7f0e6dd 60%,#e7f0e630),url('../shared/art/universes/kinetic.webp') center 80%/cover;border:2px solid #405f52;border-radius:1rem 1rem 9rem 1rem;min-height:22rem;display:flex;flex-direction:column;justify-content:space-between}
+body[data-ob-universe=kinetic] .hero>.row{flex-direction:column;align-items:flex-start}
+body[data-ob-universe=kinetic] .hero-title{max-width:none}
+body[data-ob-universe=kinetic] h1{font-size:3.6rem;line-height:1}
+body[data-ob-universe=kinetic] .hero .eyebrow{color:#254438}
+body[data-ob-universe=kinetic] .search{flex-wrap:wrap;background:#e7f0e6;border-radius:.5rem;padding:.4rem}
+body[data-ob-universe=kinetic] .search input{flex-basis:100%;width:100%}
+body[data-ob-universe=kinetic] .ob-apps-panel{padding-top:.7rem;border-top:.4rem solid #254438}
+body[data-ob-universe=kinetic] #apps{align-items:start;padding-top:2rem}
+body[data-ob-universe=kinetic] #apps .tile{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:2px solid #254438;border-radius:6rem 6rem 2rem 2rem;min-height:12rem;padding:1.1rem .6rem;background:#bfd8bd;box-shadow:.3rem .4rem 0 #253b3220;transition:transform 180ms ease}
+body[data-ob-universe=kinetic] #apps .tile:before{content:'';position:absolute;top:-2.6rem;left:50%;height:2.5rem;width:2px;background:#254438}
+body[data-ob-universe=kinetic] #apps .tile:nth-child(2){margin-top:3rem;background:#e8ccab}
+body[data-ob-universe=kinetic] #apps .tile:nth-child(2):before{top:-5.6rem;height:5.5rem}
+body[data-ob-universe=kinetic] #apps .tile:nth-child(3){margin-top:1rem;background:#cfc4e4}
+body[data-ob-universe=kinetic] #apps .tile:nth-child(3):before{top:-3.6rem;height:3.5rem}
+body[data-ob-universe=kinetic] #apps .tile:nth-child(4){margin-top:2rem;background:#cedd8c}
+body[data-ob-universe=kinetic] #apps .tile:nth-child(4):before{top:-4.6rem;height:4.5rem}
+body[data-ob-universe=kinetic] #apps .tile:focus-visible{transform:translateY(-.3rem)}
+body[data-ob-universe=kinetic] .card{border:2px solid #405f52;border-radius:1rem 1rem 3rem 3rem;box-shadow:0 .4rem 0 #bdccbd}
+body[data-ob-universe=kinetic] a{color:#285241}
+body[data-ob-universe=kinetic] #pin-status{color:#36564e}
+/* TIDE: tidal shelves and a stepped shoreline of destinations. */
+body[data-ob-universe=tide]{--ob-ground:#071f2a;--ob-panel:#123644;--ob-panel-raised:#184555;--ob-text:#eaf8ed;--ob-muted:#bdded9;--ob-accent:#a0e3d0;--ob-accent-ink:#09272a;background:#071f2a}
+body[data-ob-universe=tide] .shell{grid-template-columns:1.3fr 1fr;grid-template-areas:'top top' 'hero hero' 'apps recents' 'pins pins';gap:.8rem}
+body[data-ob-universe=tide] .hero{border:0;border-radius:8rem 1rem 1rem 1rem;padding:1.3rem 2rem 1.3rem 4rem;background-image:linear-gradient(90deg,#123a49f5 0%,#123a49ed 55%,#123a4910),url('../shared/art/universes/tide.webp');background-position:center}
+body[data-ob-universe=tide] h1{font-family:Georgia,serif;font-weight:400;font-size:3.5rem}
+body[data-ob-universe=tide] .hero .search{max-width:70%;margin-left:1.5rem}
+body[data-ob-universe=tide] .ob-apps-panel{background:#0d303d;border-top:.25rem solid #80bbb7;border-radius:1rem 1rem 5rem 1rem;padding:1rem 1.3rem}
+body[data-ob-universe=tide] #apps{grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+body[data-ob-universe=tide] #apps .tile{grid-template-columns:3rem 1fr;padding:.7rem 1rem;border:0;border-bottom:.2rem solid #82c4c2;border-radius:3rem .5rem .5rem 3rem;background:#1b4d5b;min-height:5.5rem}
+body[data-ob-universe=tide] #apps .tile:nth-child(even){border-radius:.5rem 3rem 3rem .5rem;background:#245c65}
+body[data-ob-universe=tide] .ob-recents-panel{align-self:stretch;border:0;border-top:.25rem solid #93d1c4;border-radius:6rem 1rem 1rem 1rem;padding:2rem 1.3rem 1rem 2rem;background:#184451}
+body[data-ob-universe=tide] .ob-recents-panel #recents{flex-direction:column;align-items:stretch;max-height:10rem}
+body[data-ob-universe=tide] .ob-pins-panel{background:#265761;border:0;border-radius:1rem 1rem 8rem 1rem;padding:1rem 3rem 1rem 1.3rem;display:grid;grid-template-columns:1fr 1.2fr;gap:.5rem 1rem}
+body[data-ob-universe=tide] .ob-pins-panel #pins{grid-column:2;grid-row:1/4;grid-template-columns:repeat(2,minmax(0,1fr));align-content:center}
+@media(max-width:1200px){body:is([data-ob-universe=loom],[data-ob-universe=kinetic],[data-ob-universe=tide]) .shell{grid-template-columns:1fr;grid-template-areas:'top' 'hero' 'apps' 'pins' 'recents';padding:1rem 1rem 7rem}body[data-ob-universe=loom] .hero{min-height:18rem}body[data-ob-universe=tide] .hero .search{max-width:none;margin-left:0}body[data-ob-universe=tide] .ob-pins-panel{display:flex}body[data-ob-universe=tide] .ob-pins-panel #pins{display:grid}body[data-ob-universe=kinetic] #apps{padding-bottom:1rem}}
+
+body[data-ob-universe=loom] #apps{align-items:start}body[data-ob-universe=loom] #pins{grid-template-columns:1fr}body[data-ob-universe=tide] .ob-recents-panel{border-top-left-radius:2.5rem}
+

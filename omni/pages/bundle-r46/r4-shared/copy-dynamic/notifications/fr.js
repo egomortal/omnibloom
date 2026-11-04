@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","fr",{"action.dismiss":"Ignorer","copy.dynamic.2150d8df37e4":"Tout afficher","copy.dynamic.6c006b5f27c9":"Impossible de fermer. Réessayez.","copy.dynamic.a65a13b013fd":"Les notifications sont indisponibles.","copy.static.db15e320dc5c":"Afficher les nouvelles"});

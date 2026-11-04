@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","ar",{"copy.complete.0b78998db7d7":"لا توجد إشعارات.","copy.static.1a3302e0d2c2":"آخر تحديثات تطبيقاتك.","copy.static.788011833a5a":"الإشعارات","copy.static.db15e320dc5c":"عرض الجديد","ui.0e9161011702":"تحديث","ui.9499cea73f3b":"OMNIBLOOM"});

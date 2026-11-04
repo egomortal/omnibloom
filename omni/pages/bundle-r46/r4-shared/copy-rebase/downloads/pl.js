@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","pl",{"copy.static.09d6cda1b645":"Kolejka działa · zadania symulowane","copy.static.4190c0c7ec72":"Otwórz plik","copy.static.670d8a3ad3e8":"Twoje pobrane pliki","copy.static.7819c5101a22":"Wyślij na USB","copy.static.dafc444796fc":"Wstrzymaj kolejkę","ui.19766ed6ccb2":"Anuluj"});

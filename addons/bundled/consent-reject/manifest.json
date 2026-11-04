@@ -1,0 +1,41 @@
+{
+  "manifest_version": 1,
+  "id": "consent-reject",
+  "name": "Reject optional cookies",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Press known reject controls only. Unknown banners and accept buttons stay untouched.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "feature.js",
+    "adapter.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "provider",
+      "type": "choice",
+      "label": "Supported banner",
+      "default": "both",
+      "choices": [
+        "both",
+        "onetrust",
+        "cookiebot"
+      ]
+    }
+  ]
+}

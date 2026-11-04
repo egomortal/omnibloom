@@ -1,0 +1,14 @@
+{
+  "universe.day": {
+    "en": "Universe of the day \u00b7 %s",
+    "arguments": [
+      "universeName"
+    ]
+  },
+  "universe.selected": {
+    "en": "Your universe \u00b7 %s",
+    "arguments": [
+      "universeName"
+    ]
+  }
+}

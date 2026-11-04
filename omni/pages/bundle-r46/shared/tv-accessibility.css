@@ -1,0 +1,40 @@
+/* Optional integration rules; combine with the shared design tokens. */
+:root {
+  --caption-size: 32px;
+  --caption-color: #ffffff;
+  --caption-background: #000000;
+  --caption-outline: 2px;
+}
+/* Shell-rendered captions: host applies selected settings through these tokens. */
+.ob-captions {
+  font: 600 var(--caption-size)/1.4 Inter, sans-serif;
+  color: var(--caption-color);
+  background: var(--caption-background);
+  padding: 12px 20px;
+  text-align: center;
+  white-space: pre-line;
+  max-width: 80vw;
+  margin-inline: auto;
+  overflow-wrap: break-word;
+}
+.ob-captions[data-preset="yellow"] { --caption-color: #ffff00; }
+.ob-captions[data-preset="large"] { --caption-size: 44px; }
+video::cue { color: #fff; background: #000; font-size: 32px; }
+video.ob-captions-yellow::cue { color: #ff0; }
+video.ob-captions-large::cue { font-size: 44px; }
+/* Never remove focus outlines in the native theme adapter. */
+.ob-tv :focus-visible { outline: 4px solid #fff; outline-offset: 5px; }
+.ob-tv button, .ob-tv select { min-height: 56px; }
+@media (min-width: 3000px) {
+  :root { --caption-size: 64px; }
+  .ob-captions[data-preset="large"] { --caption-size: 88px; }
+  video::cue { font-size: 64px; }
+  video.ob-captions-large::cue { font-size: 88px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-tv *, .ob-tv *::before, .ob-tv *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

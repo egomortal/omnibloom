@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","hi",{"action.back":"वापस","copy.static.50a3f9523122":"टैब बंद करें","copy.static.736612d4d0a9":"पहले के स्थान पर ले जाएँ","copy.static.743b9c60cda6":"टैब के विकल्प","copy.static.d6e856081ebe":"क्रम में बाद में ले जाएँ","ui.19766ed6ccb2":"रद्द करें"});

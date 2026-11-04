@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("address","zh-Hant",{"copy.action.type-text":"輸入","copy.static.0a228369b5ad":"搜尋建議：關閉","copy.static.1b1043d79093":"開啟後，你輸入的內容會傳送給所選的搜尋服務供應商。","copy.static.49264e8f0000":"網址或搜尋","copy.static.70307501c662":"選擇建議或輸入位址。","copy.static.b8f768b5e8b9":"搜尋書籤、歷史紀錄和已開啟的分頁","copy.static.d24df8d1b41b":"網址建議","ui.6cc8519b9158":"前往","ui.c022fa542585":"您想去哪里？"});

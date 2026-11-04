@@ -1,0 +1,78 @@
+{
+  "manifest_version": 1,
+  "id": "audio-tools",
+  "name": "Audio tools",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "A user-started Web Audio chain for same-origin media: volume, three tone bands and a night compressor.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "feature.js",
+    "adapter.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "volume",
+      "type": "range",
+      "label": "Volume (percent, up to +6 dB)",
+      "default": 100,
+      "min": 0,
+      "max": 200,
+      "step": 5
+    },
+    {
+      "key": "bass",
+      "type": "range",
+      "label": "Bass gain (dB)",
+      "default": 0,
+      "min": -12,
+      "max": 12,
+      "step": 1
+    },
+    {
+      "key": "mid",
+      "type": "range",
+      "label": "Middle gain (dB)",
+      "default": 0,
+      "min": -12,
+      "max": 12,
+      "step": 1
+    },
+    {
+      "key": "treble",
+      "type": "range",
+      "label": "Treble gain (dB)",
+      "default": 0,
+      "min": -12,
+      "max": 12,
+      "step": 1
+    },
+    {
+      "key": "night",
+      "type": "bool",
+      "label": "Compress loud passages",
+      "default": false
+    },
+    {
+      "key": "remember",
+      "type": "bool",
+      "label": "Remember volume for this site",
+      "default": false
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","en",{"copy.dynamic.839a9ca74e81":"Return requested in preview.","copy.error.413fc4be33df":"Article snapshot is too large","copy.error.81b14d388e08":"No readable article found"});

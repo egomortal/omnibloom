@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","de",{"copy.complete.0b78998db7d7":"Keine Benachrichtigungen.","copy.static.1a3302e0d2c2":"Deine neuesten App-Aktualisierungen.","copy.static.788011833a5a":"Benachrichtigungen","copy.static.db15e320dc5c":"Neue anzeigen","ui.0e9161011702":"Aktualisieren","ui.9499cea73f3b":"OMNIBLOOM"});

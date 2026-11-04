@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","ko",{"action.dismiss":"알림 닫기","copy.dynamic.2150d8df37e4":"모두 표시","copy.dynamic.6c006b5f27c9":"닫을 수 없습니다. 다시 시도하세요.","copy.dynamic.a65a13b013fd":"알림을 사용할 수 없습니다.","copy.static.db15e320dc5c":"새 알림 보기"});

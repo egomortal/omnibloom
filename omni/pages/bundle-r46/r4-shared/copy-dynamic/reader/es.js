@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","es",{"copy.dynamic.839a9ca74e81":"Se ha solicitado volver en la vista previa.","copy.error.413fc4be33df":"La instantánea del artículo es demasiado grande","copy.error.81b14d388e08":"No se encontró ningún artículo legible"});

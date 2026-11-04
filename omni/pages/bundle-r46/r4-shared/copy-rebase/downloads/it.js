@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","it",{"copy.static.09d6cda1b645":"Coda attiva · attività simulate","copy.static.4190c0c7ec72":"Apri file","copy.static.670d8a3ad3e8":"I tuoi download","copy.static.7819c5101a22":"Invia a USB","copy.static.dafc444796fc":"Sospendi coda","ui.19766ed6ccb2":"Annulla"});

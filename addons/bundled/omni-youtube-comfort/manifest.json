@@ -1,0 +1,122 @@
+{
+  "manifest_version": 1,
+  "id": "omni-youtube-comfort",
+  "name": "YouTube TV comfort",
+  "version": "1.0.0-omni-cleanroom",
+  "licence": "GPL-3.0-or-later (original adapter)",
+  "description": "Independent reading and playback preferences; quality and codec hooks need native support.",
+  "matches": [
+    "https://*.youtube.com/*"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "js": [
+    "core.js",
+    "adapter.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "hosts": [],
+  "settings": [
+    {
+      "key": "speed",
+      "type": "choice",
+      "label": "Playback speed",
+      "default": "1",
+      "choices": [
+        "0.75",
+        "1",
+        "1.25",
+        "1.5",
+        "2"
+      ],
+      "labels": [
+        "0.75",
+        "1",
+        "1.25",
+        "1.5",
+        "2"
+      ]
+    },
+    {
+      "key": "theatre",
+      "type": "bool",
+      "label": "Prefer theatre layout",
+      "default": false
+    },
+    {
+      "key": "fullscreen",
+      "type": "bool",
+      "label": "Offer fullscreen on playback",
+      "default": false
+    },
+    {
+      "key": "shorts",
+      "type": "bool",
+      "label": "Hide Shorts",
+      "default": false
+    },
+    {
+      "key": "comments",
+      "type": "bool",
+      "label": "Hide comments",
+      "default": false
+    },
+    {
+      "key": "largeControls",
+      "type": "bool",
+      "label": "Larger controls",
+      "default": false
+    },
+    {
+      "key": "stopAutoplay",
+      "type": "bool",
+      "label": "Stop autoplay",
+      "default": false
+    },
+    {
+      "key": "quality",
+      "type": "choice",
+      "label": "Preferred quality (native hook pending)",
+      "default": "auto",
+      "choices": [
+        "auto",
+        "720p",
+        "1080p",
+        "1440p",
+        "2160p"
+      ],
+      "labels": [
+        "auto",
+        "720p",
+        "1080p",
+        "1440p",
+        "2160p"
+      ]
+    },
+    {
+      "key": "codec",
+      "type": "choice",
+      "label": "Preferred codec (native hook pending)",
+      "default": "auto",
+      "choices": [
+        "auto",
+        "h264",
+        "vp9",
+        "hevc"
+      ],
+      "labels": [
+        "auto",
+        "h264",
+        "vp9",
+        "hevc"
+      ]
+    }
+  ]
+}

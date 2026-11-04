@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("library","ko",{"copy.dynamic.2c1c3c0d8d5e":"http 또는 https 주소를 사용하세요.","copy.dynamic.54b4c4b0cff5":"미리 보기에서 열기를 요청했습니다.","ui.d47d7cb0e4f8":"더 보기","ui.ed077f3d8125":"열기"});

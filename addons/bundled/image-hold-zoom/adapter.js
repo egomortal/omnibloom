@@ -1,0 +1,1 @@
+(()=>{'use strict';const a=window.omniAddon;if(!a||!a.top)return;const f=window.OmniFeature(a);let running=false;function stop(){if(running){running=false;f.disable()}}function start(){if(a.active&&!running){running=true;f.enable()}}a.onDisable(stop);a.onEnable(start);a.onSettings(()=>{if(!running||!a.active)return;if(f.update)f.update();else{stop();start()}});start()})();

@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","ru",{"copy.complete.0b78998db7d7":"Нет уведомлений.","copy.static.1a3302e0d2c2":"Недавние обновления ваших приложений.","copy.static.788011833a5a":"Уведомления","copy.static.db15e320dc5c":"Показать новые","ui.0e9161011702":"Обновить","ui.9499cea73f3b":"OMNIBLOOM"});

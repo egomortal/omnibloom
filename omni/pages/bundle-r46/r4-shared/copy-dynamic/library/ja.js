@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("library","ja",{"copy.dynamic.2c1c3c0d8d5e":"httpまたはhttpsのアドレスを使ってください。","copy.dynamic.54b4c4b0cff5":"プレビューで開くリクエストを送信しました。","ui.d47d7cb0e4f8":"その他","ui.ed077f3d8125":"開く"});

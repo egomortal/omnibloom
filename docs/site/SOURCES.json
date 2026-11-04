@@ -1,0 +1,46 @@
+[
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/index.html",
+    "sha256": "bbc5f6c1dc8aebc2bb660cd36d93ac519988759258d97f962b52356b5019b797"
+  },
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/install.html",
+    "sha256": "f479c6c632c0baeb9475dbca9566c2cb4a561d642b4fa6000b49c289fe60996f"
+  },
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/faq.html",
+    "sha256": "4ecfd1dfba47b355d60567e4a9c3bdae207ca59743ba9757ed0d0525c4f95280"
+  },
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/troubleshooting.html",
+    "sha256": "3c6871eee66e5693b89fb9230501f819d87c67dcfebab6b04765aa1df2bcbba8"
+  },
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/controllers.html",
+    "sha256": "4ec39d42ce42b7101b6eb11328a4ccdad7de60a717bf976d9911aec91fc172ca"
+  },
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/universes.html",
+    "sha256": "ca363419b314cfa430fd4a6c05cbeb3c0011706ea699ef70ecce85154453568b"
+  },
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/privacy.html",
+    "sha256": "64fe4154aff95cce28f5496b15a86bdbc9005709d80757778ef902faf5f46f84"
+  },
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/credits.html",
+    "sha256": "08ee15e8cc10bc90eade6d9f07df0f94e3e9f1990a3e12c3ef7cdbf728d9aa99"
+  },
+  {
+    "path": "outputs/codex-ui/20261103-r3-097-docs-v2-fix/manual.html",
+    "sha256": "e2d3a30cb72e71cc55c2aab440ee87818aef98e300f5df011991daa4db9d22c6"
+  },
+  {
+    "path": "OMNIBLOOM-LAUNCH-PLAN.md",
+    "sha256": "a012e3d6a641ce46280d8f66752f86b02cb6fa25d35c363783a0e50f420d26d2"
+  },
+  {
+    "path": "outputs/omnibloom-jdownloader/REPORT.final.md",
+    "sha256": "205e6021d783c79491c9650daefa905f76427d2df9b157e402312b57cdc2f752"
+  }
+]

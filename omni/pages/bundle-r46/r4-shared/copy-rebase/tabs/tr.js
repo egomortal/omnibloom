@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","tr",{"action.back":"Geri","copy.static.50a3f9523122":"Sekmeyi kapat","copy.static.736612d4d0a9":"Daha önceye taşı","copy.static.743b9c60cda6":"Sekme seçenekleri","copy.static.d6e856081ebe":"Daha sonraya taşı","ui.19766ed6ccb2":"İptal"});

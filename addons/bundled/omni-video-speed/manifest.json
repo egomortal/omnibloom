@@ -1,0 +1,46 @@
+{
+  "manifest_version": 1,
+  "id": "omni-video-speed",
+  "name": "Video speed",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "description": "Video speed with explicit controls and no online service.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "controls.js",
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "step",
+      "type": "choice",
+      "label": "Speed step",
+      "default": "0.25",
+      "choices": [
+        "0.1",
+        "0.25",
+        "0.5"
+      ],
+      "labels": [
+        "0.10\u00d7",
+        "0.25\u00d7",
+        "0.50\u00d7"
+      ]
+    }
+  ]
+}

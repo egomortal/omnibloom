@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","id",{"action.dismiss":"Tutup pemberitahuan","copy.dynamic.2150d8df37e4":"Tampilkan semua","copy.dynamic.6c006b5f27c9":"Tidak dapat menutup. Coba lagi.","copy.dynamic.a65a13b013fd":"Notifikasi tidak tersedia.","copy.static.db15e320dc5c":"Tampilkan yang baru"});

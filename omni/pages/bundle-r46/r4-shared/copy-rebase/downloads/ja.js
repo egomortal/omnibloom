@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","ja",{"copy.static.09d6cda1b645":"キュー実行中 · 模擬ジョブ","copy.static.4190c0c7ec72":"ファイルを開く","copy.static.670d8a3ad3e8":"あなたのダウンロード","copy.static.7819c5101a22":"USBに送信","copy.static.dafc444796fc":"キューを一時停止","ui.19766ed6ccb2":"キャンセル"});

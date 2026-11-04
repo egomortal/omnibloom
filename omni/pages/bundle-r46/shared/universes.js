@@ -1,0 +1,6 @@
+(()=>{'use strict';const names=["Bloom", "Aurora", "Cosmic", "Arcade", "Solstice", "Metro", "Sakura", "Abyss", "Prism", "Atlas", "Cassette", "Relay", "Loom", "Kinetic", "Tide"];const ids=names.map(n=>n.toLowerCase());const normalize=value=>typeof value==='string'&&ids.includes(value.toLowerCase())?value.toLowerCase():null;let selected=null;
+function stored(){try{return normalize(localStorage.getItem('ob.universe'))}catch(e){return null}}
+async function read(){let value;try{value=normalize(await window.omnibloomHost?.getSetting?.('universe'))}catch(e){}selected=value||stored();return selected}
+async function write(value){const id=normalize(value);if(!id)return false;selected=id;try{localStorage.setItem('ob.universe',id)}catch(e){}try{if(typeof window.omnibloomHost?.setSetting==='function')await window.omnibloomHost.setSetting('universe',id)}catch(e){window.obUI?.toast('Universe saved on this device; shared setting unavailable.')}window.dispatchEvent(new CustomEvent('ob-universe-change',{detail:id}));return true}
+function label(id){return names[ids.indexOf(id)]||names[0]}
+window.obUniverses={names,ids,normalize,read,write,label};})();

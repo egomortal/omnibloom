@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","ja",{"action.dismiss":"通知を閉じる","copy.dynamic.2150d8df37e4":"すべて表示","copy.dynamic.6c006b5f27c9":"閉じることができませんでした。もう一度お試しください。","copy.dynamic.a65a13b013fd":"通知を利用できません。","copy.static.db15e320dc5c":"新着を表示"});

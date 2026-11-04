@@ -1,0 +1,6 @@
+document.addEventListener('DOMContentLoaded',()=>{
+const label=document.createElement('label');label.className='settings-search';label.textContent='Search settings';const input=document.createElement('input');input.type='search';input.id='settings-search';input.maxLength=120;label.append(input);const main=document.querySelector('main'),heading=main.querySelector('h1');heading.after(label);const empty=document.createElement('p');empty.textContent='No matching settings.';empty.hidden=true;label.after(empty);
+function filter(){const query=input.value.trim().toLocaleLowerCase();let count=0;for(const row of document.querySelectorAll('section > label')){row.hidden=!row.textContent.toLocaleLowerCase().includes(query);if(!row.hidden)count++}empty.hidden=count>0;document.querySelector('#reset').disabled=!!query;}
+input.oninput=filter;document.addEventListener('change',()=>queueMicrotask(filter));document.addEventListener('click',()=>queueMicrotask(filter));
+document.addEventListener('keydown',e=>{if(e.target===input&&!['ArrowUp','ArrowDown','Escape','Tab'].includes(e.key))e.stopImmediatePropagation()},true);filter();
+});

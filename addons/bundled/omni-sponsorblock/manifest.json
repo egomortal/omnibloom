@@ -1,0 +1,101 @@
+{
+  "manifest_version": 1,
+  "id": "omni-sponsorblock",
+  "name": "SponsorBlock segments",
+  "version": "1.0.0-omni-cleanroom",
+  "licence": "GPL-3.0-or-later (original adapter)",
+  "description": "Skip or mute selected community segments; no requests before consent.",
+  "matches": [
+    "https://*.youtube.com/*"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "js": [
+    "core.js",
+    "adapter.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "hosts": [
+    "sponsor.ajay.app"
+  ],
+  "settings": [
+    {
+      "key": "consent",
+      "type": "bool",
+      "label": "Allow SponsorBlock lookups (IP and video hash prefix)",
+      "default": false
+    },
+    {
+      "key": "sponsor",
+      "type": "choice",
+      "label": "Sponsor action",
+      "default": "skip",
+      "choices": [
+        "off",
+        "skip",
+        "mute"
+      ],
+      "labels": [
+        "off",
+        "skip",
+        "mute"
+      ]
+    },
+    {
+      "key": "intro",
+      "type": "choice",
+      "label": "Intro action",
+      "default": "skip",
+      "choices": [
+        "off",
+        "skip",
+        "mute"
+      ],
+      "labels": [
+        "off",
+        "skip",
+        "mute"
+      ]
+    },
+    {
+      "key": "outro",
+      "type": "choice",
+      "label": "Outro action",
+      "default": "skip",
+      "choices": [
+        "off",
+        "skip",
+        "mute"
+      ],
+      "labels": [
+        "off",
+        "skip",
+        "mute"
+      ]
+    },
+    {
+      "key": "selfpromo",
+      "type": "choice",
+      "label": "Selfpromo action",
+      "default": "skip",
+      "choices": [
+        "off",
+        "skip",
+        "mute"
+      ],
+      "labels": [
+        "off",
+        "skip",
+        "mute"
+      ]
+    }
+  ],
+  "source": "https://github.com/ajayyy/SponsorBlock"
+}

@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","ru",{"copy.static.09d6cda1b645":"Очередь работает · имитационные задания","copy.static.4190c0c7ec72":"Открыть файл","copy.static.670d8a3ad3e8":"Ваши загрузки","copy.static.7819c5101a22":"Отправить на USB","copy.static.dafc444796fc":"Приостановить очередь","ui.19766ed6ccb2":"Отмена"});

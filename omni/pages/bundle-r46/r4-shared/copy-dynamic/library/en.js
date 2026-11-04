@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("library","en",{"copy.dynamic.2c1c3c0d8d5e":"Use an http or https address.","copy.dynamic.54b4c4b0cff5":"Open requested in preview.","ui.d47d7cb0e4f8":"More","ui.ed077f3d8125":"Open"});

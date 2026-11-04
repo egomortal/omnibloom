@@ -1,0 +1,6 @@
+/* R4-008: one high-contrast ring with a dark separation edge. */
+:root{--ob-focus-width:4px;--ob-focus-gap:4px;--ob-focus-safe:72px}
+@media(min-width:3000px){:root{--ob-focus-width:8px;--ob-focus-gap:8px;--ob-focus-safe:144px}}
+button:focus,a[href]:focus,input:focus,select:focus,textarea:focus,[tabindex]:focus,video[controls]:focus,audio[controls]:focus,iframe:focus,iframe.ob-frame-focused,summary:focus{outline:var(--ob-focus-width) solid #FFFFFF!important;outline-offset:var(--ob-focus-gap)!important;box-shadow:0 0 0 calc(var(--ob-focus-width) + var(--ob-focus-gap) + 2px) #070C12!important;scroll-margin-block:var(--ob-focus-safe);scroll-margin-inline:16px;animation:none!important;transition:none!important}
+@media(forced-colors:active){button:focus,a[href]:focus,input:focus,select:focus,textarea:focus,[tabindex]:focus{outline-color:Highlight!important;box-shadow:none!important;forced-color-adjust:auto}}
+@media(prefers-reduced-motion:reduce){button:focus,a[href]:focus,input:focus,select:focus,textarea:focus,[tabindex]:focus{scroll-behavior:auto!important;animation:none!important;transition:none!important}}

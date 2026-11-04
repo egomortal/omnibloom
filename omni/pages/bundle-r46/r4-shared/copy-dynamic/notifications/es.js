@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","es",{"action.dismiss":"Descartar","copy.dynamic.2150d8df37e4":"Mostrar todo","copy.dynamic.6c006b5f27c9":"No se pudo descartar. Inténtalo de nuevo.","copy.dynamic.a65a13b013fd":"Las notificaciones no están disponibles.","copy.static.db15e320dc5c":"Mostrar nuevas"});

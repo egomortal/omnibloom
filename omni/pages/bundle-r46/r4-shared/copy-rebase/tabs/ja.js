@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","ja",{"action.back":"戻る","copy.static.50a3f9523122":"タブを閉じる","copy.static.736612d4d0a9":"前の位置に移動","copy.static.743b9c60cda6":"タブのオプション","copy.static.d6e856081ebe":"後ろに移動","ui.19766ed6ccb2":"キャンセル"});

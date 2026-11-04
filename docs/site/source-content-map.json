@@ -1,0 +1,50 @@
+[
+  {
+    "page": "index.html",
+    "mainPreserved": true,
+    "mainSha256": "bc58c197c75a1933e668eb00b60e31bddcf25f61b19e0a812946189a7f91df8f",
+    "source": "20261103-docs-site-fix/index.html"
+  },
+  {
+    "page": "install.html",
+    "mainPreserved": true,
+    "mainSha256": "08e9a0d69c92476145b6d984281427097e2c4a6a6c536745ca4bc7d869f87f95",
+    "source": "20261103-docs-site-fix/install.html"
+  },
+  {
+    "page": "faq.html",
+    "mainPreserved": true,
+    "mainSha256": "d6aec9517f9b4474892ca75cb056b146b666341ed388b8f60976e149fc5ce3cd",
+    "source": "20261103-docs-site-fix/faq.html"
+  },
+  {
+    "page": "troubleshooting.html",
+    "mainPreserved": true,
+    "mainSha256": "20a23d70518b1242bed58a69deef9651f5d8e44ef7a10a6bb316748da9e9a28f",
+    "source": "20261103-docs-site-fix/troubleshooting.html"
+  },
+  {
+    "page": "controllers.html",
+    "mainPreserved": true,
+    "mainSha256": "f133ad33736890acbb9c25e61f3cc14d138bfa8ba1405fd6a36759b10c8cb8e8",
+    "source": "20261103-docs-site-fix/controllers.html"
+  },
+  {
+    "page": "universes.html",
+    "mainPreserved": true,
+    "mainSha256": "0e8847a0b1ea0d0daabaf1fd9ef312fe10183ea8ebfedd4b1b90f547f417752c",
+    "source": "20261103-docs-site-fix/universes.html"
+  },
+  {
+    "page": "privacy.html",
+    "mainPreserved": true,
+    "mainSha256": "013f838c8eda45df71b8edb2b37d142dee86d32a99e752944f24b643c87c1168",
+    "source": "20261103-docs-site-fix/privacy.html"
+  },
+  {
+    "page": "credits.html",
+    "mainPreserved": true,
+    "mainSha256": "ba30bb6b8bf82149d2bf75de6c90b2cad1c941c2155779bf0bde1f642aada6e8",
+    "source": "20261103-docs-site-fix/credits.html"
+  }
+]

@@ -1,0 +1,75 @@
+{
+  "manifest_version": 1,
+  "id": "subtitle-style",
+  "name": "Subtitle styling",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Adjust native HTML5 captions. Custom player overlays, protected video and embedded cross-origin players may not expose captions.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "feature.js",
+    "adapter.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "size",
+      "type": "choice",
+      "label": "Caption size in pixels",
+      "default": "28",
+      "choices": [
+        "22",
+        "28",
+        "36",
+        "44"
+      ]
+    },
+    {
+      "key": "color",
+      "type": "choice",
+      "label": "Caption text",
+      "default": "white",
+      "choices": [
+        "white",
+        "yellow",
+        "black"
+      ]
+    },
+    {
+      "key": "background",
+      "type": "choice",
+      "label": "Caption background",
+      "default": "dark",
+      "choices": [
+        "dark",
+        "clear",
+        "light"
+      ]
+    },
+    {
+      "key": "position",
+      "type": "choice",
+      "label": "Caption height",
+      "default": "original",
+      "choices": [
+        "original",
+        "bottom",
+        "raised"
+      ]
+    }
+  ]
+}

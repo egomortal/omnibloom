@@ -1,0 +1,35 @@
+{
+ "manifest_version": 1,
+ "id": "omni-clearurls",
+ "name": "Tracking link cleaner",
+ "version": "1.0.0-omni-cleanroom",
+ "licence": "GPL-3.0-or-later (original adapter)",
+ "description": "Small tested clean-room rule set; signed, login and payment URLs are preserved.",
+ "matches": [
+  "<all_urls>"
+ ],
+ "run_at": "document_end",
+ "all_frames": false,
+ "default_on": false,
+ "private_safe": false,
+ "quick_switch": true,
+ "live_toggle": true,
+ "css_level": "user",
+ "js": [
+  "core.js",
+  "adapter.js"
+ ],
+ "css": [
+  "addon.css"
+ ],
+ "hosts": [],
+ "settings": [
+  {
+   "key": "enabled",
+   "type": "bool",
+   "label": "Clean tracking parameters in clicked links",
+   "default": true
+  }
+ ],
+ "source": "https://github.com/ClearURLs/Addon"
+}

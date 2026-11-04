@@ -1,0 +1,39 @@
+{
+  "manifest_version": 1,
+  "id": "image-hold-zoom",
+  "name": "Hold to zoom images",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Focus or point at an image, then hold Alt+Z. Releasing the key, leaving the page or disabling closes the zoom.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "feature.js",
+    "adapter.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "scale",
+      "type": "range",
+      "label": "Maximum zoom area (percent of screen)",
+      "default": 85,
+      "min": 50,
+      "max": 95,
+      "step": 5
+    }
+  ]
+}

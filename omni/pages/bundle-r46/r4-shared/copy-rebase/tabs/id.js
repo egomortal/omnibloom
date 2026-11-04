@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","id",{"action.back":"Kembali","copy.static.50a3f9523122":"Tutup tab","copy.static.736612d4d0a9":"Pindahkan lebih awal","copy.static.743b9c60cda6":"Opsi tab","copy.static.d6e856081ebe":"Pindahkan ke urutan berikutnya","ui.19766ed6ccb2":"Batal"});

@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","th",{"copy.static.09d6cda1b645":"คิวกำลังทำงาน · งานจำลอง","copy.static.4190c0c7ec72":"เปิดไฟล์","copy.static.670d8a3ad3e8":"รายการดาวน์โหลดของคุณ","copy.static.7819c5101a22":"ส่งไปยัง USB","copy.static.dafc444796fc":"พักคิว","ui.19766ed6ccb2":"ยกเลิก"});

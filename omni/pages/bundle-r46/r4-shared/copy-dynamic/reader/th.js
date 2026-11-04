@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","th",{"copy.dynamic.839a9ca74e81":"ขอกลับในตัวอย่างแล้ว","copy.error.413fc4be33df":"สำเนาบทความมีขนาดใหญ่เกินไป","copy.error.81b14d388e08":"ไม่พบบทความที่อ่านได้"});

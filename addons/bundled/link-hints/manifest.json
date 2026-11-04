@@ -1,0 +1,39 @@
+{
+  "manifest_version": 1,
+  "id": "link-hints",
+  "name": "Link hints",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Open labels with Alt+Shift+L. Use arrows or type two letters, then select a control.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "feature.js",
+    "adapter.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "limit",
+      "type": "range",
+      "label": "Maximum visible hints",
+      "default": 100,
+      "min": 20,
+      "max": 200,
+      "step": 10
+    }
+  ]
+}

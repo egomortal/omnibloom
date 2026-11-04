@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","pl",{"copy.dynamic.839a9ca74e81":"Zażądano powrotu w podglądzie.","copy.error.413fc4be33df":"Migawka artykułu jest zbyt duża","copy.error.81b14d388e08":"Nie znaleziono czytelnego artykułu"});

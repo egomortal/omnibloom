@@ -1,0 +1,2 @@
+.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tile h2{min-height:2rem}.tile p{color:var(--ob-muted);overflow-wrap:anywhere}textarea:focus{outline:4px solid white;outline-offset:5px}.tile .row button{flex:1}#error{color:#ffacab}
+.notes-layout{display:grid;grid-template-columns:1fr 2fr;gap:1rem}.notes-layout textarea{height:10rem}#notes{height:17rem;width:100%}#preview{white-space:pre-wrap;overflow-wrap:anywhere;max-height:35vh;overflow:auto;font:inherit}.notes-layout label{margin:.6rem 0}

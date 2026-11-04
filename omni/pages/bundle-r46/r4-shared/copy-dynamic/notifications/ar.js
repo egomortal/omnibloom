@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","ar",{"action.dismiss":"إخفاء","copy.dynamic.2150d8df37e4":"إظهار الكل","copy.dynamic.6c006b5f27c9":"تعذر الإغلاق. حاول مجددًا.","copy.dynamic.a65a13b013fd":"الإشعارات غير متاحة.","copy.static.db15e320dc5c":"عرض الجديد"});

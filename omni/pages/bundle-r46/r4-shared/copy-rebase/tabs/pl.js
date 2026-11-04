@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","pl",{"action.back":"Wstecz","copy.static.50a3f9523122":"Zamknij kartę","copy.static.736612d4d0a9":"Przenieś wcześniej","copy.static.743b9c60cda6":"Opcje karty","copy.static.d6e856081ebe":"Przesuń dalej","ui.19766ed6ccb2":"Anuluj"});

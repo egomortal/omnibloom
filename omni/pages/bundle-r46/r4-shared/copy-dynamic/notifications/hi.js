@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","hi",{"action.dismiss":"हटाएँ","copy.dynamic.2150d8df37e4":"सभी दिखाएँ","copy.dynamic.6c006b5f27c9":"बंद नहीं किया जा सका। फिर कोशिश करें।","copy.dynamic.a65a13b013fd":"सूचनाएँ उपलब्ध नहीं हैं।","copy.static.db15e320dc5c":"नए दिखाएँ"});

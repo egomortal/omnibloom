@@ -1,0 +1,1 @@
+(function(root,factory){const m=factory();if(typeof module==='object')module.exports=m;else root.MediaControls=m})(globalThis,()=>{function mode(tab){if(!['video','audio','photo'].includes(tab))throw Error('Invalid media mode');return{timeline:tab!=='photo',subtitles:tab==='video',transport:tab!=='photo',queue:tab==='audio',photo:tab==='photo'}}return{mode}});

@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","zh-Hans",{"action.back":"返回","copy.static.50a3f9523122":"关闭标签页","copy.static.736612d4d0a9":"向前移动","copy.static.743b9c60cda6":"标签页选项","copy.static.d6e856081ebe":"向后移动","ui.19766ed6ccb2":"取消"});

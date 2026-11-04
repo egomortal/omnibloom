@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","nl",{"action.dismiss":"Verbergen","copy.dynamic.2150d8df37e4":"Alles tonen","copy.dynamic.6c006b5f27c9":"Kon niet worden gesloten. Probeer opnieuw.","copy.dynamic.a65a13b013fd":"Meldingen zijn niet beschikbaar.","copy.static.db15e320dc5c":"Nieuwe tonen"});
