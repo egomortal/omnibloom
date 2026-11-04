@@ -91,6 +91,7 @@ has its own tile and menu, and Omni can open its menu too.
 | Feature | Status | Details |
 | --- | :---: | --- |
 | Bluetooth pads | ✅ | Pair Xbox Series X\|S and other Bluetooth controllers to the PS5. |
+| Plug in, unplug, go wireless | ✅ | Plug an Xbox controller in by USB, then unplug it: Master Control opens a 60-second Bluetooth search by itself. Hold the pair button once and it reconnects wirelessly from then on. No phone or menu needed. |
 | Wired pads | 🧪 | Switch Pro, 8BitDo and Manba in Switch mode, HORI and XIM over USB. DualShock 4 over USB is opt-in. |
 | Remap buttons | 🧪 | Per-controller button remapping. |
 | Menu inside Omni | 🧪 | Open Master Control's menu from Omni and drive it with the controller. |

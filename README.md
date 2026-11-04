@@ -22,7 +22,7 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 | --- | --- | --- |
 | **Omni** (the browser) | WebKit browser as a native PS5 app (title PPSA99732): 4K60 video with HDR and hardware decoding, built-in ad blocking with uBlock Origin rules, tabs, translation, full DualSense control | [`omni/`](omni) |
 | **Downloads** | A link grabber that checks each link's real file type and quality before you download it, with a quality picker | [`downloads/`](downloads) |
-| **Master Control** | A controller app: pair Xbox and other Bluetooth pads, use Switch-mode, 8BitDo, HORI and other USB pads, remap buttons. Runs in the background with its own menu. Its own repository | [egomortal/master-control](https://github.com/egomortal/master-control) |
+| **Master Control** | A controller app: pair Xbox and other Bluetooth pads (plug an Xbox pad in, unplug it, and it pairs wirelessly by itself), use Switch-mode, 8BitDo, HORI and other USB pads, remap buttons. Runs in the background with its own menu. Its own repository | [egomortal/master-control](https://github.com/egomortal/master-control) |
 | **USB files broker** | A small helper that lets Omni open and save files on USB drives, and nowhere else | [`omni/files-broker/`](omni/files-broker) |
 | **JDownloader 2 engine** (optional) | Runs **your own** JDownloader 2 on the PS5, inside Omni's downloads, on the [PS5 Java 25 port by mateo-cogeanu](https://github.com/mateo-cogeanu/ps5-java25-homebrew). JDownloader 2 itself is never shipped; Setup copies yours | [`jdownloader/`](jdownloader) |
 | **Omnibloom Setup** | One file for your computer: finds the PS5, installs and updates everything, sets up JDownloader 2 | [`setup/`](setup) |
