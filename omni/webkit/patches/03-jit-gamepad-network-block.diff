@@ -1,0 +1,269 @@
+--- /opt/omni-build/webkit/Source/JavaScriptCore/jit/JITInlineCacheGenerator.cpp	2026-10-17 22:50:09.349673910 -0400
++++ Source/JavaScriptCore/jit/JITInlineCacheGenerator.cpp	2026-11-02 15:49:50.399102474 -0500
+@@ -42,6 +42,17 @@
+ 
+ namespace JSC {
+ 
++#if !ENABLE(DFG_JIT)
++// OMNI_JSC_JIT_V1: CompileTimePropertyInlineCache always has the DFG alternative and the generic visitors below
++// instantiate for it, so with DFG off the type still has to be complete (same layout as DFGJITCode.h; never created).
++namespace DFG {
++struct UnlinkedPropertyInlineCache : JSC::UnlinkedPropertyInlineCache {
++    CallSiteIndex callSiteIndex;
++    CodeOrigin codeOrigin;
++};
++}
++#endif
++
+ static void emitICStatsChainFlushProbe(CCallHelpers& jit, GPRReg propertyCacheGPR)
+ {
+     if constexpr (ICStatsInternal::traceHandlerChains) {
+@@ -71,12 +82,10 @@
+         },
+         [&](BaselineUnlinkedPropertyInlineCache* propertyCache) {
+             m_baselineUnlinkedPropertyCache = propertyCache;
+-        }
+-#if ENABLE(DFG_JIT)
+-        ,
++        },
++        // OMNI_JSC_JIT_V1: the variant always has this alternative, so the visitor needs it with DFG off too.
+         [&](DFG::UnlinkedPropertyInlineCache*) {
+         }
+-#endif
+         ), propertyCache);
+ }
+ 
+--- /opt/omni-build/webkit/Source/JavaScriptCore/bytecode/CodeBlockInlines.h	2026-10-17 22:50:09.262795825 -0400
++++ Source/JavaScriptCore/bytecode/CodeBlockInlines.h	2026-11-02 15:37:00.314883057 -0500
+@@ -29,6 +29,7 @@
+ #include "BytecodeStructs.h"
+ #include "CodeBlock.h"
+ #include "DFGJITCode.h"
++#include "JumpTable.h" // OMNI_JSC_JIT_V1: BaselineJITCode only forward-declares the jump tables (DFGJITCode.h brought this in when DFG was on)
+ #include "UnlinkedMetadataTableInlines.h"
+ 
+ namespace JSC {
+--- /opt/omni-build/webkit/Source/WTF/wtf/playstation/OSAllocatorPlayStation.cpp	2026-10-17 22:50:12.996904633 -0400
++++ Source/WTF/wtf/playstation/OSAllocatorPlayStation.cpp	2026-11-02 15:11:41.969544255 -0500
+@@ -28,6 +28,10 @@
+ #include <wtf/OSAllocator.h>
+ 
+ #include <errno.h>
++#include <stdio.h>
++#include <string.h>
++#include <sys/mman.h>
++#include <unistd.h>
+ #include <memory-extra/vss.h>
+ #include <wtf/Assertions.h>
+ #include <wtf/DataLog.h>
+@@ -38,12 +42,57 @@
+ 
+ namespace WTF {
+ 
++// OMNI_JSC_JIT_V1: executable memory for JavaScriptCore's JIT pool.
++// Sony's allocator refuses executable memory (memory-extra commits RW only). Omni's WebProcess runs as a
++// jailbroken payload, where anonymous mappings may be made executable (console probe omni-native-jit0,
++// 2026-11-02: RW->RX and RX<->RWX flips work in the WebProcess type). The JIT is only reached when the
++// WebProcess starts with JSC_useJIT=true (Omni's /data/omni/jsc-jit.flag, default off). The pool is
++// mapped with plain mmap at its reserved size (JSC_jitMemoryReservationSize keeps it small) and is
++// never handed to memory-extra; ENABLE(MPROTECT_RX_TO_RWX) keeps it read+execute except while JSC
++// writes code. Only one executable region exists (JSC's fixed pool); it is tracked here so the
++// decommit/release/protect calls that libpas or JSC make on it use mmap/mprotect, not memory-extra.
++static uintptr_t s_omniExecBegin;
++static uintptr_t s_omniExecEnd;
++static constexpr size_t s_omniExecMaxBytes = 256 * 1024 * 1024;
++
++static bool omniInExecRegion(const void* address, size_t bytes)
++{
++    uintptr_t begin = reinterpret_cast<uintptr_t>(address);
++    return s_omniExecEnd && begin >= s_omniExecBegin && begin + bytes <= s_omniExecEnd;
++}
++
++static void* omniMapExecutable(size_t bytes, bool writable)
++{
++    if (bytes > s_omniExecMaxBytes || s_omniExecEnd) {
++        fprintf(stderr, "jit: executable reservation refused bytes=%zu existing=%d\n", bytes, s_omniExecEnd ? 1 : 0);
++        return nullptr;
++    }
++    // Map read/write, then flip to the requested protection: the probe showed RWX at map time is
++    // silently dropped in the title type, while mprotect after mapping works in both process types.
++    void* result = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
++    if (result == MAP_FAILED) {
++        fprintf(stderr, "jit: executable mmap failed bytes=%zu errno=%d\n", bytes, errno);
++        return nullptr;
++    }
++    int protection = PROT_READ | PROT_EXEC | (writable ? PROT_WRITE : 0);
++    if (mprotect(result, bytes, protection)) {
++        fprintf(stderr, "jit: executable mprotect failed bytes=%zu errno=%d\n", bytes, errno);
++        munmap(result, bytes);
++        return nullptr;
++    }
++    s_omniExecBegin = reinterpret_cast<uintptr_t>(result);
++    s_omniExecEnd = s_omniExecBegin + bytes;
++    fprintf(stderr, "jit: executable pool %p bytes=%zu %s\n", result, bytes, writable ? "rwx" : "rx (written through rx<->rwx flips)");
++    return result;
++}
++
+ void* OSAllocator::tryReserveAndCommit(size_t bytes, Usage usage, void* address, bool writable, bool executable, bool jitCageEnabled, unsigned numGuardPagesToAddOnEachEnd)
+ {
+     UNUSED_PARAM(numGuardPagesToAddOnEachEnd); // Guard pages not supported, and will be ignored.
+     ASSERT_UNUSED(jitCageEnabled, !jitCageEnabled);
+-    ASSERT_UNUSED(executable, !executable);
+     ASSERT_UNUSED(address, !address);
++    if (executable)
++        return omniMapExecutable(bytes, writable);
+ 
+     void* result = memory_extra::vss::reserve(bytes);
+     if (!result)
+@@ -61,11 +110,13 @@
+ void* OSAllocator::tryReserveUncommitted(size_t bytes, Usage usage, void* address, bool writable, bool executable, bool jitCageEnabled, unsigned numGuardPagesToAddOnEachEnd)
+ {
+     UNUSED_PARAM(usage);
+-    UNUSED_PARAM(writable);
+     UNUSED_PARAM(numGuardPagesToAddOnEachEnd); // Guard pages not supported, and will be ignored.
+     ASSERT_UNUSED(jitCageEnabled, !jitCageEnabled);
+-    ASSERT_UNUSED(executable, !executable);
+     ASSERT_UNUSED(address, !address);
++    // libpas' JIT heap never commits its pages on PlayStation (client-owned permissions), so the
++    // executable pool is mapped, accessible, at reservation time.
++    if (executable)
++        return omniMapExecutable(bytes, writable);
+ 
+     void* result = memory_extra::vss::reserve(bytes);
+     if (!result)
+@@ -107,13 +158,22 @@
+ 
+ void OSAllocator::commit(void* address, size_t bytes, bool writable, bool executable)
+ {
+-    ASSERT_UNUSED(executable, !executable);
++    if (executable || omniInExecRegion(address, bytes)) {
++        // Already mapped at reservation; (re)apply the protection.
++        bool success = !mprotect(address, bytes, PROT_READ | PROT_EXEC | (writable ? PROT_WRITE : 0));
++        RELEASE_ASSERT(success);
++        return;
++    }
+     bool success = memory_extra::vss::commit(address, bytes, writable, -1);
+     RELEASE_ASSERT(success);
+ }
+ 
+ void OSAllocator::decommit(void* address, size_t bytes)
+ {
++    if (omniInExecRegion(address, bytes)) {
++        madvise(address, bytes, MADV_DONTNEED);
++        return;
++    }
+     bool success = memory_extra::vss::decommit(address, bytes);
+     RELEASE_ASSERT(success);
+ }
+@@ -127,12 +187,20 @@
+ void OSAllocator::releaseDecommitted(void* address, size_t bytes, unsigned numGuardPagesToAddOnEachEnd)
+ {
+     UNUSED_PARAM(numGuardPagesToAddOnEachEnd); // Guard pages not supported, and will be ignored.
++    if (omniInExecRegion(address, bytes)) {
++        RELEASE_ASSERT(!munmap(address, bytes));
++        if (reinterpret_cast<uintptr_t>(address) == s_omniExecBegin && reinterpret_cast<uintptr_t>(address) + bytes == s_omniExecEnd)
++            s_omniExecBegin = s_omniExecEnd = 0;
++        return;
++    }
+     bool success = memory_extra::vss::release(address, bytes);
+     RELEASE_ASSERT(success);
+ }
+ 
+ bool OSAllocator::tryProtect(void* address, size_t bytes, bool readable, bool writable)
+ {
++    if (omniInExecRegion(address, bytes))
++        return !mprotect(address, bytes, (readable ? PROT_READ : 0) | (writable ? PROT_WRITE : 0) | PROT_EXEC);
+     return memory_extra::vss::protect(address, bytes, readable, writable, -1);
+ }
+ 
+--- /opt/omni-build/webkit/Source/WTF/wtf/PlatformEnablePlayStation.h	2026-10-17 22:50:12.968670831 -0400
++++ Source/WTF/wtf/PlatformEnablePlayStation.h	2026-11-02 15:11:41.955285568 -0500
+@@ -35,6 +35,12 @@
+ 
+ /* --------- PlayStation port --------- */
+ 
++/* OMNI_JSC_JIT_V1: when the JIT is built, keep its pool read+execute and flip pages to writable only
++   while JavaScriptCore writes code (W^X). */
++#if !defined(ENABLE_MPROTECT_RX_TO_RWX) && defined(ENABLE_JIT) && ENABLE_JIT
++#define ENABLE_MPROTECT_RX_TO_RWX 1
++#endif
++
+ #if !defined(ENABLE_LLINT_EMBEDDED_OPCODE_ID)
+ #define ENABLE_LLINT_EMBEDDED_OPCODE_ID 0
+ #endif
+--- /opt/omni-build/webkit/Source/WebKit/UIProcess/Gamepad/libwpe/UIGamepadProviderLibWPE.cpp	2026-10-17 22:50:14.051494630 -0400
++++ Source/WebKit/UIProcess/Gamepad/libwpe/UIGamepadProviderLibWPE.cpp	2026-11-02 15:11:41.942170561 -0500
+@@ -44,9 +44,27 @@
+ #endif
+ #endif
+ 
++#if PLATFORM(PLAYSTATION)
++#include "APIPageConfiguration.h"
++#include "WKAPICast.h"
++#include "WebPageProxy.h"
++#include <wtf/NeverDestroyed.h>
++#endif
++
+ namespace WebKit {
+ using namespace WebCore;
+ 
++#if PLATFORM(PLAYSTATION)
++// OMNI_GAMEPAD_V1: the PlayStation port has no view that knows which page has focus, so Omni's shell
++// names the page that should receive gamepad input (the active tab, only while no Omni UI such as the
++// keyboard or a menu is open). nullptr = no page gets gamepad input.
++static RefPtr<WebPageProxy>& omniGamepadInputPage()
++{
++    static NeverDestroyed<RefPtr<WebPageProxy>> page;
++    return page.get();
++}
++#endif
++
+ void UIGamepadProvider::platformSetDefaultGamepadProvider()
+ {
+     if (GamepadProvider::singleton().isMockGamepadProvider())
+@@ -68,6 +86,14 @@
+ 
+ WebPageProxy* UIGamepadProvider::platformWebPageProxyForGamepadInput()
+ {
++#if PLATFORM(PLAYSTATION)
++    {
++        auto& page = omniGamepadInputPage();
++        if (!page || page->isClosed() || !page->hasRunningProcess())
++            return nullptr;
++        return page.get();
++    }
++#endif
+ #if PLATFORM(WPE)
+ #if ENABLE(WPE_PLATFORM)
+     if (WKWPE::isUsingWPEPlatformAPI())
+@@ -98,4 +124,11 @@
+ 
+ } // namespace WebKit
+ 
++#if PLATFORM(PLAYSTATION)
++extern "C" WK_EXPORT void WKOmniSetGamepadInputPage(WKPageRef pageRef)
++{
++    WebKit::omniGamepadInputPage() = pageRef ? WebKit::toImpl(pageRef) : nullptr;
++}
++#endif
++
+ #endif // ENABLE(GAMEPAD)
+--- /opt/omni-build/webkit/Source/WebKit/NetworkProcess/NetworkResourceLoader.cpp	2026-10-19 13:32:36.874183481 -0400
++++ Source/WebKit/NetworkProcess/NetworkResourceLoader.cpp	2026-11-02 15:44:55.223022253 -0500
+@@ -134,6 +134,7 @@
+ extern "C" bool omniUBlockShouldBlock(const char*, const char*, const char*);
+ extern "C" bool omniUBlockSiteAllowed(const char*); // omni ublock trusted sites
+ extern "C" bool omniUBlockRewrite(const char*, const char*, const char*, bool, char*, size_t); // omni ublock rewrite
++extern "C" bool omniPrivateNetworkBlocked(const char* url, const char* documentURL); // omni OMNI_SEC_PNA_V1
+ static String omniRewriteTopLevel(const WebCore::ResourceRequest& request, WebCore::FetchOptions::Destination destination, bool mainFrame, bool blocked)
+ {
+     if (!mainFrame || destination != WebCore::FetchOptions::Destination::Document) return { };
+@@ -157,6 +158,8 @@
+     while (updateHost.endsWith('.')) updateHost = updateHost.left(updateHost.length() - 1);
+     if (updateHost == "update.playstation.net"_s || updateHost.endsWith(".update.playstation.net"_s)
+         || updateHost == "dl.playstation.net"_s || updateHost.endsWith(".dl.playstation.net"_s)) return true;
++    // omni OMNI_SEC_PNA_V1: a public page may not reach the home network (checked before trusted-site/uBlock-off)
++    if (omniPrivateNetworkBlocked(reinterpret_cast<const char*>(request.url().string().utf8().data()), reinterpret_cast<const char*>(documentURL.string().utf8().data()))) return true;
+     const char* type = "other";
+     using D = WebCore::FetchOptions::Destination;
+     using R = WebCore::ResourceRequestRequester;

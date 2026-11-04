@@ -1,0 +1,32 @@
+[
+  {
+    "file": "assets/master-control-icon.png",
+    "bytes": 26745,
+    "sha256": "2d759429e3e800ccd731d35302cd64276530add6d6ff23e4ccbcb883997919bf"
+  },
+  {
+    "file": "assets/omni-icon.png",
+    "bytes": 160178,
+    "sha256": "be4f49255d6df617545448e21fefb3ec033f19d100558118b09707ec1fb720c9"
+  },
+  {
+    "file": "assets/omnibloom-social-preview.png",
+    "bytes": 215074,
+    "sha256": "eb4c17b22120d7e67cf3990e1c4ccadf95e549ed9804d582840e404170d4b398"
+  },
+  {
+    "file": "screenshots/ambient-prototype.png",
+    "bytes": 794212,
+    "sha256": "6be3dc28c66e1b2d50ce61f7bafef652faf009df3d6a36bbc2e33d5a809bee93"
+  },
+  {
+    "file": "screenshots/couch-tools-prototype.png",
+    "bytes": 56760,
+    "sha256": "7739ee55d57059dbc24c56c8f424454eb4faac1df27cd13b484f0055203b673c"
+  },
+  {
+    "file": "screenshots/universe-prototype.png",
+    "bytes": 87677,
+    "sha256": "a39beab83c3e57c1f89aec9a69c0c1dcdcab33a1763457b14c911ed99da417f2"
+  }
+]

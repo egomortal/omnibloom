@@ -1,0 +1,52 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (en_US-ljspeech-high, LJ Speech (Keith Ito), public domain). Native review still required.
+
+1
+00:00:00.500 --> 00:00:10.370
+Open Media Center and choose a USB drive through Files. Select a video,
+music track or photo. Resume and subtitles depend on the engine’s reported
+
+2
+00:00:10.370 --> 00:00:16.379
+capability; unsupported actions stay unavailable rather than pretending to
+work.
+
+3
+00:00:30.500 --> 00:00:40.237
+Review the music queue before playing, and start or stop a photo slideshow
+explicitly. Keep a visible way back to the library. Disconnecting a drive
+
+4
+00:00:40.237 --> 00:00:45.903
+should stop access cleanly and explain how to reconnect without losing
+focus.
+
+5
+00:01:00.500 --> 00:01:09.233
+Protected media may require a supported decryption module and service
+approval. Omnibloom never bypasses DRM or CAPTCHA. Use the service’s
+
+6
+00:01:09.233 --> 00:01:15.148
+supported playback or download options; changing engines does not remove
+protection.
+
+7
+00:01:30.500 --> 00:01:40.160
+If Setup cannot find the console, confirm the address and trusted network,
+then run checks again. If an app is down, note its version and try its
+
+8
+00:01:40.160 --> 00:01:45.357
+normal Open action once. Keep the error and support code if it fails.
+
+9
+00:02:00.500 --> 00:02:11.095
+For support include app build, firmware, PC system, controller model,
+expected result, actual result and repeatable steps. Review logs before
+
+10
+00:02:11.095 --> 00:02:18.759
+sharing; remove tokens, cookies, usernames, private URLs, device addresses
+and personal paths.

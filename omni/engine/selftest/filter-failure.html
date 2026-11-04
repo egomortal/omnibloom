@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8"><title>Omni filter failure test</title>
+<h1>Filter failure test</h1><pre id="result"></pre>
+<script>
+window.omniFeatureResults = [];
+(async () => {
+    const results = window.omniFeatureResults;
+    const allowed = '/fs/data/omni/ublock-test/allowed.js';
+    try {
+        const baseline = await fetch(allowed + '?baseline');
+        if (!baseline.ok) throw Error('Baseline unavailable');
+        results.push({name:'baseline request',pass:true});
+        for (const [name,url] of [
+            ['filter exception blocks triggering request',allowed + '?omni-filter-fault'],
+            ['filter stays closed after exception',allowed + '?after-fault']
+        ]) {
+            let rejected = false;
+            try { await fetch(url); } catch (_) { rejected = true; }
+            results.push({name,pass:rejected});
+        }
+    } catch (error) { results.push({name:'fixture setup',pass:false,error:String(error)}); }
+    document.getElementById('result').textContent = JSON.stringify(results);
+})();
+</script>

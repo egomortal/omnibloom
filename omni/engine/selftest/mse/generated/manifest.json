@@ -1,0 +1,86 @@
+{
+  "duration": 4,
+  "originalContent": "FFmpeg testsrc2 and 440 Hz sine",
+  "tracks": [
+    {
+      "kind": "video",
+      "mime": "video/mp4; codecs=\"avc1.42c01e\"",
+      "init": "init-0.mp4",
+      "segments": [
+        "segment-0-00001.m4s",
+        "segment-0-00002.m4s",
+        "segment-0-00003.m4s",
+        "segment-0-00004.m4s"
+      ],
+      "files": {
+        "init-0.mp4": {
+          "bytes": 829,
+          "sha256": "5a7663fbc34a567bd4d37b4fbbc75c1c8ab885852a9750c69321c7629cdcaec4"
+        },
+        "segment-0-00001.m4s": {
+          "bytes": 32043,
+          "sha256": "9fa1f93e381096ab1ac95c9d99359e626785c5bbbb9f36005c40af3bbbc29b09"
+        },
+        "segment-0-00002.m4s": {
+          "bytes": 41953,
+          "sha256": "d058348252ad7eea62e1bfb5b3270e3a150d0d50174256066feff43543cfb0d5"
+        },
+        "segment-0-00003.m4s": {
+          "bytes": 46315,
+          "sha256": "5f11b2c55dfb31122f87c9705ca4e33861e0881c8c36c74e6170e460b0b877a8"
+        },
+        "segment-0-00004.m4s": {
+          "bytes": 49692,
+          "sha256": "ef01d95e9b5a90bd621ef27d3be0983383616e6ef34a3bb2446071928f57bb7d"
+        }
+      },
+      "probe": {
+        "codec": "h264",
+        "duration": "4.000000"
+      }
+    },
+    {
+      "kind": "audio",
+      "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+      "init": "init-1.mp4",
+      "segments": [
+        "segment-1-00001.m4s",
+        "segment-1-00002.m4s",
+        "segment-1-00003.m4s",
+        "segment-1-00004.m4s",
+        "segment-1-00005.m4s"
+      ],
+      "files": {
+        "init-1.mp4": {
+          "bytes": 765,
+          "sha256": "77a99204bdea0f3737291b9a5a6c380abd5076ae97ef6bbd1bab7502a6132529"
+        },
+        "segment-1-00001.m4s": {
+          "bytes": 8156,
+          "sha256": "87e16261837f70180644956cacddefd32845e25ff23b8ad7abdf464f55b7ff24"
+        },
+        "segment-1-00002.m4s": {
+          "bytes": 8442,
+          "sha256": "450b7f84dca91157d8160dbca30b71f931f7a75a7b58826f369f0c5a76cd790e"
+        },
+        "segment-1-00003.m4s": {
+          "bytes": 8426,
+          "sha256": "517545ce9f6fc1fe376b7837bc1c36b2886c09e0e2bc4f859bc7f01835782668"
+        },
+        "segment-1-00004.m4s": {
+          "bytes": 8454,
+          "sha256": "fd9334cfdba9a289c2abe5b6f669d4f585a310ed0f63ddef0dbe56e649f11ae3"
+        },
+        "segment-1-00005.m4s": {
+          "bytes": 371,
+          "sha256": "f4b844c0422d2003aa1144d417219afaab5e037ddbd4e4aa6d29518ab14ae0ec"
+        }
+      },
+      "probe": {
+        "codec": "aac",
+        "duration": "4.021333"
+      }
+    }
+  ],
+  "ffmpegVersion": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers"
+}

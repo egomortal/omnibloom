@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>Omni player controls test</title>
+<style>body{margin:0;background:#101820;color:white;font:18px sans-serif}button{position:absolute;left:20px;top:10px;width:200px;height:40px}video{position:absolute;left:20px;top:70px;width:800px;height:450px;background:black}pre{position:absolute;left:830px;top:10px;width:410px;white-space:pre-wrap}video:fullscreen{width:100vw;height:100vh;left:0;top:0;object-fit:contain}</style>
+<button>Enter fullscreen</button><video playsinline controls src="media-hd.mp4"></video><pre></pre>
+<script>
+window.omniFeatureResults=[];const video=document.querySelector('video');let played=false,entered=false;
+function record(name,pass,value){omniFeatureResults.push({name,pass,value});document.querySelector('pre').textContent=JSON.stringify(omniFeatureResults,null,2);}
+video.addEventListener('play',()=>{played=true;record('native play control click',true);});
+video.addEventListener('pause',()=>{if(played)record('native pause control click',video.currentTime>0&&!video.ended,video.currentTime);});
+document.querySelector('button').onclick=()=>video.requestFullscreen().catch(e=>record('fullscreen request',false,String(e)));
+document.addEventListener('fullscreenchange',()=>{
+ if(document.fullscreenElement===video){entered=true;setTimeout(()=>{const r=video.getBoundingClientRect();record('fullscreen fills entire browser display',Math.abs(r.width-innerWidth)<2&&Math.abs(r.height-innerHeight)<2&&innerWidth>=1280&&innerHeight>=720,{video:[r.width,r.height],viewport:[innerWidth,innerHeight]});},300);}
+ else if(entered)record('controller exits fullscreen',true);
+});
+</script>

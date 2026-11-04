@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "width": 1920,
+      "cpuThrottle": 4,
+      "images": 17,
+      "broken": false,
+      "overflow": false,
+      "chapters": 17,
+      "completeRuntimeBytes": 499372,
+      "budgetBytes": 2000000,
+      "passed": true
+    },
+    {
+      "width": 3840,
+      "cpuThrottle": 4,
+      "images": 17,
+      "broken": false,
+      "overflow": false,
+      "chapters": 17,
+      "completeRuntimeBytes": 499372,
+      "budgetBytes": 2000000,
+      "passed": true
+    }
+  ]
+}

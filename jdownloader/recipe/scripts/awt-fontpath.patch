@@ -1,0 +1,11 @@
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/make/modules/java.desktop/lib/AwtLibraries.gmk.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/make/modules/java.desktop/lib/AwtLibraries.gmk
+@@ -182,7 +182,7 @@
+   # PS5 downloader has no CUPS print service. Do not compile a provider whose
+   # headers/libraries are unavailable; image/raster/Font JNI remain real.
+   ifeq ($(PS5_BOOTSTRAP), yes)
+-    LIBAWT_HEADLESS_EXCLUDE_FILES += CUPSfuncs.c
++    LIBAWT_HEADLESS_EXCLUDE_FILES += CUPSfuncs.c fontpath.c
+   endif
+ 
+   LIBAWT_HEADLESS_EXTRA_HEADER_DIRS := \

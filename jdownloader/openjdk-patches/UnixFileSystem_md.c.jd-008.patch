@@ -1,0 +1,25 @@
+--- a/src/java.base/unix/native/libjava/UnixFileSystem_md.c
++++ b/src/java.base/unix/native/libjava/UnixFileSystem_md.c
+@@ -519,13 +519,7 @@
+ Java_java_io_UnixFileSystem_getSpace0(JNIEnv *env, jobject this,
+                                       jobject file, jint t)
+ {
+-#ifdef __PROSPERO__
+-    // The SDK raw statfs path is not validated for a title sandbox.
+-    // Report unavailable capacity rather than invoking it or inventing data.
+-    (void)env; (void)this; (void)file; (void)t;
+-    // File space queries return zero when the OS query is unavailable.
+-    return 0L;
+-#else
++
+     jlong rv = 0L;
+ 
+     WITH_FIELD_PLATFORM_STRING(env, file, ids.path, path) {
+@@ -578,7 +572,6 @@
+ #endif
+     } END_PLATFORM_STRING(env, path);
+     return rv;
+-#endif
+ }
+ 
+ JNIEXPORT jlong JNICALL

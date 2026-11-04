@@ -1,0 +1,13 @@
+#block-start-NETWORK_FILTERS:GOOD
+[144,268435456,"ads.example"]
+[129,12797,[42,[[2,"ads.example/allowed.js",0],[6]]]]
+[64,268435456,"images.example"]
+[128,1342177280,[11,"tracker[0-9]+\\.js",0]]
+[128,909840,[42,[[2,"only.example",0],[7],[14,"publisher.co.uk"]]]]
+[80,268435456,"assets.publisher.co.uk"]
+[128,909039,[3,"/omni/ublock-test/blocked.js",1]]
+[128,909039,[3,"/omni/ublock-test/excepted.js",1]]
+[129,909039,[3,"/omni/ublock-test/excepted.js",1]]
+[128,909039,[3,"/omni/blocker-test/blocked.js",1]]
+[256,87654055,[4,"/media-blocked.mp4",7]]
+#block-end-NETWORK_FILTERS:GOOD

@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "page": "20261102-r2-user-manual/index.html",
+      "width": 1920,
+      "cpuThrottle": 4,
+      "reducedMotion": true,
+      "horizontalOverflow": false,
+      "minText": 22,
+      "fcpMs": 228,
+      "images": true,
+      "lang": "en",
+      "loadedBytes": 140678,
+      "budgetBytes": 2000000,
+      "passed": true
+    },
+    {
+      "page": "20261102-r2-user-manual/index.html",
+      "width": 3840,
+      "cpuThrottle": 4,
+      "reducedMotion": true,
+      "horizontalOverflow": false,
+      "minText": 22,
+      "fcpMs": 240,
+      "images": true,
+      "lang": "en",
+      "loadedBytes": 168376,
+      "budgetBytes": 2000000,
+      "passed": true
+    }
+  ]
+}

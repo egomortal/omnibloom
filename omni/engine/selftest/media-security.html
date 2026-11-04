@@ -1,0 +1,40 @@
+<!doctype html><meta charset="utf-8"><title>Omni media security tests</title>
+<script>
+window.omniFeatureResults=[];
+const origin='http://192.0.2.20:8766';
+function record(name,pass,value){omniFeatureResults.push({name,pass,value});console.log('MEDIA SECURITY RESULT '+JSON.stringify({name,pass,value}));}
+async function load(path,cors){
+    console.log('MEDIA SECURITY LOAD '+path+' cors='+!!cors);
+    const video=document.createElement('video');video.muted=true;
+    if(cors)video.crossOrigin='anonymous';document.body.append(video);
+    const outcome=await new Promise(resolve=>{
+        const settle=value=>{clearTimeout(t);video.onloadeddata=null;video.onerror=null;resolve(value);};
+        const t=setTimeout(()=>settle('timeout'),2000);
+        video.onloadeddata=()=>settle('loaded');
+        video.onerror=()=>settle('error');
+        video.src=origin+path;
+    });
+    return {video,loaded:outcome==='loaded',outcome};
+}
+function readable(video){const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;const ctx=canvas.getContext('2d');ctx.drawImage(video,0,0);try{ctx.getImageData(0,0,1,1);return true;}catch(e){if(e.name==='SecurityError')return false;throw e;}}
+function close(video){console.log('MEDIA SECURITY CLOSE begin');video.pause();video.removeAttribute('src');video.load();video.remove();console.log('MEDIA SECURITY CLOSE end');}
+addEventListener('load',async()=>{
+    try{
+        let result=await load('/video',false);
+        record('cross-origin media plays but canvas is tainted',result.loaded&&!readable(result.video));close(result.video);
+        result=await load('/video',true);
+        record('anonymous media without CORS is rejected',result.outcome==='error',result.outcome);close(result.video);
+        result=await load('/cors',true);
+        record('explicit CORS media permits canvas',result.loaded&&readable(result.video));close(result.video);
+        const frame=document.createElement('iframe');
+        const redirected=await new Promise(resolve=>{const t=setTimeout(()=>resolve(false),3000);const listener=e=>{if(e.origin===origin&&e.source===frame.contentWindow&&'omniMediaRedirect' in e.data){clearTimeout(t);removeEventListener('message',listener);resolve(e.data.omniMediaRedirect);}};addEventListener('message',listener);frame.src=origin+'/page';document.body.append(frame);});
+        record('same-origin URL redirected cross-origin taints canvas',redirected);console.log('MEDIA SECURITY IFRAME remove begin');frame.remove();console.log('MEDIA SECURITY IFRAME remove end');
+        for(const path of ['/oversized','/malformed','/media-blocked.mp4']){
+            result=await load(path,false);record(path+' rejected',result.outcome==='error',result.outcome);close(result.video);
+        }
+        const cspFrame=document.createElement('iframe');
+        const csp=await new Promise(resolve=>{const t=setTimeout(()=>resolve(false),2000);const listener=e=>{if(e.origin===origin&&e.source===cspFrame.contentWindow&&'omniMediaCSP' in e.data){clearTimeout(t);removeEventListener('message',listener);resolve(e.data.omniMediaCSP);}};addEventListener('message',listener);cspFrame.src=origin+'/csp-page';document.body.append(cspFrame);});
+        record('CSP media-src none rejects video',csp);cspFrame.remove();
+    }catch(error){record('media security harness',false,String(error));}
+});
+</script><h1>Omni media security tests</h1>

@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>Omni allocation and network stress</title>
+<h1>Omni allocation and network stress</h1><script>
+window.omniFeatureResults=[];
+(async()=>{
+ const retained=Array.from({length:4096},(_,i)=>({index:i,text:'retained-'+i,child:{value:i^0x5a5a}}));
+ const buffers=Array.from({length:64},(_,i)=>{const a=new Uint8Array(65536);a[0]=i;a[65535]=255-i;return a;});
+ let requests=0;
+ try{
+  for(let round=0;round<48;++round){
+   const garbage=Array.from({length:10000},(_,i)=>({value:round+':'+i+':'+('x'.repeat(96)),array:[i,i+1,i+2]}));
+   if(garbage[9999].array[2]!==10001)throw Error('temporary object mismatch');
+   const response=await fetch('media-test.mp4?gc-stress='+round,{cache:'no-store'});
+   if(!response.ok||(await response.arrayBuffer()).byteLength<1000)throw Error('request failed');
+   ++requests;
+   await new Promise(resolve=>setTimeout(resolve,10));
+  }
+  const intact=retained.every((o,i)=>o.index===i&&o.text==='retained-'+i&&o.child.value===(i^0x5a5a))&&buffers.every((a,i)=>a[0]===i&&a[65535]===255-i);
+  omniFeatureResults.push({name:'live object graph and typed arrays survive allocation churn',pass:intact});
+  omniFeatureResults.push({name:'48 requests through native uBlock during allocation churn',pass:requests===48,value:requests});
+ }catch(error){omniFeatureResults.push({name:'allocation stress',pass:false,value:String(error)});}
+})();
+</script>

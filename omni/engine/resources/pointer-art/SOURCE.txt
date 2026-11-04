@@ -1,0 +1,15 @@
+Pointer art for OMNI_POINTER_STYLE_V1 (dl2-candidate-57)
+
+Author: Kenney (www.kenney.nl). Licence: Creative Commons Zero (CC0 1.0), see the two License.txt copies here.
+- Cursor Pack 1.1   https://kenney.nl/assets/cursor-pack     file: kenney_cursor-pack.zip
+- Crosshair Pack 1.1 https://kenney.nl/assets/crosshair-pack file: kenney_crosshair-pack.zip
+The zips were downloaded 2026-11-02 from the author's OpenGameArt pages (licence CC0 shown there):
+- https://opengameart.org/content/cursor-pack-1   -> https://opengameart.org/sites/default/files/kenney_cursor-pack_0.zip
+- https://opengameart.org/content/crosshair-pack-200%C3%97 -> https://opengameart.org/sites/default/files/kenney_crosshair-pack.zip
+(kenney.nl itself answered 403 to scripted downloads from both the agent container and the PC.)
+
+Curated (tools/make_pointer_art.py): 13 cursors from Vector/Outline (pointer_c, pointer_a, pointer_d, pointer_toon_a,
+pointer_scifi_a, navigation_nw, pointer_g, hand_point, hand_thin_point, gauntlet_point, dot_large, target_round_b, target_a)
+and 11 crosshairs from Vector/Light (crosshair-001, 016, 020, 008, 009, 026, 087, 104, 169, 175, 018).
+26cf8f3e135f8c9a3354a8a6e6c2576e78bd8e2db01c841f93ab43ad3205a78f  /mnt/user-data/outputs/p57/art/kenney_crosshair-pack.zip
+baa87634f3cfd294b0c83e70222053aab2f56d19f78eca4067b9b38a555269cc  /mnt/user-data/outputs/p57/art/kenney_cursor-pack.zip

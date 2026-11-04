@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Omni separate-track audio/video baseline</title>
+<style>body{background:#111a20;color:#edf4f7;font:18px system-ui;max-width:900px;margin:2em auto;padding:1em}button{font:inherit;padding:.7em;background:#a3e635;border:0;border-radius:8px}video{display:block;width:640px;max-width:100%;margin:1em 0}pre{white-space:pre-wrap}small{color:#afbdc5}</style>
+<h1>Separate-track playback baseline</h1>
+<p>Four seconds of original video and a 440 Hz tone, requested unmuted at 25% volume. This test checks video frame progress and playback completion. Native PCM submission must be checked separately in the process log; neither check proves physical audibility.</p>
+<button id="run">Run unmuted baseline</button><video id="video" controls playsinline></video>
+<small>Local generated H.264/AAC fixture only. No YouTube, DRM, or general compatibility claim. Overall deadline:25 seconds; playback deadline:10 seconds.</small>
+<pre id="result">Ready</pre><script src="av-playback.js"></script></html>

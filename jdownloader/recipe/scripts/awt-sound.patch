@@ -1,0 +1,20 @@
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/make/modules/java.desktop/Lib.gmk.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/make/modules/java.desktop/Lib.gmk
+@@ -37,6 +37,8 @@
+ include lib/AwtLibraries.gmk
+ include lib/ClientLibraries.gmk
+ 
++# PS5 downloader has no ALSA sound service.
++ifneq ($(PS5_BOOTSTRAP), yes)
+ ifeq ($(call isTargetOs, aix), false)
+ ifneq ($(OPENJDK_TARGET_OS_ENV), bsd.openbsd)
+   ##############################################################################
+@@ -97,6 +99,8 @@
+ endif
+ endif
+ 
++endif # PS5 optional sound service
++
+ ifeq ($(call isTargetOs, macosx), true)
+   ##############################################################################
+   # Build libosxapp

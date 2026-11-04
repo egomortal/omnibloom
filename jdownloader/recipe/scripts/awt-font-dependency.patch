@@ -1,0 +1,10 @@
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/make/modules/java.desktop/lib/ClientLibraries.gmk.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/make/modules/java.desktop/lib/ClientLibraries.gmk
+@@ -392,6 +392,7 @@
+ 
+ ifeq ($(PS5_BOOTSTRAP), yes)
+   LIBFONTMANAGER_EXCLUDE_FILES += X11FontScaler.c X11TextRenderer.c
++  LIBFONTMANAGER_JDK_LIBS += libawt_headless
+ endif
+ 
+ LIBFONTMANAGER_CFLAGS += $(X_CFLAGS) -DLE_STANDALONE -DHEADLESS

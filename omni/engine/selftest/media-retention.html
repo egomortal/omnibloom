@@ -1,0 +1,73 @@
+<!doctype html><meta charset="utf-8"><title>Omni retained media regression</title>
+<style>body{background:#101820;color:#e8f2ed;font:18px sans-serif;margin:24px}video{width:160px;height:90px}pre{white-space:pre-wrap}</style>
+<h1>Retained media cancellation and failure</h1>
+<p>Eight elements stay referenced after failure. This checks lifecycle behavior, not a measured memory plateau.</p>
+<button id="start" disabled>Run regression</button><div id="players"></div><pre id="status"></pre>
+<script>
+(function () {
+    'use strict';
+    const results=window.omniFeatureResults=[];
+    const retained=window.omniRetainedMedia=[];
+    const state={stage:'document',documentLoaded:false,completed:0,result:null};
+    let busy=false,deadline=0;
+    function render(){document.getElementById('status').textContent=JSON.stringify(state,null,2);}
+    function record(name,pass,value){results.push({name:name,pass:pass,value:value});render();return pass;}
+    function wait(target,event,action){
+        return new Promise(function(resolve){
+            let doneAlready=false,timer;
+            function done(outcome){
+                if(doneAlready)return;doneAlready=true;clearTimeout(timer);
+                target.removeEventListener(event,success);
+                if(event!=='error')target.removeEventListener('error',failure);
+                resolve({outcome:outcome,readyState:target.readyState,error:target.error?target.error.code:null,width:target.videoWidth,height:target.videoHeight});
+            }
+            function success(){done('event');}function failure(){done('unexpected-error');}
+            const remaining=Math.min(2500,deadline-Date.now());
+            if(remaining<=0){done('deadline');return;}
+            target.addEventListener(event,success);
+            if(event!=='error')target.addEventListener('error',failure);
+            timer=setTimeout(function(){done('timeout');},remaining);
+            try{action();}catch(error){done('exception: '+String(error));}
+        });
+    }
+    async function start(){
+        if(!state.documentLoaded)return {outcome:'not-ready'};
+        if(busy)return {outcome:'busy'};
+        if(retained.length)return {outcome:'already-run'};
+        busy=true;deadline=Date.now()+23000;document.getElementById('start').disabled=true;
+        try{
+            for(let i=0;i<8;i++){
+                state.stage='valid-'+i;render();
+                const video=document.createElement('video');video.muted=true;video.preload='auto';
+                retained.push(video);document.getElementById('players').appendChild(video);
+                let result=await wait(video,'loadeddata',function(){video.src='media-test.mp4';video.load();});
+                if(!record('retained '+i+' valid decoded',result.outcome==='event'&&result.width===320&&result.height===180,result))return {outcome:'failed'};
+                state.stage='malformed-'+i;
+                result=await wait(video,'error',function(){video.src='media-invalid.mp4';video.load();});
+                if(!record('retained '+i+' malformed rejected',result.outcome==='event'&&result.error!==null,result))return {outcome:'failed'};
+                state.completed++;
+            }
+            const video=retained[0];state.stage='valid-reload';
+            let result=await wait(video,'loadeddata',function(){video.src='media-test.mp4';video.load();});
+            if(!record('failed element valid reload',result.outcome==='event'&&result.width===320&&result.height===180,result))return {outcome:'failed'};
+            state.stage='cancel';
+            result=await wait(video,'emptied',function(){video.pause();video.removeAttribute('src');video.load();});
+            if(!record('loaded element cancelled',result.outcome==='event'&&result.readyState===0,result))return {outcome:'failed'};
+            state.result='passed';return {outcome:'passed'};
+        }finally{
+            // Keep every element referenced and in the document for inspection.
+            // On failure stop any pending download without dropping references.
+            if(state.result!=='passed'){
+                state.result='failed';
+                retained.forEach(function(video){video.pause();video.removeAttribute('src');video.load();});
+            }
+            busy=false;state.stage='complete';render();
+        }
+    }
+    window.omniStartMediaTest=start;
+    window.omniMediaRetention={start:start,snapshot:function(){return {state:state,retained:retained.length,results:results.slice()};}};
+    document.getElementById('start').onclick=start;
+    window.addEventListener('load',function(){state.documentLoaded=true;state.stage='ready';document.getElementById('start').disabled=false;render();},{once:true});
+    render();
+})();
+</script>

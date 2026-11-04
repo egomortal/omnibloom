@@ -1,0 +1,1301 @@
+diff --git a/Source/JavaScriptCore/shell/PlatformPlayStation.cmake b/Source/JavaScriptCore/shell/PlatformPlayStation.cmake
+index 6ed5fac94..95ad2e31e 100644
+--- a/Source/JavaScriptCore/shell/PlatformPlayStation.cmake
++++ b/Source/JavaScriptCore/shell/PlatformPlayStation.cmake
+@@ -1,3 +1,5 @@
++# [omni-homebrew] homebrew: stock jsc.cpp main(), no Sony test harness
++if (NOT OMNI_HOMEBREW)
+ list(REMOVE_ITEM jsc_SOURCES ../jsc.cpp)
+ list(APPEND jsc_SOURCES
+     ${JAVASCRIPTCORE_DIR}/shell/playstation/TestShell.cpp
+@@ -16,6 +18,7 @@ else ()
+     set(PLAYSTATION_jsc_WRAP fopen getcwd chdir main)
+     list(APPEND jsc_LIBRARIES ${LIBTESTWRAPPERS})
+ endif ()
++endif () # OMNI_HOMEBREW
+ 
+ set(PLAYSTATION_jsc_PROCESS_NAME "JSCShell")
+ set(PLAYSTATION_jsc_MAIN_THREAD_NAME "JSCShell")
+diff --git a/Source/WTF/wtf/RedBlackTree.h b/Source/WTF/wtf/RedBlackTree.h
+index 3a122a4d9..2f933cdd5 100644
+--- a/Source/WTF/wtf/RedBlackTree.h
++++ b/Source/WTF/wtf/RedBlackTree.h
+@@ -286,6 +286,10 @@ public:
+         } else if (y->color() == Black)
+             removeFixup(x, xParent);
+ 
++        // Omni: removed nodes must not retain checked links into the tree.
++        // Former children may be destroyed before this node is reused/destroyed.
++        // Rebalancing above is finished; dropping these links is now safe.
++        z->reset();
+         return z;
+     }
+     
+diff --git a/Source/WTF/wtf/Threading.cpp b/Source/WTF/wtf/Threading.cpp
+index ae3871991..34d10d402 100644
+--- a/Source/WTF/wtf/Threading.cpp
++++ b/Source/WTF/wtf/Threading.cpp
+@@ -25,6 +25,17 @@
+  */
+ 
+ #include "config.h"
++#if PLATFORM(PLAYSTATION)
++#include <unwind.h>
++#include <stdio.h>
++extern "C" int sceKernelAvailableFlexibleMemorySize(size_t*);
++static _Unwind_Reason_Code omni_thread_failure_frame(_Unwind_Context* context, void* opaque)
++{
++    auto* depth = static_cast<unsigned*>(opaque);
++    fprintf(stderr, "thread failure stack[%u]=%p\n", *depth, reinterpret_cast<void*>(_Unwind_GetIP(context)));
++    return ++*depth >= 20 ? _URC_END_OF_STACK : _URC_NO_REASON;
++}
++#endif
+ #include <wtf/Threading.h>
+ 
+ #include <bmalloc/BPlatform.h>
+@@ -277,6 +288,17 @@ Ref<Thread> Thread::create(ASCIILiteral name, Function<void()>&& entryPoint, Thr
+                 stackSpec = StackAllocationSpecification::RequestSize(maybeSize.value());
+         }
+         bool success = thread->establishHandle(context.get(), stackSpec, qos, schedulingPolicy);
++#if PLATFORM(PLAYSTATION)
++        if (!success) {
++            fprintf(stderr, "thread creation failed: name=%s\n", name.characters());
++            size_t available = 0;
++            int memoryResult = sceKernelAvailableFlexibleMemorySize(&available);
++            fprintf(stderr, "omni thread failure flexible: result=%d available=%zu\n", memoryResult, available);
++            unsigned depth = 0;
++            _Unwind_Backtrace(omni_thread_failure_frame, &depth);
++            fflush(stderr);
++        }
++#endif
+         RELEASE_ASSERT(success);
+ 
+ #if HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
+diff --git a/Source/WTF/wtf/posix/ThreadingPOSIX.cpp b/Source/WTF/wtf/posix/ThreadingPOSIX.cpp
+index 459f36a61..6b7d9a6ef 100644
+--- a/Source/WTF/wtf/posix/ThreadingPOSIX.cpp
++++ b/Source/WTF/wtf/posix/ThreadingPOSIX.cpp
+@@ -160,7 +160,12 @@ void Thread::signalHandlerSuspendResume(int, siginfo_t*, void* ucontext)
+         return;
+     }
+ 
+-#if HAVE(MACHINE_CONTEXT)
++#if PLATFORM(PLAYSTATION) && HAVE(MACHINE_CONTEXT)
++    // Omni: PS5 inserts 48 bytes before uc_mcontext relative to FreeBSD.
++    // Preserve the actual saved registers; never clamp or omit GC roots.
++    static_assert(offsetof(ucontext_t, uc_mcontext) == 16 || offsetof(ucontext_t, uc_mcontext) == 64);
++    thread->m_platformRegisters = reinterpret_cast<PlatformRegisters*>(static_cast<char*>(ucontext) + 64);
++#elif HAVE(MACHINE_CONTEXT)
+     ucontext_t* userContext = static_cast<ucontext_t*>(ucontext);
+     thread->m_platformRegisters = &registersFromUContext(userContext);
+ #else
+@@ -362,8 +367,20 @@ bool Thread::establishHandle(NewThreadContext& context, StackAllocationSpecifica
+ #endif
+ 
+     switch (stackSpec.kind()) {
+-    case StackAllocationSpecification::Kind::Default:
++    case StackAllocationSpecification::Kind::Default: {
++        // [omni-default-stack] Foreground loader inherits a 2 MiB default.
++        // Leave smaller defaults and all explicit WebKit stack requests intact.
++        size_t inheritedSize = 0;
++        pthread_attr_getstacksize(&attr, &inheritedSize);
++        if (inheritedSize > 512 * 1024) {
++            int result = pthread_attr_setstacksize(&attr, 512 * 1024);
++            if (result) {
++                pthread_attr_destroy(&attr);
++                return false;
++            }
++        }
+         break;
++    }
+     case StackAllocationSpecification::Kind::SizeOnly:
+         pthread_attr_setstacksize(&attr, stackSpec.sizeBytes());
+         break;
+@@ -378,7 +395,10 @@ bool Thread::establishHandle(NewThreadContext& context, StackAllocationSpecifica
+         } } break;
+     }
+ 
++    size_t omniStackSize = 0;
++    pthread_attr_getstacksize(&attr, &omniStackSize);
+     int error = pthread_create(&threadHandle, &attr, wtfThreadEntryPoint, &context);
++    if (error) { fprintf(stderr, "omni pthread_create failed: error=%d stack=%zu\n", error, omniStackSize); fflush(stderr); fsync(fileno(stderr)); } // [omni-thread-diagnostic]
+     pthread_attr_destroy(&attr);
+     if (error) {
+         LOG_ERROR("Failed to create pthread at entry point %p with context %p", wtfThreadEntryPoint, &context);
+diff --git a/Source/WebCore/Modules/mediacontrols/MediaControlsHost.cpp b/Source/WebCore/Modules/mediacontrols/MediaControlsHost.cpp
+index 8d1e054fc..5e04d8e4d 100644
+--- a/Source/WebCore/Modules/mediacontrols/MediaControlsHost.cpp
++++ b/Source/WebCore/Modules/mediacontrols/MediaControlsHost.cpp
+@@ -146,7 +146,7 @@ String MediaControlsHost::layoutTraitsClassName() const
+     return "VisionLayoutTraits"_s;
+ #elif PLATFORM(WATCHOS)
+     return "WatchOSLayoutTraits"_s;
+-#elif USE(THEME_ADWAITA)
++#elif USE(THEME_ADWAITA) || PLATFORM(PLAYSTATION)
+     return "AdwaitaLayoutTraits"_s;
+ #else
+     ASSERT_NOT_REACHED();
+diff --git a/Source/WebCore/page/Page.cpp b/Source/WebCore/page/Page.cpp
+index 1ef85d167..d804f2515 100644
+--- a/Source/WebCore/page/Page.cpp
++++ b/Source/WebCore/page/Page.cpp
+@@ -5255,7 +5255,8 @@ OptionSet<FilterRenderingMode> Page::preferredFilterRenderingModes(const Graphic
+         modes.add(FilterRenderingMode::Accelerated);
+ #endif
+ 
+-#if USE(SKIA) && !PLATFORM(WIN) && (!PLATFORM(WPE) || ENABLE(WPE_PLATFORM))
++// [omni-homebrew] preference does not exist on PlayStation
++#if USE(SKIA) && !PLATFORM(WIN) && !PLATFORM(PLAYSTATION) && (!PLATFORM(WPE) || ENABLE(WPE_PLATFORM))
+     if (settings().hardwareAccelerationEnabled())
+         modes.add(FilterRenderingMode::Accelerated);
+ #endif
+diff --git a/Source/WebCore/platform/MediaSample.h b/Source/WebCore/platform/MediaSample.h
+index e76bc8c8b..a2fc9c4ca 100644
+--- a/Source/WebCore/platform/MediaSample.h
++++ b/Source/WebCore/platform/MediaSample.h
+@@ -45,13 +45,14 @@ typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
+ namespace WebCore {
+ 
+ class MockSampleBox;
++class OmniMediaSample;
+ class ProcessIdentity;
+ 
+ using TrackID = uint64_t;
+ 
+ class PlatformSample {
+ public:
+-    using VariantType = Variant<const MockSampleBox*
++    using VariantType = Variant<const MockSampleBox*, const OmniMediaSample*
+ #if PLATFORM(COCOA)
+         , RetainPtr<CMSampleBufferRef>
+ #elif USE(GSTREAMER)
+@@ -62,6 +63,8 @@ public:
+         : m_sample(WTF::move(sample))
+     { }
+ 
++    const OmniMediaSample* omniSample() const { return std::get<const OmniMediaSample*>(m_sample); }
++
+     const MockSampleBox* mockSampleBox() const { return std::get<const MockSampleBox*>(m_sample); }
+ 
+ #if PLATFORM(COCOA)
+@@ -130,6 +133,7 @@ public:
+         MockSampleBox,
+         CMSampleBuffer,
+         GStreamerSample,
++        OmniFFmpegSample,
+     };
+     virtual Type type() const = 0;
+ 
+diff --git a/Source/WebCore/platform/graphics/MediaPlayer.cpp b/Source/WebCore/platform/graphics/MediaPlayer.cpp
+index aee187786..914e76395 100644
+--- a/Source/WebCore/platform/graphics/MediaPlayer.cpp
++++ b/Source/WebCore/platform/graphics/MediaPlayer.cpp
+@@ -121,6 +121,10 @@
+ #endif
+ 
+ namespace WebCore {
++void registerOmniMediaEngine(MediaEngineRegistrar);
++#if ENABLE(MEDIA_SOURCE)
++void registerOmniMSEEngine(MediaEngineRegistrar);
++#endif
+ 
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlayer);
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlayerFactory);
+@@ -326,6 +330,11 @@ bool RemoteMediaPlayerSupport::registerRemoteEngineIfAvailable(MediaEngineRegist
+ static void buildMediaEnginesVector() WTF_REQUIRES_LOCK(mediaEngineVectorLock)
+ {
+     ASSERT(mediaEngineVectorLock.isLocked());
++    // Omni bounded video backend
++    registerOmniMediaEngine(addMediaEngine);
++#if ENABLE(MEDIA_SOURCE)
++    registerOmniMSEEngine(addMediaEngine);
++#endif
+ 
+ #if USE(AVFOUNDATION)
+     if (DeprecatedGlobalSettings::isAVFoundationEnabled()) {
+diff --git a/Source/WebCore/platform/graphics/MediaPlayer.h b/Source/WebCore/platform/graphics/MediaPlayer.h
+index b78d7a24f..511cdba56 100644
+--- a/Source/WebCore/platform/graphics/MediaPlayer.h
++++ b/Source/WebCore/platform/graphics/MediaPlayer.h
+@@ -163,6 +163,7 @@ struct SeekTarget {
+ };
+ 
+ enum class MediaPlatformType {
++    OmniFFmpeg,
+     Mock,
+     AVFObjC,
+     GStreamer,
+@@ -170,6 +171,8 @@ enum class MediaPlatformType {
+ };
+ 
+ enum class MediaPlayerType {
++    OmniFFmpeg,
++    OmniMSE,
+     Null,
+     Mock,
+     MockMSE,
+diff --git a/Source/WebCore/platform/graphics/MediaPlayerEnums.h b/Source/WebCore/platform/graphics/MediaPlayerEnums.h
+index 581158cda..adf43abea 100644
+--- a/Source/WebCore/platform/graphics/MediaPlayerEnums.h
++++ b/Source/WebCore/platform/graphics/MediaPlayerEnums.h
+@@ -84,6 +84,8 @@ enum class MediaPlayerBufferingPolicy : uint8_t {
+ };
+ 
+ enum class MediaPlayerMediaEngineIdentifier : uint8_t {
++    OmniFFmpeg,
++    OmniMSE,
+     AVFoundation,
+     AVFoundationMSE,
+     AVFoundationMediaStream,
+diff --git a/Source/WebCore/platform/graphics/MediaSourcePrivate.h b/Source/WebCore/platform/graphics/MediaSourcePrivate.h
+index b95fb31a5..6e9fbf144 100644
+--- a/Source/WebCore/platform/graphics/MediaSourcePrivate.h
++++ b/Source/WebCore/platform/graphics/MediaSourcePrivate.h
+@@ -108,7 +108,7 @@ public:
+     // MediaSource readyState is "ended". Used by both MediaSource (main) on
+     // readyState/dirty triggers and MediaSourcePrivate (dispatcher) when track
+     // ranges change so a single algorithm produces the value.
+-    WEBCORE_EXPORT static PlatformTimeRanges computeBufferedRanges(const Vector<PlatformTimeRanges>& activeRanges, bool ended);
++    static PlatformTimeRanges computeBufferedRanges(const Vector<PlatformTimeRanges>& activeRanges, bool ended);
+ 
+     MediaPlayer::ReadyState LEGACY_NODELETE mediaPlayerReadyState() const;
+     void setMediaPlayerReadyState(MediaPlayer::ReadyState);
+diff --git a/Source/WebCore/platform/graphics/skia/FontCacheSkia.cpp b/Source/WebCore/platform/graphics/skia/FontCacheSkia.cpp
+index 74cfeb60a..7405aec45 100644
+--- a/Source/WebCore/platform/graphics/skia/FontCacheSkia.cpp
++++ b/Source/WebCore/platform/graphics/skia/FontCacheSkia.cpp
+@@ -71,6 +71,7 @@ SkFontMgr& FontCache::fontManager() const
+ #endif
+     }
+     RELEASE_ASSERT(m_fontManager);
++
+     return *m_fontManager.get();
+ }
+ 
+diff --git a/Source/WebCore/platform/graphics/skia/PlatformDisplaySkia.cpp b/Source/WebCore/platform/graphics/skia/PlatformDisplaySkia.cpp
+index 776466ea8..8d2e46e8e 100644
+--- a/Source/WebCore/platform/graphics/skia/PlatformDisplaySkia.cpp
++++ b/Source/WebCore/platform/graphics/skia/PlatformDisplaySkia.cpp
+@@ -382,6 +382,8 @@ GLContext* PlatformDisplay::skiaGLContext()
+ #endif
+ }
+ 
++// [omni-homebrew] accessors need a fallback when SkiaGLContext is compiled out
++#if !(PLATFORM(PLAYSTATION) && USE(COORDINATED_GRAPHICS))
+ void PlatformDisplay::setSkiaGLContextForCurrentThread(std::unique_ptr<GLContext>&& glContext)
+ {
+     if (!glContext) {
+@@ -419,6 +421,14 @@ void PlatformDisplay::clearSkiaGLContext()
+ {
+     s_skiaGLContext = nullptr;
+ }
++#else
++void PlatformDisplay::setSkiaGLContextForCurrentThread(std::unique_ptr<GLContext>&&) { }
++GrDirectContext* PlatformDisplay::skiaGrContext() const { return nullptr; }
++unsigned PlatformDisplay::msaaSampleCount() const { return 0; }
++size_t PlatformDisplay::maxSkiaResourceCacheBytes() const { return 0; }
++void PlatformDisplay::skiaReleaseUnusedResources(WTF::Critical) { }
++void PlatformDisplay::clearSkiaGLContext() { }
++#endif
+ 
+ } // namespace WebCore
+ 
+diff --git a/Source/WebCore/platform/network/curl/CurlContext.cpp b/Source/WebCore/platform/network/curl/CurlContext.cpp
+index 2e6a2537f..79147c1c3 100644
+--- a/Source/WebCore/platform/network/curl/CurlContext.cpp
++++ b/Source/WebCore/platform/network/curl/CurlContext.cpp
+@@ -370,9 +370,14 @@ CURLcode CurlHandle::willSetupSslCtx(void* sslCtx)
+     return CURLE_OK;
+ }
+ 
+-CURLcode CurlHandle::willSetupSslCtxCallback(CURL*, void* sslCtx, void* userData)
++CURLcode CurlHandle::willSetupSslCtxCallback(CURL* handle, void* sslCtx, void* userData)
+ {
+-    return static_cast<CurlHandle*>(userData)->willSetupSslCtx(sslCtx);
++    auto* self = static_cast<CurlHandle*>(userData);
++    // DoH child transfers inherit this callback. Let libcurl verify their
++    // certificates normally without mixing their chains into the page request.
++    if (handle != self->m_handle)
++        return CURLE_OK;
++    return self->willSetupSslCtx(sslCtx);
+ }
+ 
+ CURLcode CurlHandle::perform()
+@@ -411,6 +416,24 @@ void CurlHandle::setURL(const URL& url, LocalhostAlias localhostAlias)
+     if (url.protocolIs("https"_s))
+         enableSSL();
+ 
++#if PLATFORM(PLAYSTATION)
++    // [omni-widget-dns] App-local, exact-host exception; never change system DNS.
++    // Redirects are separate CurlRequests and re-evaluate this condition.
++    // [omni-browser-dns-v3] Browser-only resolver; no system networking changes.
++    auto dnsHost = url.host().toString().convertToASCIILowercase();
++    while (dnsHost.endsWith('.')) dnsHost = dnsHost.left(dnsHost.length() - 1);
++    auto within = [&](const String& domain) { return dnsHost == domain || dnsHost.endsWith(makeString('.' , domain)); };
++    bool systemHost = !dnsHost.contains('.') || within("localhost"_s)
++        || within("local"_s) || within("lan"_s)
++        || within("playstation.net"_s) || within("playstation.com"_s)
++        || within("sony.com"_s) || within("sonyentertainmentnetwork.com"_s);
++    bool widgetHost = url.protocolIsInHTTPFamily() && !systemHost;
++    curl_easy_setopt(m_handle, CURLOPT_DOH_URL, widgetHost ? "https://cloudflare-dns.com/dns-query" : nullptr);
++    curl_easy_setopt(m_handle, CURLOPT_DOH_SSL_VERIFYPEER, 1L);
++    curl_easy_setopt(m_handle, CURLOPT_DOH_SSL_VERIFYHOST, 2L);
++#endif
++
++
+     if (localhostAlias == LocalhostAlias::Enable) {
+         auto host = url.host();
+         auto port = url.port();
+diff --git a/Source/WebCore/rendering/playstation/RenderThemePlayStation.cpp b/Source/WebCore/rendering/playstation/RenderThemePlayStation.cpp
+index 3cdfc90a3..dec62e2ab 100644
+--- a/Source/WebCore/rendering/playstation/RenderThemePlayStation.cpp
++++ b/Source/WebCore/rendering/playstation/RenderThemePlayStation.cpp
+@@ -28,6 +28,9 @@
+ #include "RenderThemePlayStation.h"
+ 
+ #include <wtf/NeverDestroyed.h>
++#include "SharedBuffer.h"
++#include <wtf/text/MakeString.h>
++#include "OmniMediaControlsAssets.h"
+ 
+ namespace WebCore {
+ 
+@@ -37,4 +40,49 @@ RenderThemePlayStation& RenderTheme::singleton()
+     return theme;
+ }
+ 
++
++// Omni upstream media controls: runs in WebKit's isolated media-controls world.
++Vector<String, 2> RenderThemePlayStation::mediaControlsScripts()
++{
++    return { String::fromUTF8(omniMediaControlsScript) };
++}
++Vector<String, 2> RenderThemePlayStation::mediaControlsStyleSheets(const HTMLMediaElement&)
++{
++    return { String::fromUTF8(omniMediaControlsStyles) };
++}
++RefPtr<FragmentedSharedBuffer> RenderThemePlayStation::mediaControlsImageDataForIconNameAndType(const String& iconName, const String& iconType)
++{
++    auto name = makeString(iconName, '.', iconType);
++    if (name == "EnterFullscreen.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon0));
++    if (name == "ExitFullscreen.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon1));
++    if (name == "Forward.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon2));
++    if (name == "MediaSelector-fullscreen.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon3));
++    if (name == "MediaSelector.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon4));
++    if (name == "Overflow.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon5));
++    if (name == "Pause.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon6));
++    if (name == "PipIn-fullscreen.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon7));
++    if (name == "PipIn.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon8));
++    if (name == "PipOut.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon9));
++    if (name == "Play.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon10));
++    if (name == "Rewind.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon11));
++    if (name == "SkipBack10.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon12));
++    if (name == "SkipBack15.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon13));
++    if (name == "SkipForward10.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon14));
++    if (name == "SkipForward15.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon15));
++    if (name == "Volume0-RTL.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon16));
++    if (name == "Volume0.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon17));
++    if (name == "Volume1-RTL.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon18));
++    if (name == "Volume1.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon19));
++    if (name == "Volume2-RTL.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon20));
++    if (name == "Volume2.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon21));
++    if (name == "Volume3-RTL.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon22));
++    if (name == "Volume3.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon23));
++    if (name == "VolumeMuted-RTL.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon24));
++    if (name == "VolumeMuted.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon25));
++    if (name == "X.svg"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon26));
++    if (name == "invalid-placard@1x.png"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon27));
++    if (name == "invalid-placard@2x.png"_s) return SharedBuffer::create(std::span<const uint8_t>(omniMediaIcon28));
++    return nullptr;
++}
++
+ } // namespace WebCore
+diff --git a/Source/WebCore/rendering/playstation/RenderThemePlayStation.h b/Source/WebCore/rendering/playstation/RenderThemePlayStation.h
+index 035b6c78c..f61a75493 100644
+--- a/Source/WebCore/rendering/playstation/RenderThemePlayStation.h
++++ b/Source/WebCore/rendering/playstation/RenderThemePlayStation.h
+@@ -33,6 +33,11 @@ namespace WebCore {
+ class RenderThemePlayStation final : public RenderTheme {
+ public:
+     friend NeverDestroyed<RenderThemePlayStation>;
++    // Omni upstream media controls
++    Vector<String, 2> mediaControlsScripts() final;
++    Vector<String, 2> mediaControlsStyleSheets(const HTMLMediaElement&) final;
++    RefPtr<FragmentedSharedBuffer> mediaControlsImageDataForIconNameAndType(const String&, const String&) final;
++
+ };
+ 
+ } // namespace WebCore
+diff --git a/Source/WebKit/CMakeLists.txt b/Source/WebKit/CMakeLists.txt
+index 954f638ae..d42be9b50 100644
+--- a/Source/WebKit/CMakeLists.txt
++++ b/Source/WebKit/CMakeLists.txt
+@@ -1666,3 +1666,8 @@ if (NOT APPLE)
+         )
+     endif ()
+ endif ()
++
++# [omni-homebrew] OmniEngine multi-call ELF
++if (OMNI_HOMEBREW AND OMNI_ENGINE_DIR)
++    include(${OMNI_ENGINE_DIR}/cmake/OmniEngine.cmake)
++endif ()
+diff --git a/Source/WebKit/NetworkProcess/NetworkResourceLoader.cpp b/Source/WebKit/NetworkProcess/NetworkResourceLoader.cpp
+index 0dc11e81b..3b9280b78 100644
+--- a/Source/WebKit/NetworkProcess/NetworkResourceLoader.cpp
++++ b/Source/WebKit/NetworkProcess/NetworkResourceLoader.cpp
+@@ -129,6 +129,57 @@
+ #define LOADER_RELEASE_LOG_FAULT(fmt, ...) RELEASE_LOG_FAULT(Network, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 ", isMainResource=%d, destination=%u, isSynchronous=%d] NetworkResourceLoader::" fmt, this, webPageProxyID().toUInt64(), pageID().toUInt64(), frameID().toUInt64(), coreIdentifier().toUInt64(), isMainResource(), static_cast<unsigned>(m_parameters.options.destination), isSynchronous(), ##__VA_ARGS__)
+ 
+ namespace WebKit {
++
++// omni upstream ublock bridge
++extern "C" bool omniUBlockShouldBlock(const char*, const char*, const char*);
++extern "C" bool omniUBlockSiteAllowed(const char*); // omni ublock trusted sites
++extern "C" bool omniUBlockRewrite(const char*, const char*, const char*, bool, char*, size_t); // omni ublock rewrite
++static String omniRewriteTopLevel(const WebCore::ResourceRequest& request, WebCore::FetchOptions::Destination destination, bool mainFrame, bool blocked)
++{
++    if (!mainFrame || destination != WebCore::FetchOptions::Destination::Document) return { };
++    if (!request.url().protocolIsInHTTPFamily() || request.httpMethod() != "GET"_s) return { };
++    auto host = request.url().host().toString().convertToASCIILowercase();
++    while (host.endsWith('.')) host = host.left(host.length() - 1);
++    if (host == "update.playstation.net"_s || host.endsWith(".update.playstation.net"_s)
++        || host == "dl.playstation.net"_s || host.endsWith(".dl.playstation.net"_s)) return { };
++    if (omniUBlockSiteAllowed(reinterpret_cast<const char*>(request.firstPartyForCookies().host().toString().utf8().data()))) return { };
++    char target[8192];
++    if (!omniUBlockRewrite(reinterpret_cast<const char*>(request.url().string().utf8().data()), "", "main_frame", blocked, target, sizeof(target))) return { };
++    URL rewritten { String::fromUTF8(target) };
++    if (!rewritten.isValid() || !rewritten.protocolIsInHTTPFamily() || rewritten.string() == request.url().string()) return { };
++    return rewritten.string();
++}
++static bool omniFilterRequest(const WebCore::ResourceRequest& request, const URL& documentURL, WebCore::FetchOptions::Destination destination, bool mainFrame)
++{
++    if (!request.url().protocolIsInHTTPFamily()) return false;
++    // omni independent update protection: checked before uBlock's enabled state.
++    auto updateHost = request.url().host().toString().convertToASCIILowercase();
++    while (updateHost.endsWith('.')) updateHost = updateHost.left(updateHost.length() - 1);
++    if (updateHost == "update.playstation.net"_s || updateHost.endsWith(".update.playstation.net"_s)
++        || updateHost == "dl.playstation.net"_s || updateHost.endsWith(".dl.playstation.net"_s)) return true;
++    const char* type = "other";
++    using D = WebCore::FetchOptions::Destination;
++    using R = WebCore::ResourceRequestRequester;
++    switch (destination) {
++    case D::Document: type = mainFrame ? "main_frame" : "sub_frame"; break;
++    case D::Iframe: type = "sub_frame"; break;
++    case D::Script: case D::Worker: case D::Sharedworker: case D::Serviceworker: type = "script"; break;
++    case D::Style: type = "stylesheet"; break;
++    case D::Image: type = "image"; break;
++    case D::Font: type = "font"; break;
++    case D::Audio: case D::Video: case D::Track: type = "media"; break;
++    case D::Object: case D::Embed: type = "object"; break;
++    default: break;
++    }
++    switch (request.requester()) {
++    case R::XHR: case R::Fetch: case R::EventSource: type = "xmlhttprequest"; break;
++    case R::Ping: case R::Beacon: type = "ping"; break;
++    default: break;
++    }
++    if (omniUBlockSiteAllowed(reinterpret_cast<const char*>(request.firstPartyForCookies().host().toString().utf8().data()))) return false;
++    const auto& origin = documentURL.isValid() ? documentURL : request.firstPartyForCookies();
++    return omniUBlockShouldBlock(reinterpret_cast<const char*>(request.url().string().utf8().data()), reinterpret_cast<const char*>(origin.string().utf8().data()), type);
++}
+ using namespace WebCore;
+ 
+ #if HAVE(BROKEN_MULTIPART_RESPONSE_FLOW_CONTROL)
+@@ -273,6 +324,19 @@ void NetworkResourceLoader::startRequest(const ResourceRequest& newRequest)
+     ASSERT(!m_wasStarted);
+     m_wasStarted = true;
+ 
++    {
++        bool omniBlocked = omniFilterRequest(newRequest, m_parameters.documentURL, m_parameters.options.destination, isMainFrameLoad());
++        auto omniTarget = omniRewriteTopLevel(newRequest, m_parameters.options.destination, isMainFrameLoad(), omniBlocked);
++        if (!omniTarget.isEmpty()) {
++            didFailLoading(WebCore::ResourceError { "OmniUBlockRedirect"_s, 3, newRequest.url(), omniTarget });
++            return;
++        }
++        if (omniBlocked) {
++            didFailLoading(WebCore::ResourceError { "OmniUBlock"_s, 1, newRequest.url(), "Blocked by uBlock Origin network filter"_s });
++            return;
++        }
++    }
++
+     if (m_networkLoadChecker) {
+         m_networkLoadChecker->check(ResourceRequest { newRequest }, this, [weakThis = WeakPtr { *this }] (auto&& result) {
+             RefPtr protectedThis = weakThis.get();
+@@ -1898,6 +1962,19 @@ void NetworkResourceLoader::willSendServiceWorkerRedirectedRequest(ResourceReque
+ void NetworkResourceLoader::willSendRedirectedRequestInternal(ResourceRequest&& request, ResourceRequest&& redirectRequest, ResourceResponse&& redirectResponse, IsFromServiceWorker isFromServiceWorker, CompletionHandler<void(WebCore::ResourceRequest&&)>&& completionHandler)
+ {
+     LOADER_RELEASE_LOG("willSendRedirectedRequest:");
++    {
++        bool omniBlocked = omniFilterRequest(redirectRequest, m_parameters.documentURL, m_parameters.options.destination, isMainFrameLoad());
++        auto omniTarget = omniRewriteTopLevel(redirectRequest, m_parameters.options.destination, isMainFrameLoad(), omniBlocked);
++        if (!omniTarget.isEmpty() || omniBlocked) {
++            Ref protectedThis { *this };
++            if (!omniTarget.isEmpty())
++                didFailLoading(WebCore::ResourceError { "OmniUBlockRedirect"_s, 3, redirectRequest.url(), omniTarget });
++            else
++                didFailLoading(WebCore::ResourceError { "OmniUBlock"_s, 1, redirectRequest.url(), "Redirect blocked by uBlock Origin network filter"_s });
++            completionHandler({ });
++            return;
++        }
++    }
+     ++m_redirectCount;
+     m_redirectResponse = redirectResponse;
+     if (!m_firstResponseURL.isValid())
+diff --git a/Source/WebKit/NetworkProcess/cache/NetworkCacheDataCurl.cpp b/Source/WebKit/NetworkProcess/cache/NetworkCacheDataCurl.cpp
+index b6dddae5d..722aeed73 100644
+--- a/Source/WebKit/NetworkProcess/cache/NetworkCacheDataCurl.cpp
++++ b/Source/WebKit/NetworkProcess/cache/NetworkCacheDataCurl.cpp
+@@ -113,6 +113,19 @@ Data Data::adoptMap(FileSystem::MappedFileData&& mappedFile, FileSystem::FileHan
+     return { WTF::move(mappedFile) };
+ }
+ 
++// [omni-content-rule-memory] Curl's mapped-file wrapper does not retain a POSIX fd.
++#if PLATFORM(PLAYSTATION)
++RefPtr<WebCore::SharedMemory> Data::tryCreateSharedMemory() const
++{
++    if (isNull() || !isMap() || !size())
++        return nullptr;
++    auto memory = WebCore::SharedMemory::allocate(size());
++    if (memory)
++        memcpySpan(memory->mutableSpan(), span());
++    return memory;
++}
++#endif
++
+ #if ENABLE(SHAREABLE_RESOURCE) && OS(WINDOWS)
+ RefPtr<WebCore::SharedMemory> Data::tryCreateSharedMemory() const
+ {
+diff --git a/Source/WebKit/Platform/IPC/Connection.cpp b/Source/WebKit/Platform/IPC/Connection.cpp
+index 01f3488ad..e70b40848 100644
+--- a/Source/WebKit/Platform/IPC/Connection.cpp
++++ b/Source/WebKit/Platform/IPC/Connection.cpp
+@@ -514,7 +514,12 @@ Error Connection::flushSentMessages(Timeout timeout)
+     do {
+         if (!isValid())
+             return Error::InvalidConnection;
++#if PLATFORM(PLAYSTATION)
++        // omni pending write flush
++        if (m_outgoingMessages.isEmpty() && !m_socketWriteInProgress)
++#else
+         if (m_outgoingMessages.isEmpty())
++#endif
+             return Error::NoError;
+         m_outgoingMessagesEmptyCondition.waitUntil(m_outgoingMessagesLock, timeout.deadline());
+     } while (!timeout.didTimeOut());
+@@ -1277,11 +1282,22 @@ void Connection::sendOutgoingMessages()
+                 m_outgoingMessagesEmptyCondition.notifyAll();
+                 break;
+             }
++#if PLATFORM(PLAYSTATION)
++            m_socketWriteInProgress = true;
++#endif
+             message = m_outgoingMessages.takeFirst().moveToUniquePtr();
+         }
+         ASSERT(message);
+ 
+-        if (!sendOutgoingMessage(makeUniqueRefFromNonNullUniquePtr(WTF::move(message))))
++        bool sent = sendOutgoingMessage(makeUniqueRefFromNonNullUniquePtr(WTF::move(message)));
++#if PLATFORM(PLAYSTATION)
++        if (!m_pendingSocketMessage) {
++            Locker locker { m_outgoingMessagesLock };
++            m_socketWriteInProgress = false;
++            m_outgoingMessagesEmptyCondition.notifyAll();
++        }
++#endif
++        if (!sent)
+             break;
+     }
+ }
+diff --git a/Source/WebKit/Platform/IPC/Connection.h b/Source/WebKit/Platform/IPC/Connection.h
+index 366dde74d..921082b09 100644
+--- a/Source/WebKit/Platform/IPC/Connection.h
++++ b/Source/WebKit/Platform/IPC/Connection.h
+@@ -27,6 +27,7 @@
+  */
+ 
+ #pragma once
++#include <wtf/RunLoop.h>
+ 
+ #include "ConnectionHandle.h"
+ #include "Decoder.h"
+@@ -866,7 +867,9 @@ private:
+     UnixFileDescriptor m_socketDescriptor;
+ #endif
+ #if PLATFORM(PLAYSTATION)
+-    RefPtr<WTF::Thread> m_socketMonitor;
++    std::unique_ptr<RunLoop::Timer> m_socketMonitorTimer;
++    std::unique_ptr<UnixMessage> m_pendingSocketMessage;
++    bool m_socketWriteInProgress { false }; // guarded by m_outgoingMessagesLock
+ #endif
+ #elif OS(DARWIN)
+     // Called on the connection queue.
+diff --git a/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp b/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
+index ca5e12f38..a1c2e6f47 100644
+--- a/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
++++ b/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
+@@ -102,6 +102,13 @@ int Connection::socketDescriptor() const
+ void Connection::platformInitialize(Identifier&& identifier)
+ {
+     m_socketDescriptor = WTF::move(identifier.handle);
++#if PLATFORM(PLAYSTATION)
++    // omni forced socket pressure: diagnostic flag only.
++    if (!access("/data/omni/ipc-pressure-selftest.flag", F_OK)) {
++        int bytes = 4096;
++        setsockopt(socketDescriptor(), SOL_SOCKET, SO_SNDBUF, &bytes, sizeof(bytes));
++    }
++#endif
+     m_readBuffer.reserveInitialCapacity(messageMaxSize);
+     m_fileDescriptors.reserveInitialCapacity(attachmentMaxAmount);
+ }
+@@ -115,9 +122,15 @@ void Connection::platformInvalidate()
+         return;
+ 
+ #if PLATFORM(PLAYSTATION)
+-    if (m_socketMonitor) {
+-        m_socketMonitor->detach();
+-        m_socketMonitor = nullptr;
++    if (m_socketMonitorTimer) {
++        m_socketMonitorTimer->stop();
++        m_socketMonitorTimer = nullptr;
++    }
++    m_pendingSocketMessage = nullptr;
++    {
++        Locker locker { m_outgoingMessagesLock };
++        m_socketWriteInProgress = false;
++        m_outgoingMessagesEmptyCondition.notifyAll();
+     }
+ #endif
+ 
+@@ -242,7 +255,11 @@ static ssize_t readBytesFromSocket(int socketDescriptor, Vector<uint8_t>& buffer
+     message.msg_iovlen = 1;
+ 
+     while (true) {
++#if PLATFORM(PLAYSTATION)
++        ssize_t bytesRead = recvmsg(socketDescriptor, &message, MSG_NOSIGNAL | MSG_DONTWAIT);
++#else
+         ssize_t bytesRead = recvmsg(socketDescriptor, &message, MSG_NOSIGNAL);
++#endif
+ 
+         if (bytesRead < 0) {
+             if (errno == EINTR)
+@@ -289,7 +306,12 @@ static ssize_t readBytesFromSocket(int socketDescriptor, Vector<uint8_t>& buffer
+ 
+ void Connection::readyReadHandler()
+ {
++#if PLATFORM(PLAYSTATION)
++    // Yield to writes and invalidation even when a peer continuously sends.
++    for (unsigned readBudget = 0; readBudget < 32; ++readBudget) {
++#else
+     while (true) {
++#endif
+         ssize_t bytesRead = readBytesFromSocket(socketDescriptor(), m_readBuffer, m_fileDescriptors);
+ 
+         if (bytesRead < 0) {
+@@ -336,22 +358,32 @@ void Connection::platformOpen()
+     m_isConnected = true;
+ 
+ #if PLATFORM(PLAYSTATION)
+-    m_socketMonitor = Thread::create("SocketMonitor"_s, [protectedThis] {
+-        {
+-            int fd;
+-            while ((fd = protectedThis->socketDescriptor()) != -1) {
+-                int maxFd = fd;
+-                fd_set fdSet;
+-                FD_ZERO(&fdSet);
+-                FD_SET(fd, &fdSet);
+-
+-                if (-1 != select(maxFd + 1, &fdSet, 0, 0, 0)) {
+-                    if (FD_ISSET(fd, &fdSet))
+-                        protectedThis->readyReadHandler();
++    // omni serialized socket monitoring: existing queue owns reads and teardown.
++    // Timer captures a raw owner, not a strong cycle; callbacks protect lifetime.
++    m_connectionQueue->dispatch([protectedThis] {
++        if (!protectedThis->m_isConnected)
++            return;
++        protectedThis->m_socketMonitorTimer = makeUnique<RunLoop::Timer>(
++            Ref { RunLoop::currentSingleton() }, "IPC socket readiness"_s,
++            [connection = protectedThis.get()] {
++                Ref protect { *connection };
++                if (protect->m_isConnected)
++                    protect->readyReadHandler();
++                if (protect->m_isConnected && protect->m_pendingSocketMessage) {
++                    auto pending = std::exchange(protect->m_pendingSocketMessage, nullptr);
++                    bool sent = protect->sendOutputMessage(WTF::move(*pending));
++                    // omni complete deferred flush
++                    if (!protect->m_pendingSocketMessage) {
++                        Locker locker { protect->m_outgoingMessagesLock };
++                        protect->m_socketWriteInProgress = false;
++                        protect->m_outgoingMessagesEmptyCondition.notifyAll();
++                    }
++                    if (sent)
++                        protect->sendOutgoingMessages();
+                 }
+-            }
+-
+-        }
++            });
++        protectedThis->m_socketMonitorTimer->startRepeating(5_ms);
++        protectedThis->readyReadHandler();
+     });
+     return;
+ #endif
+@@ -364,7 +396,11 @@ void Connection::platformOpen()
+ 
+ bool Connection::platformCanSendOutgoingMessages() const
+ {
++#if PLATFORM(PLAYSTATION)
++    return !m_pendingSocketMessage;
++#else
+     return true;
++#endif
+ }
+ 
+ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
+@@ -450,10 +486,23 @@ bool Connection::sendOutputMessage(UnixMessage&& outputMessage)
+ 
+     message.msg_iovlen = iovLength;
+ 
+-    while (sendmsg(socketDescriptor(), &message, MSG_NOSIGNAL) == -1) {
++#if PLATFORM(PLAYSTATION)
++    // omni nonblocking output retry: retain message and attachments in FIFO order.
++    constexpr int sendFlags = MSG_NOSIGNAL | MSG_DONTWAIT;
++#else
++    constexpr int sendFlags = MSG_NOSIGNAL;
++#endif
++    while (sendmsg(socketDescriptor(), &message, sendFlags) == -1) {
+         if (errno == EINTR)
+             continue;
+         if (errno == EAGAIN || errno == EWOULDBLOCK) {
++#if PLATFORM(PLAYSTATION)
++            if (!access("/data/omni/ipc-pressure-selftest.flag", F_OK))
++                fprintf(stderr, "IPC pressure: deferred socket write\n");
++            RELEASE_ASSERT(!m_pendingSocketMessage);
++            m_pendingSocketMessage = makeUnique<UnixMessage>(WTF::move(outputMessage));
++            return false;
++#else
+             struct pollfd pollfd;
+ 
+             pollfd.fd = socketDescriptor();
+@@ -461,6 +510,7 @@ bool Connection::sendOutputMessage(UnixMessage&& outputMessage)
+             pollfd.revents = 0;
+             poll(&pollfd, 1, -1);
+             continue;
++#endif
+         }
+ 
+ #if OS(LINUX)
+diff --git a/Source/WebKit/PlatformPlayStation.cmake b/Source/WebKit/PlatformPlayStation.cmake
+index 0a6968d20..c9a393c49 100644
+--- a/Source/WebKit/PlatformPlayStation.cmake
++++ b/Source/WebKit/PlatformPlayStation.cmake
+@@ -69,7 +69,7 @@ list(APPEND WebKit_SOURCES
+ 
+     UIProcess/API/C/playstation/WKContextConfigurationPlayStation.cpp
+     UIProcess/API/C/playstation/WKPagePrivatePlayStation.cpp
+-    UIProcess/API/C/playstation/WKRunloop.cpp
++    UIProcess/API/C/playstation/WKRunLoop.cpp
+     UIProcess/API/C/playstation/WKView.cpp
+ 
+     UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
+@@ -176,7 +176,34 @@ list(APPEND WebKit_PUBLIC_FRAMEWORK_HEADERS
+ 
+     UIProcess/API/C/playstation/WKContextConfigurationPlayStation.h
+     UIProcess/API/C/playstation/WKPagePrivatePlayStation.h
+-    UIProcess/API/C/playstation/WKRunloop.h
++    UIProcess/API/C/playstation/WKRunLoop.h
+     UIProcess/API/C/playstation/WKView.h
+     UIProcess/API/C/playstation/WKViewClient.h
+ )
++
++# [omni-homebrew] entry points: WebProcess
++if (OMNI_HOMEBREW)
++    list(REMOVE_ITEM WebProcess_SOURCES WebProcess/EntryPoint/playstation/WebProcessMain.cpp)
++    list(APPEND WebProcess_SOURCES /opt/omni-build/omni-browser/engine/entry/OmniChildProcessMain.cpp)
++    list(APPEND WebProcess_DEFINITIONS OMNI_PROCESS_WEB)
++    # OBJECT libraries only contribute objects when linked directly
++    list(APPEND WebProcess_PRIVATE_LIBRARIES WebCore PAL JavaScriptCore WTF bmalloc Skia)
++endif ()
++
++# [omni-homebrew] entry points: NetworkProcess
++if (OMNI_HOMEBREW)
++    list(REMOVE_ITEM NetworkProcess_SOURCES NetworkProcess/EntryPoint/playstation/NetworkProcessMain.cpp)
++    list(APPEND NetworkProcess_SOURCES /opt/omni-build/omni-browser/engine/entry/OmniChildProcessMain.cpp)
++    list(APPEND NetworkProcess_DEFINITIONS OMNI_PROCESS_NETWORK)
++    # OBJECT libraries only contribute objects when linked directly
++    list(APPEND NetworkProcess_PRIVATE_LIBRARIES WebCore PAL JavaScriptCore WTF bmalloc Skia)
++endif ()
++
++# [omni-homebrew] entry points: GPUProcess
++if (OMNI_HOMEBREW)
++    list(REMOVE_ITEM GPUProcess_SOURCES GPUProcess/EntryPoint/playstation/GPUProcessMain.cpp)
++    list(APPEND GPUProcess_SOURCES /opt/omni-build/omni-browser/engine/entry/OmniChildProcessMain.cpp)
++    list(APPEND GPUProcess_DEFINITIONS OMNI_PROCESS_GPU)
++    # OBJECT libraries only contribute objects when linked directly
++    list(APPEND GPUProcess_PRIVATE_LIBRARIES WebCore PAL JavaScriptCore WTF bmalloc Skia)
++endif ()
+diff --git a/Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in b/Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in
+index 2a1703fb0..b0cf080da 100644
+--- a/Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in
++++ b/Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in
+@@ -3169,6 +3169,8 @@ enum class WebCore::MediaPlayerBufferingPolicy : uint8_t {
+ };
+ 
+ enum class WebCore::MediaPlayerMediaEngineIdentifier : uint8_t {
++    OmniFFmpeg,
++    OmniMSE,
+     AVFoundation,
+     AVFoundationMSE,
+     AVFoundationMediaStream,
+diff --git a/Source/WebKit/UIProcess/API/APIContentRuleListStore.cpp b/Source/WebKit/UIProcess/API/APIContentRuleListStore.cpp
+index 061e4605a..bffcb4ec7 100644
+--- a/Source/WebKit/UIProcess/API/APIContentRuleListStore.cpp
++++ b/Source/WebKit/UIProcess/API/APIContentRuleListStore.cpp
+@@ -1,3 +1,4 @@
++#include <cstdio> // [omni-rule-diagnostics]
+ /*
+  * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+  *
+@@ -339,7 +340,7 @@ static std::expected<MappedData, std::error_code> compiledToFile(WTF::String&& j
+             writeToFile(sourceJSON.is8Bit());
+             m_sourceWritten += sizeof(bool);
+             if (sourceJSON.is8Bit()) {
+-                writeToFile(WebKit::NetworkCache::Data(sourceJSON.span8()));
++                writeToFile(WebKit::NetworkCache::Data(asBytes(sourceJSON.span8()))); // [omni-homebrew]
+                 m_sourceWritten += sourceJSON.length();
+             } else {
+                 writeToFile(WebKit::NetworkCache::Data(asBytes(sourceJSON.span16())));
+@@ -427,6 +428,7 @@ static std::expected<MappedData, std::error_code> compiledToFile(WTF::String&& j
+         bool m_hadFileError { false };
+     };
+ 
++    fprintf(stderr, "rules: opening temporary file\n"); fflush(stderr);
+     auto [temporaryFilePath, temporaryFileHandle] = openTemporaryFile("ContentRuleList"_s, { }, parentPath(finalFilePath));
+     if (!temporaryFileHandle) {
+         RELEASE_LOG_ERROR(ContentRuleLists, "Content Rule List compiling failed: Opening temporary file failed.");
+@@ -445,6 +447,7 @@ static std::expected<MappedData, std::error_code> compiledToFile(WTF::String&& j
+     ContentRuleListMetaData metaData;
+     CompilationClient compilationClient(WTF::move(temporaryFileHandle), metaData);
+     
++    fprintf(stderr, "rules: compiling bytecode\n"); fflush(stderr);
+     if (auto compilerError = compileRuleList(compilationClient, WTF::move(json), WTF::move(parsedRules))) {
+         RELEASE_LOG_ERROR(ContentRuleLists, "Content Rule List compiling failed: Compiling failed.");
+         return makeUnexpected(compilerError);
+@@ -469,6 +472,7 @@ static std::expected<MappedData, std::error_code> compiledToFile(WTF::String&& j
+         return makeUnexpected(ContentRuleListStore::Error::CompileFailed);
+     }
+ 
++    fprintf(stderr, "rules: mapping compiled file\n"); fflush(stderr);
+     auto mappedData = mapFile(finalFilePath);
+     if (mappedData.isNull()) {
+         RELEASE_LOG_ERROR(ContentRuleLists, "Content Rule List compiling failed: Mapping file failed.");
+@@ -480,10 +484,12 @@ static std::expected<MappedData, std::error_code> compiledToFile(WTF::String&& j
+ 
+ static Ref<API::ContentRuleList> createExtension(WTF::String&& identifier, MappedData&& data)
+ {
++    fprintf(stderr, "rules: creating shared memory\n"); fflush(stderr);
+     auto sharedMemory = data.data.tryCreateSharedMemory();
+ 
+     // Content extensions are always compiled to files, and at this point the file
+     // has been already mapped, therefore tryCreateSharedMemory() cannot fail.
++    fprintf(stderr, "rules: shared memory returned\n"); fflush(stderr);
+     RELEASE_ASSERT(sharedMemory);
+ 
+     const size_t headerAndSourceSize = headerSize(data.metaData.version) + data.metaData.sourceSize;
+@@ -651,9 +657,12 @@ void ContentRuleListStore::compileContentRuleListFile(WTF::String&& filePath, WT
+             parsedRules = parsedRulesOnBackgroundQueue.value();
+         }
+ 
++    fprintf(stderr, "rules: worker started\n"); fflush(stderr);
+         auto result = compiledToFile(WTF::move(json), WTF::move(parsedRules), filePath);
+ 
++    fprintf(stderr, "rules: worker compiled\n"); fflush(stderr);
+         if (!result.has_value()) {
++            fprintf(stderr, "rules: compiler error %d %s\n", result.error().value(), result.error().message().c_str()); fflush(stderr);
+             RunLoop::mainSingleton().dispatch([protectedThis = WTF::move(protectedThis), error = WTF::move(result.error()), completionHandler = WTF::move(completionHandler)] () mutable {
+                 completionHandler(nullptr, error);
+             });
+diff --git a/Source/WebKit/UIProcess/API/C/WKUserContentExtensionStoreRef.cpp b/Source/WebKit/UIProcess/API/C/WKUserContentExtensionStoreRef.cpp
+index 23452b4fb..7fccd1b65 100644
+--- a/Source/WebKit/UIProcess/API/C/WKUserContentExtensionStoreRef.cpp
++++ b/Source/WebKit/UIProcess/API/C/WKUserContentExtensionStoreRef.cpp
+@@ -69,7 +69,7 @@ static inline WKUserContentExtensionStoreResult toResult(const std::error_code&
+         return kWKUserContentExtensionStoreRemoveFailed;
+     }
+ 
+-    RELEASE_ASSERT_NOT_REACHED();
++    return kWKUserContentExtensionStoreCompileFailed; // [omni-rule-error]
+ }
+ #endif
+ 
+diff --git a/Source/WebKit/UIProcess/API/C/WKUserScriptRef.cpp b/Source/WebKit/UIProcess/API/C/WKUserScriptRef.cpp
+index 04ffeda92..49d834b69 100644
+--- a/Source/WebKit/UIProcess/API/C/WKUserScriptRef.cpp
++++ b/Source/WebKit/UIProcess/API/C/WKUserScriptRef.cpp
+@@ -27,6 +27,7 @@
+ #include "WKUserScriptRef.h"
+ 
+ #include "APIArray.h"
++#include "APIContentWorld.h"
+ #include "APIUserScript.h"
+ #include "WKAPICast.h"
+ 
+@@ -42,6 +43,12 @@ WKUserScriptRef WKUserScriptCreateWithSource(WKStringRef sourceRef, _WKUserScrip
+     return toAPILeakingRef(API::UserScript::create(WebCore::UserScript { toWTFString(sourceRef), { }, { }, { }, toUserScriptInjectionTime(injectionTime), forMainFrameOnly ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames }, API::ContentWorld::pageContentWorldSingleton()));
+ }
+ 
++// [omni-user-script-world]
++extern "C" WKUserScriptRef WKUserScriptCreateWithSourceInWorldOmni(WKStringRef sourceRef, _WKUserScriptInjectionTime injectionTime, bool forMainFrameOnly, WKStringRef worldName)
++{
++    return toAPILeakingRef(API::UserScript::create(WebCore::UserScript { toWTFString(sourceRef), { }, { }, { }, toUserScriptInjectionTime(injectionTime), forMainFrameOnly ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames }, API::ContentWorld::sharedWorldWithName(toWTFString(worldName))));
++}
++
+ WKStringRef WKUserScriptCopySource(WKUserScriptRef userScriptRef)
+ {
+     return toCopiedAPI(toImpl(userScriptRef)->userScript().source());
+diff --git a/Source/WebKit/UIProcess/API/C/playstation/WKPagePrivatePlayStation.cpp b/Source/WebKit/UIProcess/API/C/playstation/WKPagePrivatePlayStation.cpp
+index 8a0972133..5bc755b0b 100644
+--- a/Source/WebKit/UIProcess/API/C/playstation/WKPagePrivatePlayStation.cpp
++++ b/Source/WebKit/UIProcess/API/C/playstation/WKPagePrivatePlayStation.cpp
+@@ -90,7 +90,7 @@ void WKPageHandleKeyboardEvent(WKPageRef pageRef, WKKeyboardEvent event)
+     NativeWebKeyboardEvent::HandledByInputMethod handledByInputMethod = NativeWebKeyboardEvent::HandledByInputMethod::No;
+     std::optional<Vector<WebCore::CompositionUnderline>> preeditUnderlines;
+     std::optional<WebKit::EditingRange> preeditSelectionRange;
+-    WebKit::toImpl(pageRef)->handleKeyboardEvent(NativeWebKeyboardEvent::create(&wpeEvent, ""_s, false, handledByInputMethod, WTF::move(preeditUnderlines), WTF::move(preeditSelectionRange)));
++    WebKit::toImpl(pageRef)->handleKeyboardEvent(NativeWebKeyboardEvent::create(&wpeEvent, event.text && event.length > 0 ? String::fromUTF8(std::span(event.text, static_cast<size_t>(event.length))) : String(), false, handledByInputMethod, WTF::move(preeditUnderlines), WTF::move(preeditSelectionRange)));
+ }
+ 
+ void WKPageHandleMouseEvent(WKPageRef pageRef, WKMouseEvent event)
+@@ -212,3 +212,5 @@ void WKPagePaint(WKPageRef pageRef, unsigned char* surfaceData, WKSize wkSurface
+     cairo_surface_destroy(surface);
+ #endif
+ }
++
++// [omni-keyboard-text] Preserve typed text; null text uses backend key mapping.
+diff --git a/Source/WebKit/UIProcess/playstation/PlayStationWebView.cpp b/Source/WebKit/UIProcess/playstation/PlayStationWebView.cpp
+index f5ba02041..7664050b6 100644
+--- a/Source/WebKit/UIProcess/playstation/PlayStationWebView.cpp
++++ b/Source/WebKit/UIProcess/playstation/PlayStationWebView.cpp
+@@ -95,6 +95,9 @@ void PlayStationWebView::setClient(std::unique_ptr<API::ViewClient>&& client)
+ void PlayStationWebView::setViewSize(WebCore::IntSize viewSize)
+ {
+     m_viewSize = viewSize;
++    // Omni: notify the live page when the shell viewport changes.
++    if (auto* area = m_page->drawingArea())
++        area->setSize(viewSize);
+ }
+ 
+ void PlayStationWebView::setViewState(OptionSet<WebCore::ActivityState> flags)
+@@ -139,9 +142,15 @@ bool PlayStationWebView::isFullScreen()
+ 
+ void PlayStationWebView::enterFullScreen(CompletionHandler<void(bool)>&& completionHandler)
+ {
+-    if (m_client && !isFullScreen())
+-        m_client->enterFullScreen(*this, WTF::move(completionHandler));
+-    else
++    if (m_client && !isFullScreen()) {
++        // Omni: the current fullscreen manager does not call the old willEnter hook.
++        m_isFullScreen = true;
++        m_client->enterFullScreen(*this, [this, protectedThis = Ref { *this }, completionHandler = WTF::move(completionHandler)](bool entered) mutable {
++            if (!entered)
++                m_isFullScreen = false;
++            completionHandler(entered);
++        });
++    } else
+         completionHandler(false);
+ }
+ 
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
+index efd16800d..043ceddf8 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
+@@ -46,6 +46,10 @@
+ #include <WebCore/Settings.h>
+ #include <WebCore/ShareableBitmap.h>
+ #include <wtf/SetForScope.h>
++// OMNI_SOFTWARE_DRAW_PROFILE_V1
++#include <wtf/Scope.h>
++#include <algorithm>
++#include <cstdio>
+ 
+ #if PLATFORM(PLAYSTATION)
+ #include "LayerTreeHostPlayStation.h"
+@@ -382,6 +386,21 @@ void DrawingAreaCoordinatedGraphics::displayDidRefresh(MonotonicTime)
+     if (m_layerTreeHost)
+         return;
+ 
++    if (m_omniUpdatePending) {
++        double elapsed = (MonotonicTime::now() - m_omniUpdateSent).seconds() * 1000;
++        m_omniUpdatePending = false;
++        ++m_omniAcks;
++        m_omniAckTotalMs += elapsed;
++        m_omniAckMaxMs = std::max(m_omniAckMaxMs, elapsed);
++        if (!(m_omniAcks % 30) && m_omniProfileLines < 24) {
++            ++m_omniProfileLines;
++            fprintf(stderr, "OMNI DRAW: displays=%llu displayTotalMs=%.3f displayMaxMs=%.3f acks=%llu ackTotalMs=%.3f ackMaxMs=%.3f queued=%u\n",
++                static_cast<unsigned long long>(m_omniDisplayCalls), m_omniDisplayTotalMs, m_omniDisplayMaxMs,
++                static_cast<unsigned long long>(m_omniAcks), m_omniAckTotalMs, m_omniAckMaxMs,
++                static_cast<unsigned>(m_scheduledWhileWaitingForDidUpdate));
++            fflush(stderr);
++        }
++    }
+     m_isWaitingForDidUpdate = false;
+ 
+     if (!m_scheduledWhileWaitingForDidUpdate)
+@@ -580,6 +599,8 @@ void DrawingAreaCoordinatedGraphics::display()
+         return;
+     }
+ 
++    m_omniUpdateSent = MonotonicTime::now();
++    m_omniUpdatePending = true;
+     if (m_compositingAccordingToProxyMessages) {
+         send(Messages::DrawingAreaProxy::ExitAcceleratedCompositingMode(0, WTF::move(updateInfo)));
+         m_compositingAccordingToProxyMessages = false;
+@@ -612,6 +633,13 @@ static bool shouldPaintBoundsRect(const IntRect& bounds, const Vector<IntRect, 1
+ 
+ void DrawingAreaCoordinatedGraphics::display(UpdateInfo& updateInfo)
+ {
++    auto omniDisplayStart = MonotonicTime::now();
++    auto omniProfileScope = makeScopeExit([&] {
++        double elapsed = (MonotonicTime::now() - omniDisplayStart).seconds() * 1000;
++        ++m_omniDisplayCalls;
++        m_omniDisplayTotalMs += elapsed;
++        m_omniDisplayMaxMs = std::max(m_omniDisplayMaxMs, elapsed);
++    });
+     ASSERT(!m_isPaintingSuspended || m_inUpdateGeometry);
+     ASSERT(!m_layerTreeHost);
+ 
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.h b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.h
+index ee23dc5c0..feebed403 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.h
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.h
+@@ -146,6 +146,13 @@ private:
+     bool m_shouldSendEnterAcceleratedCompositingMode { false };
+ 
+     RunLoop::Timer m_displayTimer;
++    // OMNI_SOFTWARE_DRAW_PROFILE_V1: per-area lifetime, no URLs or content.
++    uint64_t m_omniDisplayCalls { 0 }, m_omniAcks { 0 };
++    unsigned m_omniProfileLines { 0 };
++    double m_omniDisplayTotalMs { 0 }, m_omniDisplayMaxMs { 0 };
++    double m_omniAckTotalMs { 0 }, m_omniAckMaxMs { 0 };
++    MonotonicTime m_omniUpdateSent;
++    bool m_omniUpdatePending { false };
+ };
+ 
+ } // namespace WebKit
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHostPlayStation.cpp b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHostPlayStation.cpp
+index 30eb64700..cdd3ecf2a 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHostPlayStation.cpp
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHostPlayStation.cpp
+@@ -77,7 +77,7 @@ LayerTreeHost::LayerTreeHost(WebPage& webPage, WebCore::PlatformDisplayID displa
+ #if USE(CAIRO)
+     , m_paintingEngine(Cairo::PaintingEngine::create())
+ #elif USE(SKIA)
+-    , m_skiaPaintingEngine(SkiaPaintingEngine::create())
++    , m_skiaPaintingEngine(SkiaPaintingEngine::create(nullptr)) // [omni-homebrew] CPU painting
+ #endif
+ {
+     {
+diff --git a/Source/WebKit/WebProcess/WebPage/playstation/WebPagePlayStation.cpp b/Source/WebKit/WebProcess/WebPage/playstation/WebPagePlayStation.cpp
+index 33a978652..6b68dfa42 100644
+--- a/Source/WebKit/WebProcess/WebPage/playstation/WebPagePlayStation.cpp
++++ b/Source/WebKit/WebProcess/WebPage/playstation/WebPagePlayStation.cpp
+@@ -55,7 +55,8 @@ bool WebPage::platformCanHandleRequest(const ResourceRequest&)
+ 
+ String WebPage::platformUserAgent(const URL& url) const
+ {
+-    if (url.isNull() || !m_page->settings().needsSiteSpecificQuirks())
++    // [omni-custom-user-agent] Explicit app configuration takes precedence.
++    if (m_hasCustomUserAgent || url.isNull() || !m_page->settings().needsSiteSpecificQuirks())
+         return emptyString();
+ 
+     return WebCore::standardUserAgentForURL(url);
+diff --git a/Source/bmalloc/libpas/src/libpas/pas_page_malloc.c b/Source/bmalloc/libpas/src/libpas/pas_page_malloc.c
+index ee1c884e4..ef1a97a68 100644
+--- a/Source/bmalloc/libpas/src/libpas/pas_page_malloc.c
++++ b/Source/bmalloc/libpas/src/libpas/pas_page_malloc.c
+@@ -203,6 +203,17 @@ static void* try_map_pages_with_mte_tag_storage(size_t size)
+ PAS_IGNORE_WARNINGS_END
+ #endif /* PAS_ENABLE_MTE && PAS_OS(DARWIN) */
+ 
++#if PAS_PLATFORM(PLAYSTATION)
++#include <unwind.h>
++static _Unwind_Reason_Code omni_mapping_backtrace(struct _Unwind_Context* context, void* opaque)
++{
++    unsigned* count = opaque;
++    char line[96];
++    int length = snprintf(line, sizeof(line), "mapping stack[%u]=%p\n", *count, (void*)_Unwind_GetIP(context));
++    if (length > 0) write(2, line, (size_t)length < sizeof(line) ? (size_t)length : sizeof(line) - 1);
++    return ++*count >= 20 ? _URC_END_OF_STACK : _URC_NO_REASON;
++}
++#endif
+ static void*
+ pas_page_malloc_try_map_pages(size_t size, pas_memory_flavor flavor)
+ {
+@@ -229,6 +240,32 @@ pas_page_malloc_try_map_pages(size_t size, pas_memory_flavor flavor)
+ 
+     mmap_result = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | PAS_NORESERVE, PAS_VM_TAG, 0);
+     if (mmap_result == MAP_FAILED) {
++#if PAS_PLATFORM(PLAYSTATION)
++        /* omni allocation diagnostics */
++        int saved_errno = errno;
++        char message[160];
++        int length = snprintf(message, sizeof(message), "allocator mmap failed: bytes=%zu errno=%d\n", size, saved_errno);
++        if (length > 0) write(2, message, (size_t)length < sizeof(message) ? (size_t)length : sizeof(message) - 1);
++        /* omni mapping budget: measure at failure, not earlier startup. */
++        extern int sceKernelAvailableFlexibleMemorySize(size_t*);
++        size_t available_flexible = 0;
++        int query_result = sceKernelAvailableFlexibleMemorySize(&available_flexible);
++        length = snprintf(message, sizeof(message), "allocator budget: query=%d flexible=%zu allocated=%zu\n", query_result, available_flexible, pas_page_malloc_num_allocated_bytes);
++        if (length > 0) write(2, message, (size_t)length < sizeof(message) ? (size_t)length : sizeof(message) - 1);
++        /* omni native mapping comparison: diagnostic only, never an allocator fallback. */
++        if (size == 67108864) {
++            extern int sceKernelMapFlexibleMemory(void**, size_t, int, int);
++            extern int sceKernelReleaseFlexibleMemory(void*, size_t);
++            void* native_mapping = NULL;
++            int native_result = sceKernelMapFlexibleMemory(&native_mapping, size, 3, 0);
++            int release_result = native_result ? 0 : sceKernelReleaseFlexibleMemory(native_mapping, size);
++            length = snprintf(message, sizeof(message), "allocator native comparison: result=%#x address=%p release=%#x\n", native_result, native_mapping, release_result);
++            if (length > 0) write(2, message, (size_t)length < sizeof(message) ? (size_t)length : sizeof(message) - 1);
++        }
++        unsigned mapping_depth = 0;
++        _Unwind_Backtrace(omni_mapping_backtrace, &mapping_depth);
++        errno = saved_errno;
++#endif
+         errno = 0; /* Clear the error so that we don't leak errno in those
+                       cases where we handle the allocation failure
+                       internally. If we want to set errno for clients then we
+@@ -282,7 +319,26 @@ pas_page_malloc_try_allocate_without_deallocating_padding(
+             return result;
+     }
+ 
+-    mmap_result = pas_page_malloc_try_map_pages(mapped_size, flavor);
++    mmap_result = NULL;
++#if PAS_PLATFORM(PLAYSTATION)
++    /* omni aligned mapping: avoid alignment padding peak. */
++    if (!alignment.alignment_begin && page_allocation_alignment > pas_page_malloc_alignment()) {
++        void* candidate = mmap(NULL, aligned_size, PROT_READ | PROT_WRITE,
++            MAP_PRIVATE | MAP_ANON | MAP_ALIGNED(pas_log2(page_allocation_alignment)), PAS_VM_TAG, 0);
++        if (candidate != MAP_FAILED) {
++            if (!((uintptr_t)candidate & (page_allocation_alignment - 1))) {
++                mmap_result = candidate;
++                mapped_size = aligned_size;
++            } else {
++                // Some kernels may ignore optional alignment flags.
++                int released = munmap(candidate, aligned_size);
++                PAS_ASSERT(!released);
++            }
++        }
++    }
++#endif
++    if (!mmap_result)
++        mmap_result = pas_page_malloc_try_map_pages(mapped_size, flavor);
+     if (!mmap_result)
+         return result;
+ 
+diff --git a/Source/bmalloc/libpas/src/libpas/pas_utils.c b/Source/bmalloc/libpas/src/libpas/pas_utils.c
+index c901fbcb7..611f52ed1 100644
+--- a/Source/bmalloc/libpas/src/libpas/pas_utils.c
++++ b/Source/bmalloc/libpas/src/libpas/pas_utils.c
+@@ -219,8 +219,27 @@ void pas_assertion_failed_no_inline_with_extra_detail(const char* filename, int
+     pas_crash_with_info_impl((size_t)filename, (size_t)line, (size_t)function, (size_t)expression, extra, 1337, 0xbeef0bff);
+ }
+ 
++#if PAS_PLATFORM(PLAYSTATION)
++#include <unwind.h>
++static _Unwind_Reason_Code omni_allocation_backtrace(struct _Unwind_Context* context, void* opaque)
++{
++    unsigned* count = opaque;
++    char line[96];
++    int length = snprintf(line, sizeof(line), "allocator stack[%u]=%p\n", *count, (void*)_Unwind_GetIP(context));
++    if (length > 0) write(2, line, (size_t)length < sizeof(line) ? (size_t)length : sizeof(line) - 1);
++    return ++*count >= 20 ? _URC_END_OF_STACK : _URC_NO_REASON;
++}
++#endif
+ void pas_panic_on_out_of_memory_error(void)
+ {
++#if PAS_PLATFORM(PLAYSTATION)
++    /* omni allocation diagnostics */
++    unsigned depth = 0;
++    _Unwind_Backtrace(omni_allocation_backtrace, &depth);
++    char message[160];
++    int length = snprintf(message, sizeof(message), "allocator fatal: caller=%p\n", __builtin_return_address(0));
++    if (length > 0) write(2, message, (size_t)length < sizeof(message) ? (size_t)length : sizeof(message) - 1);
++#endif
+     __builtin_trap();
+ }
+ 
+diff --git a/Source/cmake/OptionsPlayStation.cmake b/Source/cmake/OptionsPlayStation.cmake
+index f55771f99..76e0fe313 100644
+--- a/Source/cmake/OptionsPlayStation.cmake
++++ b/Source/cmake/OptionsPlayStation.cmake
+@@ -21,8 +21,11 @@ set(CMAKE_C_LINKER_WRAPPER_FLAG_SEP ",")
+ set(CMAKE_CXX_LINKER_WRAPPER_FLAG "-Wl,")
+ set(CMAKE_CXX_LINKER_WRAPPER_FLAG_SEP ",")
+ 
++# [omni-homebrew] Sony-SDK-only compiler flag
++if (NOT OMNI_HOMEBREW)
+ # Set the standard libary version
+ WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-sce-stdlib=v2)
++endif ()
+ 
+ set(ENABLE_WEBKIT_LEGACY OFF)
+ set(ENABLE_WEBINSPECTORUI OFF)
+@@ -359,7 +362,11 @@ endif ()
+ set(bmalloc_LIBRARY_TYPE OBJECT)
+ set(WTF_LIBRARY_TYPE OBJECT)
+ 
+-if (ENABLE_STATIC_JSC)
++if (ENABLE_STATIC_JSC AND OMNI_HOMEBREW)
++    # static archive: pulls in LowLevelInterpreterLib objects without the
++    # $<TARGET_OBJECTS> genex that CMake can't propagate through OBJECT libs
++    set(JavaScriptCore_LIBRARY_TYPE STATIC)
++elseif (ENABLE_STATIC_JSC)
+     set(JavaScriptCore_LIBRARY_TYPE OBJECT)
+ else ()
+     set(JavaScriptCore_LIBRARY_TYPE SHARED)
+@@ -371,7 +378,12 @@ endif ()
+ # for ranlib.
+ set(PAL_LIBRARY_TYPE OBJECT)
+ set(WebCore_LIBRARY_TYPE OBJECT)
+-set(WebKit_LIBRARY_TYPE SHARED)
++# Homebrew links everything statically into each process executable.
++if (OMNI_HOMEBREW)
++    set(WebKit_LIBRARY_TYPE OBJECT)
++else ()
++    set(WebKit_LIBRARY_TYPE SHARED)
++endif ()
+ 
+ find_library(MEMORY_EXTRA_LIB MemoryExtra)
+ find_path(MEMORY_EXTRA_INCLUDE_DIR NAMES memory-extra)
+@@ -387,14 +399,18 @@ if (TARGET libdl::dl)
+     add_link_options("$<$<OR:$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>,$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>>:$<TARGET_PROPERTY:libdl::dl,INTERFACE_LINK_OPTIONS>>")
+ endif ()
+ 
++# Sony wraps mmap for memory accounting; the homebrew libc has no
++# __wrap_mmap, so only do it with the official SDK.
+ function(add_executable target)
+     _add_executable(${ARGV})
+-    target_link_options(${target} PRIVATE "LINKER:--wrap=mmap")
++    if (NOT OMNI_HOMEBREW)
++        target_link_options(${target} PRIVATE "LINKER:--wrap=mmap")
++    endif ()
+ endfunction()
+ 
+ function(add_library target type)
+     _add_library(${ARGV})
+-    if ("${type}" STREQUAL "SHARED")
++    if ("${type}" STREQUAL "SHARED" AND NOT OMNI_HOMEBREW)
+         target_link_options(${target} PRIVATE "LINKER:--wrap=mmap")
+         sign(${target})
+     endif ()
+@@ -424,7 +440,9 @@ macro(WEBKIT_EXECUTABLE _target)
+             target_link_options(${_target} PRIVATE "LINKER:--wrap=${WRAP}")
+         endforeach ()
+     endif ()
+-    add_dependencies(${_target} playstation_tools_copy)
++    if (NOT OMNI_HOMEBREW)
++        add_dependencies(${_target} playstation_tools_copy)
++    endif ()
+ endmacro()
+ 
+ macro(PLAYSTATION_MODULES)

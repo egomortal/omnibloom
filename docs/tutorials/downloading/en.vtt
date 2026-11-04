@@ -1,0 +1,52 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (en_US-ljspeech-high, LJ Speech (Keith Ito), public domain). Native review still required.
+
+1
+00:00:00.500 --> 00:00:10.382
+Paste a complete HTTP(S) link into Downloads. Choose the engine and quality,
+then explicitly start. Demo only simulates progress and saves no media.
+
+2
+00:00:10.382 --> 00:00:17.458
+Holding the waiting queue does not pause active jobs; cancellation and final
+status are separate.
+
+3
+00:00:30.500 --> 00:00:39.218
+Protected media may require a supported decryption module and service
+approval. Omnibloom never bypasses DRM or CAPTCHA. Use the service’s
+
+4
+00:00:39.218 --> 00:00:45.125
+supported playback or download options; changing engines does not remove
+protection.
+
+5
+00:01:00.500 --> 00:01:09.568
+If a request times out or the worker restarts, check the queue and history
+before submitting again. A previous request may already have been accepted.
+
+6
+00:01:09.568 --> 00:01:15.125
+Saved links keep the address; Use link fills the form without starting a
+download.
+
+7
+00:01:30.500 --> 00:01:39.852
+Bloom Core runs in the background. If it is unavailable, apps should open
+with their own defaults, but discovery and shared actions may be limited.
+
+8
+00:01:39.852 --> 00:01:45.032
+Open the status page to see installed apps, versions and reported state.
+
+9
+00:02:00.500 --> 00:02:11.332
+For support include app build, firmware, PC system, controller model,
+expected result, actual result and repeatable steps. Review logs before
+
+10
+00:02:11.332 --> 00:02:19.154
+sharing; remove tokens, cookies, usernames, private URLs, device addresses
+and personal paths.

@@ -1,0 +1,15 @@
+{
+  "temporary_build_root": "/var/tmp/omni-jd-native-20261026-001",
+  "port": "/var/tmp/omni-jd-native-20261026-001/port/ps5-java25-homebrew-db3ac845fa090c64e2a737d6c4222dd37867d7fe/Development",
+  "jdk": "/var/tmp/omni-jd-native-20261026-001/host-jdk/jdk-25.0.4+7",
+  "source": "/var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8",
+  "autoconf": "/var/tmp/omni-jd-native-20261026-001/autoconf/autoconf-2.72",
+  "sdk": "/var/tmp/omni-jd-native-20261026-001/port/ps5-java25-homebrew-db3ac845fa090c64e2a737d6c4222dd37867d7fe/Development/.tools/native-sdk/ps5-payload-sdk",
+  "input_sha256": {
+    "port.tar.gz": "e7e73cc3f91135590c4d8b85bcd19de19e7ead16adab1c1bb08137df24062863",
+    "sdk-v0.42.zip": "8cfbc7cd5811e719eb4f0c47eea668d3dc7b40bc8ab11c4a5031d40c23ec02da",
+    "host-jdk.tar.gz": "e58fcdcd637b25c03ca84cbbcefc70d11efb8f4b4cbd05decc9f661769d77f94",
+    "openjdk.tar.gz": "dd52da87ee131a68e8d10d56f7a9adc82d322f0448dcd7438e16e9b8d070fd7a",
+    "autoconf.tar.gz": "afb181a76e1ee72832f6581c0eddf8df032b83e2e0239ef79ebedc4467d92d6e"
+  }
+}

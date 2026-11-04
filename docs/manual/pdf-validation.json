@@ -1,0 +1,112 @@
+{
+  "pdfPages": 19,
+  "pdfBytes": 4404570,
+  "chapterTitlesVerified": 17,
+  "screenshots": [
+    {
+      "chapter": "suite",
+      "source": "20261102-start-page\\shots\\1920-20261102-start-page_index_html.png",
+      "output": "pictures/suite.webp",
+      "bytes": 23494
+    },
+    {
+      "chapter": "setup",
+      "source": "20261102-setup-design\\shots\\800-checks.png",
+      "output": "pictures/setup.webp",
+      "bytes": 26300
+    },
+    {
+      "chapter": "welcome",
+      "source": "20261102-universe-art\\art\\aurora.webp",
+      "output": "pictures/welcome.webp",
+      "bytes": 36670
+    },
+    {
+      "chapter": "typing",
+      "source": "20261102-r2-controller-keyboard\\shots\\1920.png",
+      "output": "pictures/typing.webp",
+      "bytes": 22002
+    },
+    {
+      "chapter": "tabs",
+      "source": "20261102-r2-library\\shots\\1920.png",
+      "output": "pictures/tabs.webp",
+      "bytes": 16458
+    },
+    {
+      "chapter": "settings",
+      "source": "20261102-r2-settings\\shots\\1920-browsing.png",
+      "output": "pictures/settings.webp",
+      "bytes": 19778
+    },
+    {
+      "chapter": "reading",
+      "source": "20261102-r2-reader\\shots\\1920-article.png",
+      "output": "pictures/reading.webp",
+      "bytes": 50446
+    },
+    {
+      "chapter": "downloads",
+      "source": "20261102-r2-downloads-overlay\\shots\\1920.png",
+      "output": "pictures/downloads.webp",
+      "bytes": 14964
+    },
+    {
+      "chapter": "overlay",
+      "source": "20261102-r2-mini-player\\shots\\1920.png",
+      "output": "pictures/overlay.webp",
+      "bytes": 15444
+    },
+    {
+      "chapter": "files",
+      "source": "20261102-r2-media-center\\screen-1920.png",
+      "output": "pictures/files.webp",
+      "bytes": 27808
+    },
+    {
+      "chapter": "pairing",
+      "source": "20261102-master-control\\pairing-1920.png",
+      "output": "pictures/pairing.webp",
+      "bytes": 27640
+    },
+    {
+      "chapter": "tester",
+      "source": "20261102-r2-controller-tester\\screen-1920.png",
+      "output": "pictures/tester.webp",
+      "bytes": 18700
+    },
+    {
+      "chapter": "profiles",
+      "source": "20261102-r2-game-profiles\\screen-1920.png",
+      "output": "pictures/profiles.webp",
+      "bytes": 29418
+    },
+    {
+      "chapter": "passwords",
+      "source": "20261102-password-manager\\vault-1920.png",
+      "output": "pictures/passwords.webp",
+      "bytes": 13328
+    },
+    {
+      "chapter": "phone",
+      "source": "20261102-r2-phone-link\\screen-1920.png",
+      "output": "pictures/phone.webp",
+      "bytes": 21796
+    },
+    {
+      "chapter": "privacy",
+      "source": "20261102-r2-site-settings\\shots\\1920.png",
+      "output": "pictures/privacy.webp",
+      "bytes": 16544
+    }
+  ],
+  "missingRequestedScreenshots": [
+    {
+      "chapter": "support",
+      "requested": "20261102-r2-support-export/screen-1920.png"
+    }
+  ],
+  "renderer": "pypdfium2 (Poppler not found in runtime)",
+  "visualReview": "PASS: all 19 rendered pages inspected via contact sheet; no overlaps, clipped text, orphan headings or missing illustration captions.",
+  "missingScreenshotDisposition": "Support exporter is a CLI; no GUI screenshot is fabricated. Its documented preview/export workflow appears in chapter 16."
+}

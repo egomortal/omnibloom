@@ -1,0 +1,53 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (es_ES-davefx-medium, davefx (OHF-Voice voice-datasets), CC0). Native review still required.
+
+1
+00:00:00.500 --> 00:00:09.288
+Pega un enlace HTTP(S) completo en Descargas. Elige motor y calidad y
+empieza explícitamente. La demostración solo simula el progreso y no guarda
+
+2
+00:00:09.288 --> 00:00:16.495
+contenido. Detener la cola no pausa tareas activas; cancelar y confirmar el
+estado final son pasos distintos.
+
+3
+00:00:30.500 --> 00:00:39.033
+El contenido protegido puede requerir un módulo de descifrado compatible y
+autorización del servicio. Omnibloom nunca evita DRM ni CAPTCHA. Usa las
+
+4
+00:00:39.033 --> 00:00:44.800
+opciones oficiales de reproducción o descarga; cambiar de motor no elimina
+la protección.
+
+5
+00:01:00.500 --> 00:01:08.780
+Si una solicitud caduca o el servicio se reinicia, revisa la cola y el
+historial antes de reenviar. La solicitud anterior puede estar aceptada.
+
+6
+00:01:08.780 --> 00:01:14.939
+Guardar enlace conserva la dirección; Usar enlace rellena el formulario sin
+iniciar la descarga.
+
+7
+00:01:30.500 --> 00:01:38.152
+Bloom Core funciona en segundo plano. Si no está disponible, las
+aplicaciones deberían abrirse con sus valores predeterminados, pero la
+
+8
+00:01:38.152 --> 00:01:45.496
+detección y las acciones compartidas pueden limitarse. Abre Estado para ver
+aplicaciones, versiones y estado informado.
+
+9
+00:02:00.500 --> 00:02:10.486
+Para soporte incluye compilación, firmware, sistema del PC, modelo de mando,
+resultado esperado y real y pasos reproducibles. Revisa los registros antes
+
+10
+00:02:10.486 --> 00:02:17.261
+de compartir; elimina tokens, cookies, usuarios, URL privadas, direcciones y
+rutas personales.

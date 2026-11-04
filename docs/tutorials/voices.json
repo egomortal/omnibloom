@@ -1,0 +1,75 @@
+{
+ "engine": "piper-tts 1.8.0 (OHF-Voice/piper1-gpl, GPL-3.0-or-later)",
+ "voices": [
+  {
+   "lang": "en",
+   "voice": "en_US-ljspeech-high",
+   "dataset_licence": "public domain",
+   "attribution": "LJ Speech Dataset, Keith Ito",
+   "dataset_url": "https://keithito.com/LJ-Speech-Dataset/",
+   "model_source": "https://huggingface.co/rhasspy/piper-voices (repo licence MIT)",
+   "model_card": "https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/ljspeech/high/MODEL_CARD",
+   "onnx_sha256": "5d4f08ba6a2a48c44592eed3ce56bf85e9de3dd4e20df90541ae68a8310c029a"
+  },
+  {
+   "lang": "es",
+   "voice": "es_ES-davefx-medium",
+   "dataset_licence": "CC0",
+   "attribution": "davefx, OHF-Voice voice-datasets",
+   "dataset_url": "https://github.com/OHF-Voice/voice-datasets",
+   "model_source": "https://huggingface.co/rhasspy/piper-voices (repo licence MIT)",
+   "model_card": "https://huggingface.co/rhasspy/piper-voices/blob/main/es/es_ES/davefx/medium/MODEL_CARD",
+   "onnx_sha256": "6658b03b1a6c316ee4c265a9896abc1393353c2d9e1bca7d66c2c442e222a917"
+  },
+  {
+   "lang": "pt-BR",
+   "voice": "pt_BR-faber-medium",
+   "dataset_licence": "CC0",
+   "attribution": "faber, OHF-Voice voice-datasets",
+   "dataset_url": "https://github.com/OHF-Voice/voice-datasets",
+   "model_source": "https://huggingface.co/rhasspy/piper-voices (repo licence MIT)",
+   "model_card": "https://huggingface.co/rhasspy/piper-voices/blob/main/pt/pt_BR/faber/medium/MODEL_CARD",
+   "onnx_sha256": "858555e3a064209c57088fe6bd70c4c3dc54d03eaa00c45d5ecaf43a33f95aa7"
+  },
+  {
+   "lang": "fr",
+   "voice": "fr_FR-siwis-medium",
+   "dataset_licence": "CC BY 4.0",
+   "attribution": "SIWIS French Speech Synthesis Database, Junichi Yamagishi, Pierre-Edouard Honnet, Philip Garner, Alexandros Lazaridis (University of Edinburgh / Idiap)",
+   "dataset_url": "https://datashare.is.ed.ac.uk/handle/10283/2353",
+   "model_source": "https://huggingface.co/rhasspy/piper-voices (repo licence MIT)",
+   "model_card": "https://huggingface.co/rhasspy/piper-voices/blob/main/fr/fr_FR/siwis/medium/MODEL_CARD",
+   "onnx_sha256": "641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99"
+  },
+  {
+   "lang": "de",
+   "voice": "de_DE-thorsten-high",
+   "dataset_licence": "CC0",
+   "attribution": "Thorsten-Voice, Thorsten Müller",
+   "dataset_url": "https://github.com/thorstenMueller/Thorsten-Voice",
+   "model_source": "https://huggingface.co/rhasspy/piper-voices (repo licence MIT)",
+   "model_card": "https://huggingface.co/rhasspy/piper-voices/blob/main/de/de_DE/thorsten/high/MODEL_CARD",
+   "onnx_sha256": "9df1c43c61149ef9b39e618e2b861fbe41e1fcea9390b2dac62e8761573ea4f1"
+  },
+  {
+   "lang": "it",
+   "voice": "it_IT-paola-medium",
+   "dataset_licence": "CC0",
+   "attribution": "Voice-Dataset-Italian, paolapersico1",
+   "dataset_url": "https://huggingface.co/datasets/paolapersico1/Voice-Dataset-Italian",
+   "model_source": "https://huggingface.co/rhasspy/piper-voices (repo licence MIT)",
+   "model_card": "https://huggingface.co/rhasspy/piper-voices/blob/main/it/it_IT/paola/medium/MODEL_CARD",
+   "onnx_sha256": "6fc918b5a0ea6137382833dddfa567bffbe6a5060c02043c87192ee59c04210c"
+  },
+  {
+   "lang": "ja",
+   "voice": null,
+   "note": "captions only: the only Piper ja voice (hi_fi_captain) is CC BY-NC-SA 4.0"
+  },
+  {
+   "lang": "ko",
+   "voice": null,
+   "note": "captions only: the only Piper ko voice (kss) is CC BY-NC-SA 4.0"
+  }
+ ]
+}

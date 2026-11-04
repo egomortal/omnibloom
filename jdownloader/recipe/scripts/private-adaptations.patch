@@ -1,0 +1,201 @@
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/hotspot/os/bsd/os_bsd.cpp.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/hotspot/os/bsd/os_bsd.cpp
+@@ -457,11 +457,11 @@
+   // Embedded native app layout: Java home is a packaged asset directory,
+   // not a desktop-loaded shared object's canonical location.
+   ps5_vm_trace("ENTER: PS5 packaged runtime properties");
+-  Arguments::set_dll_dir("/app0/assets/java25/lib");
++  Arguments::set_dll_dir("/data/omni-downloader/jdownloader/native/java25/lib");
+   ps5_vm_trace("DONE: PS5 core library directory");
+-  Arguments::set_java_home("/app0/assets/java25");
++  Arguments::set_java_home("/data/omni-downloader/jdownloader/native/java25");
+   ps5_vm_trace("DONE: PS5 Java home");
+-  Arguments::set_library_path("/app0/assets/java25/lib");
++  Arguments::set_library_path("/data/omni-downloader/jdownloader/native/java25/lib");
+   Arguments::set_ext_dirs("");
+   ps5_vm_trace("ENTER: PS5 boot image stat and path setup");
+   if (!set_boot_path('/', ':')) {
+@@ -1893,7 +1893,7 @@
+ #ifdef __PROSPERO__
+   // This is the actual packaged target library used as the embedded module's
+   // identity. No desktop realpath(NULL-buffer) contract is required.
+-  const char *path = "/app0/assets/java25/lib/server/libjvm.so";
++  const char *path = "/data/omni-downloader/jdownloader/native/java25/lib/server/libjvm.so";
+   size_t length = strlen(path);
+   if (buflen > 0) {
+     if (length < static_cast<size_t>(buflen)) memcpy(buf, path, length + 1);
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/hotspot/share/classfile/classLoader.cpp.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/hotspot/share/classfile/classLoader.cpp
+@@ -633,7 +633,7 @@
+ #ifdef __PROSPERO__
+           // This exact asset has already been opened/validated by JIMAGE_Open.
+           // It is the fixed packaged file, not an arbitrary path or symlink.
+-          if (strcmp(path, "/app0/assets/java25/lib/modules") == 0) {
++          if (strcmp(path, "/data/omni-downloader/jdownloader/native/java25/lib/modules") == 0) {
+             canonical_path = path;
+             ps5_vm_trace("PS5: fixed packaged core image path identity");
+           } else {
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/hotspot/share/runtime/ps5StartupTrace.hpp.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/hotspot/share/runtime/ps5StartupTrace.hpp
+@@ -103,7 +103,7 @@
+     errno=saved_errno;
+     return; // Last-stage context above remains current even when disk IO is sampled.
+   }
+-  int fd = ::open("/download0/java25-vm-trace.log", O_CREAT | O_WRONLY | O_APPEND, 0600);
++  int fd = ::open("/data/omni-downloader/jdownloader/native/java25-vm-trace.log", O_CREAT | O_WRONLY | O_APPEND, 0600);
+   if (fd < 0) { errno = saved_errno; return; }
+   size_t length = ::strlen(stage);
+   size_t sent = 0;
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/hotspot/share/jfr/recorder/repository/jfrEmergencyDump.cpp.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/hotspot/share/jfr/recorder/repository/jfrEmergencyDump.cpp
+@@ -73,7 +73,7 @@
+ // normal file-open/write failures are still handled by the existing code.
+ static char* get_default_dump_directory(char* buffer, size_t size) {
+ #ifdef __PROSPERO__
+-  static const char directory[] = "/download0";
++  static const char directory[] = "/data/omni-downloader/jdownloader/native";
+   if (buffer == nullptr || size < sizeof(directory)) return nullptr;
+   memcpy(buffer, directory, sizeof(directory));
+   return buffer;
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/java.base/share/classes/jdk/internal/loader/URLClassPath.java.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/java.base/share/classes/jdk/internal/loader/URLClassPath.java
+@@ -243,7 +243,7 @@
+             // canonicalization is denied there; actual JAR opening remains
+             // responsible for file validation. Preserve other path handling.
+             boolean ps5BundledJar = Boolean.getBoolean("sun.nio.fs.ps5Sandbox")
+-                    && s.startsWith("/app0/assets/java25/jars/")
++                    && s.startsWith("/data/omni-downloader/jdownloader/runtime/")
+                     && s.endsWith(".jar")
+                     && !s.contains("/../") && !s.contains("/./");
+             if (!ps5BundledJar) f = f.getCanonicalFile();
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/java.base/unix/native/libnet/NetworkInterface.c.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/java.base/unix/native/libnet/NetworkInterface.c
+@@ -81,7 +81,7 @@
+     int length = snprintf(text, sizeof(text),
+         "PS5 netif: %s value=%ld pending=%d errno=%d\n", phase, value, pending, saved);
+     if (length > 0 && (size_t)length < sizeof(text)) {
+-        int fd = open("/download0/java25-vm-trace.log", O_CREAT|O_WRONLY|O_APPEND, 0600);
++        int fd = open("/data/omni-downloader/jdownloader/native/java25-vm-trace.log", O_CREAT|O_WRONLY|O_APPEND, 0600);
+         if (fd >= 0) {
+             size_t offset = 0;
+             while (offset < (size_t)length) {
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/java.base/unix/native/libjava/java_props_md.c.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/java.base/unix/native/libjava/java_props_md.c
+@@ -372,7 +372,7 @@
+ 
+     /* tmp dir */
+ #ifdef __PROSPERO__
+-    sprops.tmp_dir = "/download0";
++    sprops.tmp_dir = "/data/omni-downloader/jdownloader/native";
+ #else
+     sprops.tmp_dir = P_tmpdir;
+ #endif
+@@ -528,7 +528,7 @@
+ #ifdef __PROSPERO__
+         /* Bootstrap defaults for the tested native title sandbox. */
+         sprops.user_name = "ps5";
+-        sprops.user_home = "/download0";
++        sprops.user_home = "/data/omni-downloader/jdownloader/native";
+ #else
+         struct passwd *pwent = getpwuid(getuid());
+         sprops.user_name = pwent ? strdup(pwent->pw_name) : "?";
+@@ -563,7 +563,7 @@
+     /* Current directory */
+     {
+ #ifdef __PROSPERO__
+-        sprops.user_dir = "/app0";
++        sprops.user_dir = "/data/omni-downloader/jdownloader/runtime";
+ #else
+         char buf[MAXPATHLEN];
+         errno = 0;
+--- /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c.before
++++ /var/tmp/omni-jd-native-20261026-001/source/openjdk-b219cdec88ca2e165711f63b8158ab78303facc8/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
+@@ -35,7 +35,7 @@
+ #include <errno.h>
+ static void ps5_realpath_note(const char *phase,const char *path) {
+     int saved=errno;
+-    int fd=open("/download0/java25-vm-trace.log",O_CREAT|O_WRONLY|O_APPEND,0600);
++    int fd=open("/data/omni-downloader/jdownloader/native/java25-vm-trace.log",O_CREAT|O_WRONLY|O_APPEND,0600);
+     if(fd>=0){const char *parts[]={"REALPATH: ",phase," ",path,"\n"};
+         for(unsigned i=0;i<5;i++){size_t left=strlen(parts[i]);const char *p=parts[i];
+             while(left){ssize_t n=write(fd,p,left);if(n<0&&errno==EINTR)continue;if(n<=0)break;p+=n;left-=n;}}
+--- /var/tmp/omni-jd-native-20261026-001/port/ps5-java25-homebrew-db3ac845fa090c64e2a737d6c4222dd37867d7fe/Development/tools/java25_builtin_runtime.py.before
++++ /var/tmp/omni-jd-native-20261026-001/port/ps5-java25-homebrew-db3ac845fa090c64e2a737d6c4222dd37867d7fe/Development/tools/java25_builtin_runtime.py
+@@ -9,14 +9,15 @@
+ import re
+ import argparse
+ import hashlib
++import os
+ from java25_resident_libraries import read_libraries
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ BUILD = ROOT / '.tools/java25/openjdk/build/ps5-bootstrap'
+ WORK = ROOT / 'build/java25'
+ SDK = ROOT / '.tools/native-sdk/ps5-payload-sdk'
+-LLVM = Path(subprocess.check_output(['/opt/homebrew/opt/llvm/bin/llvm-config','--bindir'],text=True).strip())
+-LLD = Path(subprocess.check_output(['brew','--prefix','lld'],text=True).strip())/'bin/ld.lld'
++LLVM = Path(subprocess.check_output([os.environ['LLVM_CONFIG'],'--bindir'],text=True).strip())
++LLD = LLVM/'ld.lld'
+ LIBRARIES = ['java','zip','jimage','net','nio','verify']
+ 
+ def main():
+@@ -153,7 +154,7 @@
+  if(!address||!info) return 0;
+  // This application is one resident native image. HotSpot needs a stable
+  // packaged location to derive java.home for its embedded core libraries.
+- *info={};info->dli_fname="/app0/assets/java25/lib/server/libjvm.so";return 1;
++ *info={};info->dli_fname="/data/omni-downloader/jdownloader/native/java25/lib/server/libjvm.so";return 1;
+ }
+ '''
+     target=WORK/'builtin-libraries.cpp';target.write_text(output)
+--- /var/tmp/omni-jd-native-20261026-001/port/ps5-java25-homebrew-db3ac845fa090c64e2a737d6c4222dd37867d7fe/Development/tools/package_java25_jni.py.before
++++ /var/tmp/omni-jd-native-20261026-001/port/ps5-java25-homebrew-db3ac845fa090c64e2a737d6c4222dd37867d7fe/Development/tools/package_java25_jni.py
+@@ -187,38 +187,38 @@
+     module_names=re.search(r'^MODULES="([^"]+)"',(WORK/"boot-image/release").read_text(),re.M).group(1)
+     (assets/"release").write_text('JAVA_VERSION="25.0.4"\nMODULES="'+module_names+'"\nOS_NAME="FreeBSD"\nOS_ARCH="amd64"\nIMPLEMENTOR="Experimental PS5 port"\n')
+     (assets/"classes").mkdir(exist_ok=True)
+-    subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/Hello25.java")],check=True)
++    subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/Hello25.java")],check=True)
+     if args.fileio:
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/FileIO25.java")],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/FileIO25.java")],check=True)
+     if args.zipjar:
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/ZipJar25.java")],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/ZipJar25.java")],check=True)
+         subprocess.run(["python3",str(ROOT/"tools/java25_jar_fixture.py"),"--output",str(assets/"jars/probe.jar")],check=True)
+         if (assets/"classes/ps5probe/JarHello25.class").exists():
+             raise SystemExit("JAR payload must not be available as a loose class")
+     if args.network:
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/Network25.java")],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/Network25.java")],check=True)
+     if args.lan:
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/Lan25.java"),str(ROOT/"java25/tests/Dns25.java")],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/Lan25.java"),str(ROOT/"java25/tests/Dns25.java")],check=True)
+         (assets/"probe.properties").write_text("lan.host="+args.lan_host+"\nlan.port="+str(args.lan_port)+"\n")
+     if external:
+         shutil.copytree(Path(external['asset_dir'])/'java25',assets,dirs_exist_ok=True)
+         if resident_options:shutil.copyfile(WORK/"builtin-resident-audit.json",assets/"resident-libraries-audit.json")
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),*(["-classpath",os.pathsep.join(compile_classpath)] if compile_classpath else []),*external['java_sources']],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),*(["-classpath",os.pathsep.join(compile_classpath)] if compile_classpath else []),*external['java_sources']],check=True)
+     if args.dependencies:
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),*[str(ROOT/"java25/tests"/(name+".java")) for name in ("MultiJar25","SystemClasspath25","NativeDeps25")]],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),*[str(ROOT/"java25/tests"/(name+".java")) for name in ("MultiJar25","SystemClasspath25","NativeDeps25")]],check=True)
+         subprocess.run(["python3",str(ROOT/"tools/java25_dependency_fixture.py"),"--output",str(assets/"jars")],check=True)
+         if (assets/"classes/ps5deps").exists():raise SystemExit("Dependency classes must exist only inside JARs")
+         (assets/"probe.properties").unlink(missing_ok=True)
+     if args.lan_endurance:
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),*[str(ROOT/"java25/tests"/(name+".java")) for name in ("Ipv6Lan25","LanTcpLoad25","LanUdpLoad25")]],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),*[str(ROOT/"java25/tests"/(name+".java")) for name in ("Ipv6Lan25","LanTcpLoad25","LanUdpLoad25")]],check=True)
+         (assets/"probe.properties").unlink(missing_ok=True)
+     if args.advanced_network:
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),*[str(ROOT/"java25/tests"/(name+".java")) for name in ("Https25","Ipv625","NetworkLoad25")]],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),*[str(ROOT/"java25/tests"/(name+".java")) for name in ("Https25","Ipv625","NetworkLoad25")]],check=True)
+         (assets/"lib/security").mkdir(exist_ok=True)
+         shutil.copy2(native_libs/"security/cacerts",assets/"lib/security/cacerts")
+         (assets/"probe.properties").unlink(missing_ok=True)
+     if args.inbound:
+-        subprocess.run(["/opt/homebrew/opt/openjdk@25/bin/javac","--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/InboundTcp25.java"),str(ROOT/"java25/tests/InboundUdp25.java")],check=True)
++        subprocess.run([str(Path(os.environ["JAVA25_BOOT_JDK"])/"bin/javac"),"--release","25","-d",str(assets/"classes"),str(ROOT/"java25/tests/InboundTcp25.java"),str(ROOT/"java25/tests/InboundUdp25.java")],check=True)
+         (assets/"probe.properties").unlink(missing_ok=True) # No endpoint/address configuration for listeners.
+     sounds=assets.parent/"sounds"
+     sounds.mkdir(exist_ok=True)

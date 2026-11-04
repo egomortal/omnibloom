@@ -1,0 +1,64 @@
+<!doctype html><meta charset="utf-8"><title>Omni early playback intent</title>
+<style>body{background:#101820;color:#e8f2ed;font:18px sans-serif;margin:24px}video{width:320px;height:180px}pre{white-space:pre-wrap}</style>
+<h1>Playback intent during loading</h1><button id="start" disabled>Run regression</button><div id="players"></div><pre id="status"></pre>
+<script>
+(function(){
+    'use strict';
+    const results=window.omniFeatureResults=[];
+    const state={stage:'document',documentLoaded:false,result:null};
+    const videos=[];let busy=false,ran=false;
+    function render(){document.getElementById('status').textContent=JSON.stringify({state:state,results:results},null,2);}
+    function record(name,pass,value){results.push({name:name,pass:pass,value:value});render();if(!pass)throw Error(name);}
+    function bounded(promise,name){return new Promise(function(resolve,reject){
+        const timer=setTimeout(function(){reject(Error(name+' timeout'));},5000);
+        promise.then(function(value){clearTimeout(timer);resolve(value);},function(error){clearTimeout(timer);reject(error);});
+    });}
+    function wait(video,name,action){return new Promise(function(resolve,reject){
+        const timer=setTimeout(function(){done(Error(name+' timeout'));},5000);
+        function done(error){clearTimeout(timer);video.removeEventListener(name,success);video.removeEventListener('error',failure);error?reject(error):resolve();}
+        function success(){done();}function failure(){done(Error('media error '+(video.error&&video.error.code)));}
+        video.addEventListener(name,success);video.addEventListener('error',failure);
+        try{action();}catch(error){done(error);}
+    });}
+    function create(){const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';videos.push(v);document.getElementById('players').appendChild(v);return v;}
+    function cleanup(){videos.forEach(function(v){v.pause();v.removeAttribute('src');v.load();});}
+    async function start(){
+        if(!state.documentLoaded)return {outcome:'not-ready'};
+        if(busy)return {outcome:'busy'};
+        if(ran)return {outcome:'already-run'};
+        busy=ran=true;document.getElementById('start').disabled=true;
+        try{
+            state.stage='early-play';render();
+            const first=create();let playResult;
+            await wait(first,'loadeddata',function(){
+                first.src='/fs/data/omni/media-test.mp4';first.load();
+                record('play requested before data',first.readyState===0,first.readyState);
+                playResult=first.play().then(function(){return 'resolved';},function(e){return 'rejected: '+e.name;});
+            });
+            record('early play promise',await bounded(playResult,'play')==='resolved','settled after load');
+            const begin=Date.now();
+            while(first.currentTime<.2 && !first.error && Date.now()-begin<2500)await new Promise(function(resolve){setTimeout(resolve,50);});
+            record('early play progresses',!first.error&&first.currentTime>=.2,first.currentTime);
+            first.pause();first.removeAttribute('src');first.load();
+            state.stage='early-play-then-pause';render();
+            const second=create();let cancelledPlay;
+            await wait(second,'loadeddata',function(){
+                second.src='/fs/data/omni/media-test.mp4';second.load();
+                record('pause requested before data',second.readyState===0,second.readyState);
+                cancelledPlay=second.play().then(function(){return 'resolved';},function(e){return 'rejected: '+e.name;});
+                second.pause();
+            });
+            const outcome=await bounded(cancelledPlay,'cancelled play');
+            record('pending play settled after pause',outcome==='rejected: AbortError',outcome);
+            await new Promise(function(resolve){setTimeout(resolve,350);});
+            record('paused load stays paused',second.paused&&!second.error&&second.currentTime<.05,{paused:second.paused,time:second.currentTime});
+            state.result='passed';return {outcome:'passed'};
+        }catch(error){state.result='failed';results.push({name:'early play regression',pass:false,value:String(error)});return {outcome:'failed'};}
+        finally{cleanup();busy=false;state.stage='complete';render();}
+    }
+    window.omniStartMediaTest=start;
+    window.omniMediaEarlyPlay={snapshot:function(){return {state:state,results:results.slice()};}};
+    document.getElementById('start').onclick=start;
+    window.addEventListener('load',function(){state.documentLoaded=true;state.stage='ready';document.getElementById('start').disabled=false;render();},{once:true});render();
+})();
+</script>

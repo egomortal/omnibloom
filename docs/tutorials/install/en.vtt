@@ -1,0 +1,50 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (en_US-ljspeech-high, LJ Speech (Keith Ito), public domain). Native review still required.
+
+1
+00:00:00.500 --> 00:00:10.258
+Open the verified Setup package on your PC. Confirm that your console
+firmware and prerequisite environment are listed for this release. If not,
+
+2
+00:00:10.258 --> 00:00:15.195
+stop and ask the maintainers; do not update firmware as a guess.
+
+3
+00:00:30.500 --> 00:00:40.065
+Put the PC and console on your trusted home network. Choose Find your PS5 or
+enter its address. Confirm the device, then review every check before
+
+4
+00:00:40.065 --> 00:00:44.858
+continuing. Resolve blocked checks and keep their support codes.
+
+5
+00:01:00.500 --> 00:01:10.372
+Choose the apps you want. Bloom Core is required while other suite apps are
+installed. JDownloader 2 is optional and separate: review its installer and
+
+6
+00:01:10.372 --> 00:01:16.332
+terms. Start installation and wait for the final results, not just a
+progress bar.
+
+7
+00:01:30.500 --> 00:01:40.510
+For a newer release choose Update in Installed apps. For missing application
+files choose Repair. Preserve user data and backups. If installation stops,
+
+8
+00:01:40.510 --> 00:01:47.168
+review completed steps before retrying; a partial transfer is not a
+successful installation.
+
+9
+00:02:00.500 --> 00:02:10.371
+Read the release notes and compatibility matrix first. Unknown means
+untested, not supported. Ex-Box 360 is planned for later. Mock screenshots
+
+10
+00:02:10.371 --> 00:02:15.113
+show the intended interface, not verified console behaviour.

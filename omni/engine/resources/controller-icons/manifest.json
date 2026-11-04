@@ -1,0 +1,156 @@
+[
+  {
+    "id": "xbox_a",
+    "file": "xbox_button_a_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_button_a_outline.png",
+    "sha256": "60c063951f647e6f3511db8dec433d2bb5890628711b0bf18f264592389c8ef1",
+    "bytes": 1142
+  },
+  {
+    "id": "xbox_b",
+    "file": "xbox_button_b_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_button_b_outline.png",
+    "sha256": "b4139033eba502b6a521cb05afd630349fa899b8559d962ab5dd3e31dcded864",
+    "bytes": 1066
+  },
+  {
+    "id": "xbox_x",
+    "file": "xbox_button_x_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_button_x_outline.png",
+    "sha256": "9cf584950945a6fcaed3bf12b2d432e57117c5df8319497929399016681ab3c4",
+    "bytes": 1202
+  },
+  {
+    "id": "xbox_y",
+    "file": "xbox_button_y_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_button_y_outline.png",
+    "sha256": "4eef130d450c491be4c3c11140610d6475e7423c6f032ad9cd3376ec1d023f20",
+    "bytes": 1118
+  },
+  {
+    "id": "xbox_lb",
+    "file": "xbox_lb_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_lb_outline.png",
+    "sha256": "b1c95a1576fa3284a3c2791a53f9d126a4e4cf9d66f5c05a40744a1a7b3baa4c",
+    "bytes": 654
+  },
+  {
+    "id": "xbox_rb",
+    "file": "xbox_rb_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_rb_outline.png",
+    "sha256": "614914e9fd5e1a5615c8c94deed378516351140e1f38ddd02da768c1c7b0517e",
+    "bytes": 738
+  },
+  {
+    "id": "xbox_view",
+    "file": "xbox_button_view_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_button_view_outline.png",
+    "sha256": "f02e420cd758fc1d64005f5c2157a328547e1ba9244edd2a3112d99d3a7dc57d",
+    "bytes": 1035
+  },
+  {
+    "id": "xbox_menu",
+    "file": "xbox_button_menu_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_button_menu_outline.png",
+    "sha256": "4a0378365985510f798d67aad3738bb6553146b3093e1ae12a966b18bd59936a",
+    "bytes": 953
+  },
+  {
+    "id": "xbox_stick_l",
+    "file": "xbox_stick_l.png",
+    "archivePath": "Xbox Series/Double/xbox_stick_l.png",
+    "sha256": "68edebe98e5efdbfc800154bcc523e67c6b6812df39ee45cf5a6362d6d670861",
+    "bytes": 1124
+  },
+  {
+    "id": "xbox_stick_r_press",
+    "file": "xbox_stick_r_press.png",
+    "archivePath": "Xbox Series/Double/xbox_stick_r_press.png",
+    "sha256": "f0e502e4868f6d21b4bfb03e544696bbc534649db8be808259096ceefb3968ee",
+    "bytes": 1261
+  },
+  {
+    "id": "xbox_dpad_horizontal",
+    "file": "xbox_dpad_horizontal_outline.png",
+    "archivePath": "Xbox Series/Double/xbox_dpad_horizontal_outline.png",
+    "sha256": "0481ebf14dbffcafa2ef3bbb47ff7a9ee092434e3287ba63b376b2d5d33b7d36",
+    "bytes": 351
+  },
+  {
+    "id": "ps_a",
+    "file": "playstation_button_cross_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation_button_cross_outline.png",
+    "sha256": "9cd38251161d6111ae330d84141d3ffdb20c158950f0e67baff364c37b4dd965",
+    "bytes": 1192
+  },
+  {
+    "id": "ps_b",
+    "file": "playstation_button_circle_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation_button_circle_outline.png",
+    "sha256": "1845bdd5bc9d245bdbc0ee4b4fdd66a246256c2d00de9dfbf85e9b5861ded0bd",
+    "bytes": 1226
+  },
+  {
+    "id": "ps_x",
+    "file": "playstation_button_square_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation_button_square_outline.png",
+    "sha256": "3b91c3450d19e09e0f040c92d207bae6e428809d156f07ec78206bd9a3da263c",
+    "bytes": 978
+  },
+  {
+    "id": "ps_y",
+    "file": "playstation_button_triangle_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation_button_triangle_outline.png",
+    "sha256": "0542d727297b0bc86e6786176825ffdf45ebd70858864b984a5d9908640e41a2",
+    "bytes": 1164
+  },
+  {
+    "id": "ps_lb",
+    "file": "playstation_trigger_l1_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation_trigger_l1_outline.png",
+    "sha256": "e0d5e0bd263a1d3c12d89a9143eadd8f98612b041adae56361f83ddaf175cad4",
+    "bytes": 697
+  },
+  {
+    "id": "ps_rb",
+    "file": "playstation_trigger_r1_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation_trigger_r1_outline.png",
+    "sha256": "ef5491f07cf53fd2818f10cd4be74717c8e0cac4eb59b389f55c5ee787932067",
+    "bytes": 810
+  },
+  {
+    "id": "ps_view",
+    "file": "playstation5_button_create_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation5_button_create_outline.png",
+    "sha256": "651968564725c135a83bd509fbffa0828af630b62b53d53ff71b487157af8fe9",
+    "bytes": 770
+  },
+  {
+    "id": "ps_menu",
+    "file": "playstation5_button_options_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation5_button_options_outline.png",
+    "sha256": "9d078d0f2ea3ec14799ebf4515fe50be0ba4ca9ecefe2ce430402cb15d9a865a",
+    "bytes": 644
+  },
+  {
+    "id": "ps_stick_l",
+    "file": "playstation_stick_l.png",
+    "archivePath": "PlayStation Series/Double/playstation_stick_l.png",
+    "sha256": "68edebe98e5efdbfc800154bcc523e67c6b6812df39ee45cf5a6362d6d670861",
+    "bytes": 1124
+  },
+  {
+    "id": "ps_stick_r_press",
+    "file": "playstation_stick_r_press.png",
+    "archivePath": "PlayStation Series/Double/playstation_stick_r_press.png",
+    "sha256": "f0e502e4868f6d21b4bfb03e544696bbc534649db8be808259096ceefb3968ee",
+    "bytes": 1261
+  },
+  {
+    "id": "ps_dpad_horizontal",
+    "file": "playstation_dpad_horizontal_outline.png",
+    "archivePath": "PlayStation Series/Double/playstation_dpad_horizontal_outline.png",
+    "sha256": "2a5f1ee00064249a6e0049bb88a3b5b35c71a5724df53c6356b101bed671285a",
+    "bytes": 618
+  }
+]

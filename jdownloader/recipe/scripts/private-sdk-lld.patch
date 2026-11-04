@@ -1,0 +1,11 @@
+--- /var/tmp/omni-jd-native-20261026-001/port/ps5-java25-homebrew-db3ac845fa090c64e2a737d6c4222dd37867d7fe/Development/.tools/native-sdk/ps5-payload-sdk/bin/prospero-lld.original
++++ /var/tmp/omni-jd-native-20261026-001/port/ps5-java25-homebrew-db3ac845fa090c64e2a737d6c4222dd37867d7fe/Development/.tools/native-sdk/ps5-payload-sdk/bin/prospero-lld
+@@ -26,7 +26,7 @@
+ LDSCRIPT="-T${PS5_PAYLOAD_SDK}/ldscripts/elf_x86_64.x"
+ 
+ for ARG in "$@"; do
+-    if [[ "$ARG" == "--shared" ]]; then
++    if [[ "$ARG" == "--shared" || "$ARG" == "-shared" ]]; then
+         PIE=""
+     fi
+     if [[ "$ARG" == "-r" ]]; then

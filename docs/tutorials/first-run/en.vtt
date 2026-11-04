@@ -1,0 +1,54 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (en_US-ljspeech-high, LJ Speech (Keith Ito), public domain). Native review still required.
+
+1
+00:00:00.500 --> 00:00:09.987
+Open Omni after installation. Read the welcome screens, choose your
+controller glyphs, review privacy and select a universe. Move with the D-pad
+
+2
+00:00:09.987 --> 00:00:15.264
+and select with A or Cross; B or Circle returns to the previous screen.
+
+3
+00:00:30.500 --> 00:00:40.957
+Choose a universe for its atmosphere; the underlying actions stay
+consistent. Aurora, Cosmic, Arcade, Solstice, Metro, Sakura, Abyss, Prism,
+
+4
+00:00:40.957 --> 00:00:47.458
+Atlas and Cassette are original styles. Reduced motion keeps transitions
+still.
+
+5
+00:01:00.500 --> 00:01:10.073
+The console block prevents websites from reaching unapproved local services.
+Verified app records define permitted pages. Ask maintainers to review a
+
+6
+00:01:10.073 --> 00:01:15.299
+legitimate integration; do not disable protection to fix a blocked page.
+
+7
+00:01:30.500 --> 00:01:39.210
+Local discovery does not make browsing anonymous. Sites and download
+services receive requests and apply their own privacy policies. Web pages
+
+8
+00:01:39.210 --> 00:01:48.104
+must never receive Bloom Core’s token. History, links and passwords may be
+stored locally; verify storage, encryption and deletion in the shipped
+
+9
+00:01:48.104 --> 00:01:49.072
+build.
+
+10
+00:02:00.500 --> 00:02:09.813
+Bloom Core runs in the background. If it is unavailable, apps should open
+with their own defaults, but discovery and shared actions may be limited.
+
+11
+00:02:09.813 --> 00:02:14.974
+Open the status page to see installed apps, versions and reported state.

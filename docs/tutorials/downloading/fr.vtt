@@ -1,0 +1,53 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (fr_FR-siwis-medium, SIWIS French Speech Synthesis Database (Univ. of Edinburgh), CC BY 4.0). Native review still required.
+
+1
+00:00:00.500 --> 00:00:08.945
+Collez un lien HTTP(S) complet dans Téléchargements. Choisissez moteur et
+qualité, puis démarrez explicitement. La démo simule seulement la
+
+2
+00:00:08.945 --> 00:00:17.505
+progression sans enregistrer de média. Suspendre la file n’arrête pas les
+tâches actives ; annulation et état final sont distincts.
+
+3
+00:00:30.500 --> 00:00:38.677
+Les médias protégés peuvent nécessiter un module de déchiffrement compatible
+et l’accord du service. Omnibloom ne contourne jamais DRM ou CAPTCHA.
+
+4
+00:00:38.677 --> 00:00:45.717
+Utilisez les options de lecture ou téléchargement prises en charge ; changer
+de moteur ne retire pas la protection.
+
+5
+00:01:00.500 --> 00:01:08.537
+Si une requête expire ou si le service redémarre, vérifiez file et
+historique avant de soumettre à nouveau. La demande précédente peut être
+
+6
+00:01:08.537 --> 00:01:15.729
+acceptée. Enregistrer conserve l’adresse ; Utiliser le lien remplit le
+formulaire sans démarrer le téléchargement.
+
+7
+00:01:30.500 --> 00:01:38.664
+Bloom Core fonctionne en arrière-plan. S’il est indisponible, les apps
+doivent s’ouvrir avec leurs réglages par défaut, mais la découverte et les
+
+8
+00:01:38.664 --> 00:01:44.556
+actions partagées peuvent être limitées. Ouvrez État pour voir apps,
+versions et état signalé.
+
+9
+00:02:00.500 --> 00:02:09.694
+Pour l’assistance, indiquez build, firmware, système PC, modèle de manette,
+résultats attendu et réel, et étapes reproductibles. Relisez les journaux
+
+10
+00:02:09.694 --> 00:02:16.773
+avant partage ; retirez jetons, cookies, noms d’utilisateur, URL privées,
+adresses et chemins personnels.

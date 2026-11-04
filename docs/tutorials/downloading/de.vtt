@@ -1,0 +1,53 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (de_DE-thorsten-high, Thorsten-Voice (Thorsten Müller), CC0). Native review still required.
+
+1
+00:00:00.500 --> 00:00:08.717
+Füge einen vollständigen HTTP(S)-Link in Downloads ein. Wähle Engine und
+Qualität und starte ausdrücklich. Demo simuliert nur Fortschritt und
+
+2
+00:00:08.717 --> 00:00:16.077
+speichert keine Medien. Warteschlange anhalten pausiert keine aktiven
+Aufgaben; Abbruch und Endstatus sind getrennt.
+
+3
+00:00:30.500 --> 00:00:38.093
+Geschützte Medien können ein unterstütztes Entschlüsselungsmodul und die
+Freigabe des Dienstes erfordern. Omnibloom umgeht weder DRM noch CAPTCHA.
+
+4
+00:00:38.093 --> 00:00:43.685
+Nutze unterstützte Wiedergabe- oder Downloadoptionen; ein Engine-Wechsel
+entfernt keinen Schutz.
+
+5
+00:01:00.500 --> 00:01:08.671
+Prüfe nach Zeitüberschreitung oder Dienstneustart Warteschlange und Verlauf,
+bevor du erneut sendest. Die frühere Anfrage kann bereits angenommen sein.
+
+6
+00:01:08.671 --> 00:01:14.034
+Link speichern behält die Adresse; Link verwenden füllt das Formular ohne
+Downloadstart.
+
+7
+00:01:30.500 --> 00:01:38.306
+Bloom Core läuft im Hintergrund. Ist es nicht verfügbar, sollten Apps mit
+eigenen Vorgaben öffnen; Erkennung und gemeinsame Aktionen können
+
+8
+00:01:38.306 --> 00:01:44.184
+eingeschränkt sein. Die Statusseite zeigt installierte Apps, Versionen und
+gemeldeten Zustand.
+
+9
+00:02:00.500 --> 00:02:09.855
+Nenne für Support Build, Firmware, PC-System, Controllermodell, erwartetes
+und tatsächliches Ergebnis sowie reproduzierbare Schritte. Prüfe Logs vor
+
+10
+00:02:09.855 --> 00:02:17.029
+dem Teilen; entferne Tokens, Cookies, Benutzernamen, private URLs,
+Geräteadressen und persönliche Pfade.

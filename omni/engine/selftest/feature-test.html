@@ -1,0 +1,87 @@
+<!doctype html><meta charset="utf-8"><title>Omni browser feature test</title>
+<h1>Omni browser feature test</h1><pre id="results"></pre>
+<script src="security-tests.js"></script>
+<script>
+window.omniFeatureResults = [];
+async function test(name, action) {
+    console.log('FEATURE START: ' + name);
+    try { const value = await action(); omniFeatureResults.push({name, pass:true, value}); }
+    catch (error) { omniFeatureResults.push({name, pass:false, error:String(error)}); }
+    console.log('FEATURE RESULT: ' + JSON.stringify(omniFeatureResults.at(-1)));
+    document.querySelector('#results').textContent = JSON.stringify(omniFeatureResults, null, 2);
+}
+(async () => {
+    if (location.search.includes('ublock')) await test('upstream uBlock request interception', async () => {
+        if (typeof window.OmniUBlock !== 'undefined') throw Error('Native filter engine exposed to webpage');
+        window.OmniUBlock={match:()=>0}; // A page's lookalike must not alter native filtering.
+        const load = name => new Promise(resolve => {
+            const s=document.createElement('script');s.src=name.startsWith('http:')?name:'ublock-test/'+name+'.js';
+            s.onload=()=>resolve(true);s.onerror=()=>resolve(false);document.head.append(s);
+        });
+        const allowed=await load('allowed'),blocked=await load('blocked'),excepted=await load('excepted');
+        if (!allowed || blocked || !excepted || !window.omniAllowedScriptRan || window.omniBlockedScriptRan || !window.omniExceptedScriptRan)
+            throw Error(JSON.stringify({allowed,blocked,excepted}));
+        if (location.search.includes('redirect')) {
+            const blockedRedirect=await load('http://192.0.2.20:8765/blocked-redirect');
+            window.omniExceptedScriptRan=false;
+            const allowedRedirect=await load('http://192.0.2.20:8765/allowed-redirect');
+            if(blockedRedirect || !allowedRedirect || !window.omniExceptedScriptRan || window.omniBlockedScriptRan)
+                throw Error(JSON.stringify({blockedRedirect,allowedRedirect}));
+        }
+        delete window.OmniUBlock;
+        return 'allowed executes; blocked does not; exception executes; native context isolated';
+    });
+    await test('canvas pixels', () => {
+        const c=document.createElement('canvas'); c.width=1920; c.height=1080;
+        const ctx=c.getContext('2d'); ctx.fillStyle='#008800'; ctx.fillRect(0,0,c.width,c.height);
+        const p=ctx.getImageData(0,0,1,1).data;
+        if(p[1]!==136) throw Error('Pixel mismatch'); return true;
+    });
+    await test('canvas encode', () => {
+        const c=document.createElement('canvas'); c.width=300; c.height=150;
+        c.getContext('2d').fillText('Omni',20,30);
+        for(const type of ['image/png','image/jpeg','image/webp'])
+            if(!c.toDataURL(type).startsWith('data:'+type+';base64,')) throw Error(type+' unavailable');
+        return 'PNG, JPEG and WebP';
+    });
+    await test('typed arrays 32 MiB', () => {
+        const a=new Uint8Array(32*1024*1024);
+        for(let i=0;i<a.length;i+=16384) a[i]=31;
+        return a[16384]===31;
+    });
+    await test('eight full-HD canvases', () => {
+        const canvases=[];
+        for(let i=0;i<8;i++) {
+            const c=document.createElement('canvas');c.width=1920;c.height=1080;
+            const ctx=c.getContext('2d');ctx.fillStyle='#008800';ctx.fillRect(0,0,c.width,c.height);
+            canvases.push(c);
+        }
+        const pixel=canvases[7].getContext('2d').getImageData(1919,1079,1,1).data;
+        if(pixel[1]!==136) throw Error('Canvas pixel mismatch');
+        for(const c of canvases){c.width=0;c.height=0;}
+        return true;
+    });
+    await test('WebAssembly', async () => {
+        const m=await WebAssembly.instantiate(new Uint8Array([0,97,115,109,1,0,0,0]));
+        const memory=new WebAssembly.Memory({initial:16,maximum:32}); memory.grow(1);
+        return memory.buffer.byteLength;
+    });
+    await test('crypto SHA256', async () => (await crypto.subtle.digest('SHA-256',new TextEncoder().encode('omni'))).byteLength);
+    await test('worker', () => new Promise((resolve,reject) => {
+        const url=URL.createObjectURL(new Blob(['postMessage(42)'],{type:'text/javascript'}));
+        const w=new Worker(url); const t=setTimeout(()=>{w.terminate();URL.revokeObjectURL(url);reject(Error('Timeout'));},3000);
+        w.onmessage=e=>{clearTimeout(t);w.terminate();URL.revokeObjectURL(url);resolve(e.data);};
+        w.onerror=e=>{clearTimeout(t);w.terminate();URL.revokeObjectURL(url);reject(Error(e.message));};
+    }));
+    await test('media formats', () => {
+        const v=document.createElement('video');
+        return {mp4:v.canPlayType('video/mp4; codecs="avc1.42E01E"'),webm:v.canPlayType('video/webm; codecs="vp8"'),audio:typeof AudioContext};
+    });
+    if(window.omniSecurityFixture) await runOmniSecurityTests(test);
+    await test('offline audio', async () => {
+        const a=new OfflineAudioContext(1,4410,44100); const o=a.createOscillator();o.connect(a.destination);o.start();
+        const b=await a.startRendering();return b.length;
+    });
+    console.log('FEATURE TEST COMPLETE');
+})();
+</script>

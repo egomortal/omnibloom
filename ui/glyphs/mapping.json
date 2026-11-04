@@ -1,0 +1,166 @@
+{
+  "xbox": {
+    "cross": {
+      "label": "A",
+      "file": "xbox/cross.svg",
+      "symbol": "xbox-cross"
+    },
+    "circle": {
+      "label": "B",
+      "file": "xbox/circle.svg",
+      "symbol": "xbox-circle"
+    },
+    "square": {
+      "label": "X",
+      "file": "xbox/square.svg",
+      "symbol": "xbox-square"
+    },
+    "triangle": {
+      "label": "Y",
+      "file": "xbox/triangle.svg",
+      "symbol": "xbox-triangle"
+    },
+    "l1": {
+      "label": "LB",
+      "file": "xbox/l1.svg",
+      "symbol": "xbox-l1"
+    },
+    "r1": {
+      "label": "RB",
+      "file": "xbox/r1.svg",
+      "symbol": "xbox-r1"
+    },
+    "l2": {
+      "label": "LT",
+      "file": "xbox/l2.svg",
+      "symbol": "xbox-l2"
+    },
+    "r2": {
+      "label": "RT",
+      "file": "xbox/r2.svg",
+      "symbol": "xbox-r2"
+    },
+    "l3": {
+      "label": "LS",
+      "file": "xbox/l3.svg",
+      "symbol": "xbox-l3"
+    },
+    "r3": {
+      "label": "RS",
+      "file": "xbox/r3.svg",
+      "symbol": "xbox-r3"
+    },
+    "up": {
+      "label": "up",
+      "file": "xbox/up.svg",
+      "symbol": "xbox-up"
+    },
+    "down": {
+      "label": "down",
+      "file": "xbox/down.svg",
+      "symbol": "xbox-down"
+    },
+    "left": {
+      "label": "left",
+      "file": "xbox/left.svg",
+      "symbol": "xbox-left"
+    },
+    "right": {
+      "label": "right",
+      "file": "xbox/right.svg",
+      "symbol": "xbox-right"
+    },
+    "menu": {
+      "label": "Menu",
+      "file": "xbox/menu.svg",
+      "symbol": "xbox-menu"
+    },
+    "view": {
+      "label": "View",
+      "file": "xbox/view.svg",
+      "symbol": "xbox-view"
+    }
+  },
+  "playstation": {
+    "cross": {
+      "label": "CROSS",
+      "file": "playstation/cross.svg",
+      "symbol": "playstation-cross"
+    },
+    "circle": {
+      "label": "CIRCLE",
+      "file": "playstation/circle.svg",
+      "symbol": "playstation-circle"
+    },
+    "square": {
+      "label": "SQUARE",
+      "file": "playstation/square.svg",
+      "symbol": "playstation-square"
+    },
+    "triangle": {
+      "label": "TRIANGLE",
+      "file": "playstation/triangle.svg",
+      "symbol": "playstation-triangle"
+    },
+    "l1": {
+      "label": "L1",
+      "file": "playstation/l1.svg",
+      "symbol": "playstation-l1"
+    },
+    "r1": {
+      "label": "R1",
+      "file": "playstation/r1.svg",
+      "symbol": "playstation-r1"
+    },
+    "l2": {
+      "label": "L2",
+      "file": "playstation/l2.svg",
+      "symbol": "playstation-l2"
+    },
+    "r2": {
+      "label": "R2",
+      "file": "playstation/r2.svg",
+      "symbol": "playstation-r2"
+    },
+    "l3": {
+      "label": "L3",
+      "file": "playstation/l3.svg",
+      "symbol": "playstation-l3"
+    },
+    "r3": {
+      "label": "R3",
+      "file": "playstation/r3.svg",
+      "symbol": "playstation-r3"
+    },
+    "up": {
+      "label": "UP",
+      "file": "playstation/up.svg",
+      "symbol": "playstation-up"
+    },
+    "down": {
+      "label": "DOWN",
+      "file": "playstation/down.svg",
+      "symbol": "playstation-down"
+    },
+    "left": {
+      "label": "LEFT",
+      "file": "playstation/left.svg",
+      "symbol": "playstation-left"
+    },
+    "right": {
+      "label": "RIGHT",
+      "file": "playstation/right.svg",
+      "symbol": "playstation-right"
+    },
+    "menu": {
+      "label": "Options",
+      "file": "playstation/menu.svg",
+      "symbol": "playstation-menu"
+    },
+    "view": {
+      "label": "Share",
+      "file": "playstation/view.svg",
+      "symbol": "playstation-view"
+    }
+  }
+}

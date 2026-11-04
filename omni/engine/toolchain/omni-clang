@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Omni Engine wrapper around the SDK's prospero-clang.
+# The SDK wrapper appends crt1.o whenever a non-flag argument is present, even
+# for -E/-S (preprocess/asm-only) runs, which makes clang preprocess the
+# binary crt1.o. Add -nostartfiles for those modes. SPDX-License-Identifier: BSD-2-Clause
+SDK="${PS5_PAYLOAD_SDK:-/opt/ps5-payload-sdk}"
+extra=()
+for a in "$@"; do
+  case "$a" in -E|-S|-M|-MM) extra=(-nostartfiles); break;; esac
+done
+exec "$SDK/bin/prospero-clang" "${extra[@]}" "$@"

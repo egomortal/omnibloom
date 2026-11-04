@@ -1,0 +1,51 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (en_US-ljspeech-high, LJ Speech (Keith Ito), public domain). Native review still required.
+
+1
+00:00:00.500 --> 00:00:10.031
+Choose by exact controller model and connection, not brand alone. Basic
+input, rumble, motion and touch controls have separate results. Record
+
+2
+00:00:10.031 --> 00:00:17.342
+hardware revision, app build, pairing, reconnect, buttons, sticks, triggers
+and recovery after rest.
+
+3
+00:00:30.500 --> 00:00:39.555
+Open Master Control and choose Pair. Follow the exact model’s Bluetooth
+pairing instructions. If pairing times out, stop searching, confirm pairing
+
+4
+00:00:39.555 --> 00:00:45.206
+mode and check whether the controller is connected elsewhere before retrying
+once.
+
+5
+00:01:00.500 --> 00:01:10.039
+After connection, test buttons and sticks before changing a profile. Select
+the intended app or game, review the mapping and apply explicitly. Imported
+
+6
+00:01:10.039 --> 00:01:13.987
+profiles must be reviewed; they never apply silently.
+
+7
+00:01:30.500 --> 00:01:40.294
+If Setup cannot find the console, confirm the address and trusted network,
+then run checks again. If an app is down, note its version and try its
+
+8
+00:01:40.294 --> 00:01:45.554
+normal Open action once. Keep the error and support code if it fails.
+
+9
+00:02:00.500 --> 00:02:11.158
+For support include app build, firmware, PC system, controller model,
+expected result, actual result and repeatable steps. Review logs before
+
+10
+00:02:11.158 --> 00:02:18.863
+sharing; remove tokens, cookies, usernames, private URLs, device addresses
+and personal paths.

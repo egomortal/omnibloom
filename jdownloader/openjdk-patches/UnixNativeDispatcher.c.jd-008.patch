@@ -1,0 +1,26 @@
+--- a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
++++ b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
+@@ -1352,14 +1352,7 @@
+ Java_sun_nio_fs_UnixNativeDispatcher_statvfs0(JNIEnv* env, jclass this,
+     jlong pathAddress, jobject attrs)
+ {
+-#ifdef __PROSPERO__
+-    // The SDK raw statfs path is not validated for a title sandbox.
+-    // Report unavailable capacity rather than invoking it or inventing data.
+-    (void)this; (void)pathAddress; (void)attrs;
+-    PS5_REALPATH_NOTE("capacity unavailable ENOSYS", "");
+-    throwUnixException(env, ENOSYS);
+-    return;
+-#else
++
+     int err;
+ #if defined(MACOSX) || defined(__PROSPERO__)
+     struct statfs buf;
+@@ -1397,7 +1390,6 @@
+         (*env)->SetLongField(env, attrs, attrs_f_bfree,  long_to_jlong(buf.f_bfree));
+         (*env)->SetLongField(env, attrs, attrs_f_bavail, long_to_jlong(buf.f_bavail));
+     }
+-#endif
+ }
+ 
+ JNIEXPORT void JNICALL

@@ -1,0 +1,112 @@
+{
+ "generated": "2026-10-19T17:44:34.972Z",
+ "source": "uBlock Origin Lite build of pinned gorhill/uBlock checkout",
+ "rulesets": [
+  {
+   "id": "ublock-filters",
+   "name": "uBlock filters – Ads, trackers, and more",
+   "css": {
+    "generic": 673,
+    "specific": 5158
+   }
+  },
+  {
+   "id": "easylist",
+   "name": "EasyList",
+   "css": {
+    "generic": 12329,
+    "specific": 8297
+   }
+  },
+  {
+   "id": "easyprivacy",
+   "name": "EasyPrivacy",
+   "css": {
+    "generic": 2,
+    "specific": 4
+   }
+  },
+  {
+   "id": "pgl",
+   "name": "Peter Lowe – Ads, trackers, and more",
+   "css": {
+    "generic": 0,
+    "specific": 0
+   }
+  },
+  {
+   "id": "ublock-badware",
+   "name": "uBlock filters – Badware risks",
+   "css": {
+    "generic": 48,
+    "specific": 209
+   }
+  },
+  {
+   "id": "urlhaus-full",
+   "name": "Malicious URL Blocklist",
+   "css": {
+    "generic": 0,
+    "specific": 0
+   }
+  },
+  {
+   "id": "annoyances-cookies",
+   "name": "EasyList/uBO – Cookie Notices",
+   "css": {
+    "generic": 13380,
+    "specific": 20613
+   }
+  },
+  {
+   "id": "annoyances-overlays",
+   "name": "EasyList/uBO – Overlay Notices",
+   "css": {
+    "generic": 1186,
+    "specific": 6212
+   }
+  },
+  {
+   "id": "annoyances-widgets",
+   "name": "EasyList – Chat Widgets",
+   "css": {
+    "generic": 14,
+    "specific": 15
+   }
+  },
+  {
+   "id": "annoyances-others",
+   "name": "EasyList – Other Annoyances",
+   "css": {
+    "generic": 784,
+    "specific": 2647
+   }
+  },
+  {
+   "id": "annoyances-notifications",
+   "name": "EasyList – Notifications",
+   "css": {
+    "generic": 290,
+    "specific": 1263
+   }
+  }
+ ],
+ "scriptletFiles": [
+  "main/ublock-filters",
+  "main/easyprivacy",
+  "main/ublock-badware",
+  "main/annoyances-cookies",
+  "main/annoyances-overlays",
+  "main/annoyances-notifications",
+  "main/annoyances-others",
+  "isolated/ublock-filters",
+  "isolated/easyprivacy",
+  "isolated/ublock-badware",
+  "isolated/annoyances-cookies",
+  "isolated/annoyances-overlays",
+  "isolated/annoyances-notifications",
+  "isolated/annoyances-others"
+ ],
+ "genericUnhideHosts": 1353,
+ "genericHideHosts": 2
+}

@@ -1,0 +1,44 @@
+{
+  "title": "[Help] ",
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Describe one problem. Redact credentials, device addresses and personal paths. Use SECURITY.md for security reports."
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "context",
+      "attributes": {
+        "label": "App, version and environment",
+        "description": "Distinguish browser prototype from console build. Firmware only if relevant; no IP address."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "steps",
+      "attributes": {
+        "label": "What did you try?",
+        "description": "Small reproduction and expected versus observed behavior."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "evidence",
+      "attributes": {
+        "label": "Relevant evidence",
+        "description": "Redacted error text or screenshot; state what remains untested."
+      },
+      "validations": {
+        "required": false
+      }
+    }
+  ]
+}

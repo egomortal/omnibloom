@@ -1,0 +1,38 @@
+{
+  "title": "[Idea] ",
+  "body": [
+    {
+      "type": "textarea",
+      "id": "problem",
+      "attributes": {
+        "label": "User problem",
+        "description": "Who encounters it, and in what task?"
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "scope",
+      "attributes": {
+        "label": "Smallest useful change",
+        "description": "One bounded outcome; keep implementation proposals separate from user needs."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "evidence",
+      "attributes": {
+        "label": "Existing work and acceptance",
+        "description": "Link related backlog IDs/discussions; explain how success could be checked."
+      },
+      "validations": {
+        "required": true
+      }
+    }
+  ]
+}

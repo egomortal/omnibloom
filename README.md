@@ -1,62 +1,95 @@
 <p align="center">
-  <img src="assets/icon/omni-icon-256.png" alt="Omni Browser icon" width="256">
+  <img src="assets/icon/omni-icon-256.png" alt="Omnibloom icon" width="256">
 </p>
 
-Omni Browser
+<h1 align="center">Omnibloom</h1>
+<p align="center"><em>potential birth from possibility</em></p>
 
-Omni Browser is a community-driven browser created by a hobbyist with significant assistance from AI tools, including Claude and Astra. The goal is simple: create a true one-stop shop browser for the jailbroken PlayStation 5 community and beyond.
+Omnibloom is a web browser and controller suite for jailbroken PlayStation 5 consoles. It is
+built on WebKit, the engine behind Safari, and runs as its own app on the console. On the
+console it shows as **Omni**.
 
-Omni was built out of necessity. What started as an effort to improve and expand the capabilities of the PS5 browser evolved into a broader project focused on modern web compatibility, media playback, convenience, and user control.
+It is a hobby project by one developer, built with a lot of help from AI tools, including
+Claude and Astra.
 
-Features
+Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` links redirect here).
 
-- **Using Omni?** See [FEATURES.md](FEATURES.md) for what works, what's being tested, and what's coming.
-- **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) for reusable components, build steps, and open problems.
+> Not affiliated with Omni Browser (Android, RebelRoot), The Omni Group / OmniWeb, or OmniPad-PS5.
+
+## What's in it
+
+| Part | What it is | Folder |
+| --- | --- | --- |
+| **Omni** (the browser) | WebKit browser as a native PS5 app (title PPSA99732): 4K60 video with HDR and hardware decoding, built-in ad blocking with uBlock Origin rules, tabs, translation, full DualSense control | [`omni/`](omni) |
+| **Downloads** | A link grabber that checks each link's real file type and quality before you download it, with a quality picker | [`downloads/`](downloads) |
+| **Master Control** | A controller app: pair Xbox and other Bluetooth pads, use Switch-mode, 8BitDo, HORI and other USB pads, remap buttons. Runs in the background with its own menu. Its own repository | [egomortal/master-control](https://github.com/egomortal/master-control) |
+| **USB files broker** | A small helper that lets Omni open and save files on USB drives, and nowhere else | [`omni/files-broker/`](omni/files-broker) |
+| **JDownloader 2 engine** (optional) | Runs **your own** JDownloader 2 on the PS5, inside Omni's downloads, on the [PS5 Java 25 port by mateo-cogeanu](https://github.com/mateo-cogeanu/ps5-java25-homebrew). JDownloader 2 itself is never shipped; Setup copies yours | [`jdownloader/`](jdownloader) |
+| **Omnibloom Setup** | One file for your computer: finds the PS5, installs and updates everything, sets up JDownloader 2 | [`setup/`](setup) |
+
+- **Using it?** See [FEATURES.md](FEATURES.md) for what works, what's being tested and what's coming.
+- **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) and [docs/BUILD.md](docs/BUILD.md).
 - **Before asking for a feature or firmware support,** please read my [personal notes](personal%20notes.md).
 
-4K video at 60 FPS, with HDR
-Built-in ad blocking powered by uBlock Origin rules, on by default
-Link grabber for video and media downloads (JDownloader and yt-dlp support planned)
-Full DualSense controller support, with a stick-drift fix
-Tabs, shortcuts, and page translation
-Focus on performance, usability, and media consumption
-Open-source and community driven
-Philosophy
+## Requirements
 
-Omni is intended to be your one-stop shop. I believe users should be able to browse, watch, download, organize, and customize their experience without juggling countless separate tools.
+- A jailbroken PS5 on **firmware 13.60**. That is the only firmware I can test on. Others may work, but I can't promise anything.
+- **ShadowMountPlus**, to register and launch Omni as an app.
+- **kstuff** (kstuff-lite works), for the kernel patches homebrew apps need.
+- A payload loader listening on port 9021 (elfldr) for the downloads worker, the files broker and Master Control.
 
-I also believe the web should be usable without being buried under advertisements. That's why ad blocking is a core part of the experience. No ads, no paywalls, and no premium tiers. If you enjoy the project and want to support development, buying me a coffee is appreciated, but it is never required.
+Install steps are in [docs/INSTALL.md](docs/INSTALL.md).
 
-AI Acknowledgment
+## Philosophy
 
-This project was created with substantial assistance from AI tools.
+Omnibloom is meant to be a one-stop shop. You should be able to browse, watch, download,
+organize and customize without juggling a pile of separate tools.
 
-This is not a license requirement, and nobody is obligated to agree with me. However, I would ask users to recognize the role AI now plays in modern software development. If you're benefiting from software that was built with AI assistance, please consider acknowledging that contribution rather than dismissing it outright.
+The web should be usable without being buried in ads, so ad blocking is a core part of it.
+No ads, no paywalls, no premium tiers. If you want to support development you can
+[buy me a coffee](https://buymeacoffee.com/egomortal), but it's never required.
 
-Security Notice
+## AI acknowledgment
 
-Omni includes the same standard HTTPS protections expected from a modern browser. However, no software can fully protect users from malicious actors.
+This project was made with substantial help from AI tools. That is not a licence requirement
+and nobody has to agree with me about it. I'd only ask that you recognize the part AI plays in
+modern software, rather than dismissing it outright.
 
-When using forks, modified versions, unofficial builds, or third-party distributions of Omni, you are trusting the people who maintain those versions. I can speak for my own intentions, but I cannot speak for anyone else's.
+## Security notice
 
-Use common sense, review code when possible, and only install builds from sources you trust.
+Omni uses the same standard HTTPS protections as any modern browser. It also blocks web pages
+from reaching the console's own services and your home network. No software can fully protect
+you from malicious actors, though.
 
-The Omni project and its contributors are not responsible for any damage, loss, or security issues caused by third-party modifications, forks, or redistributed versions of the software.
+Forks, modified versions and third-party builds are trusted only as far as you trust the people
+who make them. Review code when you can, and only install builds from sources you trust. The
+project and its contributors are not responsible for damage, loss or security problems caused
+by third-party modifications, forks or redistributed versions.
 
-Contributions
+## Licence
 
-Contributions are welcome.
+Omnibloom is free software under the **GNU General Public License v3.0 or later**. See
+[LICENSE](LICENSE). Third-party components keep their own licences, listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-Whether you're fixing bugs, improving performance, adding features, or helping with documentation, your help is appreciated. I will actively review and moderate contributions to help maintain the quality and direction of the project.
+## Contributions
 
-Credits
+Contributions are welcome: bug fixes, performance work, features and documentation. I review
+and moderate them to keep the project's quality and direction.
 
-Before anything else, I want to thank the developers, researchers, open-source projects, and communities that laid the groundwork which made Omni possible i.e. all the GitHub repositories made with ai or otherwise. No project exists in isolation, and Omni is built on years of knowledge, experimentation, and innovation from countless people who came before it.
+## Credits
 
-To everyone whose work contributed directly or indirectly: thank you.
+> **JDownloader 2 on the PS5 is possible thanks to [mateo-cogeanu's PS5 Java 25 port](https://github.com/mateo-cogeanu/ps5-java25-homebrew).**
+> Omnibloom's JDownloader 2 engine is built from it, on the FreeBSD OpenJDK fork. Its OpenJDK parts are GPLv2 with the Classpath
+> Exception, and the source is at the port's repo; our build recipe and patches are in [`jdownloader/`](jdownloader).
 
-Final Note
+Omnibloom stands on decades of open-source work. See [credits and gratitude](credits%20and%20gratitude)
+and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Master Control builds on PadBridge, AnyPad-PS5,
+ps5-wireless-pads and Ghost-Control; their authors are credited in
+[Master Control's own notices](https://github.com/egomortal/master-control/blob/main/THIRD-PARTY-NOTICES.md).
 
-Omni exists because I wanted something better. If it helps others, that's awesome. If you fork it and build something even cooler, that's awesome too.
+## Final note
 
-Just remember: software is built by people, communities, and increasingly AI-assisted tools. Respect the work, help each other out, and have fun building. 🚀
+Omnibloom exists because I wanted something better. If it helps you, awesome. If you fork it
+and build something even cooler, that's awesome too. Respect the work, help each other out and
+have fun building.

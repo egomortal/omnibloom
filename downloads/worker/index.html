@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="omni-session-token" content="__TOKEN__">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#101511">
+  <title>Omni — your downloads, your universe</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/universes.css">
+  <link rel="stylesheet" href="/assets/action-motion.css">
+  <link rel="stylesheet" href="/assets/guide.css">
+  <link rel="stylesheet" href="/assets/navigator.css">
+  <link rel="stylesheet" href="/assets/job-details.css">
+</head>
+<body data-theme="bloom">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="ambient" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/downloads" data-open-route="launch" aria-label="Omni home"><span class="brand-mark" aria-hidden="true"><i></i></span><span>omni<span class="brand-dot">.</span><small>DOWNLOAD STUDIO</small></span></a>
+      <div class="topbar-context"><span class="status-dot"></span> A space for your next discovery</div>
+      <div class="topbar-actions"><span class="local-badge" title="Connected to the authenticated local download worker.">Local worker</span><button class="universe-button game-section-button" id="games-toggle" type="button" hidden aria-haspopup="dialog" aria-controls="theme-dialog"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#controller"></use></svg><span>Video games</span></button><button class="universe-button" id="theme-toggle" type="button"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#spark"></use></svg><span>Change universe</span><kbd>T</kbd></button><button class="avatar" type="button" aria-label="Open preferences" data-open-route="settings">O</button></div>
+    </header>
+    <div class="workspace">
+      <aside class="navigator" aria-label="Universe navigation">
+        <div class="nav-intro"><span class="eyebrow">YOUR UNIVERSE</span><div class="universe-name"><h2 id="universe-title">Bloom</h2><span id="universe-number">01 / 15</span></div><p id="universe-description">Potential, opening into possibility.</p></div>
+        <nav id="navigation" aria-label="Main navigation"></nav>
+        <div class="nav-footer"><span class="nav-footer-symbol" id="universe-symbol" aria-hidden="true"></span><p id="navigation-hint">Rotate with ← →<br>Press Enter to jump in</p><span class="tiny-star" aria-hidden="true">✦</span></div>
+      </aside>
+      <main id="main-content" tabindex="-1"></main>
+    </div>
+    <footer class="app-footer"><span><span class="status-dot"></span> Made for curious minds.</span><span id="theme-total">15 universes. One place for everything.</span><button id="preview-info" class="text-button" type="button">About downloads <span aria-hidden="true">↗</span></button></footer>
+  </div>
+  <dialog id="theme-dialog" aria-labelledby="theme-heading">
+    <div class="dialog-heading"><div><span class="eyebrow">A CHANGE OF SCENERY</span><h2 id="theme-heading">Pick your universe.</h2><p>New atmosphere. A completely different way around.</p></div><button class="icon-button" type="button" aria-label="Close themes" data-close-dialog="theme-dialog"><svg class="icon"><use href="/assets/icons.svg#close"></use></svg></button></div>
+    <div class="theme-collections" role="group" aria-label="Theme collection"><button type="button" data-theme-collection="legends" aria-pressed="false" hidden>Video games <span>22</span></button><button type="button" data-theme-collection="originals" aria-pressed="true">Original styles <span>11</span></button><p>Every Universe here is an Omnibloom original.</p></div>
+    <div class="theme-grid" id="theme-grid"></div>
+    <div class="theme-dialog-footer"><span>Your downloads stay right where they are.</span><span class="theme-pad-hint">D-pad to move · <kbd data-glyph="cross">A</kbd> to apply · <kbd data-glyph="circle">B</kbd> or <kbd>Esc</kbd> to close</span><button type="button" class="primary-button theme-done" data-close-dialog="theme-dialog">Done</button></div>
+  </dialog>
+  <dialog id="add-dialog" aria-labelledby="add-heading">
+    <div class="dialog-heading"><div><span class="eyebrow">FOUND SOMETHING GOOD?</span><h2 id="add-heading">Bring it along.</h2><p>Paste a link. Choose your engine. You’re ready.</p></div><button class="icon-button" type="button" aria-label="Close add link" data-close-dialog="add-dialog"><svg class="icon"><use href="/assets/icons.svg#close"></use></svg></button></div>
+    <form id="download-form">
+      <label for="download-url">Your link</label><input id="download-url" type="url" required placeholder="https://example.com/something-great" autocomplete="url">
+      <div id="form-candidates" class="form-candidates" data-pick-target="download-url" hidden><p class="form-candidates-title">Found on the page · pick one <span>unverified</span></p><div class="form-candidate-rows" role="group" aria-label="Links found on the page"></div></div>
+      <div class="form-columns"><div><label for="download-engine">Download engine</label><select id="download-engine"><option value="ytdlp">yt-dlp · video & audio</option><option value="jdownloader">JDownloader · files & links</option></select></div><div><label for="download-kind">What to save</label><select id="download-kind"><option value="video">Best video</option><option value="audio">Audio stream</option><option value="file">Original file</option></select></div></div>
+      <p class="form-error" id="download-error" role="alert"></p>
+      <label class="uncertain-submission production-demo" hidden><input id="download-confirm-new" type="checkbox"> I checked the queue/history. Submit again despite possible duplicate after restart.</label><label class="production-demo"><input id="download-demo" type="checkbox"> Demo only · simulate progress without downloading media</label><p class="simulation-note">Real mode starts with the selected engine and switches to the other one automatically if it can’t take the link. Grabbed links are checked first: type, quality and size. yt-dlp: single videos, HLS and DASH; no live streams, playlists, RTMP or DRM.</p>
+      <button type="submit" class="primary-button full">Add to queue <svg class="icon"><use href="/assets/icons.svg#arrow-right"></use></svg></button>
+    </form>
+  </dialog>
+  <dialog id="quality-dialog" aria-labelledby="quality-heading"><div class="dialog-heading"><div><span class="eyebrow">CHECKED LINK</span><h2 id="quality-heading">Choose a quality</h2><p id="quality-summary"></p></div><button class="icon-button" type="button" aria-label="Close quality" data-close-dialog="quality-dialog"><svg class="icon"><use href="/assets/icons.svg#close"></use></svg></button></div><div id="quality-options" class="quality-options" role="group" aria-label="Video quality"></div><div id="quality-langs" class="quality-options" role="group" aria-label="Audio language" hidden></div><button type="button" class="primary-button full" id="quality-done">Use this quality</button></dialog>
+  <dialog id="info-dialog" aria-labelledby="info-heading"><div class="dialog-heading"><div><span class="eyebrow">YOUR DOWNLOAD WORKER</span><h2 id="info-heading">Both engines. One space.</h2></div><button type="button" class="icon-button" aria-label="Close download information" data-close-dialog="info-dialog">Close</button></div><p>Real requests use the local authenticated worker. Demo jobs simulate progress and save no media. Engine readiness is checked from worker status; selecting an engine never starts Java.</p><p>The queue hold affects waiting jobs only. Active jobs can be cancelled; pause, byte-resume and same-engine retry are not offered. If the first engine can’t take a link, the other engine takes it automatically and the job card names the engine that did. After an interrupted job, submit its source again explicitly. History may not retain the original source after restart.</p><p>Themes and reduced motion are saved in this browser. Worker history and saved links use the runtime's storage. Reported paths are not file-existence checks. Universe artwork uses finite animations; Reduce motion makes page changes immediate.</p><button class="primary-button" type="button" data-close-dialog="info-dialog">Ready</button></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="omni-transition" class="omni-transition" aria-hidden="true" data-state="idle"><div class="transform-shutter transform-shutter-left"></div><div class="transform-shutter transform-shutter-right"></div><div class="transform-sigil"><span class="transform-hourglass"></span><span id="transform-destination">LINK CHAMBER</span></div><div class="character-action character-action-bayonetta"></div><div class="character-action character-action-borderlands"></div><div class="character-action character-action-dishonored"></div><div class="character-action character-action-bioshockinfinite"></div><div class="action-muzzle"></div><div class="action-siren-pulse"></div><div class="action-blink-trace"></div><div class="action-tear"></div><div id="siren-caption" class="siren-caption"></div></div>
+  <button type="button" class="watch-recall" id="watch-recall" hidden><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#controller"></use></svg> Open dial</button>
+  <script src="/assets/candidate-wire.js" defer></script>
+  <script src="/assets/production-api.js" defer></script>
+  <script src="/assets/app.js" defer></script>
+  <script src="/assets/link-tools.js" defer></script>
+  <script src="/assets/guide.js" defer></script>
+  <script src="/assets/navigator.js" defer></script>
+  <script src="/assets/job-details.js" defer></script>
+</body>
+</html>

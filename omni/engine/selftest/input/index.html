@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>Omni input test</title>
+<style>body{font:28px sans-serif;background:white;color:black}input{font:28px sans-serif;width:600px;height:60px}</style>
+<form id="search"><label>Search <input id="q" name="q" autocomplete="off"></label><button>Search</button></form>
+<p id="result"></p>
+<script>
+window.inputEvents=0; window.submitted='';
+q.addEventListener('input',()=>window.inputEvents++);
+search.addEventListener('submit',e=>{e.preventDefault();window.submitted=q.value;result.textContent=q.value});
+</script>

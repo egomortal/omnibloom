@@ -1,0 +1,97 @@
+/* Omnibloom original Universes (public copy). Art and direction: Astra (codex-ui/20261103-universes-bold).
+   Integrated into the downloads page by Claude, 2026-11-03. GPL-3.0-or-later; art is the project's own.
+   Rules of the pass: the current destination is the brightest/raised item; focus adds a white outline + lift;
+   art scrolls with the page (no fixed layers: CPU WebKit repaints fixed layers on every scroll). */
+body[data-theme=bloom]{--bg:#11152a;--panel:#171b33;--panel-2:#20254a;--ink:#f4f1f7;--muted:#c3bfd3;--line:#3a3f62;--accent:#f0afd0;--accent-ink:#2a0f22;--glow:#f0afd02a;--u-art:url('/assets/art/bloom.webp')}
+body[data-theme=relay]{--bg:#091a25;--panel:#0e2430;--panel-2:#143444;--ink:#eaf6f6;--muted:#a7c3c8;--line:#28495a;--accent:#9ce2df;--accent-ink:#06211f;--glow:#9ce2df24;--u-art:url('/assets/art/relay.webp')}
+body[data-theme=loom]{--bg:#1d2234;--panel:#242a42;--panel-2:#2d3450;--ink:#f6efef;--muted:#c6bec8;--line:#434b6a;--accent:#eab8b5;--accent-ink:#2e1514;--glow:#eab8b524;--u-art:url('/assets/art/loom.webp')}
+body[data-theme=kinetic]{--bg:#101925;--panel:#152230;--panel-2:#1d2d3e;--ink:#eef5f7;--muted:#a9bcc6;--line:#2e4153;--accent:#8dcfda;--accent-ink:#0a2228;--glow:#8dcfda24;--u-art:url('/assets/art/kinetic.webp')}
+body[data-theme=tide]{--bg:#0a1b35;--panel:#0f2443;--panel-2:#163055;--ink:#eef7f6;--muted:#a8c2cb;--line:#25446e;--accent:#b5e8d9;--accent-ink:#06261d;--glow:#b5e8d924;--u-art:url('/assets/art/tide.webp')}
+body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]){--focus:#fff;--radius:16px;--selection-ink:var(--accent)}
+/* Art: one image per Universe, loaded only while that Universe is active, and only once the saved
+   Universe is known (html[data-ready]), so a first paint never fetches the wrong picture. */
+body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .ambient{display:none}
+body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .app-shell{min-height:100vh}
+html[data-ready=true] body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .app-shell{background:linear-gradient(90deg,var(--bg) 0,var(--bg) 14%,transparent 72%),linear-gradient(0deg,var(--bg) 0,transparent 55%),var(--u-art) right top/auto 100vh no-repeat}
+body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .navigator{background:#060b14d9;border-color:#ffffff2e;backdrop-filter:none}
+html[data-ready=true] body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .hero-art{background-image:var(--u-art);background-position:70% 40%;opacity:.95}
+body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) #navigation-hint{font-size:13px;line-height:1.5;color:var(--ink)}
+/* Shared route look */
+.u-nav button{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:9px 14px;border:2px solid #ffffff3a;border-radius:10px;background:#0b1424e0;color:var(--ink);font:600 15px/1.2 var(--display);text-align:left;cursor:pointer;transition:transform .22s ease,background-color .22s ease,border-color .22s ease,box-shadow .22s ease,filter .22s ease}
+.u-nav .u-num{color:var(--accent);font-size:13px;min-width:22px}
+.u-nav .u-arrow{margin-left:auto;color:var(--accent)}
+.u-nav button.is-current{border-color:#fff;box-shadow:0 0 0 2px var(--accent),0 6px 16px #0009}
+html[data-omni-input=pad] .u-nav button:focus{outline:3px solid #fff;outline-offset:3px;box-shadow:0 0 0 7px #000a;z-index:2}
+.u-nav button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+/* Bloom: petals unfurl from the left edge; the current petal is lit and pushed out. */
+.u-bloom{display:grid;gap:8px;padding:10px 0}
+.u-bloom button{border-radius:6px 30px 30px 6px;background:linear-gradient(90deg,#6b2854e6,#1a1327e6)}
+.u-bloom button:nth-child(2),.u-bloom button:nth-child(4){margin-left:8px;width:calc(100% - 8px)}
+.u-bloom button:nth-child(3){margin-left:14px;width:calc(100% - 14px)}
+.u-bloom button.is-current{background:linear-gradient(90deg,#d76aa6,#7a3a78);color:#fff;transform:translateX(8px)}
+.u-bloom button.is-current .u-num,.u-bloom button.is-current .u-arrow{color:#fff}
+@keyframes u-unfurl{from{opacity:0;transform:translateX(-18px) scaleX(.9)}to{opacity:1;transform:none}}
+.u-bloom.u-enter button{animation:u-unfurl .28s ease-out both}
+.u-bloom.u-enter button:nth-child(2){animation-delay:.04s}.u-bloom.u-enter button:nth-child(3){animation-delay:.08s}.u-bloom.u-enter button:nth-child(4){animation-delay:.12s}.u-bloom.u-enter button:nth-child(5){animation-delay:.16s}
+/* Tide: five bands, deepest first; the current band is the bright crest. */
+.u-tide{display:grid;gap:8px;padding:10px 0}
+.u-tide button{border-radius:6px 22px 6px 22px;background:#0f3a50e6;border-color:#70bbc18c}
+.u-tide button:nth-child(2){background:#164a5ee6}.u-tide button:nth-child(3){background:#1b5867e6}.u-tide button:nth-child(4){background:#226270e6}.u-tide button:nth-child(5){background:#286b78e6}
+.u-tide button.is-current{background:#b5e8d9;color:#06261d;transform:translateX(8px)}
+.u-tide button.is-current .u-num,.u-tide button.is-current .u-arrow{color:#06261d}
+/* Wide Universes take the full width above the page, like Atlas. */
+body:is([data-theme=relay],[data-theme=loom],[data-theme=kinetic]) .workspace{grid-template-columns:minmax(0,1fr);gap:18px}
+body:is([data-theme=relay],[data-theme=loom],[data-theme=kinetic]) .navigator{padding:16px 18px}
+body:is([data-theme=relay],[data-theme=loom],[data-theme=kinetic]) .nav-intro{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:10px}
+body:is([data-theme=relay],[data-theme=loom],[data-theme=kinetic]) .nav-intro>.eyebrow{display:none}
+body:is([data-theme=relay],[data-theme=loom],[data-theme=kinetic]) .universe-name{margin:0;gap:16px}
+body:is([data-theme=relay],[data-theme=loom],[data-theme=kinetic]) .nav-intro p{margin:0}
+body:is([data-theme=relay],[data-theme=loom],[data-theme=kinetic]) .nav-footer{display:none}
+.u-band{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+/* Relay: a patchboard of sockets; the live socket glows and the tile lifts. */
+.u-relay button{flex-direction:column;justify-content:center;gap:8px;min-height:92px;text-align:center;border-radius:12px;background:#081823e6;border-color:#8ed3d466}
+.u-relay .u-socket{width:26px;height:26px;border:6px solid #9ce2df;border-radius:50%;background:#183948}
+.u-relay button.is-current{background:#1d4a57;transform:translateY(-4px)}
+.u-relay button.is-current .u-socket{background:#e9b369;border-color:#fff}
+/* Loom: woven strands; the pulled strand is lifted and bright, the rest sit back. */
+.u-loom button{flex-direction:column;justify-content:flex-end;min-height:104px;padding:12px 8px;text-align:center;border-radius:6px 6px 20px 20px;border-color:#f9d7c55c;background:linear-gradient(90deg,#ffffff22 3px,transparent 3px 9px,#ffffff1c 9px 12px,transparent 12px),#6c4b4c;filter:saturate(.75) brightness(.8)}
+.u-loom button:nth-child(2){background-color:#6a5739}.u-loom button:nth-child(3){background-color:#3a5f5a}.u-loom button:nth-child(4){background-color:#41546f}.u-loom button:nth-child(5){background-color:#664f63}
+.u-loom button.is-current{filter:none;transform:translateY(-6px);background-color:#c98a8c}
+.u-loom button.is-current:nth-child(2){background-color:#c49b63}.u-loom button.is-current:nth-child(3){background-color:#5fa69b}.u-loom button.is-current:nth-child(4){background-color:#6f91c2}.u-loom button.is-current:nth-child(5){background-color:#b787ad}
+/* Kinetic: weights hang from one beam; the chosen weight swings up and lights. */
+.u-kinetic{position:relative;padding-top:10px;border-top:6px solid #a8cbd4;align-items:start}
+.u-kinetic button{flex-direction:column;justify-content:flex-end;min-height:76px;margin-top:18px;text-align:center;border-radius:5px 5px 18px 18px;border-color:#bed7da66;background:#2c4f57;filter:saturate(.75) brightness(.82)}
+.u-kinetic button:nth-child(2){margin-top:40px;background:#4f4163}.u-kinetic button:nth-child(3){margin-top:56px;background:#5f4a37}.u-kinetic button:nth-child(4){margin-top:38px;background:#30485c}.u-kinetic button:nth-child(5){margin-top:16px;background:#573c4d}
+.u-kinetic .u-cord{position:absolute;bottom:100%;left:50%;height:28px;border-left:3px solid #c0dadd}
+.u-kinetic button:nth-child(2) .u-cord,.u-kinetic button:nth-child(4) .u-cord{height:50px}.u-kinetic button:nth-child(3) .u-cord{height:66px}.u-kinetic button:nth-child(5) .u-cord{height:26px}
+.u-kinetic button.is-current{filter:none;transform:translateY(-10px);background:#5aa3b1}
+.u-kinetic button.is-current:nth-child(2){background:#9a7fc0}.u-kinetic button.is-current:nth-child(3){background:#c09063}.u-kinetic button.is-current:nth-child(4){background:#5f99bf}.u-kinetic button.is-current:nth-child(5){background:#b97597}
+/* Controller label setting row */
+.glyph-select{min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink);font:inherit}
+/* Reduced motion: no lifts, no unfurl. */
+body.reduced-motion .u-nav button{transition:none;animation:none!important}
+body.reduced-motion .u-nav button.is-current{transform:none}
+@media(prefers-reduced-motion:reduce){.u-nav button{transition:none;animation:none!important}.u-nav button.is-current{transform:none}}
+@media(max-width:800px){.u-band{grid-template-columns:repeat(3,minmax(0,1fr))}.u-kinetic button,.u-kinetic button:nth-child(n){margin-top:18px}.u-kinetic .u-cord,.u-kinetic button:nth-child(n) .u-cord{height:28px}}
+/* Public copy, every Universe: the mark is the user's own swirl icon (the old hourglass mark is not shipped). */
+.brand-mark{background:var(--panel) url('/assets/brand-icon.png') center/86% no-repeat}
+.brand-mark i{display:none}
+.omni-transition:not([data-effect=solstice]):not([data-effect=cassette]) .transform-hourglass{clip-path:none;width:84px;height:84px;background:url('/assets/brand-icon.png') center/contain no-repeat;filter:drop-shadow(0 0 14px var(--accent))}
+/* Keep the header readable over bright art. */
+body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .topbar-actions .local-badge{background:#060b14cc;border:1px solid #ffffff26;border-radius:8px;padding:5px 10px;color:var(--ink)}
+body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .topbar-context{background:#060b14b3;border-radius:8px;padding:5px 10px}
+
+/* OMNIBLOOM_ORIGINAL_ART_V1: launch art for the 10 original universes (Astra, round 1).
+   A CSS background only loads while its theme is active, so only the selected universe downloads art.
+   The base rule drops the old emerald-core.png fallback, which the public copy does not ship. */
+.hero-art{background-image:none}
+html body[data-theme=aurora] .hero-art{background:url('/assets/art/aurora.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=cosmic] .hero-art{background:url('/assets/art/cosmic.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=arcade] .hero-art{background:url('/assets/art/arcade.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=solstice] .hero-art{background:url('/assets/art/solstice.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=metro] .hero-art{background:url('/assets/art/metro.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=sakura] .hero-art{background:url('/assets/art/sakura.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=abyss] .hero-art{background:url('/assets/art/abyss.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=prism] .hero-art{background:url('/assets/art/prism.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=atlas] .hero-art{background:url('/assets/art/atlas.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}
+html body[data-theme=cassette] .hero-art{background:url('/assets/art/cassette.webp') 68% 50%/cover no-repeat;opacity:.9;mix-blend-mode:normal;transform:none}

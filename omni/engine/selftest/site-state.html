@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8"><title>Omni local persistence check</title>
+<style>body{background:#101820;color:#e8f2ed;font:18px sans-serif;margin:24px}pre{white-space:pre-wrap}</style>
+<h1>Local site-state persistence</h1>
+<p>Use this same loopback URL and origin for both phases. Write once, close the entire browser and network process normally, then verify after relaunch. A same-process reload does not prove disk persistence.</p>
+<button id="write">Write test state</button> <button id="verify">Verify after restart</button> <button id="cleanup">Remove test state</button>
+<pre id="status"></pre>
+<script>
+(function(){
+ 'use strict';
+ const key='omni_local_persistence_v1', value='original-local-fixture';
+ const results=window.omniFeatureResults=[];
+ function record(name,pass){results.push({name:name,pass:pass});document.getElementById('status').textContent=JSON.stringify(results,null,2);}
+ function cookiePresent(){return document.cookie.split(';').some(function(item){return item.trim()===key+'='+value;});}
+ function run(phase){
+  results.length=0;
+  try{
+   if(location.hostname!=='127.0.0.1'&&location.hostname!=='localhost'){record('local origin required',false);return;}
+   if(phase==='write'){
+    document.cookie=key+'='+value+'; Max-Age=86400; Path=/; SameSite=Lax';
+    localStorage.setItem(key,value);
+    record('persistent cookie accepted in current session',cookiePresent());
+    record('local storage accepted in current session',localStorage.getItem(key)===value);
+   }else if(phase==='verify'){
+    // No writes here: missing state must fail, not be recreated by the test.
+    record('cookie present after operator-confirmed process restart',cookiePresent());
+    record('local storage present after operator-confirmed process restart',localStorage.getItem(key)===value);
+   }else if(phase==='cleanup'){
+    document.cookie=key+'=; Max-Age=0; Path=/; SameSite=Lax';localStorage.removeItem(key);
+    record('only fixture state removed',!cookiePresent()&&localStorage.getItem(key)===null);
+   }else record('explicit write or verify phase required',false);
+  }catch(error){record('site state operation failed: '+error.name,false);}
+ }
+ for(const phase of ['write','verify','cleanup'])document.getElementById(phase).onclick=function(){run(phase);};
+ window.omniStartMediaTest=function(){run(new URLSearchParams(location.search).get('phase'));return {outcome:results.every(function(r){return r.pass;})?'complete':'failed'};};
+})();
+</script>

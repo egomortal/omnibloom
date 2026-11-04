@@ -1,0 +1,51 @@
+WEBVTT
+
+NOTE Re-timed to Piper narration (pt_BR-faber-medium, faber (OHF-Voice voice-datasets), CC0). Native review still required.
+
+1
+00:00:00.500 --> 00:00:09.084
+Cole um link HTTP(S) completo em Downloads. Escolha mecanismo e qualidade e
+inicie explicitamente. Demonstração apenas simula progresso e não salva
+
+2
+00:00:09.084 --> 00:00:14.881
+mídia. Pausar a fila não pausa tarefas ativas; cancelamento e estado final
+são separados.
+
+3
+00:00:30.500 --> 00:00:38.250
+Mídia protegida pode exigir um módulo de descriptografia compatível e
+aprovação do serviço. Omnibloom nunca contorna DRM ou CAPTCHA. Use as opções
+
+4
+00:00:38.250 --> 00:00:43.627
+de reprodução ou download aceitas pelo serviço; trocar de mecanismo não
+remove a proteção.
+
+5
+00:01:00.500 --> 00:01:08.736
+Se uma solicitação expirar ou o serviço reiniciar, confira fila e histórico
+antes de reenviar. A solicitação anterior pode ter sido aceita. Salvar link
+
+6
+00:01:08.736 --> 00:01:13.372
+guarda o endereço; Usar link preenche o formulário sem iniciar o download.
+
+7
+00:01:30.500 --> 00:01:38.707
+Bloom Core roda em segundo plano. Se estiver indisponível, os apps devem
+abrir com seus padrões, mas a descoberta e as ações compartilhadas podem
+
+8
+00:01:38.707 --> 00:01:43.325
+ficar limitadas. Abra Status para ver apps, versões e estado informado.
+
+9
+00:02:00.500 --> 00:02:09.936
+Para suporte, inclua build, firmware, sistema do PC, modelo do controle,
+resultados esperado e real e passos reproduzíveis. Revise os logs antes de
+
+10
+00:02:09.936 --> 00:02:16.506
+compartilhar; remova tokens, cookies, usuários, URLs privadas, endereços e
+caminhos pessoais.

@@ -1,0 +1,91 @@
+<!doctype html><meta charset="utf-8"><title>Omni staged media diagnostic</title>
+<style>body{background:#101820;color:#e8f2ed;font:18px sans-serif;margin:24px}button{padding:12px;margin-right:12px}video{display:block;width:480px;height:270px;margin-top:16px}pre{white-space:pre-wrap;font-size:14px}</style>
+<h1>Local document first, media second</h1>
+<p>This page requests no media until document load finishes and a test is started.</p>
+<button id="mp4" disabled>Test MP4</button><button id="webm" disabled>Test WebM</button><button id="cancel" disabled>Cancel</button><div id="player"></div><pre id="status"></pre>
+<script>
+(function () {
+    'use strict';
+    const results = window.omniFeatureResults = [];
+    const state = {stage:'document', documentLoaded:false, format:null, events:[], result:null};
+    const output = document.getElementById('status');
+    let video = null, busy = false, cancelWait = null;
+    function snapshot() {
+        return {stage:state.stage, documentLoaded:state.documentLoaded, format:state.format,
+            events:state.events.slice(), result:state.result, readyState:document.readyState,
+            video:video ? {readyState:video.readyState, networkState:video.networkState,
+                currentTime:video.currentTime, duration:Number.isFinite(video.duration)?video.duration:null,
+                width:video.videoWidth, height:video.videoHeight, error:video.error?video.error.code:null} : null};
+    }
+    function render() { output.textContent=JSON.stringify(snapshot(),null,2); }
+    function recordEvent(name) {
+        if(state.events.length<64) state.events.push({name:name, at:Date.now(), stage:state.stage});
+        render();
+    }
+    function record(name, pass, detail) { results.push({name:name,pass:pass,value:detail}); }
+    function buttons() {
+        document.getElementById('mp4').disabled=!state.documentLoaded||busy;
+        document.getElementById('webm').disabled=!state.documentLoaded||busy;
+        document.getElementById('cancel').disabled=!busy;
+    }
+    // Each phase removes every waiter on success, error, timeout or cancellation.
+    function waitFor(name, action) {
+        return new Promise(function(resolve) {
+            const target=video;
+            let finished=false, timer;
+            function done(outcome, detail) {
+                if(finished) return;
+                finished=true; clearTimeout(timer);
+                target.removeEventListener(name, success); target.removeEventListener('error', failure);
+                cancelWait=null; resolve({outcome:outcome,detail:detail||null});
+            }
+            function success() { done('event',name); }
+            function failure() { done('error',target.error?target.error.code:'unknown'); }
+            target.addEventListener(name,success); target.addEventListener('error',failure);
+            cancelWait=function(){done('cancelled');};
+            timer=setTimeout(function(){done('timeout',name);},8000);
+            try {
+                const promise=action();
+                if(promise && typeof promise.then==='function') promise.catch(function(error){done('rejected',String(error));});
+            } catch(error) { done('exception',String(error)); }
+        });
+    }
+    async function start(format) {
+        if(!state.documentLoaded) return {outcome:'not-ready'};
+        if(busy) return {outcome:'busy'};
+        if(format!=='mp4' && format!=='webm') return {outcome:'invalid-format'};
+        busy=true; state.format=format; state.result=null; state.events=[]; buttons();
+        video=document.createElement('video'); video.muted=true; video.playsInline=true; video.controls=true;
+        document.getElementById('player').appendChild(video);
+        const target=video;
+        const observed=['loadstart','loadedmetadata','loadeddata','canplay','playing','waiting','stalled','ended','error','abort','emptied'];
+        const observe=function(event){recordEvent(event.type);};
+        observed.forEach(function(name){target.addEventListener(name,observe);});
+        let outcome;
+        try {
+            state.stage='loading'; render();
+            outcome=await waitFor('loadeddata',function(){target.src='media-test.'+format;target.load();});
+            const decoded=outcome.outcome==='event' && target.videoWidth===320 && target.videoHeight===180;
+            record(format+' loadeddata and dimensions',decoded,{phase:outcome,width:target.videoWidth,height:target.videoHeight});
+            if(!decoded) { state.result=outcome.outcome==='event'?{outcome:'unexpected-dimensions'}:outcome; return state.result; }
+            state.stage='playing'; render();
+            outcome=await waitFor('ended',function(){return target.play();});
+            const ended=outcome.outcome==='event' && target.ended && target.currentTime>=1.9;
+            record(format+' playback ended',ended,{phase:outcome,currentTime:target.currentTime});
+            state.result=ended?{outcome:'passed'}:(outcome.outcome==='event'?{outcome:'unexpected-end-state'}:outcome);
+            return state.result;
+        } finally {
+            observed.forEach(function(name){target.removeEventListener(name,observe);});
+            target.pause(); target.removeAttribute('src'); target.load(); target.remove();
+            video=null; busy=false; cancelWait=null; state.stage='complete'; buttons(); render();
+        }
+    }
+    window.omniMediaIsolation={start:start,snapshot:snapshot,cancel:function(){if(cancelWait)cancelWait();}};
+    window.omniStartMediaTest=function(format){return start(format||'mp4');};
+    document.getElementById('mp4').onclick=function(){start('mp4');};
+    document.getElementById('webm').onclick=function(){start('webm');};
+    document.getElementById('cancel').onclick=window.omniMediaIsolation.cancel;
+    window.addEventListener('load',function(){state.documentLoaded=true;state.stage='ready';recordEvent('document-load');buttons();},{once:true});
+    recordEvent('script-ready');
+})();
+</script>

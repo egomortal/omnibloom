@@ -1,0 +1,40 @@
+--- a/src/java.base/bsd/native/libnio/fs/BsdNativeDispatcher.c
++++ b/src/java.base/bsd/native/libnio/fs/BsdNativeDispatcher.c
+@@ -58,6 +58,9 @@
+ };
+ 
+ #include "sun_nio_fs_BsdNativeDispatcher.h"
++#ifdef __PROSPERO__
++#include "ps5MountSnapshot.h"
++#endif
+ 
+ static void throwUnixException(JNIEnv* env, int errnum) {
+     jobject x = JNU_NewObjectByName(env, "sun/nio/fs/UnixException",
+@@ -91,11 +94,22 @@
+ Java_sun_nio_fs_BsdNativeDispatcher_getfsstat(JNIEnv* env, jclass this)
+ {
+ #ifdef __PROSPERO__
+-    /* The linked desktop getfsstat uses raw syscall395. Mount enumeration
+-     * has no validated PS5 ABI; report unsupported rather than invoking it.
+-     * Do not invent mounts or filesystem capacity. */
+-    throwUnixException(env, ENOSYS);
+-    return 0;
++    struct fsstat_iter *iter = malloc(sizeof(*iter));
++    if (iter == NULL) { JNU_ThrowOutOfMemoryError(env, "native heap"); return 0; }
++    iter->buf = NULL; iter->pos = 0; iter->nentries = 0;
++    if (ps5_mount_snapshot(getfsstat, &iter->buf, &iter->nentries) < 0) {
++        int error = errno; free(iter); throwUnixException(env, error); return 0;
++    }
++    for (int i = 0; i < iter->nentries; ++i) {
++        struct statfs *entry = &iter->buf[i];
++        if (entry->f_version != STATFS_VERSION ||
++            memchr(entry->f_fstypename, 0, sizeof(entry->f_fstypename)) == NULL ||
++            memchr(entry->f_mntfromname, 0, sizeof(entry->f_mntfromname)) == NULL ||
++            memchr(entry->f_mntonname, 0, sizeof(entry->f_mntonname)) == NULL) {
++            free(iter->buf); free(iter); throwUnixException(env, EIO); return 0;
++        }
++    }
++    return (jlong)iter;
+ #else
+     int nentries;
+     size_t bufsize;

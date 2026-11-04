@@ -1,0 +1,55 @@
+{
+  "title": "[Translation] ",
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Use TRANSLATING.md. Keep IDs/format tokens intact; structural validation is not native-language approval."
+      }
+    },
+    {
+      "type": "input",
+      "id": "locale",
+      "attributes": {
+        "label": "Locale, catalog and baseline",
+        "description": "Exact code plus source commit/hash."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "ids",
+      "attributes": {
+        "label": "Claimed IDs and context",
+        "description": "Prefer 25–50 explicit IDs; coordinate before editing."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "review",
+      "attributes": {
+        "label": "Review evidence",
+        "description": "Wording rationale, reviewer language familiarity, unchanged-English decisions and validator output."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "remaining",
+      "attributes": {
+        "label": "Open source or rendering issues",
+        "description": "Plural composition, positional argument meaning, font shaping and untested platforms; do not claim entire-language approval."
+      },
+      "validations": {
+        "required": true
+      }
+    }
+  ]
+}

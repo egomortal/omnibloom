@@ -1,0 +1,8 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Omni request-blocking test</title>
+<style>body {font:24px sans-serif;background:#10202a;color:white;padding:40px}</style>
+<h1>Omni request-blocking test</h1>
+<p>Both scripts run with blocking off. Only the ordinary script runs with blocking on.</p>
+<script src="allowed.js"></script>
+<script src="blocked.js" onerror="window.omniBlockedError=true"></script>
