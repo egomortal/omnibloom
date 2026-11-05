@@ -1,4 +1,47 @@
-# Omni native title: s3.1c patch set
+# Omni native title: patch sets (s3.1c, s3.4c)
+
+## s3.4c: 4K60 SDR on the GPU video path (console-proven 2026-11-05)
+
+**s3.4c** is the build that played 2160p60 SDR YouTube on the console: 3840x2160, median 59.94 fps, 0.17% of frames
+dropped over 300 s (title `eboot.bin` `015c8e6c…d707f6b0`; child unchanged, s3.1c's `7b810ea5…fd717c64`). It stacks on
+s3.1c (this folder's s3.1c steps below) and is title-only: the child is linked from the unpatched tree first and the build
+stops unless it is byte-identical to `7b810ea5`.
+
+| Folder | What |
+|---|---|
+| `clean4/integration.diff` | Astra's canonical CLEAN4 selection (25 files, a normalized review tree): native quick bar, grouped Options and Apps tiles (`OMNI_MQ_NATIVE_V1`), media stats + HDR-preference bridge, downloads readiness C-1, assigned card ports C-2, the files-port migration and Setup metadata. Its userland parts are applied in this repository (`downloads/worker/`, `omni/files-broker/`, `setup/tools/make_package.py`); Setup's `ports.py`/`port_registry.py` are not (they need Setup-next modules this repository does not have). |
+| `s34/s34-entry/`, `s34/s34-media/`, `s34/s34-entry-baseline.json` | the integration's `engine/entry` + `engine/media` files as the build copies them; `OmniBrowser.cpp` is the 3-way merge of the integration and Astra's fps diagnostics plus 4k60's patch 05 (`OMNI_HOLE_ELIGIBILITY_PROBE_V1`) |
+| `s34/engine/media/`, `s34/src-title/` | the title's own media and presenter sources after 4k60's patches 01-03 (`OMNI_GPU_VIDEO_V3`, `OMNI_GPU_PRESENT_V3`, `OMNI_VIDEO_FPS_V2`), merged with the CLEAN4 presenter (two-entry SDL import cache, region reuse) |
+| `s34/tools/` | the s3.4c tool set (`apply_s34_entry.py`, `apply_dark_video.py`, `apply_dark_standard.py`, `prep_s34.py`, the earlier `prep_s*`/`apply_*` the chain still calls) |
+| `s34/hwservice-stats-tree.diff` | the integration's two stats entry points in the tree's own `OmniHwService.cpp` (the in-tree link needs them) |
+| `s34/hosttest/` | GPU host tests (`gpuvideo_test.cpp`, `present_test.cpp`, `pair_test.cpp`, lavapipe), the dark-page tests (node), `pointer_cross_test_s34.cpp`, `eligibility_test.cjs` |
+| `s34/SHA256SUMS.txt`, `s34/checks.txt` | the s3.4c build's own hashes and string/symbol checks (paths scrubbed) |
+| `video-4k60/` | the omni-video-4k60 patch set: 00 (GPU V2 base, skipped where `OMNI_GPU_VIDEO_V2` is present), 01, 02, 03, 05, `apply_video4k60.py`, `REPORT.md` (the cause: the dark-page filter kept YouTube off the hole-punch plane), `TEST-PLAN.md`. Its 04 (dark) is not used: s3.4's `OMNI_DARK_VIDEO_PLANE_V1` + `OMNI_DARK_STANDARD_V1` cover it, so it is not in this folder. |
+| `build/build-omni-native-s34*.sh` | s3.4, s3.4b and s3.4c |
+
+### Order (as `build/build-omni-native-s34c.sh` applies it)
+
+| # | Step | Marker |
+|---|---|---|
+| 0 | s3.1c's host tests (step 0 below), then the GPU host tests on lavapipe: video V3 (+ fallback, `failsetup`), shared device (one VkDevice for present + video), present V3 (+ fallback), surface-pair cache | |
+| 1-3 | s3.1c steps 1-6 (WebKit s3 + PNA, `engine-entry/*`, view-transition, yt, soak read), then the **child** from that unpatched tree (must be `7b810ea5`) | |
+| 4 | `tools/apply_pointer_cross.py <tree> shell/pointer-cross.diff` + `pointer_cross_test.cpp` (41/41) | `OMNI_POINTER_CROSS_V1` |
+| 5 | `s34/tools/apply_s34_entry.py <tree>`: the CLEAN4 `engine/entry` + `engine/media` files; each tree file must equal its pinned baseline (`s34-entry-baseline.json`) first. It also checks each file against `codex-ui/20261104-suite-clean4-integration/proposed/` next to the workspace (= `clean4/integration.diff` applied) | `OMNI_MQ_NATIVE_V1`, `OMNI_VIDEO_STATS_BRIDGE_V1` |
+| 6 | `s34/tools/apply_dark_video.py <tree>`: the dark-page filter steps aside while a playing video covers >= 20% of the viewport (the YouTube 0.0145 s start stall) | `OMNI_DARK_VIDEO_PLANE_V1` |
+| 7 | `s34/tools/apply_dark_standard.py <tree>`: Dark mode the standard way (the page's own dark theme first, the invert filter last, the Dark Reader add-on hook) | `OMNI_DARK_STANDARD_V1` |
+| 8 | `patch -p1 < s34/hwservice-stats-tree.diff` in the tree; `pointer_cross_test_s34.cpp` on the s3.4 files (41/41) | |
+| 9 | ninja `OmniEngine`, `make_link_command.py`, `s34/tools/prep_s34.py` (compiles `s34/engine/media/OmniHwService.cpp` + `OmniGpuVideo.cpp`, swaps the GPU objects into the link, copies `s34/src-title/`), `build.py` (pages: the final CLEAN4 tree, `omni/pages/bundle-clean4/`) | `OMNI_GPU_VIDEO_V3`, `OMNI_GPU_PRESENT_V3` |
+
+Build log of the console-proven build: host tests 17/17, 51/51, 103/103; GPU host tests all exit 0; child IDENTICAL;
+pointer-cross 41/41 twice; ninja ok; layout check PASSED. Runtime flags (from `video-4k60/TEST-PLAN.md`):
+`/data/omni/gpu-present.flag` (`out=2160`), `/data/omni/gpu-video.flag`, optional `video-fps.flag`; kill switch for the shared
+device `/data/omni/gpu-share-disabled.flag`. HDR10 passthrough is not part of s3.4c (SDR only).
+
+Not here: **s3.4d** (prefers-color-scheme emulation, `apply_dark_emu.py`) is built but not yet proven on the console.
+
+---
+
+## s3.1c
 
 This folder holds the changes that turn the **s3** native tree into the **s3.1c** build
 (title `eboot.bin` `e8ac0c9d…69e498e2`, child `omni-engine-child.elf` `7b810ea5…fd717c64`).

@@ -1,0 +1,325 @@
+diff --git a/src-title/OmniGpuPresent.cpp b/src-title/OmniGpuPresent.cpp
+index daf1162..3c80abf 100755
+--- a/src-title/OmniGpuPresent.cpp
++++ b/src-title/OmniGpuPresent.cpp
+@@ -35,6 +35,18 @@
+ //    Omni's HDR setting is on (/data/omni/hdr-auto.flag or hdr-presenter-test.flag); the SDR frame (page and video)
+ //    is mapped to PQ with SDR white at 203 nits (`hdrwhite=N`) by a compute pass, checked against a CPU reference
+ //    at set-up. Flag words: hdr, hdrwhite=N; failsetup (fails the set-up on purpose: the fallback check).
++//
++// OMNI_GPU_PRESENT_V3 (omni-video-4k60):
++//  - one RADV device: omni_gpu_present_share() hands this device and queue to OmniGpuVideo (V3), so the title no longer
++//    brings up a second device for the video; every vkQueueSubmit / vkQueuePresentKHR / vkDeviceWaitIdle on the shared
++//    queue holds g_queueLock (Vulkan's external synchronisation rule), and teardown shuts the video module down first;
++//  - OMNI_GPU_SURFACE_PAIR_V1 + OMNI_GPU_REGION_REUSE_V1 (Astra's 2026-11-04 proposals): the two SDL canvases the shell
++//    exchanges are both kept imported (329 re-imports in 10 s before), and the video copy regions reuse one vector;
++//  - FIFO stays the default on purpose: the hole-punch's V8 presenter picks "the picture due at the vblank this flip
++//    reaches", which needs one flip per vblank and a blocking acquire (MAILBOX would let a later present replace a
++//    queued one and break that accounting; it remains a flag word for experiments);
++//  - OMNI_VIDEO_FPS_V2: the per-second line adds the GPU video's in-place / ring-copy counts, the shared-device state,
++//    the present mode and the number of present intervals over 25 ms (a missed vblank at 60 Hz).
+ #include <vulkan/vulkan.h>
+ #include "OmniPqOutShader.h"   // V2 HDR: SPIR-V of omni_pq_out.comp
+ 
+@@ -69,6 +81,12 @@ static const char* const kLogPath = "/data/omni/native/gpu-present.log";
+ static const char* const kFlagPath = "/data/omni/gpu-present.flag";
+ #endif
+ 
++// OMNI_GPU_PRESENT_V3: the queue is shared with OmniGpuVideo (V3); its submissions and presents are serialised here.
++static std::mutex g_queueLock;
++static void queueLock() { g_queueLock.lock(); }
++static void queueUnlock() { g_queueLock.unlock(); }
++extern "C" void omni_gpu_video_shutdown() __attribute__((weak));
++
+ namespace {
+ 
+ double nowMs() { timespec ts {}; clock_gettime(CLOCK_MONOTONIC, &ts); return ts.tv_sec * 1000.0 + ts.tv_nsec / 1e6; }
+@@ -160,8 +178,10 @@ struct Gp {
+     Buf staging;   // persistent upload buffer (presents are synchronous: one is enough; kept, never per-upload)
+     Buf readback;  // differential check
+     // V2: the SDL surface imported once; staging mirror state; damage of the next present; imported layers
+-    Buf frameImport; const void* frameKey = nullptr; size_t frameKeyBytes = 0; VkDeviceSize frameOff = 0; bool frameImportRefused = false;
+-    std::atomic<const void*> frameKeySeen { nullptr };   // frameKey, readable without g.lock (the SDL_FreeSurface wrap)
++    // OMNI_GPU_SURFACE_PAIR_V1: SDL alternates two surfaces; exact pointer/size keys, bounded LRU.
++    Buf frameImports[2]; const void* frameKeys[2] {}; size_t frameKeyBytes[2] {}; VkDeviceSize frameOffsets[2] {};
++    uint64_t frameLastUse[2] {}, frameUseTick = 0; bool frameImportRefused = false;
++    std::atomic<const void*> frameKeysSeen[2] {}; // lock-free FreeSurface hints; actual invalidation holds g.lock
+     bool stagingValid = false; int stagingPitch = 0, stagingH = 0;
+     bool damageFull = true; std::vector<Rect> damage;
+     std::mutex cacheLock; std::list<Cached> layers; uint64_t useTick = 0;
+@@ -174,6 +194,7 @@ struct Gp {
+     int optOutHeight = 0;   // 0 = match canvas
+     int canvasHintW = 1920, canvasHintH = 1080;
+     VideoStage video;
++    std::vector<VkBufferImageCopy> videoRegions; // OMNI_GPU_REGION_REUSE_V1: retained scratch, protected by g.lock
+     // checks / statistics
+     int verifyPlain = 0, verifyVideo = 0;
+     uint64_t presents = 0, imports = 0, importFails = 0, stagingCopies = 0, videoFrames = 0, videoRuns = 0;
+@@ -189,6 +210,7 @@ struct Gp {
+     double lastCpuMs = 0, lastGpuMs = -1;   // V2: for the fps line
+     std::thread reaper;
+     std::atomic<int64_t> presentSinceUs { 0 };   // watchdog: a present call in progress since (0 = none)
++    std::atomic<bool> shared { false };   // V3: the device was handed to OmniGpuVideo (shut it down before ours goes)
+ };
+ Gp g;
+ 
+@@ -319,17 +341,36 @@ bool ensureCanvas(uint32_t w, uint32_t h)
+ 
+ // V2: the frame's source buffer: the SDL surface imported once (the same surface every frame), else the persistent
+ // staging mirror, where only the damaged rows are copied (the shell's rects plus the video rectangle).
++// Caller holds g.lock; previous presents completed their fence. Never called after a hung present.
++void clearFrameImports()
++{
++    for (size_t i = 0; i < 2; ++i) {
++        freeBuf(g.frameImports[i]); g.frameKeys[i] = nullptr; g.frameKeyBytes[i] = 0;
++        g.frameOffsets[i] = 0; g.frameLastUse[i] = 0; g.frameKeysSeen[i].store(nullptr, std::memory_order_release);
++    }
++}
+ bool frameSource(const uint8_t* pixels, int pitch, int w, int h, VkBuffer& buf, VkDeviceSize& off)
+ {
+     const size_t bytes = size_t(pitch) * size_t(h);
+     if (g.hostImport && !g.optForceStaging && !g.frameImportRefused) {
+-        if (g.frameImport.buffer && g.frameKey == pixels && g.frameKeyBytes == bytes) { buf = g.frameImport.buffer; off = g.frameOff; g.frameHits++; return true; }
+-        if (g.frameImport.buffer) {
+-            plog(true, "SDL window surface changed (%p, %zu bytes -> %p, %zu bytes): its import is replaced", g.frameKey, g.frameKeyBytes, static_cast<const void*>(pixels), bytes);
+-            freeBuf(g.frameImport); g.frameKey = nullptr; g.frameKeyBytes = 0; g.frameKeySeen.store(nullptr);
++        for (size_t i = 0; i < 2; ++i)
++            if (g.frameImports[i].buffer && g.frameKeys[i] == pixels && g.frameKeyBytes[i] == bytes) {
++                buf = g.frameImports[i].buffer; off = g.frameOffsets[i]; g.frameLastUse[i] = ++g.frameUseTick;
++                g.frameHits++; return true;
++            }
++        size_t slot = 2;
++        // Re-size of the same pointer replaces its own slot; otherwise use empty, then least recent.
++        for (size_t i = 0; i < 2; ++i) if (g.frameKeys[i] == pixels) { slot = i; break; }
++        if (slot == 2) for (size_t i = 0; i < 2; ++i) if (!g.frameImports[i].buffer) { slot = i; break; }
++        if (slot == 2) slot = g.frameLastUse[0] <= g.frameLastUse[1] ? 0 : 1;
++        freeBuf(g.frameImports[slot]); g.frameKeys[slot] = nullptr; g.frameKeyBytes[slot] = 0;
++        g.frameOffsets[slot] = 0; g.frameLastUse[slot] = 0; g.frameKeysSeen[slot].store(nullptr, std::memory_order_release);
++        if (importHost(g.frameImports[slot], pixels, bytes, g.frameOffsets[slot])) {
++            g.frameKeys[slot] = pixels; g.frameKeyBytes[slot] = bytes; g.frameLastUse[slot] = ++g.frameUseTick;
++            g.frameKeysSeen[slot].store(pixels, std::memory_order_release);
++            buf = g.frameImports[slot].buffer; off = g.frameOffsets[slot]; return true;
+         }
+-        if (importHost(g.frameImport, pixels, bytes, g.frameOff)) {
+-            g.frameKey = pixels; g.frameKeyBytes = bytes; g.frameKeySeen.store(pixels); buf = g.frameImport.buffer; off = g.frameOff; return true; }
++        clearFrameImports(); // failed replacement must not leave a sibling import alive
+         if (g.optForceImport) return false;
+         g.frameImportRefused = true;
+         plog(true, "the SDL surface import was refused: the persistent staging mirror is used from now on (damaged rows only)");
+@@ -418,7 +459,7 @@ bool recordCompose(const uint8_t* pixels, int pitch, int w, int h, VkImage targe
+     if (rec.video) {
+         // the hole-punch, on the GPU: each run of video pixels comes straight from the layer (same channel order
+         // as the canvas: holePunchAttach). Runs are clipped to the canvas and the layer.
+-        std::vector<VkBufferImageCopy> regions; regions.reserve(g.video.runs.size() / 3);
++        auto& regions = g.videoRegions; regions.clear(); regions.reserve(g.video.runs.size() / 3);
+         const VideoStage& v = g.video;
+         for (size_t k = 0; k + 2 < v.runs.size(); k += 3) {
+             const int y = int(v.runs[k]), x0 = int(v.runs[k + 1]); int n = int(v.runs[k + 2]);
+@@ -722,7 +763,8 @@ bool hdrSelfTest(int w, int h, int* worstOut, long* offOut)
+     g.vk.vkEndCommandBuffer(g.cmd);
+     VkSubmitInfo si { VK_STRUCTURE_TYPE_SUBMIT_INFO }; si.commandBufferCount = 1; si.pCommandBuffers = &g.cmd;
+     g.vk.vkResetFences(g.device, 1, &g.submitFence);
+-    bool ok = g.vk.vkQueueSubmit(g.queue, 1, &si, g.submitFence) == VK_SUCCESS
++    queueLock(); const VkResult sr = g.vk.vkQueueSubmit(g.queue, 1, &si, g.submitFence); queueUnlock();   // V3: shared queue
++    bool ok = sr == VK_SUCCESS
+         && g.vk.vkWaitForFences(g.device, 1, &g.submitFence, VK_TRUE, 5000ull * 1000 * 1000) == VK_SUCCESS;
+     g.canvas.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+     int worst = 0; long off = 0;
+@@ -754,11 +796,13 @@ bool hdrSelfTest(int w, int h, int* worstOut, long* offOut)
+ // The SDL surface's import goes the same way (the SDL_FreeSurface wrap; the host test): caller must not hold g.lock.
+ static void dropFrameImport(const void* p)
+ {
+-    if (!p || p != g.frameKeySeen.load()) return;
+-    std::lock_guard<std::mutex> l(g.lock);   // a present in flight finishes first (presents are synchronous)
+-    if (g.frameKey != p || g.hung) return;
+-    plog(false, "the SDL window surface is freed: its import goes first");
+-    freeBuf(g.frameImport); g.frameKey = nullptr; g.frameKeyBytes = 0; g.frameKeySeen.store(nullptr);
++    if (!p || (p != g.frameKeysSeen[0].load(std::memory_order_acquire) && p != g.frameKeysSeen[1].load(std::memory_order_acquire))) return;
++    std::lock_guard<std::mutex> l(g.lock); // a present in flight finishes first (presents are synchronous)
++    if ((g.frameKeys[0] != p && g.frameKeys[1] != p) || g.hung) return;
++    // The shell exchanges two SDL-owned canvas/window pixel pointers. Conservatively
++    // discard both imports on either matching pointer before either allocation can be freed.
++    plog(false, "the SDL window surface is freed: both cached frame imports go first");
++    clearFrameImports();
+ }
+ extern "C" void omni_gpu_present_forget(const void* p)
+ {
+@@ -827,13 +871,15 @@ bool submitAndWait()
+     VkSubmitInfo si { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+     si.commandBufferCount = 1; si.pCommandBuffers = &g.cmd; si.signalSemaphoreCount = 1; si.pSignalSemaphores = &g.renderDone;
+     g.vk.vkResetFences(g.device, 1, &g.submitFence);
++    queueLock();   // V3: the queue is shared with OmniGpuVideo; held for the submit and the present only
+     VkResult r = g.vk.vkQueueSubmit(g.queue, 1, &si, g.submitFence);
+-    if (r != VK_SUCCESS) { plog(true, "vkQueueSubmit=%d", int(r)); return false; }
++    if (r != VK_SUCCESS) { queueUnlock(); plog(true, "vkQueueSubmit=%d", int(r)); return false; }
+     VkPresentInfoKHR pi { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+     pi.waitSemaphoreCount = 1; pi.pWaitSemaphores = &g.renderDone; pi.swapchainCount = 1; pi.pSwapchains = &g.swapchain; pi.pImageIndices = &g.acquired;
+     VkPresentIdKHR pid { VK_STRUCTURE_TYPE_PRESENT_ID_KHR }; uint64_t id = ++g.presentId;
+     if (g.presentWait) { pid.swapchainCount = 1; pid.pPresentIds = &id; pi.pNext = &pid; }
+     r = g.vk.vkQueuePresentKHR(g.queue, &pi);
++    queueUnlock();
+     g.imageLayouts[g.acquired] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+     g.acquired = UINT32_MAX;
+     if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) { plog(true, "vkQueuePresentKHR=%d", int(r)); return false; }
+@@ -1152,11 +1198,14 @@ void teardownLocked(const char* why)
+ {
+     if (g.torndown.exchange(true)) return;
+     if (g.hung) { plog(true, "teardown (%s): GPU hung: objects left for the system", why); return; }
++    std::vector<VkBufferImageCopy>().swap(g.videoRegions); // release CPU scratch at normal teardown
++    // V3: the video module uses this device: it frees its objects first (waits for its own conversion, bounded).
++    if (g.shared.exchange(false) && omni_gpu_video_shutdown) omni_gpu_video_shutdown();
+     if (g.device) {
+-        g.vk.vkDeviceWaitIdle(g.device);
++        { std::lock_guard<std::mutex> q(g_queueLock); g.vk.vkDeviceWaitIdle(g.device); }
+         releaseVideo();
+         hdrDestroy();   // its views first
+-        freeBuf(g.staging); freeBuf(g.readback); freeImg(g.canvas); freeBuf(g.frameImport); g.frameKey = nullptr; g.frameKeySeen.store(nullptr);
++        freeBuf(g.staging); freeBuf(g.readback); freeImg(g.canvas); clearFrameImports();
+         { std::lock_guard<std::mutex> c(g.cacheLock); for (Cached& e : g.layers) freeBuf(e.b); g.layers.clear(); }
+         if (g.queries) g.vk.vkDestroyQueryPool(g.device, g.queries, nullptr);
+         if (g.renderDone) g.vk.vkDestroySemaphore(g.device, g.renderDone, nullptr);
+@@ -1274,12 +1323,14 @@ static const uint32_t kSDLInitVideo = 0x20u, kSDLPixelFormatABGR8888 = 0x1676200
+ // (the GPU present, or SDL's own when it is off) and reads the hole-punch's and OmniGpuVideo's totals (weak).
+ extern "C" int omni_hw_video_counters(uint64_t*, uint64_t*, uint64_t*, uint64_t*) __attribute__((weak));
+ extern "C" void omni_gpu_video_stats(uint64_t*, uint64_t*, uint64_t*) __attribute__((weak));
++extern "C" void omni_gpu_video_stats2(uint64_t*, uint64_t*, int*) __attribute__((weak));   // OMNI_VIDEO_FPS_V2
+ extern "C" int omni_gpu_video_preinit() __attribute__((weak));
+ static const char* const kFpsPath = "/data/omni/native/video-fps.log";
+ struct FpsWindow {
+     std::mutex m; bool on = false; unsigned lines = 0;
+     double start = 0, last = 0, sumInterval = 0, maxInterval = 0, sumCpu = 0, sumGpu = 0; unsigned n = 0, gpuN = 0, intervals = 0;
+     uint64_t hw[4] {}, vid[3] {}; bool haveHw = false;
++    unsigned late25 = 0; uint64_t vid2[2] {};   // OMNI_VIDEO_FPS_V2: intervals over 25 ms; in-place / ring-copy totals
+ };
+ static FpsWindow g_fps;
+ static void fpsStart()
+@@ -1287,7 +1338,7 @@ static void fpsStart()
+     g_fps.on = access(kFlagPath, F_OK) == 0 || access("/data/omni/gpu-video.flag", F_OK) == 0 || access("/data/omni/video-fps.flag", F_OK) == 0;
+     if (!g_fps.on) return;
+     if (FILE* f = fopen(kFpsPath, "a")) {
+-        fprintf(f, "FPS-START t=%.3f build=omni-native-s3.2-video OMNI_VIDEO_FPS_V1 fields: path presents fps decoded shown dropped late interval_avg_ms interval_max_ms present_cpu_ms present_gpu_ms video_gpu_pictures video_wall_ms video_gpu_ms\n", nowMs() / 1000.0);
++        fprintf(f, "FPS-START t=%.3f build=omni-video-4k60 OMNI_VIDEO_FPS_V2 fields: path presents fps decoded shown dropped late interval_avg_ms interval_max_ms intervals_over_25ms present_cpu_ms present_gpu_ms video_gpu_pictures video_wall_ms video_gpu_ms video_in_place video_ring_copies shared_device mode\n", nowMs() / 1000.0);
+         fclose(f);
+     }
+ }
+@@ -1299,31 +1350,35 @@ static void fpsTick(const char* path, double cpuMs, double gpuMs)
+     std::lock_guard<std::mutex> l(g_fps.m);
+     FpsWindow& f = g_fps;
+     const double now = nowMs();
+-    if (f.last) { const double iv = now - f.last; f.sumInterval += iv; f.maxInterval = std::max(f.maxInterval, iv); f.intervals++; }
++    if (f.last) { const double iv = now - f.last; f.sumInterval += iv; f.maxInterval = std::max(f.maxInterval, iv); f.intervals++; if (iv > 25.0) f.late25++; }
+     f.last = now; f.n++; f.sumCpu += cpuMs; if (gpuMs >= 0) { f.sumGpu += gpuMs; f.gpuN++; }
+     if (!f.start) f.start = now;
+     if (now - f.start < 1000) return;
+     uint64_t hw[4] = {}, vid[3] = {};
+     const bool haveHw = omni_hw_video_counters && omni_hw_video_counters(&hw[0], &hw[1], &hw[2], &hw[3]);
+     if (omni_gpu_video_stats) omni_gpu_video_stats(&vid[0], &vid[1], &vid[2]);
++    uint64_t vid2[2] = {}; int sharedDev = 0;
++    if (omni_gpu_video_stats2) omni_gpu_video_stats2(&vid2[0], &vid2[1], &sharedDev);
+     auto d = [](uint64_t now, uint64_t before) { return now >= before ? now - before : 0; };   // a new stream restarts its counts
+     const double secs = (now - f.start) / 1000.0;
+     const uint64_t vp = d(vid[0], f.vid[0]);
+     char gpuText[32]; if (f.gpuN) snprintf(gpuText, sizeof gpuText, "%.3f", f.sumGpu / f.gpuN); else snprintf(gpuText, sizeof gpuText, "-");
+     if (f.lines++ < 20000)
+         if (FILE* out = fopen(kFpsPath, "a")) {
+-            fprintf(out, "FPS t=%.3f path=%s out=%ux%u hdr=%d presents=%u fps=%.2f decoded=%llu shown=%llu dropped=%llu late=%llu interval_avg_ms=%.2f interval_max_ms=%.2f present_cpu_ms=%.3f present_gpu_ms=%s video_gpu_pictures=%llu video_wall_ms=%.3f video_gpu_ms=%.3f%s\n",
++            fprintf(out, "FPS t=%.3f path=%s out=%ux%u hdr=%d presents=%u fps=%.2f decoded=%llu shown=%llu dropped=%llu late=%llu interval_avg_ms=%.2f interval_max_ms=%.2f intervals_over_25ms=%u present_cpu_ms=%.3f present_gpu_ms=%s video_gpu_pictures=%llu video_wall_ms=%.3f video_gpu_ms=%.3f video_in_place=%llu video_ring_copies=%llu shared_device=%d mode=%s%s\n",
+                 now / 1000.0, path, g.extent.width, g.extent.height, int(g.hdr), f.n, f.n / secs,
+                 (unsigned long long)(haveHw && f.haveHw ? d(hw[0], f.hw[0]) : 0), (unsigned long long)(haveHw && f.haveHw ? d(hw[1], f.hw[1]) : 0),
+                 (unsigned long long)(haveHw && f.haveHw ? d(hw[2], f.hw[2]) : 0), (unsigned long long)(haveHw && f.haveHw ? d(hw[3], f.hw[3]) : 0),
+-                f.intervals ? f.sumInterval / f.intervals : 0.0, f.maxInterval, f.sumCpu / f.n, gpuText, (unsigned long long)vp,
++                f.intervals ? f.sumInterval / f.intervals : 0.0, f.maxInterval, f.late25, f.sumCpu / f.n, gpuText, (unsigned long long)vp,
+                 vp ? d(vid[1], f.vid[1]) / 1000.0 / double(vp) : 0.0, vp ? d(vid[2], f.vid[2]) / 1000.0 / double(vp) : 0.0,
++                (unsigned long long)d(vid2[0], f.vid2[0]), (unsigned long long)d(vid2[1], f.vid2[1]), sharedDev,
++                !strcmp(path, "gpu") ? modeName(g.presentMode) : "sdl-vblank",
+                 haveHw && f.haveHw ? "" : " (hole-punch counters busy or absent)");
+             fclose(out);
+         }
+     if (haveHw) { memcpy(f.hw, hw, sizeof hw); f.haveHw = true; }
+-    memcpy(f.vid, vid, sizeof vid);
+-    f.start = now; f.n = f.gpuN = f.intervals = 0; f.sumInterval = f.maxInterval = f.sumCpu = f.sumGpu = 0;
++    memcpy(f.vid, vid, sizeof vid); memcpy(f.vid2, vid2, sizeof vid2);
++    f.start = now; f.late25 = 0; f.n = f.gpuN = f.intervals = 0; f.sumInterval = f.maxInterval = f.sumCpu = f.sumGpu = 0;
+ }
+ 
+ extern "C" int __wrap_SDL_Init(uint32_t flags)
+@@ -1356,7 +1411,7 @@ extern "C" int __wrap_SDL_Init(uint32_t flags)
+ extern "C" void __real_SDL_FreeSurface(OmniSDLSurface*);
+ extern "C" void __wrap_SDL_FreeSurface(OmniSDLSurface* s)
+ {
+-    if (s && s->pixels && s->pixels == g.frameKeySeen.load(std::memory_order_acquire)) dropFrameImport(s->pixels);
++    if (s && s->pixels) dropFrameImport(s->pixels);
+     __real_SDL_FreeSurface(s);
+ }
+ extern "C" void __wrap_SDL_Quit(void)
+@@ -1526,7 +1581,7 @@ extern "C" long omni_gpu_present_test(const uint8_t* frame, int pitch, int w, in
+     g.vk.vkCmdCopyImageToBuffer(g.cmd, target.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, outBuf.buffer, 1, &c);
+     g.vk.vkEndCommandBuffer(g.cmd);
+     VkSubmitInfo si { VK_STRUCTURE_TYPE_SUBMIT_INFO }; si.commandBufferCount = 1; si.pCommandBuffers = &g.cmd;
+-    g.vk.vkResetFences(g.device, 1, &g.submitFence); g.vk.vkQueueSubmit(g.queue, 1, &si, g.submitFence);
++    g.vk.vkResetFences(g.device, 1, &g.submitFence); queueLock(); g.vk.vkQueueSubmit(g.queue, 1, &si, g.submitFence); queueUnlock();
+     if (g.vk.vkWaitForFences(g.device, 1, &g.submitFence, VK_TRUE, 30ull * 1000 * 1000 * 1000) != VK_SUCCESS) return -1;
+     long bad = 0;
+     if (rec.readback) {
+@@ -1545,13 +1600,21 @@ extern "C" void omni_gpu_present_test_cache(size_t* layers, uint64_t* frameHits,
+     std::lock_guard<std::mutex> l(g.cacheLock);
+     *layers = g.layers.size(); *frameHits = g.frameHits; *layerHits = g.layerHits; *stagingFull = g.stagingFull; *stagingRects = g.stagingRects;
+ }
++extern "C" void omni_gpu_present_test_frame_cache(size_t* count, uint64_t* imports, uint64_t* hits)
++{
++    std::lock_guard<std::mutex> l(g.lock);
++    *count = size_t(g.frameImports[0].buffer != VK_NULL_HANDLE) + size_t(g.frameImports[1].buffer != VK_NULL_HANDLE);
++    *imports = g.imports; *hits = g.frameHits;
++}
+ extern "C" void omni_gpu_present_test_teardown(long* buffers, long* images, long* memory)   // everything the module made, then the live counts
+ {
+     std::lock_guard<std::mutex> l(g.lock);
++    std::vector<VkBufferImageCopy>().swap(g.videoRegions); // host teardown mirrors normal scratch release
+     if (!g.device) return;
+-    g.vk.vkDeviceWaitIdle(g.device);
++    if (g.shared.exchange(false) && omni_gpu_video_shutdown) omni_gpu_video_shutdown();   // V3: as the console teardown
++    { std::lock_guard<std::mutex> q(g_queueLock); g.vk.vkDeviceWaitIdle(g.device); }
+     releaseVideo();
+-    freeBuf(g.staging); freeBuf(g.readback); freeBuf(g.frameImport); g.frameKey = nullptr;
++    freeBuf(g.staging); freeBuf(g.readback); clearFrameImports();
+     if (g.canvasView) { g.vk.vkDestroyImageView(g.device, g.canvasView, nullptr); g.canvasView = VK_NULL_HANDLE; }
+     freeImg(g.canvas);
+     { std::lock_guard<std::mutex> c(g.cacheLock); for (Cached& e : g.layers) freeBuf(e.b); g.layers.clear(); }
+@@ -1564,3 +1627,37 @@ extern "C" void omni_gpu_present_test_teardown(long* buffers, long* images, long
+     g.vk.vkDestroyInstance(g.instance, nullptr); g.instance = VK_NULL_HANDLE;
+ }
+ #endif
++
++// ---- OMNI_GPU_PRESENT_V3: the shared device (both builds) -----------------------------------------------------------
++// Same layout as OmniGpuShare in engine/media/OmniGpuVideo.h (the title does not include the engine's media headers).
++struct OmniGpuShare {
++    void* instance; void* physical; void* device; void* queue;
++    uint32_t family; uint32_t timestampBits; double timestampNs;
++    uint64_t importAlign; int hostImport;
++    void (*lock)(); void (*unlock)();
++};
++static_assert(sizeof(OmniGpuShare) == 80, "OmniGpuShare layout must match OmniGpuVideo.h");
++// OmniGpuVideo's set-up (preinit, from __wrap_SDL_Init right after this module came up) adopts this device and queue.
++// Offered only while the present is active (console) or its host test device exists; never after teardown.
++extern "C" int omni_gpu_present_share(OmniGpuShare* out)
++{
++    if (!out) return 0;
++    std::lock_guard<std::mutex> l(g.lock);
++#ifndef OMNI_GPU_PRESENT_HOST_TEST
++    if (g.state.load(std::memory_order_acquire) != kActive) return 0;
++#endif
++    if (g.torndown.load() || g.hung || !g.device || !g.queue || !g.instance || !g.physical) return 0;
++    if (access("/data/omni/gpu-share-disabled.flag", F_OK) == 0) { plog(true, "device sharing refused (gpu-share-disabled.flag): the video makes its own device"); return 0; }
++    *out = OmniGpuShare {};
++    out->instance = g.instance; out->physical = g.physical; out->device = g.device; out->queue = g.queue;
++    out->family = g.family; out->timestampBits = g.timers ? 64u : 0u; out->timestampNs = g.timestampNs;
++    out->importAlign = uint64_t(g.importAlign); out->hostImport = g.hostImport ? 1 : 0;
++    out->lock = queueLock; out->unlock = queueUnlock;
++    g.shared.store(true);
++    plog(true, "device shared with the video conversion (OMNI_GPU_PRESENT_V3: one RADV device, queue family %u, submissions serialised)", g.family);
++    return 1;
++}
++#ifdef OMNI_GPU_PRESENT_HOST_TEST
++extern "C" int omni_gpu_present_test_up() { std::lock_guard<std::mutex> l(g.lock); return g.device || hostUp() ? 1 : 0; }
++extern "C" int omni_gpu_present_test_shared() { return g.shared.load() ? 1 : 0; }
++#endif

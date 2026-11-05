@@ -1,0 +1,193 @@
+diff --git a/engine/entry/OmniBrowser.cpp b/engine/entry/OmniBrowser.cpp
+index 37cff97..cc98239 100755
+--- a/engine/entry/OmniBrowser.cpp
++++ b/engine/entry/OmniBrowser.cpp
+@@ -528,6 +528,8 @@ static struct OmniYtState {
+     int stage = 0; uint32_t t0 = 0, last = 0, started = 0;
+     std::vector<std::string> urls; size_t index = 0;
+     unsigned seconds = 6, interval = 200;
++    bool fullscreenRequested = false;
++    std::vector<std::string> fullscreenSentUrls;
+     std::vector<OmniYtFrame> frames; std::vector<std::string> events;
+     unsigned paints = 0, blocked = 0, dirty = 0, deferred = 0, slow = 0; double paintMs = 0;
+     bool firstDirty = false, wasLoading = false, sawVideo = false, jsPending = false;
+@@ -6342,6 +6344,14 @@ static void omniYtFinishRun()
+     for (const auto& e : y.events) { snprintf(line, sizeof line, "YTTL event run=%zu %s", y.index, e.c_str()); log(line); }
+     y.frames.clear(); y.frames.shrink_to_fit(); y.events.clear();
+ }
++// OMNI_YTTL_FULLSCREEN_V1: opt-in normal keyboard event, once per exact configured URL.
++static bool omniYtFullscreenAllowed(bool enabled, bool sent, unsigned ms, bool edit, bool settings, bool fullscreen,
++    const std::string& current, const std::string& requested)
++{
++    return enabled && !sent && ms >= 8000 && !edit && !settings && !fullscreen
++        && current == requested && current.rfind("https://www.youtube.com/watch?", 0) == 0;
++}
++static bool omniYtFullscreenOption(const std::string& line) { return line == "fullscreen 1"; }
+ static void omniYtTick()
+ {
+     if (!ytTimeline || !active()) return;
+@@ -6356,6 +6366,7 @@ static void omniYtTick()
+                 if (l.rfind("url ", 0) == 0) y.urls.push_back(l.substr(4));
+                 else if (l.rfind("seconds ", 0) == 0) y.seconds = std::clamp(atoi(l.c_str() + 8), 2, 30);
+                 else if (l.rfind("interval ", 0) == 0) y.interval = std::clamp(atoi(l.c_str() + 9), 100, 2000);
++                else if (l.rfind("fullscreen ", 0) == 0) y.fullscreenRequested = omniYtFullscreenOption(l);
+             }
+             fclose(file);
+         }
+@@ -6374,13 +6385,28 @@ static void omniYtTick()
+     }
+     if (y.stage == 2) {
+         const uint32_t ms = now - y.t0;
++        // OMNI_YTTL_FULLSCREEN_V1 (Astra 2026-11-04, fullscreen-only.diff): `fullscreen 1` in yt-timeline.txt sends the normal
++        // f key once per configured watch URL after 8 s (no JS gesture emulation, no fullscreen API bypass).
++        const bool fullscreenSent = std::find(y.fullscreenSentUrls.begin(), y.fullscreenSentUrls.end(), y.urls[y.index]) != y.fullscreenSentUrls.end();
++        if (omniYtFullscreenAllowed(y.fullscreenRequested, fullscreenSent, ms,
++                editing || pageEditing || omniKbTarget, settingsOpen, pageFullscreen, active()->url, y.urls[y.index])) {
++            y.fullscreenSentUrls.push_back(y.urls[y.index]); // mark before dispatch; a refusal is not retried
++            omniYtEvent("fullscreen key requested (normal f key)");
++            omniFullscreenKey("f", "U+0046", 0x66);
++        }
+         const bool loading = active()->loading;
+         if (loading != y.wasLoading) { omniYtEvent(loading ? "loading" : "load finished (shell)"); y.wasLoading = loading; }
+         if (!y.sawVideo && OmniMedia::Hw::holePunchActive()) { y.sawVideo = true; omniYtEvent("video plane active"); }
+         if (y.frames.empty() || ms - y.frames.back().ms >= y.interval) omniYtCapture(ms);
+         if (ms >= y.seconds * 1000) {
+             y.stage = 3; y.jsPending = true; y.last = now;
+-            auto script = adoptWK(WKStringCreateWithUTF8CString("JSON.stringify(window.__omniYtDump?window.__omniYtDump():{error:'no data',path:location.pathname})"));
++            // OMNI_VIDEO_FPS_PROBE_V1 + OMNI_HOLE_ELIGIBILITY_PROBE_V1: the counters and the hole-punch eligibility join the dump
++            omniYtEvent(pageFullscreen ? "native pageFullscreen=1" : "native pageFullscreen=0");
++            const std::string finalScript = std::string("(function(){var d=window.__omniYtDump?window.__omniYtDump():{error:'no data',path:location.pathname};d.nativePageFullscreen=")
++                + (pageFullscreen ? "true" : "false") + ";"
++                "try{d.playback=window.__omniPlaybackProbe?window.__omniPlaybackProbe.dump():null}catch(e){d.playback={error:String(e)}}"
++                "try{d.hole=window.__omniHoleProbe?window.__omniHoleProbe.dump():null}catch(e){d.hole={error:String(e)}}return JSON.stringify(d)})()";
++            auto script = adoptWK(WKStringCreateWithUTF8CString(finalScript.c_str()));
+             WKPageEvaluateJavaScriptInMainFrame(active()->page, script.get(), nullptr, [](WKTypeRef result, WKErrorRef error, void*) {
+                 std::string v = !error && result && WKGetTypeID(result) == WKStringGetTypeID() ? OmniTest::toStd(static_cast<WKStringRef>(result)) : std::string("{\"error\":\"evaluate failed\"}");
+                 std::string line = "YTTL js run=" + std::to_string(omniYt.index) + " " + v;
+@@ -7293,7 +7319,125 @@ res:{n:res.length,by:by,dns:Math.round(dns),tcp:Math.round(tcp),tls:Math.round(t
+ nav:n?{dns:Math.round(n.domainLookupEnd-n.domainLookupStart),tcp:Math.round(n.connectEnd-n.connectStart),ttfb:Math.round(n.responseStart),resp:Math.round(n.responseEnd),dcl:Math.round(n.domContentLoadedEventEnd),load:Math.round(n.loadEventEnd),kb:Math.round((n.transferSize||0)/1024)}:null,
+ unsupported:/browser isn.t supported|update your browser/i.test(txt),consent:/consent\.|before you continue/i.test(location.href+' '+document.title),
+ vp9:(function(){try{return MediaSource.isTypeSupported('video/webm; codecs="vp9"')}catch(e){return null}})(),
+-q:(function(){try{var p=document.querySelector('#movie_player');return p&&p.getPlaybackQuality?p.getPlaybackQuality():null}catch(e){return null}})()};};})();)OMNIYTJS";
++q:(function(){try{var p=document.querySelector('#movie_player');return p&&p.getPlaybackQuality?p.getPlaybackQuality():null}catch(e){return null}})()};};})();)OMNIYTJS"
++// OMNI_VIDEO_FPS_PROBE_V1 (Astra 2026-11-04, playback-probe.js): one-second HTML video counters for the 4K60 runs.
++R"OMNIFPS((function () {
++    'use strict';
++    if (window.top !== window || window.__omniPlaybackProbe) return;
++    var samples = [], start = performance.now(), previous = null, epoch = 0;
++    var lastVideo = null, lastSource = '', timer = null, stopped = false;
++    function number(x) { return typeof x === 'number' && isFinite(x) && x >= 0 ? x : null; }
++    function tick() {
++        if (stopped) return;
++        var now = performance.now(), v = document.querySelector('video');
++        var s = {ms: now - start, epoch: epoch, visible: document.visibilityState === 'visible', video: null, interval: null};
++        if (v) {
++            var q = null;
++            try { q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : null; } catch (_) {}
++            var source = v.currentSrc || '';
++            var data = s.video = {
++                width: number(v.videoWidth), height: number(v.videoHeight), time: number(v.currentTime),
++                paused: !!v.paused, seeking: !!v.seeking, rate: number(v.playbackRate), readyState: number(v.readyState),
++                error: v.error ? number(v.error.code) : null,
++                total: q ? number(q.totalVideoFrames) : null, dropped: q ? number(q.droppedVideoFrames) : null
++            };
++            var p = previous && previous.video, dt = previous ? (s.ms - previous.ms) / 1000 : 0;
++            var reset = v !== lastVideo || source !== lastSource || !p || data.seeking || p.seeking;
++            if (p && (data.width !== p.width || data.height !== p.height || data.rate !== p.rate ||
++                data.time === null || p.time === null || data.time < p.time ||
++                data.time - p.time > dt * (data.rate || 1) + 1 ||
++                (data.total !== null && p.total !== null && data.total < p.total) ||
++                (data.dropped !== null && p.dropped !== null && data.dropped < p.dropped))) reset = true;
++            if (reset) ++epoch;
++            if (!reset && dt > 0 && dt <= 2.5 && data.total !== null && p.total !== null &&
++                data.dropped !== null && p.dropped !== null) {
++                var total = data.total - p.total, drop = data.dropped - p.dropped;
++                if (drop >= 0 && total >= drop && data.total >= data.dropped && p.total >= p.dropped) {
++                    s.interval = {seconds: dt, frames: total, dropped: drop,
++                        totalFrameRate: total / dt, nonDroppedFrameRate: (total - drop) / dt,
++                        mediaSeconds: data.time - p.time,
++                        active: !data.paused && !p.paused && !data.seeking && !p.seeking &&
++                            !data.error && !p.error && data.rate === 1 && p.rate === 1 &&
++                            s.visible && previous.visible};
++                }
++            }
++            lastVideo = v; lastSource = source;
++        } else { if (lastVideo) ++epoch; lastVideo = null; lastSource = ''; }
++        s.epoch = epoch; samples.push(s); previous = s;
++        if (samples.length >= 361 || s.ms >= 360000) stop();
++    }
++    function stop() { stopped = true; if (timer !== null) clearInterval(timer); }
++    window.__omniPlaybackProbe = {
++        dump: function () { return {schema: 1, source: 'HTMLVideoElement.getVideoPlaybackQuality',
++            samplingMs: 1000, maxSamples: 361, stopped: stopped,
++            sourceHdr: 'unknown', displayHdr: 'unknown', samples: samples.slice()}; },
++        stop: stop
++    };
++    timer = setInterval(tick, 1000); tick();
++})();
++)OMNIFPS"
++R"OMNIHOLE((function () {
++    'use strict';
++    // OMNI_HOLE_ELIGIBILITY_PROBE_V1 (omni-video-4k60): the WebProcess player's holeGeometry() rules, read from the page,
++    // so a run says WHY a video stays on the paint path (no hole-punch, no GPU video, startup gate waiting).
++    if (window.top !== window || window.__omniHoleProbe) return;
++    var start = performance.now(), samples = [], timer = null, stopped = false, changes = 0, lastKey = '';
++    function label(e) {
++        var s = String(e.tagName || '?').toLowerCase().slice(0, 24);
++        if (e.id) s += '#' + String(e.id).slice(0, 32);
++        if (typeof e.className === 'string' && e.className) s += '.' + e.className.trim().split(/\s+/).slice(0, 2).join('.').slice(0, 48);
++        return s;
++    }
++    function blocker(e) {
++        var c = getComputedStyle(e);
++        if (parseFloat(c.opacity) < 1) return 'opacity ' + c.opacity;
++        if (c.filter && c.filter !== 'none') return 'filter ' + c.filter.slice(0, 48);
++        var bf = c.backdropFilter || c.webkitBackdropFilter; if (bf && bf !== 'none') return 'backdrop-filter';
++        var m = c.maskImage || c.webkitMaskImage; if (m && m !== 'none') return 'mask';
++        if (c.clipPath && c.clipPath !== 'none') return 'clip-path';
++        if (c.mixBlendMode && c.mixBlendMode !== 'normal') return 'blend ' + c.mixBlendMode;
++        if (c.webkitBoxReflect && c.webkitBoxReflect !== 'none') return 'reflection';
++        var t = c.transform; if (t && t !== 'none') { var m2 = /matrix\(([^)]*)\)/.exec(t); if (m2) { var a = m2[1].split(',').map(parseFloat); if (Math.abs(a[1]) > 1e-6 || Math.abs(a[2]) > 1e-6) return 'rotated or skewed'; } else if (/matrix3d/.test(t)) return 'transform3d'; }
++        return null;
++    }
++    function check() {
++        var vs = document.getElementsByTagName('video'), v = null, best = 0;
++        for (var i = 0; i < vs.length; i++) { var r0 = vs[i].getBoundingClientRect(), a0 = r0.width * r0.height; if (a0 > best) { best = a0; v = vs[i]; } }
++        var out = { eligible: false, why: null, rect: null, onScreen: false, chain: 0, dark: !!(document.documentElement && document.documentElement.hasAttribute('data-omnidark')),
++                    fullscreen: !!(document.fullscreenElement || document.webkitFullscreenElement), visible: document.visibilityState === 'visible' };
++        if (!v) { out.why = 'no video'; return out; }
++        if (!out.visible) { out.why = 'page hidden'; return out; }
++        var r = v.getBoundingClientRect();
++        out.rect = [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)];
++        out.onScreen = r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight;
++        if (r.width < 2 || r.height < 2) { out.why = 'rect empty'; return out; }
++        try {
++            for (var e = v, w = window; e; ) {
++                out.chain++;
++                var b = blocker(e); if (b) { out.why = b + ' on ' + label(e); return out; }
++                if (e.parentElement) e = e.parentElement;
++                else { var fe = null; try { fe = w.frameElement; } catch (_) {} e = fe; if (fe) w = fe.ownerDocument.defaultView; }
++            }
++        } catch (x) { out.why = 'probe error ' + String(x).slice(0, 60); return out; }
++        out.eligible = true; out.why = out.onScreen ? 'eligible' : 'off screen';
++        return out;
++    }
++    function tick() {
++        if (stopped) return;
++        var c = check(), key = c.eligible + '|' + c.why;
++        if (key !== lastKey) { changes++; lastKey = key; }
++        samples.push({ ms: Math.round(performance.now() - start), e: c.eligible ? 1 : 0, why: c.why, rect: c.rect, dark: c.dark ? 1 : 0, fs: c.fullscreen ? 1 : 0 });
++        if (samples.length >= 361) stop();
++    }
++    function stop() { stopped = true; if (timer !== null) clearInterval(timer); }
++    window.__omniHoleProbe = {
++        dump: function () { return { schema: 1, rules: 'OmniMSEPlayer holeGeometry (opacity/filter/backdrop/mask/clip-path/blend/reflection on the way up, rotated, empty rect, page hidden)',
++            now: check(), changes: changes, samples: samples.slice(-120) }; },
++        stop: stop
++    };
++    timer = setInterval(tick, 1000); tick();
++})();
++)OMNIHOLE";
+             auto source = adoptWK(WKStringCreateWithUTF8CString(ytJs));
+             auto script = adoptWK(WKUserScriptCreateWithSource(source.get(), kWKInjectAtDocumentStart, true));
+             omniBlockerAddShellScript(script.get());

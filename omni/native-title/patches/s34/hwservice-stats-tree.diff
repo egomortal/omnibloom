@@ -1,0 +1,62 @@
+diff --git a/engine/media/OmniHwService.cpp b/engine/media/OmniHwService.cpp
+index 41e5b74..a596d77 100644
+--- a/engine/media/OmniHwService.cpp
++++ b/engine/media/OmniHwService.cpp
+@@ -726,24 +726,40 @@ std::atomic<uint64_t> hudCompleted {0}, hudRepeats {0}, hudDecoderErrors {0};
+ std::atomic<bool> hudEnabled {false}, hudActive {false}, hudDecoderFailed {false};
+ std::atomic<uint64_t> hudDrops {0};
+ std::atomic<int> hudWidth {0}, hudHeight {0}, hudCodec {-1};
++// A stats consumer requests one metadata publication without owning the native HUD.
++std::atomic<bool> hudMetadataRequested {false}, hudMetadataFresh {false};
++std::mutex hudMetadataMutex;
++PlaybackMetadata hudMetadata;
++double hudMetadataAt=0;
++bool storePlaybackMetadata(double now) {
++    std::unique_lock<std::mutex> lock(hudMetadataMutex,std::try_to_lock);
++    if (!lock.owns_lock()) return false;
++    hudMetadata={hudWidth.load(),hudHeight.load(),hudCodec.load(),hudActive.load(),hudDecoderFailed.load(),true};
++    hudMetadataAt=now;
++    hudMetadataFresh.store(true,std::memory_order_release);
++    return true;
++}
++
+ // Existing service thread owns channel data. Publish once per second; a busy
+ // plane is skipped rather than making a stats reader block video work.
+ void publishPlaybackStats(double now) {
+     static double next = 0;
+-    if (!hudEnabled.load(std::memory_order_relaxed) || now < next) return;
++    if (now < next || (!hudEnabled.load(std::memory_order_relaxed) && !hudMetadataRequested.load())) return;
+     next = now + 1000;
++    hudMetadataFresh.store(false,std::memory_order_release);
+     std::unique_lock<std::mutex> guard(plane.lock,std::try_to_lock);
+     if (!guard.owns_lock()) return;
+     const int owner=plane.owner;
+     const bool active=plane.attached && owner>=0 && owner<int(Wire::maxChannels);
+     hudActive.store(active,std::memory_order_relaxed);
+-    if (!active) { hudWidth.store(0); hudHeight.store(0); hudCodec.store(-1); hudDrops.store(0); hudDecoderFailed.store(false); return; }
++    if (!active) { hudWidth.store(0); hudHeight.store(0); hudCodec.store(-1); hudDrops.store(0); hudDecoderFailed.store(false); if (storePlaybackMetadata(now)) hudMetadataRequested.store(false); return; }
+     const auto& c=channels[owner];
+     if (c.v5Configuring) return;   // OMNI_PERF_B_V5: the worker owns the decoder now
+     hudCodec.store(int(c.decoder.codec()),std::memory_order_relaxed);
+     hudWidth.store(c.width,std::memory_order_relaxed); hudHeight.store(c.height,std::memory_order_relaxed);
+     hudDrops.store(plane.pacedDropped+c.paceDroppedRaw,std::memory_order_relaxed);
+     hudDecoderFailed.store(c.failed,std::memory_order_relaxed);
++    if (storePlaybackMetadata(now)) hudMetadataRequested.store(false);
+ }
+ 
+ // UI-thread staging; published only under both existing presentation/compose locks.
+@@ -2845,6 +2861,14 @@ void holePunchVblank(bool successful)
+     }
+ }
+ 
++void playbackStatsRequest() { hudMetadataRequested.store(true); }
++PlaybackMetadata playbackMetadata() {
++    std::unique_lock<std::mutex> lock(hudMetadataMutex,std::try_to_lock);
++    if (!lock.owns_lock() || !hudMetadataFresh.load(std::memory_order_acquire)) return {};
++    const double age=nowMs()-hudMetadataAt;
++    if (!std::isfinite(age) || age<0 || age>2000) return {};
++    return hudMetadata;
++}
+ void playbackStatsEnable(bool enabled) { hudEnabled.store(enabled,std::memory_order_relaxed); }
+ PlaybackStats playbackStats() {
+     PlaybackStats s;

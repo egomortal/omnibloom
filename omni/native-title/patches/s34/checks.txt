@@ -1,0 +1,59 @@
+child  OMNI_POINTER_CROSS_V1                        0
+child  accelerated compositing is off               1
+child  OMNI_SEC_PNA_CONNECT_V1                      1
+child  OMNI_CRASH_V2                                1
+child  FATAL end of report                          1
+child  OMNI_JSC_JIT_V3                              1
+child  jit: off (interpreter)                       1
+child  OMNI_SEC_REDIRECT_V1                         2
+child  OMNI_SEC_PNA_V1                              1
+child  OMNI_SEC_LOCALHOST_V1                        1
+child  close-events.log                             1
+child  OpenSSL 3.5.9                                1
+child  8.23.0                                       5
+title  mediaSoon                                    3
+title  OMNI_MQ_NATIVE_V1                            0
+title  video-hdr-preference.txt                     2
+title  OMNI_VIDEO_STATS_BRIDGE_V1                   0
+title  HDR Auto pending source passthrough          1
+title  /data/hub/apps/                              1
+title  OMNI_POINTER_CROSS_V1                        1
+title  OMNI_GPU_VIDEO_V2                            0
+title  OMNI_GPU_PRESENT_V2                          1
+title  OMNI_VIDEO_FPS_V1                            0
+title  /data/omni/native/video-fps.log              1
+title  preinit: RADV set-up now                     1
+title  HDR self-test                                1
+title  HDR10_ST2084                                 1
+title  the SDL window surface is freed              1
+title  verify %d-bit %dx%d -> %dx%d (%s)            1
+title  layers imported once                         2
+title  failsetup                                    2
+title  YTTL DONE                                    2
+title  OMNI_CRASH_V2                                1
+title  FATAL end of report                          1
+title  OMNI_PAGES_V1                                2
+title  omni://pages                                 3
+title  OMNI_ADDONS_V1 ready                         1
+title  OMNI_VAULT_V2                                2
+title  OMNI_HUB_CARDS_V1                            2
+title  Bloom Core is not running                    1
+title  PADCTL TEST PASS                             1
+title  Ad block                                     1
+0000000000012490 T __emutls_get_address
+0000000000008b80 T __wrap_SDL_FreeSurface
+0000000000004f90 T __wrap_SDL_Init
+0000000000004890 T omni_gpu_present_forget
+0000000000b69300 T omni_gpu_video_preinit
+0000000000b69370 T omni_gpu_video_stats
+0000000000b4ff70 T omni_hw_video_counters
+0000000005a59b80 T __wrap_connect
+0000000005a59aa0 T omniSecConnectContext
+layout (llvm-pie.elf): no overlapping LOADs; 2 executable sections, all inside the text LOAD: ['.text', '.init']
+layout check (eboot.elf, policy omni): PASSED; LOAD sizes MiB: 97.6, 66.3, 4.3, 49.5, 7.6
+child vs s3.1c: 7b810ea5b5cdcbc899828635b329da42595b540ff51998513b7e8b21fd717c64 / 7b810ea5b5cdcbc899828635b329da42595b540ff51998513b7e8b21fd717c64 IDENTICAL
+015c8e6cdb4c54659a946949fbeedcc82a35ed5d621d41068e0a29ecd707f6b0  /path/to/workspace/outputs/omni-native-s3.4c/out/PPSA99732/eboot.bin
+0556c7b47bd521a0e2e8952caf68529ba1810c7713c17f3e8b6b16ca94ba4430  /path/to/workspace/outputs/omni-native-s3.4c/build/eboot.elf
+7b810ea5b5cdcbc899828635b329da42595b540ff51998513b7e8b21fd717c64  /path/to/workspace/outputs/omni-native-s3.4c/child/omni-engine-child.elf
+354f191dbf91cbd2823d39c2d22512c1f2e2b2a1f4ebfb723f963f757af95a74  /path/to/workspace/outputs/omni-native-s3.4c/out/PPSA99732/sce_sys/param.json
+e6ff45d16adf687855cc3b33b0c8a4132b6504360b221e0a34c7e99fb3ba0036  /path/to/workspace/outputs/omni-native-s3.4c/out/PPSA99732/sce_module/libc.prx

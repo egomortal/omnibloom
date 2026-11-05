@@ -1,0 +1,72 @@
+{
+ "engine/entry/OmniBrowser.cpp": {
+  "before_lf": "594f4f85a6311679d6edbb19308b540cf62a23cb729b3b36a781f962f7882646",
+  "before": "594f4f85a6311679d6edbb19308b540cf62a23cb729b3b36a781f962f7882646",
+  "after": "2617eee3da0b0a4e5f97d449fb6a1ffcb19fee82545810dd17d6a6d3606c97f8"
+ },
+ "engine/entry/OmniFeaturesPanel.h": {
+  "before_lf": "88d135f50003a8ef0d2e953fdcc5fb48d3fc0cc9c1646b4e238076e42ac55fb4",
+  "before": "d16b5a3c307d433125688a2e2b41ed261cd73f85f5b9f81868173ec646bd138a",
+  "after": "489daa1347c470741f92035d7b24273dde8a8d474b4fc62a45b2f11aa9fc58a3"
+ },
+ "engine/entry/OmniFilesBroker.h": {
+  "before_lf": "6674c6862ad454f7064af9a33983078cdf814e1d11aea640792c5239bd6196ff",
+  "before": "6674c6862ad454f7064af9a33983078cdf814e1d11aea640792c5239bd6196ff",
+  "after": "6b3dcab1274ea068e193762fd21ad9253a68ebfe3502049aaadb0674ade4cefb"
+ },
+ "engine/entry/OmniMediaDownloads.h": {
+  "before_lf": "a01ef8b8e17b18821a73bcdb49349665d8696c585d2b7bba636c0d60f8a05be5",
+  "before": "a01ef8b8e17b18821a73bcdb49349665d8696c585d2b7bba636c0d60f8a05be5",
+  "after": "1bd8a29bbb5cdb9962699927409ba946ad484be450654ef88fad71e531fac8f1"
+ },
+ "engine/entry/OmniMediaDownloadsHooks.inc": {
+  "before_lf": "6982a943be413b45b5dda27171655297c39aa27d09334b4334a72153de2a7ffa",
+  "before": "6982a943be413b45b5dda27171655297c39aa27d09334b4334a72153de2a7ffa",
+  "after": "6245d3af0ce37ba3d13996ac044933675360fe36d32cff4f5864d7353404a65b"
+ },
+ "engine/entry/OmniMediaSection.h": {
+  "before_lf": "cd514d8086c40f5bfafc92c0abffc6a707940abd65e807852aa4d573613f5df9",
+  "before": "4e3b6fd8095ad23f1307929c7ecbf26dce1a067e84c94b58bf7ad918ca4e09ae",
+  "after": "053b4c96c4de43b61b012a18ba0c02e9599bf0ee844c6a07a4c9584680b8a667"
+ },
+ "engine/entry/OmniMqQuickAccess.h": {
+  "before_lf": null,
+  "before": null,
+  "after": "971a237406ddb4db43bfd1eadf41e5b4904e188eab1a2d60ac4f549f08731c22"
+ },
+ "engine/entry/OmniNonBlocking.h": {
+  "before_lf": null,
+  "before": null,
+  "after": "dcf61f65df8ff3e4da313ab3c754ba07e8dfd79040ffbf75f72239c773a7f590"
+ },
+ "engine/entry/OmniPages.h": {
+  "before_lf": "ea98b847738bc4aa6d488f8e820e814dd2b15ca950e6f5ff373a5a9525ce4d60",
+  "before": "ea98b847738bc4aa6d488f8e820e814dd2b15ca950e6f5ff373a5a9525ce4d60",
+  "after": "962a60586ff3d800a3804d4231f37cc6cb1ef65030430ec60702a93012b54fbc"
+ },
+ "engine/entry/OmniQuickMenu.h": {
+  "before_lf": "6d3e051ed17a1e1ac282cb8c35eaf2953fec9fc5181a1bd2c06c39300e825e40",
+  "before": "d8d6559d409361fd0dc6c8ad73e861b0e5af6bb1f09aa1b1ec0a621a25ead0e9",
+  "after": "887d2cd099ec54ba9e84e545f9d859f405e2a0121168c0692fb6fb31f85fedc6"
+ },
+ "engine/media/OmniHdrPreference.h": {
+  "before_lf": null,
+  "before": null,
+  "after": "5b863aa5d7feaf9ef082f6a5e420661bd1353442d528a2b40063090a30e9a5a8"
+ },
+ "engine/media/OmniHwService.cpp": {
+  "before_lf": "ac6588d6327e7875a80b93ead3721df91e5c22d8d97a84113975a51195a86e5e",
+  "before": "ac6588d6327e7875a80b93ead3721df91e5c22d8d97a84113975a51195a86e5e",
+  "after": "c41d95d76d8a9ee968e12b65f49ef4f8e4df2fb9ba03860791f4baac5eab01da"
+ },
+ "engine/media/OmniHwService.h": {
+  "before_lf": "6f3790355fb063008d4425ce61b187de350a335838e11cdfbfcff303786571d4",
+  "before": "6f3790355fb063008d4425ce61b187de350a335838e11cdfbfcff303786571d4",
+  "after": "f0eb0a78f295465b35ae4ace15873c17517981c2a8c41a2e00f90f96f8dfef9e"
+ },
+ "engine/media/OmniVideoStats.h": {
+  "before_lf": null,
+  "before": null,
+  "after": "eff82ce880e3c256db2df4728aa914d80f2a94492a56261a36cbce4db9063d8e"
+ }
+}

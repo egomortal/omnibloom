@@ -1,0 +1,406 @@
+diff --git a/engine/media/OmniGpuVideo.cpp b/engine/media/OmniGpuVideo.cpp
+index 70c5cb9..b995a3b 100755
+--- a/engine/media/OmniGpuVideo.cpp
++++ b/engine/media/OmniGpuVideo.cpp
+@@ -11,6 +11,8 @@
+ //  - preinit(): the native title's SDL_Init wrap brings RADV up here before any video decoder exists (Ex-Box's
+ //    editor: RADV must reserve its memory before Videodec2 takes its share);
+ //  - stats() for the per-second fps line (OmniGpuPresent.cpp).
++// OMNI_GPU_VIDEO_V3 (omni-video-4k60): pace-queue pictures are imported once and read in place (no ring copy), and the
++// GPU present's device and queue are shared (one RADV device in the title); see OmniGpuVideo.h.
+ //
+ // Rules from the plan's BSI lessons that apply here:
+ //  - timestampPeriod is read from the device and logged (RADV PS5 reported 10.000 ns);
+@@ -61,6 +63,9 @@ static const char* const kCachePath = "/data/omni/native/gpu-video.pipeline-cach
+ static const uint64_t kFenceTimeoutNs = 250ull * 1000 * 1000;   // a 4K picture takes ~1 ms on the GPU; 250 ms = hung
+ #endif
+ 
++// OMNI_GPU_VIDEO_V3: the title's GPU present shares its device (OmniGpuPresent.cpp). Weak: absent outside the title.
++extern "C" int omni_gpu_present_share(OmniGpuShare* out) __attribute__((weak));
++
+ namespace OmniGpuVideo {
+ namespace {
+ 
+@@ -174,11 +179,14 @@ enum State { kOff = 0, kStarting = 1, kReady = 2, kFailed = 3 };
+ 
+ // OMNI_GPU_VIDEO_V2: an imported layer, kept between pictures. `dead`: forgotten while a conversion used it
+ // (freed by that conversion when it ends).
+-struct Cached { uintptr_t start = 0, end = 0; Buf b; uint64_t lastUse = 0; bool inUse = false, dead = false; };
++struct Cached { uintptr_t start = 0, end = 0; Buf b; uint64_t lastUse = 0; bool inUse = false, dead = false; bool picture = false; };   // V3: picture = input planes
+ // One staging slot: the picture's planes are copied in; the slot's fence says when the GPU is done with it.
+ struct Slot { Buf in; VkCommandBuffer cmd = VK_NULL_HANDLE; VkFence fence = VK_NULL_HANDLE; bool pending = false; };
+ constexpr int kSlots = 3;
+ constexpr size_t kMaxCached = 16;
++// V3: imported pace-queue pictures. The queue holds up to 240 pictures (paceMaxFramesV5) plus 8 spares; every one is a
++// buffer of its own that stays mapped until PaceAlloc frees it (forget() first), so the cache covers the whole queue.
++constexpr size_t kMaxCachedPictures = 288;
+ 
+ struct Gpu {
+     std::atomic<int> state { kOff };
+@@ -209,6 +217,10 @@ struct Gpu {
+     uint64_t pictures = 0, imports = 0, importFails = 0, copies = 0, failures = 0, cacheHits = 0, forgets = 0;
+     // V2: totals for the per-second fps line (read from the present thread)
+     std::atomic<uint64_t> statPictures { 0 }, statWallUs { 0 }, statGpuUs { 0 };
++    // V3: pictures read in place / copied through the ring; the shared device (not ours to destroy)
++    std::atomic<uint64_t> statInPlace { 0 }, statRingCopies { 0 };
++    bool shared = false; void (*qlock)() = nullptr; void (*qunlock)() = nullptr;
++    uint64_t pictureImports = 0, pictureHits = 0;
+     double sumWall = 0, sumGpu = 0, sumImport = 0, maxWall = 0; unsigned windowN = 0, windowLogs = 0;
+     unsigned importFailLogs = 0;
+ };
+@@ -322,27 +334,34 @@ bool importHost(Buf& b, const void* p, size_t bytes, uint32_t& offset)
+ // OMNI_GPU_VIDEO_V2: the layer import cache. A layer's memory (CpuPixelBuffer, mmap) stays at one address until
+ // the hole-punch grows or frees it, and it calls forget() first; so one import per layer serves every picture.
+ // Caller holds g.lock (one conversion at a time). Returns the entry, marked in use, or nullptr (staging copy).
+-Cached* cachedImport(const void* p, size_t bytes, uint32_t& offset)
++Cached* cachedImport(const void* p, size_t bytes, uint32_t& offset, bool picture = false)
+ {
+     if (!g.hostImport || !p || !bytes) return nullptr;
+     const uintptr_t a = uintptr_t(g.importAlign);
+     const uintptr_t start = uintptr_t(p) & ~(a - 1), end = (uintptr_t(p) + bytes + a - 1) & ~(a - 1);
+     std::lock_guard<std::mutex> l(g.cacheLock);
+-    for (Cached& c : g.layers)
+-        if (!c.dead && c.start == start && c.end >= end) {
+-            c.inUse = true; c.lastUse = ++g.useTick; offset = uint32_t(uintptr_t(p) - start); g.cacheHits++;
++    size_t sameKind = 0;
++    for (Cached& c : g.layers) {
++        if (c.picture != picture) continue;
++        ++sameKind;
++        // V3: an entry in use already (a picture whose planes sit inside the layer's range, never in practice) is not reused
++        if (!c.dead && !c.inUse && c.start <= start && c.end >= end) {
++            c.inUse = true; c.lastUse = ++g.useTick; offset = uint32_t(uintptr_t(p) - c.start); g.cacheHits++; if (picture) g.pictureHits++;
+             return &c;
+         }
+-    if (g.layers.size() >= kMaxCached) {   // least recently used goes (no conversion is running: we hold g.lock)
+-        auto old = g.layers.begin();
+-        for (auto it = g.layers.begin(); it != g.layers.end(); ++it) if (it->lastUse < old->lastUse) old = it;
+-        freeBuf(old->b); g.layers.erase(old);
+     }
+-    Cached c; c.start = start; c.end = end;
++    if (sameKind >= (picture ? kMaxCachedPictures : kMaxCached)) {   // least recently used of this kind goes (we hold g.lock)
++        auto old = g.layers.end();
++        for (auto it = g.layers.begin(); it != g.layers.end(); ++it)
++            if (it->picture == picture && !it->inUse && (old == g.layers.end() || it->lastUse < old->lastUse)) old = it;
++        if (old != g.layers.end()) { freeBuf(old->b); g.layers.erase(old); }
++    }
++    Cached c; c.start = start; c.end = end; c.picture = picture;
+     if (!importHost(c.b, p, bytes, offset)) {
+-        if (g.importFails >= 6 && g.imports == 0) { g.hostImport = false; logLine(true, "layer imports refused 6 times: the persistent staging buffer is used from now on"); }
++        if (g.importFails >= 6 && g.imports == 0) { g.hostImport = false; logLine(true, "imports refused 6 times: the persistent staging buffers are used from now on"); }
+         return nullptr;
+     }
++    if (picture) g.pictureImports++;
+     c.inUse = true; c.lastUse = ++g.useTick;
+     g.layers.push_back(c);
+     return &g.layers.back();
+@@ -382,36 +401,64 @@ void readOptions()
+     fclose(f);
+ }
+ 
+-// The set-up thread. Everything up to the pipeline, so the first picture pays nothing.
+-void setUp()
++// OMNI_GPU_VIDEO_V3: adopt the GPU present's device and queue (one RADV device in the title). false: not offered.
++bool sharedDevice()
+ {
+-    const double t0 = nowMs();
+-    readOptions();
+-    logLine(true, "set-up start (OMNI_GPU_VIDEO_V2; options: %s%s%s%s)", g.optCopy ? "copy " : "import ", g.optCompute ? "compute-queue " : "general-queue ",
+-        g.optVerify ? "verify " : "noverify ", g.timers ? "timer" : "notimer");
++    OmniGpuShare sh {};
++    if (!omni_gpu_present_share || g.optCompute || !omni_gpu_present_share(&sh) || !sh.device || !sh.queue || !sh.lock || !sh.unlock) return false;
+     Api& vk = g.vk;
+-    if (g.optFailSetUp) return fail("set-up failure forced by the flag word failsetup (fallback test)");
+-    if (!load(VK_NULL_HANDLE, vk.CreateInstance, "vkCreateInstance")) return fail("no Vulkan driver linked (vk_icdGetInstanceProcAddr missing)");
++    g.instance = static_cast<VkInstance>(sh.instance); g.physical = static_cast<VkPhysicalDevice>(sh.physical);
++    if (!(load(g.instance, vk.GetDeviceProcAddr, "vkGetDeviceProcAddr") && load(g.instance, vk.GetPhysicalDeviceMemoryProperties, "vkGetPhysicalDeviceMemoryProperties")
++          && load(g.instance, vk.GetPhysicalDeviceProperties2, "vkGetPhysicalDeviceProperties2"))) {
++        logLine(true, "shared device: instance entry points missing; making a device of our own");
++        g.instance = VK_NULL_HANDLE; g.physical = VK_NULL_HANDLE; return false;
++    }
++    g.device = static_cast<VkDevice>(sh.device); g.queue = static_cast<VkQueue>(sh.queue); g.family = sh.family;
++    vk.GetPhysicalDeviceMemoryProperties(g.physical, &g.memory);
++    g.timestampNs = sh.timestampNs; if (!sh.timestampBits) g.timers = false;
++    g.importAlign = sh.importAlign;
++    const long page = sysconf(_SC_PAGESIZE);
++    g.hostImport = sh.hostImport && !g.optCopy && g.importAlign && (g.importAlign & (g.importAlign - 1)) == 0 && page > 0 && g.importAlign <= VkDeviceSize(page);
++    g.qlock = sh.lock; g.qunlock = sh.unlock; g.shared = true;
++    logLine(false, "device SHARED with the GPU present (queue family %u, timestampPeriod %.3f ns, %s): no second RADV device", g.family, g.timestampNs,
++        g.hostImport ? "host imports" : "staging copies");
++    return true;
++}
++bool failB(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
++bool failB(const char* fmt, ...)
++{
++    char why[512];
++    va_list ap; va_start(ap, fmt); vsnprintf(why, sizeof why, fmt, ap); va_end(ap);
++    fail("%s", why);
++    return false;
++}
++
++// V2's own instance and device (V3: only when the GPU present does not share its device).
++bool ownDevice(double t0)
++{
++    Api& vk = g.vk;
++    VkResult r = VK_SUCCESS; bool ok = false;
++    if (!load(VK_NULL_HANDLE, vk.CreateInstance, "vkCreateInstance")) return failB("no Vulkan driver linked (vk_icdGetInstanceProcAddr missing)");
+     VkApplicationInfo app { VK_STRUCTURE_TYPE_APPLICATION_INFO };
+     app.pApplicationName = "Omni video"; app.applicationVersion = 1;
+     app.pEngineName = "OmniGpuVideo"; app.engineVersion = 1;   // deliberate: no driconf entry matches it
+     app.apiVersion = VK_API_VERSION_1_3;
+     VkInstanceCreateInfo ici { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+     ici.pApplicationInfo = &app;
+-    VkResult r = vk.CreateInstance(&ici, nullptr, &g.instance);
+-    if (r != VK_SUCCESS) return fail("vkCreateInstance=%d", int(r));
+-    bool ok = load(g.instance, vk.DestroyInstance, "vkDestroyInstance") && load(g.instance, vk.EnumeratePhysicalDevices, "vkEnumeratePhysicalDevices")
++    r = vk.CreateInstance(&ici, nullptr, &g.instance);
++    if (r != VK_SUCCESS) return failB("vkCreateInstance=%d", int(r));
++    ok = load(g.instance, vk.DestroyInstance, "vkDestroyInstance") && load(g.instance, vk.EnumeratePhysicalDevices, "vkEnumeratePhysicalDevices")
+         && load(g.instance, vk.GetPhysicalDeviceProperties, "vkGetPhysicalDeviceProperties") && load(g.instance, vk.GetPhysicalDeviceProperties2, "vkGetPhysicalDeviceProperties2")
+         && load(g.instance, vk.GetPhysicalDeviceMemoryProperties, "vkGetPhysicalDeviceMemoryProperties")
+         && load(g.instance, vk.GetPhysicalDeviceQueueFamilyProperties, "vkGetPhysicalDeviceQueueFamilyProperties")
+         && load(g.instance, vk.EnumerateDeviceExtensionProperties, "vkEnumerateDeviceExtensionProperties")
+         && load(g.instance, vk.CreateDevice, "vkCreateDevice") && load(g.instance, vk.GetDeviceProcAddr, "vkGetDeviceProcAddr");
+-    if (!ok) return fail("an instance-level entry point is missing");
++    if (!ok) return failB("an instance-level entry point is missing");
+     uint32_t count = 0;
+     vk.EnumeratePhysicalDevices(g.instance, &count, nullptr);
+     std::vector<VkPhysicalDevice> devices(count);
+     r = count ? vk.EnumeratePhysicalDevices(g.instance, &count, devices.data()) : VK_ERROR_INITIALIZATION_FAILED;
+-    if (r != VK_SUCCESS || !count) return fail("no physical device (%d, count %u)", int(r), count);
++    if (r != VK_SUCCESS || !count) return failB("no physical device (%d, count %u)", int(r), count);
+     g.physical = devices[0];
+     VkPhysicalDeviceExternalMemoryHostPropertiesEXT hostProps { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_HOST_PROPERTIES_EXT };
+     VkPhysicalDeviceProperties2 props2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &hostProps };
+@@ -449,7 +496,7 @@ void setUp()
+         if (!gfx && cmp && computeOnly < 0) computeOnly = int(i);
+     }
+     int chosen = g.optCompute && computeOnly >= 0 ? computeOnly : general >= 0 ? general : computeOnly;
+-    if (chosen < 0) return fail("no queue family with compute");
++    if (chosen < 0) return failB("no queue family with compute");
+     g.family = uint32_t(chosen);
+     if (g.timers && qf[chosen].timestampValidBits == 0) { g.timers = false; logLine(false, "queue family %d has no timestamps: timer off", chosen); }
+     const float priority = 0.5f;
+@@ -460,8 +507,22 @@ void setUp()
+     dci.queueCreateInfoCount = 1; dci.pQueueCreateInfos = &qci;
+     dci.enabledExtensionCount = hasHost ? 1 : 0; dci.ppEnabledExtensionNames = enable;
+     r = vk.CreateDevice(g.physical, &dci, nullptr, &g.device);
+-    if (r != VK_SUCCESS) return fail("vkCreateDevice=%d (queue family %u)", int(r), g.family);
++    if (r != VK_SUCCESS) return failB("vkCreateDevice=%d (queue family %u)", int(r), g.family);
+     logLine(false, "device up on queue family %u (%.0f ms)", g.family, nowMs() - t0);
++    return true;
++}
++
++// The set-up thread. Everything up to the pipeline, so the first picture pays nothing.
++void setUp()
++{
++    const double t0 = nowMs();
++    readOptions();
++    logLine(true, "set-up start (OMNI_GPU_VIDEO_V3; options: %s%s%s%s)", g.optCopy ? "copy " : "import ", g.optCompute ? "compute-queue " : "general-queue ",
++        g.optVerify ? "verify " : "noverify ", g.timers ? "timer" : "notimer");
++    Api& vk = g.vk;
++    if (g.optFailSetUp) return fail("set-up failure forced by the flag word failsetup (fallback test)");
++    if (!sharedDevice() && !ownDevice(t0)) return;
++    bool ok = false; VkResult r = VK_SUCCESS;
+     ok = loadDevice(vk.DestroyDevice, "vkDestroyDevice") && loadDevice(vk.DeviceWaitIdle, "vkDeviceWaitIdle") && loadDevice(vk.GetDeviceQueue, "vkGetDeviceQueue")
+         && loadDevice(vk.CreateShaderModule, "vkCreateShaderModule") && loadDevice(vk.DestroyShaderModule, "vkDestroyShaderModule")
+         && loadDevice(vk.CreatePipelineCache, "vkCreatePipelineCache") && loadDevice(vk.GetPipelineCacheData, "vkGetPipelineCacheData")
+@@ -488,7 +549,7 @@ void setUp()
+         && loadDevice(vk.InvalidateMappedMemoryRanges, "vkInvalidateMappedMemoryRanges") && loadDevice(vk.FlushMappedMemoryRanges, "vkFlushMappedMemoryRanges");
+     if (!ok) return fail("a device-level entry point is missing");
+     if (g.hostImport && !loadDevice(vk.GetMemoryHostPointerPropertiesEXT, "vkGetMemoryHostPointerPropertiesEXT")) g.hostImport = false;
+-    vk.GetDeviceQueue(g.device, g.family, 0, &g.queue);
++    if (!g.shared) vk.GetDeviceQueue(g.device, g.family, 0, &g.queue);   // V3: the shared queue came with the device
+ 
+     // pipeline (cache persisted so later runs skip the shader compile)
+     std::vector<uint8_t> cacheData;
+@@ -555,7 +616,8 @@ void setUp()
+     if (r != VK_SUCCESS) return fail("descriptor/command/fence set-up: %d", int(r));
+     int expected = kStarting;   // shutdown may have switched it off meanwhile
+     if (g.state.compare_exchange_strong(expected, kReady, std::memory_order_acq_rel))
+-        logLine(true, "READY in %.0f ms (OMNI_GPU_VIDEO_V2: %d-slot staging ring for pictures, %s, queue family %u, timer %s)", nowMs() - t0, kSlots,
++        logLine(true, "READY in %.0f ms (OMNI_GPU_VIDEO_V3: %s device, pace-queue pictures %s, %d-slot ring for the rest, %s, queue family %u, timer %s)", nowMs() - t0,
++            g.shared ? "the present's shared" : "its own", g.hostImport ? "read in place (imported once)" : "copied (no host import)", kSlots,
+             g.hostImport ? "layers imported once and cached" : "layers through a persistent staging buffer", g.family, g.timers ? "on" : "off");
+ }
+ 
+@@ -604,12 +666,20 @@ bool run(const Job& j, bool toReadback, bool countIt)
+         if (w == VK_TIMEOUT) { g.hung = true; fail("staging slot %d still busy after %llu ms; GPU objects kept alive", slotIndex, (unsigned long long)(kFenceTimeoutNs / 1000000)); return false; }
+         sl.pending = false;
+     }
+-    if (!ensureStage(sl.in, inBytes + 64, false)) return false;
+-    memcpy(sl.in.mapped, j.planes, inBytes);
+-    if (!sl.in.coherent) {
+-        VkMappedMemoryRange mr { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE }; mr.memory = sl.in.memory; mr.size = VK_WHOLE_SIZE;
+-        vk.FlushMappedMemoryRanges(g.device, 1, &mr);
++    // V3: a pace-queue picture (memory that stays mapped until forget()) is read in place: imported once, no copy.
++    uint32_t inOff = 0;
++    Cached* inPlace = j.planesPersistent && !toReadback ? cachedImport(j.planes, inBytes, inOff, true) : nullptr;
++    if (inPlace && (inOff & 3)) { inPlace->inUse = false; inPlace = nullptr; inOff = 0; }   // (never: direct maps are page-aligned)
++    if (!inPlace) {
++        inOff = 0;
++        if (!ensureStage(sl.in, inBytes + 64, false)) { cacheDone(); return false; }
++        memcpy(sl.in.mapped, j.planes, inBytes);
++        if (!sl.in.coherent) {
++            VkMappedMemoryRange mr { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE }; mr.memory = sl.in.memory; mr.size = VK_WHOLE_SIZE;
++            vk.FlushMappedMemoryRanges(g.device, 1, &mr);
++        }
+     }
++    const Buf& srcB = inPlace ? inPlace->b : sl.in;
+     uint32_t outOff = 0;
+     Cached* layer = toReadback ? nullptr : cachedImport(j.dst, std::min(dstBytes, j.dstBytes), outOff);
+     if (layer && (outOff & 3)) { cacheDone(); layer = nullptr; outOff = 0; }   // (never for page-aligned layers)
+@@ -618,7 +688,7 @@ bool run(const Job& j, bool toReadback, bool countIt)
+     const Buf& dstB = layer ? layer->b : g.stageOut;
+     if (!layer) outOff = 0;
+ 
+-    VkDescriptorBufferInfo infos[2] = { { sl.in.buffer, 0, VK_WHOLE_SIZE }, { dstB.buffer, 0, VK_WHOLE_SIZE } };
++    VkDescriptorBufferInfo infos[2] = { { srcB.buffer, 0, VK_WHOLE_SIZE }, { dstB.buffer, 0, VK_WHOLE_SIZE } };
+     VkWriteDescriptorSet writes[2] {};
+     for (int i = 0; i < 2; ++i) {
+         writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET; writes[i].dstSet = g.set; writes[i].dstBinding = uint32_t(i);
+@@ -627,7 +697,7 @@ bool run(const Job& j, bool toReadback, bool countIt)
+     g.vk.UpdateDescriptorSets(g.device, 2, writes, 0, nullptr);
+     Push pc {};
+     pc.srcW = j.srcW; pc.srcH = j.srcH; pc.dstW = j.dstW; pc.dstH = j.dstH; pc.dstStrideWords = j.dstStride / 4; pc.bps = j.bps;
+-    pc.srcBase = 0; pc.dstBase = outOff / 4; pc.swapRB = j.swapRB ? 1 : 0;
++    pc.srcBase = inOff; pc.dstBase = outOff / 4; pc.swapRB = j.swapRB ? 1 : 0;   // V3: srcBase in bytes (the shader's unit)
+     colourFor(j, pc);
+ 
+     const uint32_t q = uint32_t(slotIndex * 2);
+@@ -651,7 +721,12 @@ bool run(const Job& j, bool toReadback, bool countIt)
+     VkSubmitInfo si { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+     si.commandBufferCount = 1; si.pCommandBuffers = &sl.cmd;
+     if (r == VK_SUCCESS) r = vk.ResetFences(g.device, 1, &sl.fence);
+-    if (r == VK_SUCCESS) { r = vk.QueueSubmit(g.queue, 1, &si, sl.fence); if (r == VK_SUCCESS) sl.pending = true; }
++    if (r == VK_SUCCESS) {
++        if (g.qlock) g.qlock();   // V3: the shared queue (the present submits and presents on it too)
++        r = vk.QueueSubmit(g.queue, 1, &si, sl.fence);
++        if (g.qunlock) g.qunlock();
++        if (r == VK_SUCCESS) sl.pending = true;
++    }
+     if (r == VK_SUCCESS) {
+         // The layer must be complete before the hole-punch publishes it: this conversion waits for its own fence.
+         r = vk.WaitForFences(g.device, 1, &sl.fence, VK_TRUE, kFenceTimeoutNs);
+@@ -692,14 +767,17 @@ bool run(const Job& j, bool toReadback, bool countIt)
+     if (countIt) {
+         const double wall = nowMs() - t0;
+         g.statPictures.fetch_add(1, std::memory_order_relaxed);
++        (inPlace ? g.statInPlace : g.statRingCopies).fetch_add(1, std::memory_order_relaxed);   // V3
+         g.statWallUs.fetch_add(uint64_t(wall * 1000), std::memory_order_relaxed); g.statGpuUs.fetch_add(uint64_t(gpuMs * 1000), std::memory_order_relaxed);
+         g.pictures++; g.sumWall += wall; g.sumGpu += gpuMs; g.sumImport += tImport - t0; g.maxWall = std::max(g.maxWall, wall);
+         if (++g.windowN == 300) {
+             if (g.windowLogs++ < 60)
+-                logLine(false, "300 pictures %dx%d%s -> %dx%d: wall avg %.2f ms (max %.2f, ring copy + layer lookup %.2f), GPU %.2f ms; totals pictures=%llu imports=%llu cacheHits=%llu importFails=%llu copies=%llu forgets=%llu live buffers=%ld memory=%ld",
++                logLine(false, "300 pictures %dx%d%s -> %dx%d: wall avg %.2f ms (max %.2f, input + layer lookup %.2f), GPU %.2f ms; in place %llu, ring copies %llu; totals pictures=%llu imports=%llu (pictures %llu, hits %llu) cacheHits=%llu importFails=%llu copies=%llu forgets=%llu live buffers=%ld memory=%ld%s",
+                     j.srcW, j.srcH, j.bps == 2 ? " 10-bit" : "", j.dstW, j.dstH, g.sumWall / 300, g.maxWall, g.sumImport / 300, g.sumGpu / 300,
+-                    (unsigned long long)g.pictures, (unsigned long long)g.imports, (unsigned long long)g.cacheHits, (unsigned long long)g.importFails,
+-                    (unsigned long long)g.copies, (unsigned long long)g.forgets, g.liveBuffers, g.liveMemory);
++                    (unsigned long long)g.statInPlace.load(), (unsigned long long)g.statRingCopies.load(),
++                    (unsigned long long)g.pictures, (unsigned long long)g.imports, (unsigned long long)g.pictureImports, (unsigned long long)g.pictureHits,
++                    (unsigned long long)g.cacheHits, (unsigned long long)g.importFails,
++                    (unsigned long long)g.copies, (unsigned long long)g.forgets, g.liveBuffers, g.liveMemory, g.shared ? ", shared device" : "");
+             g.windowN = 0; g.sumWall = g.sumGpu = g.sumImport = g.maxWall = 0;
+         }
+     }
+@@ -802,6 +880,11 @@ void stats(uint64_t& pictures, uint64_t& wallUs, uint64_t& gpuUs)
+     pictures = g.statPictures.load(std::memory_order_relaxed); wallUs = g.statWallUs.load(std::memory_order_relaxed); gpuUs = g.statGpuUs.load(std::memory_order_relaxed);
+ }
+ 
++void stats2(uint64_t& inPlace, uint64_t& ringCopies, int& sharedDevice)
++{
++    inPlace = g.statInPlace.load(std::memory_order_relaxed); ringCopies = g.statRingCopies.load(std::memory_order_relaxed); sharedDevice = g.shared ? 1 : 0;
++}
++
+ void liveObjects(long& buffers, long& memory, size_t& cached)
+ {
+     std::lock_guard<std::mutex> l(g.cacheLock);
+@@ -813,6 +896,7 @@ void liveObjects(long& buffers, long& memory, size_t& cached)
+ extern "C" int omni_gpu_video_preinit() { return OmniGpuVideo::preinit() ? 1 : 0; }
+ extern "C" void omni_gpu_video_forget(const void* p) { OmniGpuVideo::forget(p); }
+ extern "C" void omni_gpu_video_stats(uint64_t* pictures, uint64_t* wallUs, uint64_t* gpuUs) { OmniGpuVideo::stats(*pictures, *wallUs, *gpuUs); }
++extern "C" void omni_gpu_video_stats2(uint64_t* inPlace, uint64_t* ringCopies, int* sharedDevice) { OmniGpuVideo::stats2(*inPlace, *ringCopies, *sharedDevice); }
+ 
+ extern "C" void omni_gpu_video_shutdown()
+ {
+@@ -827,7 +911,10 @@ extern "C" void omni_gpu_video_shutdown()
+     if (!g.instance) return;
+     Api& vk = g.vk;
+     if (g.device) {
+-        if (vk.DeviceWaitIdle) vk.DeviceWaitIdle(g.device);
++        // V3: a shared device's queue belongs to the present too (vkDeviceWaitIdle needs every queue externally
++        // synchronised): wait for our own slot fences instead. Our own device: as V2.
++        if (g.shared) { for (Slot& sl : g.slots) if (sl.pending && sl.fence) vk.WaitForFences(g.device, 1, &sl.fence, VK_TRUE, kFenceTimeoutNs); }
++        else if (vk.DeviceWaitIdle) vk.DeviceWaitIdle(g.device);
+         { std::lock_guard<std::mutex> c(g.cacheLock); for (Cached& e : g.layers) freeBuf(e.b); g.layers.clear(); }
+         for (Slot& sl : g.slots) { freeBuf(sl.in); if (sl.fence) vk.DestroyFence(g.device, sl.fence, nullptr); sl = Slot {}; }
+         freeBuf(g.stageOut);
+@@ -839,12 +926,13 @@ extern "C" void omni_gpu_video_shutdown()
+         if (g.setLayout) vk.DestroyDescriptorSetLayout(g.device, g.setLayout, nullptr);
+         if (g.shader) vk.DestroyShaderModule(g.device, g.shader, nullptr);
+         if (g.cache) vk.DestroyPipelineCache(g.device, g.cache, nullptr);
+-        if (vk.DestroyDevice) vk.DestroyDevice(g.device, nullptr);
++        if (!g.shared && vk.DestroyDevice) vk.DestroyDevice(g.device, nullptr);   // V3: the present destroys a shared device
+         g.device = VK_NULL_HANDLE;
+     }
+-    if (vk.DestroyInstance) vk.DestroyInstance(g.instance, nullptr);
++    if (!g.shared && vk.DestroyInstance) vk.DestroyInstance(g.instance, nullptr);
+     g.instance = VK_NULL_HANDLE;
+-    logLine(true, "shutdown: GPU objects freed (pictures=%llu imports=%llu cacheHits=%llu importFails=%llu copies=%llu forgets=%llu; live buffers=%ld memory=%ld)",
++    logLine(true, "shutdown: GPU objects freed%s (pictures=%llu imports=%llu cacheHits=%llu importFails=%llu copies=%llu forgets=%llu; live buffers=%ld memory=%ld)",
++        g.shared ? " (shared device left to the present)" : "",
+         (unsigned long long)g.pictures, (unsigned long long)g.imports, (unsigned long long)g.cacheHits, (unsigned long long)g.importFails,
+         (unsigned long long)g.copies, (unsigned long long)g.forgets, g.liveBuffers, g.liveMemory);
+ }
+diff --git a/engine/media/OmniGpuVideo.h b/engine/media/OmniGpuVideo.h
+index b806a34..f3576b6 100755
+--- a/engine/media/OmniGpuVideo.h
++++ b/engine/media/OmniGpuVideo.h
+@@ -12,6 +12,15 @@
+ //   failsetup   (V2) fail the set-up on purpose: the console's fallback check (every picture stays on the CPU)
+ // Log: /data/omni/native/gpu-video.log (and the hole-punch log through the note callback).
+ //
++// OMNI_GPU_VIDEO_V3 (omni-video-4k60): zero extra copies and one RADV device.
++//  - a picture whose planes live in memory that stays mapped until forget() (Job::planesPersistent: the hole-punch's
++//    pace queue buffers, direct memory) is imported once and read in place by the shader: no ring copy. Anything else
++//    (or a refused import) still goes through the persistent 3-slot ring (one copy, on the calling service thread);
++//  - when the title's GPU present is up, its VkDevice and queue are shared (omni_gpu_present_share): no second RADV
++//    device; submissions to the shared queue are serialised with the present's queue lock. Without the present (flag
++//    off or its set-up failed) V3 creates its own device exactly as V2 did;
++//  - stats2() adds the in-place pictures and the ring copies for the per-second fps line.
++//
+ // OMNI_GPU_VIDEO_V2 (omni-native-s3.2-video): enlargements are converted with the CPU's integer-upscale rule and
+ // verified like 1:1 pictures (V1 never verified them, so a 2160 canvas never used the GPU); pictures go through a
+ // persistent 3-slot staging ring and layers are imported once (forget() before their memory goes); preinit() from
+@@ -30,6 +39,7 @@ struct Job {
+     bool swapRB = false;                                       // R,G,B,A bytes (else B,G,R,A)
+     int matrix = 1;                                            // H.273 matrix code (1 = BT.709, 5/6 = BT.601, 9 = BT.2020)
+     bool fullRange = false;
++    bool planesPersistent = false;                             // V3: planes stay mapped until forget(): import in place
+ };
+ 
+ enum Plan { kCpu = 0, kVerify = 1, kGpu = 2 };
+@@ -50,6 +60,8 @@ void forget(const void* p);
+ bool preinit();
+ // V2: totals since start (GPU conversions, their wall time and GPU time in microseconds).
+ void stats(uint64_t& pictures, uint64_t& wallUs, uint64_t& gpuUs);
++// V3: pictures read in place (imported planes), pictures copied through the ring, and whether the device is shared.
++void stats2(uint64_t& inPlace, uint64_t& ringCopies, int& sharedDevice);
+ 
+ }
+ 
+@@ -59,3 +71,15 @@ extern "C" void omni_gpu_video_shutdown();
+ extern "C" int omni_gpu_video_preinit();
+ extern "C" void omni_gpu_video_forget(const void* p);
+ extern "C" void omni_gpu_video_stats(uint64_t* pictures, uint64_t* wallUs, uint64_t* gpuUs);
++extern "C" void omni_gpu_video_stats2(uint64_t* inPlace, uint64_t* ringCopies, int* sharedDevice);   // V3
++
++// V3: the device the title's GPU present shares with the video conversion (OmniGpuPresent.cpp fills it). Handles are
++// Vulkan handles cast to void*; lock/unlock serialise vkQueueSubmit / vkQueuePresentKHR on the shared queue.
++struct OmniGpuShare {
++    void* instance; void* physical; void* device; void* queue;
++    uint32_t family; uint32_t timestampBits; double timestampNs;
++    uint64_t importAlign; int hostImport;
++    void (*lock)(); void (*unlock)();
++};
++// extern "C" int omni_gpu_present_share(OmniGpuShare* out): 1 = shared device available. Defined by OmniGpuPresent.cpp,
++// declared weak in OmniGpuVideo.cpp (absent in the big-app and the child engine: V3 then makes its own device).

@@ -1,0 +1,1988 @@
+diff --git a/downloads/worker/console_worker.py b/downloads/worker/console_worker.py
+index 30e2a61..d871d42 100644
+--- a/downloads/worker/console_worker.py
++++ b/downloads/worker/console_worker.py
+@@ -116,15 +116,21 @@ def self_test():
+ if __name__ == '__main__':
+     parser = argparse.ArgumentParser()
+     parser.add_argument('--self-test', action='store_true')
+-    parser.add_argument('--port', type=int, default=8765)
++    parser.add_argument('--port', type=int, default=None)
+     parser.add_argument('--downloads', default='/data/omni/downloads/media-worker')
+     parser.add_argument('--state', default='/data/omni-downloader/state/jobs.json')
+     parser.add_argument('--jdownloader-ready', default='/data/omni-downloader/jdownloader/bridge-ready.json')
+     args = parser.parse_args()
+     if args.self_test:
+         raise SystemExit(self_test())
+-    if not 1024 <= args.port <= 65535:
+-        parser.error('port must be between 1024 and 65535')
++    from suite_port import read_port, publish, remove
++    try:
++        assigned_port = read_port()
++    except (OSError, ValueError, UnicodeError) as error:
++        parser.error(str(error))
++    if args.port is not None and args.port != assigned_port:
++        parser.error('--port must match the downloads ID card')
++    args.port = assigned_port
+     configure_detached_output()
+     os.environ.setdefault('SSL_CERT_FILE', str(root / '.deps/certifi/cacert.pem'))
+     from worker import make_server
+@@ -142,6 +148,8 @@ if __name__ == '__main__':
+                          jd_adapter=ReadyFileJDownloaderAdapter(args.jdownloader_ready),
+                          jd_lifecycle=lifecycle)
+     try:
++        publish(server.server_port)
+         server.serve_forever()
+     finally:
+         server.server_close()
++        remove()
+diff --git a/downloads/worker/suite_port.py b/downloads/worker/suite_port.py
+new file mode 100644
+index 0000000..be284fe
+--- /dev/null
++++ b/downloads/worker/suite_port.py
+@@ -0,0 +1,64 @@
++# SPDX-License-Identifier: GPL-3.0-or-later
++"""Downloads service's own card and runtime metadata. Never launches an app."""
++import json
++import os
++from pathlib import Path
++import time
++
++CARD = Path('/data/hub/apps/downloads.json')
++RUNTIME = Path('/data/hub/runtime/downloads.json')
++
++
++def read_port(path=CARD):
++    with Path(path).open('rb') as stream:
++        data = stream.read(32769)
++    if len(data) > 32768:
++        raise ValueError('Downloads card is too large')
++    card = json.loads(data)
++    if not isinstance(card, dict) or card.get('id') != 'downloads' or card.get('hub_api') != 1:
++        raise ValueError('Downloads card is unavailable')
++    port = card.get('port')
++    if type(port) is not int or not 8761 <= port <= 8899:
++        raise ValueError('Downloads card needs an assigned suite port')
++    return port
++
++
++def publish(port, path=RUNTIME, pid=None, started_at=None):
++    if type(port) is not int or not 8761 <= port <= 8899:
++        raise ValueError('Downloads runtime port is outside the suite range')
++    pid = os.getpid() if pid is None else pid
++    if type(pid) is not int or pid <= 0:
++        raise ValueError('Downloads runtime PID is invalid')
++    path = Path(path)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    temporary = path.with_name(path.name + '.' + str(pid) + '.new')
++    record = dict(id='downloads', host='127.0.0.1', port=port, pid=pid,
++                  started_at=int(time.time()) if started_at is None else started_at)
++    try:
++        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
++        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
++            json.dump(record, stream, separators=(',', ':'))
++            stream.write('\n')
++            stream.flush()
++            os.fsync(stream.fileno())
++        os.replace(temporary, path)
++    finally:
++        try:
++            temporary.unlink()
++        except FileNotFoundError:
++            pass
++
++
++def remove(path=RUNTIME, pid=None):
++    pid = os.getpid() if pid is None else pid
++    path = Path(path)
++    try:
++        with path.open('rb') as stream:
++            data = stream.read(4097)
++        if len(data) > 4096:
++            return
++        record = json.loads(data)
++        if isinstance(record, dict) and record.get('id') == 'downloads' and record.get('pid') == pid:
++            path.unlink()
++    except (OSError, ValueError, UnicodeError):
++        pass
+diff --git a/downloads/worker/worker.py b/downloads/worker/worker.py
+index 3bb27e1..17328dd 100644
+--- a/downloads/worker/worker.py
++++ b/downloads/worker/worker.py
+@@ -575,6 +575,8 @@ class WorkerHandler(BaseHTTPRequestHandler):
+     def do_GET(self):
+         if not self.trusted_host():
+             return self.reply(403, {'error': 'Forbidden host'})
++        if self.path == '/api/health':
++            return self.reply(200, dict(ok=True, service='omni-media-worker', api_version=1))
+         if self.path == '/healthz':
+             return self.reply(200, dict(service='omni-media-worker', api_version=1))
+         if self.path in self.PAGES:
+diff --git a/engine/entry/OmniBrowser.cpp b/engine/entry/OmniBrowser.cpp
+index 37cff97..6bf0961 100644
+--- a/engine/entry/OmniBrowser.cpp
++++ b/engine/entry/OmniBrowser.cpp
+@@ -115,7 +115,7 @@ extern "C" bool omniUBlockPopupBlocked(const char* url, const char* opener);
+ extern "C" WKUserScriptRef WKUserScriptCreateWithSourceInWorldOmni(WKStringRef source, _WKUserScriptInjectionTime, bool forMainFrameOnly, WKStringRef worldName); // OMNI_FEATURES_V3: dark pages (as OmniBlocker.cpp)
+ 
+ namespace {
+-constexpr int width = 1280, height = 720, top = 112, bottom = 32;
++constexpr int width = 1280, height = 720, top = 164, bottom = 32;
+ constexpr int pageHeight = height - top - bottom;
+ // OMNI_KEYBOARD_V2: rows of 10 units (88 px) 40 px apart, the action row last; the preview field
+ // and the panel's top edge sit above keyboardY (the toast and compact dialogs end at y 360).
+@@ -128,6 +128,7 @@ int physical(int value) { return static_cast<int>(value * displayScale + 0.5); }
+ // resolution (a quarter of the pixels) and the shell doubles it; video still draws at full 4K.
+ double omniPageScale = 1;
+ static WKSize omniViewSize() { return WKSizeMake(std::lround(renderWidth * omniPageScale), std::lround(renderPageHeight * omniPageScale)); }
++static uint64_t omniMqInputGeneration = 0; // OMNI_MQ_NATIVE_V1: cancels stale UI boundary callbacks
+ struct Tab {
+     WKRetainPtr<WKViewRef> view;
+     WKPageRef page = nullptr;
+@@ -595,6 +596,7 @@ void setPageFullscreen(bool enabled)
+ 
+ void activate(size_t index)
+ {
++    ++omniMqInputGeneration; // OMNI_MQ_NATIVE_V1
+     if (index >= tabs.size()) return;
+     if (omniKbTarget) { omniKbTarget = nullptr; omniKbDone = nullptr; } // OMNI_DIALOGS_V1
+     if (pageFullscreen && active()) { WKViewRequestExitFullScreen(active()->view.get()); setPageFullscreen(false); }
+@@ -1788,23 +1790,28 @@ void scroll(double amount)
+     if (omniSavedScroll(amount)) return; // OMNI_DOWNLOADS_NAV_V1: an open Media downloads dialog scrolls first
+     omniPageWheel(amount);
+ }
++// OMNI_MQ_NATIVE_V1: declarations for the shared quick-access row.
++static bool omniMqClick(int, int);
++static bool omniMqButton(int);
++static void omniMqDraw();
++static void omniMqEnter();
++static void omniMqPointerTakeover();
+ void click()
+ {
++    ++omniMqInputGeneration; // OMNI_MQ_NATIVE_V1
+     if (omniOverlayClick(int(pointerX), int(pointerY))) return; // OMNI_DIALOGS_V1
+     if (!active()) return;
+     if (pageFullscreen) { mouse(kWKEventMouseDown); mouse(kWKEventMouseUp); return; }
++    if (omniMqClick(int(pointerX), int(pointerY))) return; // OMNI_MQ_NATIVE_V1
+     int x = pointerX, y = pointerY;
+     if (settingsOpen) { omniSettingsClick(x, y); return; } // OMNI_STYLE_V1: new panel layout
+     // OMNI_STYLE_V1: `by` is y inside the top bar, which may be sliding (equals y when it is shown);
+     // `top` when the pointer isn't on it.
+     const int omniTop = omniPageTop(), by = y < omniTop ? y + (top - omniTop) : top;
+-    if (by >= 52 && by < top && x >= 1210) { settingsOpen = true; omniSettingsRow = 0; return; }
++    if (by >= 52 && by < 112 && x >= 1210) { settingsOpen = true; omniSettingsRow = 0; return; }
+     if (editing) { omniKbClick(x, y); return; } // OMNI_KEYBOARD_V2
+     if (by < 52) { // OMNI_STYLE_V1
+-        if (x >= 1150) {
+-            if (omniBlockerSetEnabled(!omniBlockerEnabled())) WKPageReload(active()->page);
+-            return;
+-        }
++        if (x >= 1150) return; // OMNI_MQ_NATIVE_V1: no invisible old uBlock hit target
+         if (omniF3TabStripClick(x)) return; // OMNI_FEATURES_V3: more than 4 tabs
+         if (x < 100) return;
+         int index = (x - 100) / 240;
+@@ -2963,19 +2970,7 @@ static void omniDrawTopBar()
+     if (omniHover(1070, 0, 80, 52) && !full) omniRingRect(1088, 14, 30, 30, 7, T.accent, T.hover); // OMNI_HUD_ASTRA_V1: square "+" (hit area unchanged)
+     else omniEdgeRect(1088, 14, 30, 30, 7, T.edge, T.tabOn);
+     omniIcon(omniIconPlus, 1103, 29, full ? T.inkFaint : T.ink);
+-    // uBlock status: shield, green when on (outlined: network rules only), grey off, red on error.
+-    {
+-        const bool failed = omniBlockerFailed(), enabled = omniBlockerEnabled(), uBlock = omniBlockerUsesUBlock();
+-        const bool content = !uBlock || omniBlockerContentActive(), hover = omniHover(1150, 0, 130, 52);
+-        if (hover) omniRingRect(1154, 10, 118, 38, omniRadius, T.accent, T.hover); // OMNI_POLISH_V1
+-        const SDL_Color under = hover ? T.hover : T.bg;
+-        // OMNI_HUD_ASTRA_V1: a status dot, "Ad block" and the state in bold (Astra). Network rules only: a ring.
+-        const SDL_Color dot = failed ? omniBad : enabled ? T.accent : T.inkFaint;
+-        omniDisc(1167, 29, 4, dot);
+-        if (enabled && !failed && !content) omniDisc(1167, 29, 2.2f, under);
+-        const int lw = omniLabel("Ad block", 1177, 29, omniCaption, T.inkDim, 0, 56);
+-        omniLabel(failed ? "Error" : enabled ? "On" : "Off", 1177 + lw + 5, 29, omniCaptionBold, failed ? omniBad : enabled ? T.ink : T.inkDim, 0, 1274 - (1177 + lw + 5));
+-    }
++    // OMNI_MQ_NATIVE_V1: global uBlock lives in the shared quick-access row.
+     // Toolbar
+     const bool canBack = active() && WKPageCanGoBack(active()->page), canForward = active() && WKPageCanGoForward(active()->page);
+     auto navButton = [&](float cx, int icon, bool enabled, int x0, int x1) {
+@@ -3013,6 +3008,7 @@ static void omniDrawTopBar()
+     }
+     if (omniHover(1210, 52, 70, 60)) omniHudToolFocus(1238, 82); // OMNI_HUD_ASTRA_V1
+     omniIcon(omniIconGear, 1238, 82, T.ink);
++    omniMqDraw(); // OMNI_MQ_NATIVE_V1: own reserved row, never over page content
+ }
+ static void omniSettingsHints()
+ {
+@@ -5847,6 +5843,7 @@ static void omniFullscreenKey(const char* text, const char* identifier, int keys
+ 
+ void button(int button)
+ {
++    ++omniMqInputGeneration; // OMNI_MQ_NATIVE_V1
+     // OMNI_POINTER_CROSS_V1: while the pointer leads, Cross is a click at the pointer (before the built-in pages, the Master
+     // Control page, Media downloads, overlays and panels, which act on their D-pad highlight). The D-pad hands the lead back.
+     if (omniPtrCrossRoute(button, omniPtrAlpha() > 0)) {
+@@ -5855,6 +5852,7 @@ void button(int button)
+         omniShellDirty = true;
+         return;
+     }
++    if (omniMqButton(button)) { omniShellDirty = true; return; } // OMNI_MQ_NATIVE_V1
+     if (omniSavedButton(button)) { omniShellDirty = true; return; }
+     if (omniPagesButton(button)) { omniShellDirty = true; return; } // s3 OMNI_PAGES_V1: built-in pages first
+     if (omniMcButton(button)) { omniShellDirty = true; return; } // OMNI_PAD_CONTROLLER_V1: Master Control page first
+@@ -6802,6 +6800,7 @@ void tick(void*)
+     omniGamepadTick(active(), settingsOpen || editing || omniOverlayOpen(), omniShoulderFocused); // OMNI_GAMEPAD_V1
+     SDL_Event event;
+     while (SDL_PollEvent(&event)) {
++        if (event.type == SDL_KEYDOWN || event.type == SDL_TEXTINPUT || event.type == SDL_MOUSEWHEEL) ++omniMqInputGeneration; // OMNI_MQ_NATIVE_V1
+         // OMNI_PERF_A_COUNTER: stick motion by itself changes nothing drawn (the stick tick moves the pointer, WebKit reports scrolling)
+         // dl2-candidate-55: so do the raw joystick events SDL posts next to every game-controller event (SDL_JOYAXISMOTION with
+         // every stick change: they were `input`, which S4 does not know, so no draw was ever regional), sensor updates and
+@@ -6832,7 +6831,7 @@ void tick(void*)
+             if (event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT)
+                 omniSavedAxis(event.caxis);
+         } else if (event.type == SDL_CONTROLLERBUTTONDOWN || event.type == SDL_CONTROLLERBUTTONUP) { if (!omniFxButtonEvent(event.cbutton)) omniShoulderButton(event.cbutton); } // OMNI_FEATURES_V1: hold Cross
+-        else if (event.type == SDL_MOUSEMOTION) { pointerX = event.motion.x * float(width) / screen->w; pointerY = event.motion.y * float(height) / screen->h; mouse(kWKEventMouseMove); omniPtrCrossMoved(); omniPtrHover(); } // OMNI_POINTER_CROSS_V1
++        else if (event.type == SDL_MOUSEMOTION) { pointerX = event.motion.x * float(width) / screen->w; pointerY = event.motion.y * float(height) / screen->h; mouse(kWKEventMouseMove); omniMqPointerTakeover(); omniPtrCrossMoved(); omniPtrHover(); } // OMNI_POINTER_CROSS_V1
+         else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) click();
+         else if (event.type == SDL_MOUSEWHEEL) scroll(event.wheel.y * 80);
+         else if (event.type == SDL_TEXTINPUT && active()) {
+@@ -6918,7 +6917,7 @@ void tick(void*)
+             omniDrawReasons = omniReasonsBefore | added;
+             omniShellDirty.on = omniDirtyBefore || added;
+         }
+-        if (pointerX != omniPx || pointerY != omniPy) { omniPtrCrossMoved(); omniPtrHover(); } // OMNI_POINTER_CROSS_V1: the stick moved the pointer
++        if (pointerX != omniPx || pointerY != omniPy) { omniMqPointerTakeover(); omniPtrCrossMoved(); omniPtrHover(); } // OMNI_POINTER_CROSS_V1: the stick moved the pointer
+         omniDirtyPhase = omniDrInput;
+     }
+     OmniMedia::Hw::holePunchShellPhase(1); // OMNI_HOLEPUNCH_V7_STALLTRACE: input done
+diff --git a/engine/entry/OmniFeaturesPanel.h b/engine/entry/OmniFeaturesPanel.h
+index d6e9a78..940a03a 100644
+--- a/engine/entry/OmniFeaturesPanel.h
++++ b/engine/entry/OmniFeaturesPanel.h
+@@ -56,7 +56,7 @@ static OmniFxGeom omniFxGeometry(const OmniFxPanel& p)
+     OmniFxGeom g {};
+     const int n = int(p.rows.size());
+     g.header = p.subtitle.empty() ? 64 : 88;
+-    g.vis = p.cols > 1 ? (n + p.cols - 1) / p.cols : std::max(1, std::min(n, p.maxVisible));
++    g.vis = p.cols > 1 ? std::max(1, std::min((n + p.cols - 1) / p.cols, p.maxVisible)) : std::max(1, std::min(n, p.maxVisible)); // OMNI_MQ_NATIVE_V1
+     g.w = p.w;
+     g.h = g.header + g.vis * p.rowH + 14;
+     if (p.anchorX >= 0) {
+@@ -71,7 +71,12 @@ static OmniFxGeom omniFxGeometry(const OmniFxPanel& p)
+ }
+ static void omniFxKeepVisible(OmniFxPanel& p, int vis)
+ {
+-    if (p.cols > 1) { p.scroll = 0; return; }
++    if (p.cols > 1) { // OMNI_MQ_NATIVE_V1: scroll is the first visible grid row
++        const int rows = (int(p.rows.size()) + p.cols - 1) / p.cols, selectedRow = p.sel / p.cols;
++        if (selectedRow < p.scroll) p.scroll = selectedRow;
++        if (selectedRow >= p.scroll + vis) p.scroll = selectedRow - vis + 1;
++        p.scroll = std::clamp(p.scroll, 0, std::max(0, rows - vis)); return;
++    }
+     const int n = int(p.rows.size());
+     if (p.sel < p.scroll) p.scroll = p.sel;
+     if (p.sel >= p.scroll + vis) p.scroll = p.sel - vis + 1;
+@@ -92,9 +97,9 @@ static void omniFxDrawPanel(OmniFxPanel& p)
+     const int n = int(p.rows.size());
+     if (p.cols > 1) {
+         const int gap = 8, tw = (g.w - 24 - (p.cols - 1) * gap) / p.cols;
+-        for (int i = 0; i < n; ++i) {
++        for (int i = p.scroll * p.cols; i < std::min(n, (p.scroll + g.vis) * p.cols); ++i) { // OMNI_MQ_NATIVE_V1
+             const OmniFxRow& r = p.rows[i];
+-            const int c = i % p.cols, row = i / p.cols;
++            const int c = i % p.cols, row = i / p.cols - p.scroll;
+             const int tx = g.x + 12 + c * (tw + gap), ty = g.listY + row * p.rowH, th = p.rowH - gap;
+             const bool sel = i == p.sel, on = r.enabled;
+             fillRounded(tx, ty, tw, th, omniRadius, sel ? (on ? T.accent : T.key) : T.tab);
+@@ -197,7 +202,9 @@ static int omniFxRowAt(const OmniFxPanel& p, const OmniFxGeom& g, int x, int y,
+     if (p.cols > 1) {
+         const int gap = 8, tw = (g.w - 24 - (p.cols - 1) * gap) / p.cols;
+         const int c = (x - g.x - 12) / (tw + gap), r = (y - g.listY) / p.rowH;
+-        if (c >= 0 && c < p.cols) row = r * p.cols + c;
++        if (x < g.x + 12 || c < 0 || c >= p.cols || r < 0 || r >= g.vis) return omniFxNoRow;
++        if ((x - g.x - 12) % (tw + gap) >= tw || (y - g.listY) % p.rowH >= p.rowH - gap) return omniFxNoRow;
++        row = (r + p.scroll) * p.cols + c; // OMNI_MQ_NATIVE_V1
+     } else {
+         const int k = (y - g.listY) / p.rowH;
+         if (visibleOnly && k >= g.vis) return omniFxNoRow;
+diff --git a/engine/entry/OmniFilesBroker.h b/engine/entry/OmniFilesBroker.h
+index d02bd25..05cd8ee 100644
+--- a/engine/entry/OmniFilesBroker.h
++++ b/engine/entry/OmniFilesBroker.h
+@@ -107,12 +107,16 @@ static bool omniOfbSpawn()
+ static int omniOfbCall(const std::string& verb, const std::string& path, const std::string& extra, const char* body, size_t bodyLen, std::string* out, size_t cap = 9u << 20)
+ {
+     if (!omniNativeTitle()) return ENOTSUP;
+-    int fd = omniOfbConnect(8767);
++    OmniHub::Card provider;
++    if (!OmniHub::card("files-broker", provider) || provider.port < 8761 || provider.port > 8899)
++        return EHOSTUNREACH;
++    const int port = provider.port;
++    int fd = omniOfbConnect(port);
+     if (fd < 0) {
+         std::lock_guard<std::mutex> g(omniOfbLock);
+-        fd = omniOfbConnect(8767);
++        fd = omniOfbConnect(port);
+         if (fd < 0 && omniOfbSpawn())
+-            for (int i = 0; i < 40 && fd < 0; ++i) { usleep(100000); fd = omniOfbConnect(8767); }
++            for (int i = 0; i < 40 && fd < 0; ++i) { usleep(100000); fd = omniOfbConnect(port); }
+         if (fd < 0) return EHOSTUNREACH;
+     }
+     std::string token = omniOfbToken();
+diff --git a/engine/entry/OmniMediaDownloads.h b/engine/entry/OmniMediaDownloads.h
+index 3b43b31..bccdbca 100644
+--- a/engine/entry/OmniMediaDownloads.h
++++ b/engine/entry/OmniMediaDownloads.h
+@@ -2,6 +2,7 @@
+ // All network/file checks run only after an explicit request, on one bounded thread.
+ #pragma once
+ #include "OmniMediaSection.h"
++#include "OmniNonBlocking.h"
+ #include <arpa/inet.h>
+ #include <atomic>
+ #include <cerrno>
+@@ -20,7 +21,6 @@
+ #include <utility>
+ 
+ namespace OmniMediaDownloads {
+-constexpr uint16_t workerPort = 8765;
+ constexpr uint16_t launcherPort = 8080;
+ constexpr const char* workerPath = "/data/omni-downloader/python-worker.elf";
+ constexpr const char* launchRoute = "/hbldr?path=%2Fdata%2Fomni-downloader%2Fpython-worker.elf&args=omni-media-worker&daemon=1&pipe=0";
+@@ -98,8 +98,7 @@ inline HttpResult get(uint16_t port, const std::string& path, unsigned timeoutMs
+     const int fd = socket(AF_INET, SOCK_STREAM, 0);
+     if (fd < 0) return {};
+     struct Close { int fd; ~Close() { close(fd); } } owner { fd };
+-    const int flags = fcntl(fd, F_GETFL, 0);
+-    if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) return {};
++    if (!omniSocketNonBlocking(fd)) return {};
+ #ifdef SO_NOSIGPIPE
+     int noSignal = 1;
+     if (setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, sizeof(noSignal))) return {};
+@@ -203,17 +202,21 @@ public:
+ inline bool healthy(const HttpResult& r) { return r.state == HttpState::Complete && r.status == 200 && HealthReader(r.body).valid(); }
+ 
+ enum class Outcome { Ready, Unavailable, PackageMissing, LauncherRejected, TimedOut, CoolingDown };
+-struct Completion { Outcome outcome = Outcome::Unavailable; std::string link; };
++struct Completion { Outcome outcome = Outcome::Unavailable; std::string link; uint16_t port = 0; };
+ enum class RequestResult { Started, Disabled, PrivateLink, InvalidLink, Busy, ThreadError };
+ struct Hooks {
+     HttpResult (*fetch)(uint16_t, const std::string&, unsigned) = get;
+     uint64_t (*clock)() = nowMs;
+     void (*sleep)(unsigned) = [](unsigned ms) { poll(nullptr, 0, static_cast<int>(ms)); };
+     bool (*packageReady)() = [] { return access(workerPath, R_OK) == 0; };
++    unsigned (*port)() = OmniMediaSection::assignedPort;
+ };
+-inline Outcome ensureReady(const Hooks& hooks, uint64_t& nextLaunchAt) {
++inline Outcome ensureReady(const Hooks& hooks, uint64_t& nextLaunchAt, uint16_t* readyPort = nullptr) {
++    const unsigned selected = hooks.port();
++    if (selected < 8761 || selected > 8899) return Outcome::Unavailable;
++    const uint16_t workerPort = static_cast<uint16_t>(selected);
+     HttpResult health = hooks.fetch(workerPort, "/healthz", 800);
+-    if (healthy(health)) return Outcome::Ready;
++    if (healthy(health)) { if (readyPort) *readyPort = workerPort; return Outcome::Ready; }
+     // Only connection refusal establishes an unused listener. Any other owner/failure is left alone.
+     if (health.state != HttpState::Refused) return Outcome::Unavailable;
+     if (!hooks.packageReady()) return Outcome::PackageMissing;
+@@ -224,7 +227,7 @@ inline Outcome ensureReady(const Hooks& hooks, uint64_t& nextLaunchAt) {
+     const uint64_t deadline = hooks.clock() + 30000;
+     do {
+         health = hooks.fetch(workerPort, "/healthz", 800);
+-        if (healthy(health)) return Outcome::Ready;
++        if (healthy(health)) { if (readyPort) *readyPort = workerPort; return Outcome::Ready; }
+         if (health.state == HttpState::Complete) return Outcome::Unavailable;
+         if (hooks.clock() >= deadline) break;
+         hooks.sleep(250);
+@@ -246,10 +249,10 @@ class Starter {
+         value.link = std::move(task->link);
+         delete task;
+ #if defined(__cpp_exceptions)
+-        try { value.outcome = ensureReady(owner->hooks, owner->nextLaunchAt); }
++        try { value.outcome = ensureReady(owner->hooks, owner->nextLaunchAt, &value.port); }
+         catch (...) { value.outcome = Outcome::Unavailable; }
+ #else
+-        value.outcome = ensureReady(owner->hooks, owner->nextLaunchAt);
++        value.outcome = ensureReady(owner->hooks, owner->nextLaunchAt, &value.port);
+ #endif
+         { std::lock_guard<std::mutex> guard(owner->lock); owner->result = std::move(value); }
+         owner->complete.store(true, std::memory_order_release);
+diff --git a/engine/entry/OmniMediaDownloadsHooks.inc b/engine/entry/OmniMediaDownloadsHooks.inc
+index f554564..0e0beb8 100644
+--- a/engine/entry/OmniMediaDownloadsHooks.inc
++++ b/engine/entry/OmniMediaDownloadsHooks.inc
+@@ -10,6 +10,10 @@ static bool omniMediaOriginFullscreen = false, omniMediaOriginPrivate = false;
+ static bool omniMediaSavedDestination = false, omniMediaCandidateProvided = false, omniMediaDetectedCandidate = false;
+ static void omniMediaDownloadsLoadPreference()
+ {
++    OmniMediaSection::setPortResolver([]() -> unsigned {
++        OmniHub::Card provider;
++        return OmniHub::card("downloads", provider) ? static_cast<unsigned>(provider.port) : 0;
++    });
+     omniMediaDownloadsEnabled = !omniTestMode() && !access(OmniMediaDownloads::preferencePath, F_OK);
+     omniNetGrabberSyncAll(); // OMNI_C52_FIX1: add/remove the grabber's resource-load client on open tabs
+ }
+@@ -108,9 +112,9 @@ static void omniMediaDownloadsTick()
+         notice("Media downloads is ready. Open it again when you want it.");
+         return;
+     }
+-    auto plan = OmniMediaSection::plan(omniMediaDownloadsEnabled, true, omniMediaTabSnapshot(), completion.link);
++    auto plan = OmniMediaSection::plan(omniMediaDownloadsEnabled, true, omniMediaTabSnapshot(), completion.link, false, completion.port);
+     if (omniMediaSavedDestination && (plan.action == OmniMediaSection::Action::Create || plan.action == OmniMediaSection::Action::Activate)) {
+-        plan.url = OmniMediaSection::base() + "#view=saved";
++        plan.url = OmniMediaSection::base(completion.port) + "#view=saved";
+         if (omniMediaCandidateProvided)
+             plan.url += "&candidate=" + OmniMediaSection::encode(completion.link)
+                 + "&detected=" + (omniMediaDetectedCandidate ? "1" : "0");
+diff --git a/engine/entry/OmniMediaSection.h b/engine/entry/OmniMediaSection.h
+index 62d06bc..2a02c07 100644
+--- a/engine/entry/OmniMediaSection.h
++++ b/engine/entry/OmniMediaSection.h
+@@ -1,18 +1,28 @@
+ // Standalone integration policy. No WebKit, SDL, networking or process globals.
+ #pragma once
+ #include <cstdint>
++#include <atomic>
+ #include <string>
+ #include <vector>
+ 
+ namespace OmniMediaSection {
+ constexpr unsigned apiVersion = 1;
+-constexpr unsigned defaultPort = 8765;
++constexpr unsigned defaultPort = 0;
++using PortResolver = unsigned (*)();
++inline std::atomic<PortResolver>& portResolver() { static std::atomic<PortResolver> value { nullptr }; return value; }
++inline void setPortResolver(PortResolver value) { portResolver().store(value); }
++inline unsigned assignedPort() {
++    const auto resolver = portResolver().load();
++    const unsigned value = resolver ? resolver() : 0;
++    return value >= 8761 && value <= 8899 ? value : 0;
++}
+ enum class Action { Disabled, Unavailable, InvalidLink, PrivateLink, Full, Create, Activate };
+ struct Tab { uintptr_t key; bool owned; std::string url; };
+ struct Plan { Action action; uintptr_t key = 0; std::string url; };
+ 
+ inline std::string base(unsigned port = defaultPort) {
+-    return port >= 1024 && port <= 65535 ? "http://127.0.0.1:" + std::to_string(port) + "/downloads" : "";
++    if (!port) port = assignedPort();
++    return port >= 8761 && port <= 8899 ? "http://127.0.0.1:" + std::to_string(port) + "/downloads" : "";
+ }
+ inline bool belongs(const std::string& url, const std::string& origin) {
+     return !origin.empty() && (url == origin || url.compare(0, origin.size()+1, origin + "#") == 0);
+diff --git a/engine/entry/OmniMqQuickAccess.h b/engine/entry/OmniMqQuickAccess.h
+new file mode 100644
+index 0000000..5d76d82
+--- /dev/null
++++ b/engine/entry/OmniMqQuickAccess.h
+@@ -0,0 +1,89 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++// OMNI_MQ_NATIVE_V1: shared pointer/controller actions in a reserved chrome row.
++#pragma once
++static bool omniDkWant(const std::string&);
++static int omniMqFocus = -1;
++static float omniMqReturnX = 0, omniMqReturnY = 0;
++static const void* omniMqOwner = nullptr;
++static bool omniMqAvailable()
++{
++    return active() && !editing && !settingsOpen && !pageFullscreen && !omniOverlayOpen()
++        && !omniFindBarOpen() && !(omniMediaDownloadsEnabled && omniSavedOwnedView() != OmniSavedView::None);
++}
++static int omniMqHit(int x, int y)
++{
++    if (y < 116 || y >= 160 || x < 640) return -1;
++    const int column = (x - 640) / 158;
++    return column < 4 && (x - 640) % 158 < 150 ? column : -1;
++}
++static bool omniMqEnabled(int item)
++{
++    return item != 1 || (active() && omniWebURL(active()->url));
++}
++static void omniMqActivate(int item)
++{
++    if (!omniMqEnabled(item)) return;
++    if (item == 0) { if (omniBlockerSetEnabled(!omniBlockerEnabled()) && active()) WKPageReload(active()->page); }
++    else if (item == 1) omniF3QuickAction(303); // existing Dark page action
++    else if (item == 2) { omniMqFocus = -1; omniHubAppsShow(); }
++    else if (item == 3) { omniMqFocus = -1; omniAdQuickAction(381); }
++    omniShellDirty = true;
++}
++static bool omniMqClick(int x, int y)
++{
++    omniMqFocus = -1; // Any pointer activation owns focus, including a click back in the page.
++    if (!omniMqAvailable()) return false;
++    const int pageTop = omniPageTop();
++    if (y >= pageTop) return false;
++    const int barY = y + top - pageTop;
++    if (barY < 112 || barY >= top) return false;
++    const int hit = omniMqHit(x, barY);
++    omniMqFocus = -1;
++    if (hit >= 0) omniMqActivate(hit);
++    return true; // padding belongs to the row, never to address/settings controls
++}
++static void omniMqPointerTakeover() { ++omniMqInputGeneration; omniMqFocus = -1; }
++static void omniMqEnter()
++{
++    if (!omniMqAvailable()) return;
++    omniMqReturnX = pointerX;
++    omniMqReturnY = std::max(0.f, pointerY - omniPageTop()); // content-relative, including hidden chrome
++    omniMqOwner = active(); omniMqFocus = 0;
++    // Reveal atomically before positioning the chrome-owned pointer. The style tick
++    // must not carry it down with the page as it would during a slide animation.
++    omniChromeWanted = true; omniChromeT = omniChromeShown = 1.f;
++    omniPageDirty = omniShellDirty = true; omniChromeWake();
++    pointerX = 715; pointerY = 138;
++}
++static bool omniMqButton(int b)
++{
++    if (!omniMqAvailable()) { omniMqFocus = -1; return false; }
++    if (omniMqFocus < 0 || omniMqOwner != active()) { omniMqFocus = -1; return false; }
++    if (b == SDL_CONTROLLER_BUTTON_B || b == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
++        pointerX = omniMqReturnX; pointerY = std::clamp(omniPageTop() + omniMqReturnY, float(omniPageTop()), float(height-bottom-1)); omniMqFocus = -1; return true;
++    } else if (b == SDL_CONTROLLER_BUTTON_DPAD_LEFT) omniMqFocus = (omniMqFocus + 3) % 4;
++    else if (b == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) omniMqFocus = (omniMqFocus + 1) % 4;
++    else if (b == SDL_CONTROLLER_BUTTON_A) { omniMqActivate(omniMqFocus); return true; }
++    else if (b != SDL_CONTROLLER_BUTTON_DPAD_UP) { omniMqFocus = -1; return false; }
++    omniChromeWake();
++    pointerX = 715 + 158 * omniMqFocus; pointerY = 138;
++    return true;
++}
++static void omniMqDraw()
++{
++    const OmniTheme& t = omniTheme();
++    fill(0, 112, width, top - 112, t.bar);
++    omniLabel("Quick access", 24, 138, omniSmall, t.inkDim);
++    const bool web = active() && omniWebURL(active()->url);
++    const std::string labels[] = {
++        std::string("uBlock ") + (omniBlockerFailed() ? "Error" : omniBlockerEnabled() ? "On" : "Off"),
++        std::string("Dark mode ") + (!web ? "—" : omniDkWant(active()->url) ? "On" : "Off"), "Apps", "Add-ons"
++    };
++    for (int i = 0; i < 4; ++i) {
++        const int x = 640 + i * 158;
++        const bool selected = omniMqFocus == i || omniHover(x, 116, 150, 44), enabled = omniMqEnabled(i);
++        if (selected) omniRingRect(x, 116, 150, 44, omniRadius, t.accent, t.hover);
++        else omniEdgeRect(x, 116, 150, 44, omniRadius, t.edge, t.tab);
++        omniLabel(labels[i], x + 75, 138, omniSmall, enabled ? t.ink : t.inkFaint, 1, 138);
++    }
++}
+diff --git a/engine/entry/OmniNonBlocking.h b/engine/entry/OmniNonBlocking.h
+new file mode 100644
+index 0000000..16d4865
+--- /dev/null
++++ b/engine/entry/OmniNonBlocking.h
+@@ -0,0 +1,11 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++#pragma once
++#include <fcntl.h>
++#include <sys/ioctl.h>
++inline bool omniSocketNonBlocking(int fd)
++{
++    const int flags = fcntl(fd, F_GETFL, 0);
++    if (flags >= 0 && fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0) return true;
++    int enabled = 1;
++    return ioctl(fd, FIONBIO, &enabled) == 0;
++}
+diff --git a/engine/entry/OmniPages.h b/engine/entry/OmniPages.h
+index 71453cb..93a37a4 100644
+--- a/engine/entry/OmniPages.h
++++ b/engine/entry/OmniPages.h
+@@ -1,7 +1,9 @@
++#include "../media/OmniHdrPreference.h"
++#include "../media/OmniVideoStats.h" // OMNI_VIDEO_STATS_BRIDGE_V1
+ // s3 OMNI_PAGES_V1: Omni's built-in pages (outputs/omni-pages, ENGINE-CONTRACT.md), shell side.
+ // - Files: /app0/pages (packaged with the title); /data/omni/pages-dev replaces it only while /data/omni/pages-dev.flag
+ //   exists. /data/omni/pages-off.flag turns the whole feature off (the old built-in new-tab page comes back).
+-// - Origin: omni://pages, served by OmniBlocker.cpp's scheme handler with ENGINE-CONTRACT §1's CSP. A built-in page may
++// - Origin: omni://pages, served by OmniBlocker.cpp's scheme handler with ENGINE-CONTRACT Â§1's CSP. A built-in page may
+ //   load its own files and other built-in pages; any other main-frame load needs an address Omni itself opened in
+ //   that tab (so Back/Forward work, while web content can't frame or fetch these pages).
+ // - Which page opens when: new tab / Home -> start/; the first new tab of a session -> welcome/?firstRun=1 (which goes
+@@ -114,12 +116,48 @@ static void omniPagesPadFallback(WKTypeRef result, WKErrorRef error, void* conte
+     button(static_cast<int>(reinterpret_cast<intptr_t>(context)));
+     omniPagesSkip = false;
+ }
++// OMNI_MQ_PAGE_BOUNDARY_V1: a fixed read-only probe through the current page controller.
++// One outstanding evaluation; no stored Tab pointer is ever dereferenced.
++static bool omniMqAvailable();
++static void omniMqEnter();
++static bool omniMqPageProbePending = false;
++static uint32_t omniMqPageProbeStarted = 0;
++struct OmniMqPageProbe {
++    uintptr_t identity; uint64_t document; uint64_t input; WKPageRef page; uint32_t started;
++};
++static void omniMqPageProbeDone(WKTypeRef result, WKErrorRef error, void* context)
++{
++    std::unique_ptr<OmniMqPageProbe> probe(static_cast<OmniMqPageProbe*>(context));
++    omniMqPageProbePending = false;
++    const Tab* tab = active();
++    if (uint32_t(SDL_GetTicks() - probe->started) > 500 || !running || !tab || !tab->omniPagesTab || tab->loading || tab->crashed
++        || tab->omniMediaIdentity != probe->identity || tab->omniSavedDocument != probe->document
++        || tab->page != probe->page || omniMqInputGeneration != probe->input || !omniMqAvailable()) return;
++    const std::string answer = !error && result && WKGetTypeID(result) == WKStringGetTypeID()
++        ? OmniTest::toStd(static_cast<WKStringRef>(result)) : std::string();
++    if (answer == "mq-boundary") { omniMqEnter(); omniShellDirty = true; return; }
++    if (answer == "1") return;
++    omniPagesSkip = true;
++    button(SDL_CONTROLLER_BUTTON_DPAD_UP);
++    omniPagesSkip = false;
++}
++static bool omniMqPageProbeUp()
++{
++    if (omniMqPageProbePending) return uint32_t(SDL_GetTicks() - omniMqPageProbeStarted) <= 500; // stalled: ordinary native fallback, never queue more
++    Tab* tab = active();
++    auto source = adoptWK(WKStringCreateWithUTF8CString("(()=>{const h=window.omniMediaController;if(typeof h!=='function')return '0';if(h.call(window,'quick-access-boundary')==='omni.quick-access.boundary')return 'mq-boundary';return h.call(window,'up')===true?'1':'0'})()"));
++    auto* probe = new OmniMqPageProbe { tab->omniMediaIdentity, tab->omniSavedDocument, omniMqInputGeneration, tab->page, SDL_GetTicks() };
++    omniMqPageProbePending = true;
++    omniMqPageProbeStarted = probe->started;
++    WKPageEvaluateJavaScriptInMainFrame(tab->page, source.get(), probe, omniMqPageProbeDone);
++    return true;
++}
+ static bool omniPagesButton(int b)
+ {
+     if (omniPagesSkip || !active() || !active()->omniPagesTab || pageFullscreen || settingsOpen || editing || omniOverlayOpen() || active()->crashed) return false;
+     const char* script = nullptr;   // one fixed script per button: no URL or text from a page
+     switch (b) {
+-    case SDL_CONTROLLER_BUTTON_DPAD_UP: script = "window.omniMediaController?.('up')===true?'1':'0'"; break;
++    case SDL_CONTROLLER_BUTTON_DPAD_UP: return omniMqPageProbeUp(); // OMNI_MQ_PAGE_BOUNDARY_V1
+     case SDL_CONTROLLER_BUTTON_DPAD_DOWN: script = "window.omniMediaController?.('down')===true?'1':'0'"; break;
+     case SDL_CONTROLLER_BUTTON_DPAD_LEFT: script = "window.omniMediaController?.('left')===true?'1':'0'"; break;
+     case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: script = "window.omniMediaController?.('right')===true?'1':'0'"; break;
+@@ -230,6 +268,27 @@ static std::string omniPagesMessage(WKPageRef page, const std::string& body)
+     }
+     if (m == "request") {
+         const std::string method = omniPagesField(a, "method");
++        if (method == "video.hdr.preference.read" || method == "video.hdr.preference.write") {
++            OmniHdrPreference::Value v;
++            const std::string path=omniData("video-hdr-preference.txt");
++            if (method == "video.hdr.preference.write") {
++                if (omniPagesField(a,"hdrMode")=="auto") return omniPagesErr("UNSUPPORTED");
++                unsigned revision=0;
++                if (!OmniHdrPreference::revision(omniPagesField(a,"revision"),revision)) return omniPagesErr("INVALID_VALUE");
++                const auto result=OmniHdrPreference::write(path,revision,omniPagesField(a,"hdrMode"),v);
++                if(result!=OmniHdrPreference::Saved) return omniPagesErr(result==OmniHdrPreference::Stale?"STALE_STATE":result==OmniHdrPreference::Invalid?"INVALID_VALUE":"UNAVAILABLE");
++            } else if(!OmniHdrPreference::read(path,v)) return omniPagesErr("UNAVAILABLE");
++            return omniPagesOk(std::string("{\"mode\":")+omniPagesJsonQuote(v.mode)+",\"revision\":"+std::to_string(v.revision)+",\"restartRequired\":true,\"autoSupported\":false,\"hdr10Passthrough\":false}");
++        }
++        if (method == "video.stats") {
++            OmniMedia::Hw::playbackStatsRequest();
++            const auto metadata=OmniMedia::Hw::playbackMetadata();
++            OmniVideoStatsSnapshot snapshot;
++            if (!omni_video_stats_snapshot || !omni_video_stats_snapshot(&snapshot)) return omniPagesErr("UNAVAILABLE");
++            const bool known=metadata.fresh && metadata.active && !metadata.decoderFailed;
++            const std::string result=omniVideoStatsJson(snapshot,known?metadata.width:0,known?metadata.height:0,known?metadata.codec:-1);
++            return result.empty()?omniPagesErr("UNAVAILABLE"):omniPagesOk(result);
++        }
+         if (method == "navigation.current")
+             return omniPagesOk(std::string("{\"navigationEpoch\":0,\"title\":") + omniPagesJsonQuote(tab->title) + ",\"url\":"
+                 + omniPagesJsonQuote(tab->omniPagesTab ? std::string() : tab->url) + ",\"private\":" + (tab->omniPrivate ? "true" : "false") + "}");
+@@ -285,7 +344,7 @@ var host={
+  retryNavigation:function(){return call('retryNavigation');},
+  getContext:function(){var s=new URLSearchParams(location.search).get('state');return {state:STATES[s]?s:'offline'};},
+  search:function(q){return call('search',{q:String(q)});},
+- request:function(req){var r=req||{};return raw('request',{method:String(r.method||''),url:r.params&&r.params.url?String(r.params.url):''}).then(function(o){return o&&o.ok===true?{ok:true,result:o.result}:{ok:false,code:(o&&o.code)||'UNSUPPORTED'};},function(){return {ok:false,code:'UNSUPPORTED'};});},
++ request:function(req){var r=req||{};return raw('request',{method:String(r.method||''),url:r.params&&r.params.url?String(r.params.url):'',hdrMode:r.params&&typeof r.params.mode==='string'?r.params.mode:'',revision:r.params&&Number.isInteger(r.params.revision)?String(r.params.revision):''}).then(function(o){return o&&o.ok===true?{ok:true,result:o.result}:{ok:false,code:(o&&o.code)||'UNSUPPORTED'};},function(){return {ok:false,code:'UNSUPPORTED'};});},
+  addons:Object.freeze({list:function(){return call('addons.list');},call:function(op,id,a,b){return call('addons.call',{op:String(op),id:String(id),a:a==null?'':String(a),b:b==null?'':String(b)});}}),
+  vault:Object.freeze({status:function(){return call('vault.status');},list:function(){return call('vault.list').then(function(r){return r.items||[];});}})
+ };
+diff --git a/engine/entry/OmniQuickMenu.h b/engine/entry/OmniQuickMenu.h
+index 96d6905..c939c4d 100644
+--- a/engine/entry/OmniQuickMenu.h
++++ b/engine/entry/OmniQuickMenu.h
+@@ -81,7 +81,7 @@ static std::vector<OmniHub::LiveApp> omniHubApps;
+ static bool omniHubAppsOk = false;
+ static void omniHubAppsBuild(OmniFxPanel& p)
+ {
+-    p.subtitle = omniHubAppsOk ? std::string("Your Omnibloom apps") : std::string("Bloom Core is not running");
++    p.subtitle = omniHubAppsOk ? std::string("Bloom Core: running") : std::string("Bloom Core: unavailable"); // OMNI_MQ_NATIVE_V1: existing status.json reader
+     int i = 0;
+     for (const auto& a : omniHubApps) {
+         OmniFxRow r; r.id = 100 + i++;
+@@ -112,7 +112,7 @@ static void omniHubAppsShow()
+     omniHubAppsOk = OmniHub::liveApps(omniHubApps);
+     fprintf(stderr, "hub: Apps menu: Bloom Core %s, %d app(s)\n", omniHubAppsOk ? "answered" : "not running", int(omniHubApps.size()));
+     OmniFxPanel p;
+-    p.title = "Apps"; p.w = 760;
++    p.title = "Apps"; p.w = 1040; p.cols = 2; p.rowH = 96; p.maxVisible = 4; // OMNI_MQ_NATIVE_V1
+     p.build = omniHubAppsBuild; p.input = omniHubAppsInput;
+     p.faces = { { 0, "Open" }, { 1, "Back" } };
+     omniFxPush(std::move(p));
+@@ -151,7 +151,7 @@ static void omniControlsShow()
+ enum { omniQmBack = 1, omniQmForward, omniQmReload, omniQmHome, omniQmNewTab, omniQmTabs, omniQmFind, omniQmZoomOut, omniQmZoomIn,
+     omniQmZoomReset, omniQmReader, omniQmTranslate, omniQmBookmark, omniQmCopy, omniQmSite, omniQmBookmarks, omniQmHistory, omniQmDownloads,
+     omniQmReopen, omniQmPrivate, omniQmTools, omniQmSettings, omniQmBrowserSettings, omniQmExit, omniQmApps, omniQmControls };
+-static void omniFxQuickBuild(OmniFxPanel& p)
++static void omniFxQuickAllBuild(OmniFxPanel& p)
+ {
+     Tab* t = active();
+     const std::string host = omniMenuHost();
+@@ -191,10 +191,44 @@ static void omniFxQuickBuild(OmniFxPanel& p)
+     p.rows.back().danger = true;
+     p.subtitle = page ? host : t && t->omniNewTabPage ? std::string("New tab") : std::string();
+ }
++// OMNI_MQ_NATIVE_V1: existing commands stay available; More holds the remainder.
++enum { omniMqBrowse = 8000, omniMqToggles, omniMqApps, omniMqSettings, omniMqMore, omniMqBlock };
++static bool omniFxQuickInput(OmniFxPanel&, const OmniFxRow&, int);
++static int omniMqGroup(int id)
++{
++    switch (id) {
++    case omniQmTabs: case omniQmBookmarks: case omniQmHistory: case omniQmBack: case omniQmForward: case omniQmReload: return 1;
++    case omniMqBlock: case 303: return 2; // existing omniF3Dark
++    case omniQmApps: case 381: return 3; // existing Add-ons list
++    case omniQmSettings: case omniQmBrowserSettings: case omniQmSite: case omniQmControls: return 4;
++    default: return 5;
++    }
++}
++static void omniFxQuickBuild(OmniFxPanel& p)
++{
++    if (!p.mode) {
++        p.subtitle = "Browse, adjust, open an app";
++        const char* labels[] = { "Browse", "Quick toggles", "Apps", "Settings", "More" };
++        for (int i = 0; i < 5; ++i) { OmniFxRow r; r.id = omniMqBrowse + i; r.label = labels[i]; p.rows.push_back(r); }
++        return;
++    }
++    omniFxQuickAllBuild(p);
++    OmniFxRow block; block.id = omniMqBlock; block.label = "uBlock"; block.value = omniBlockerFailed() ? "Error" : omniBlockerEnabled() ? "On" : "Off";
++    p.rows.push_back(block);
++    p.rows.erase(std::remove_if(p.rows.begin(), p.rows.end(), [&](const OmniFxRow& r) { return omniMqGroup(r.id) != p.mode; }), p.rows.end());
++    for (auto& r : p.rows) if (r.id == 303) r.label = "Dark mode";
++}
+ static bool omniFxQuickInput(OmniFxPanel&, const OmniFxRow& r, int b)
+ {
+     if (b != SDL_CONTROLLER_BUTTON_A) return false;
+     if (!r.enabled) return true;
++    if (r.id >= omniMqBrowse && r.id <= omniMqMore) {
++        OmniFxPanel next; next.title = r.label; next.mode = r.id - omniMqBrowse + 1;
++        next.w = 1000; next.rowH = 56; next.maxVisible = 8;
++        next.build = omniFxQuickBuild; next.input = omniFxQuickInput;
++        next.faces = { { 0, "Choose" }, { 1, "Back" } }; omniFxPush(std::move(next)); return true;
++    }
++    if (r.id == omniMqBlock) { if (omniBlockerSetEnabled(!omniBlockerEnabled()) && active()) WKPageReload(active()->page); return true; }
+     if (r.id >= 900) return omniF2QuickInput(r, b); // OMNI_FEATURES_V2
+     if (omniF3QuickAction(r.id)) return true; // OMNI_FEATURES_V3
+     if (omniAdQuickAction(r.id)) return true; // OMNI_ADDONS_V1
+@@ -243,10 +277,12 @@ static void omniFxQuickMenuShow()
+     settingsOpen = false; omniHistoryOpenFlag = false; omniMenuOpenFlag = false;
+     omniFxCloseAll();
+     OmniFxPanel p;
+-    p.title = "Omni"; p.cols = 3; p.w = 960; p.rowH = 58;
++    p.title = "Options"; p.cols = 2; p.w = 1000; p.rowH = 92; p.maxVisible = 4; // OMNI_MQ_NATIVE_V1
+     p.build = omniFxQuickBuild; p.input = omniFxQuickInput;
+     p.faces = { { 0, "Choose" }, { 1, "Close" } };
+     p.extra = "D-pad: move   Options: close";
+     omniFxPush(std::move(p));
+-    omniFxStack.back().sel = 2;   // Reload / Stop
++    omniFxStack.back().sel = 0;   // Browse
+ }
++
++#include "OmniMqQuickAccess.h" // OMNI_MQ_NATIVE_V1
+diff --git a/engine/media/OmniHdrPreference.h b/engine/media/OmniHdrPreference.h
+new file mode 100644
+index 0000000..537c1ee
+--- /dev/null
++++ b/engine/media/OmniHdrPreference.h
+@@ -0,0 +1,36 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++// OMNI_HDR_PREFERENCE_V1. Fixed application-owned path; ordinary preference only.
++#pragma once
++#include <cerrno>
++#include <cstdio>
++#include <cstring>
++#include <string>
++namespace OmniHdrPreference {
++struct Value { unsigned revision=1;std::string mode="off";bool exists=false; };
++static inline bool mode(const std::string& s){return s=="off"||s=="auto"||s=="on";}
++static inline bool revision(const std::string& s,unsigned& out){
++ if(s.empty()||s.size()>10)return false;
++ unsigned long long n=0;
++ for(char c:s){if(c<'0'||c>'9')return false;n=n*10+unsigned(c-'0');if(n>2147483646)return false;}
++ if(!n)return false;
++ out=unsigned(n);return true;
++}
++static inline bool read(const std::string& path,Value& out){
++ FILE*f=fopen(path.c_str(),"rb");if(!f){if(errno==ENOENT){out=Value{};return true;}return false;}
++ char b[65];const size_t n=fread(b,1,sizeof b,f);const bool error=ferror(f)!=0;fclose(f);
++ if(error||!n||n>=sizeof b||b[n-1]!='\n')return false;
++ std::string s(b,n-1);const size_t tab=s.find('\t');if(tab==std::string::npos)return false;
++ Value v;if(!revision(s.substr(0,tab),v.revision)||!mode(s.substr(tab+1)))return false;
++ v.mode=s.substr(tab+1);v.exists=true;out=v;return true;
++}
++enum Result { Saved, Invalid, Stale, Unavailable };
++static inline Result write(const std::string& path,unsigned expected,const std::string& requested,Value& out){
++ if(!mode(requested)||!expected||expected>=2147483646)return Invalid;
++ Value current;if(!read(path,current))return Unavailable;if(current.revision!=expected)return Stale;
++ const std::string tmp=path+".new",body=std::to_string(expected+1)+"\t"+requested+"\n";
++ FILE*f=fopen(tmp.c_str(),"wb");if(!f)return Unavailable;
++ bool ok=fwrite(body.data(),1,body.size(),f)==body.size();if(fflush(f)!=0)ok=false;if(fclose(f)!=0)ok=false;
++ if(!ok){remove(tmp.c_str());return Unavailable;}if(rename(tmp.c_str(),path.c_str())!=0){remove(tmp.c_str());return Unavailable;}
++ out={expected+1,requested,true};return Saved;
++}
++}
+diff --git a/engine/media/OmniHwService.cpp b/engine/media/OmniHwService.cpp
+index 41e5b74..a596d77 100644
+--- a/engine/media/OmniHwService.cpp
++++ b/engine/media/OmniHwService.cpp
+@@ -726,24 +726,40 @@ std::atomic<uint64_t> hudCompleted {0}, hudRepeats {0}, hudDecoderErrors {0};
+ std::atomic<bool> hudEnabled {false}, hudActive {false}, hudDecoderFailed {false};
+ std::atomic<uint64_t> hudDrops {0};
+ std::atomic<int> hudWidth {0}, hudHeight {0}, hudCodec {-1};
++// A stats consumer requests one metadata publication without owning the native HUD.
++std::atomic<bool> hudMetadataRequested {false}, hudMetadataFresh {false};
++std::mutex hudMetadataMutex;
++PlaybackMetadata hudMetadata;
++double hudMetadataAt=0;
++bool storePlaybackMetadata(double now) {
++    std::unique_lock<std::mutex> lock(hudMetadataMutex,std::try_to_lock);
++    if (!lock.owns_lock()) return false;
++    hudMetadata={hudWidth.load(),hudHeight.load(),hudCodec.load(),hudActive.load(),hudDecoderFailed.load(),true};
++    hudMetadataAt=now;
++    hudMetadataFresh.store(true,std::memory_order_release);
++    return true;
++}
++
+ // Existing service thread owns channel data. Publish once per second; a busy
+ // plane is skipped rather than making a stats reader block video work.
+ void publishPlaybackStats(double now) {
+     static double next = 0;
+-    if (!hudEnabled.load(std::memory_order_relaxed) || now < next) return;
++    if (now < next || (!hudEnabled.load(std::memory_order_relaxed) && !hudMetadataRequested.load())) return;
+     next = now + 1000;
++    hudMetadataFresh.store(false,std::memory_order_release);
+     std::unique_lock<std::mutex> guard(plane.lock,std::try_to_lock);
+     if (!guard.owns_lock()) return;
+     const int owner=plane.owner;
+     const bool active=plane.attached && owner>=0 && owner<int(Wire::maxChannels);
+     hudActive.store(active,std::memory_order_relaxed);
+-    if (!active) { hudWidth.store(0); hudHeight.store(0); hudCodec.store(-1); hudDrops.store(0); hudDecoderFailed.store(false); return; }
++    if (!active) { hudWidth.store(0); hudHeight.store(0); hudCodec.store(-1); hudDrops.store(0); hudDecoderFailed.store(false); if (storePlaybackMetadata(now)) hudMetadataRequested.store(false); return; }
+     const auto& c=channels[owner];
+     if (c.v5Configuring) return;   // OMNI_PERF_B_V5: the worker owns the decoder now
+     hudCodec.store(int(c.decoder.codec()),std::memory_order_relaxed);
+     hudWidth.store(c.width,std::memory_order_relaxed); hudHeight.store(c.height,std::memory_order_relaxed);
+     hudDrops.store(plane.pacedDropped+c.paceDroppedRaw,std::memory_order_relaxed);
+     hudDecoderFailed.store(c.failed,std::memory_order_relaxed);
++    if (storePlaybackMetadata(now)) hudMetadataRequested.store(false);
+ }
+ 
+ // UI-thread staging; published only under both existing presentation/compose locks.
+@@ -2845,6 +2861,14 @@ void holePunchVblank(bool successful)
+     }
+ }
+ 
++void playbackStatsRequest() { hudMetadataRequested.store(true); }
++PlaybackMetadata playbackMetadata() {
++    std::unique_lock<std::mutex> lock(hudMetadataMutex,std::try_to_lock);
++    if (!lock.owns_lock() || !hudMetadataFresh.load(std::memory_order_acquire)) return {};
++    const double age=nowMs()-hudMetadataAt;
++    if (!std::isfinite(age) || age<0 || age>2000) return {};
++    return hudMetadata;
++}
+ void playbackStatsEnable(bool enabled) { hudEnabled.store(enabled,std::memory_order_relaxed); }
+ PlaybackStats playbackStats() {
+     PlaybackStats s;
+diff --git a/engine/media/OmniHwService.h b/engine/media/OmniHwService.h
+index 151e30f..798beb9 100644
+--- a/engine/media/OmniHwService.h
++++ b/engine/media/OmniHwService.h
+@@ -65,6 +65,13 @@ struct PlaybackStats {
+     int width = 0, height = 0, codec = -1;
+     bool active = false, decoderFailed = false;
+ };
++// Bounded service-thread metadata sample; freshness is publication time, not completionUs.
++struct PlaybackMetadata {
++    int width=0, height=0, codec=-1;
++    bool active=false, decoderFailed=false, fresh=false;
++};
++void playbackStatsRequest();
++PlaybackMetadata playbackMetadata();
+ void playbackStatsEnable(bool);
+ PlaybackStats playbackStats();
+ 
+diff --git a/engine/media/OmniVideoStats.h b/engine/media/OmniVideoStats.h
+new file mode 100644
+index 0000000..90edfdf
+--- /dev/null
++++ b/engine/media/OmniVideoStats.h
+@@ -0,0 +1,28 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++// OMNI_VIDEO_STATS_BRIDGE_V1: output telemetry, not source HDR/codec claims.
++#pragma once
++#include <cmath>
++#include <cstdio>
++#include <string>
++struct OmniVideoStatsSnapshot {
++    double atMs=0, seconds=0, shown=0, dropped=0;
++    bool counters=false, gpuPresent=false, hdrOutput=false;
++};
++extern "C" int omni_video_stats_snapshot(OmniVideoStatsSnapshot*) __attribute__((weak));
++static inline std::string omniVideoStatsJson(const OmniVideoStatsSnapshot& s, int width=0, int height=0, int codec=-1)
++{
++    if (!std::isfinite(s.atMs)||s.atMs<=0||!std::isfinite(s.seconds)||s.seconds<=0||s.seconds>2) return {};
++    char shown[48]="null",dropped[48]="null";
++    if (s.counters && std::isfinite(s.shown)&&std::isfinite(s.dropped)&&s.shown>=0&&s.dropped>=0
++        &&s.shown/s.seconds<=1000&&s.dropped/s.seconds<=1000) {
++        snprintf(shown,sizeof shown,"%.3f",s.shown/s.seconds);
++        snprintf(dropped,sizeof dropped,"%.3f",s.dropped/s.seconds);
++    }
++    // Only fresh, active service-thread metadata is supplied by the caller.
++    std::string res="null";
++    if(width>=10 && width<=16384 && height>=10 && height<=16384)
++        res="\""+std::to_string(width)+"x"+std::to_string(height)+"\"";
++    const char* name=codec==0?"\"H.264\"":codec==1?"\"HEVC\"":codec==2?"\"VP9\"":"null";
++    return std::string("{\"res\":")+res+",\"codec\":"+name+",\"fpsShown\":"+shown+",\"fpsDropped\":"+dropped
++        +",\"path\":\""+(s.gpuPresent?"GPU":"SDL")+"\",\"hdr\":"+(s.hdrOutput?"true":"false")+"}";
++}
+diff --git a/files-broker/src/hub_json.h b/files-broker/src/hub_json.h
+new file mode 100644
+index 0000000..fa96729
+--- /dev/null
++++ b/files-broker/src/hub_json.h
+@@ -0,0 +1,391 @@
++/* hub_json.h: small strict JSON parser and writer for the Hub (HUB_API_V1).
++ * SPDX-License-Identifier: GPL-3.0-or-later
++ *
++ * Strict RFC 8259 parser into an arena-backed tree:
++ *   - nesting at most HJ_MAX_DEPTH, at most HJ_MAX_NODES values, strings at most HJ_MAX_STR bytes;
++ *   - valid UTF-8 only, no raw control characters, no \u0000, no lone surrogates;
++ *   - duplicate object keys are rejected, and so is anything after the value.
++ * The writer escapes '<', '>', '&' and control characters, so its output is safe to put in a page.
++ * Everything is static, so including this header is enough (one translation unit, no link step).
++ */
++#ifndef HUB_JSON_H
++#define HUB_JSON_H
++#include <stdarg.h>
++#include <stddef.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#define HJ_MAX_DEPTH 16
++#define HJ_MAX_NODES 4096
++#define HJ_MAX_STR 4096
++#define HJ_ARENA_CHUNK (16u * 1024u)
++#define HJ_ARENA_MAX (1u << 20)
++
++typedef enum { HJ_NULL, HJ_FALSE, HJ_TRUE, HJ_NUM, HJ_STR, HJ_ARR, HJ_OBJ } hj_type;
++
++typedef struct hj {
++    hj_type t;
++    struct hj* next;   /* next sibling (array element or object member) */
++    char* key;         /* member name when the parent is an object */
++    double num;
++    char* str;         /* HJ_STR: NUL-terminated (no embedded NUL is accepted) */
++    size_t len;
++    struct hj* child;  /* HJ_ARR / HJ_OBJ: first element or member */
++} hj;
++
++typedef struct hj_chunk { struct hj_chunk* next; size_t used, cap; } hj_chunk;
++typedef struct { hj_chunk* head; size_t total; int nodes; size_t max; } hj_arena;   /* max 0 = HJ_ARENA_MAX */
++
++static void hj_arena_free(hj_arena* a)
++{
++    hj_chunk* c = a->head;
++    while (c) { hj_chunk* n = c->next; free(c); c = n; }
++    a->head = NULL; a->total = 0; a->nodes = 0; a->max = 0;
++}
++
++static void* hj_alloc(hj_arena* a, size_t n)
++{
++    n = (n + 15u) & ~(size_t)15u;
++    if (!a->head || a->head->cap - a->head->used < n) {
++        size_t cap = n > HJ_ARENA_CHUNK ? n : HJ_ARENA_CHUNK;
++        if (a->total + cap > (a->max ? a->max : HJ_ARENA_MAX)) return NULL;
++        hj_chunk* c = (hj_chunk*)malloc(sizeof(hj_chunk) + cap + 16);
++        if (!c) return NULL;
++        c->next = a->head; c->used = 0; c->cap = cap;
++        a->head = c; a->total += cap;
++    }
++    unsigned char* base = (unsigned char*)(a->head + 1);
++    base += (16 - ((size_t)base & 15)) & 15;
++    void* p = base + a->head->used;
++    a->head->used += n;
++    memset(p, 0, n);
++    return p;
++}
++
++typedef struct { const char* p; const char* end; hj_arena* a; int depth; const char* err; int max_nodes; } hj_parser;
++
++static void hj_ws(hj_parser* ps)
++{
++    while (ps->p < ps->end && (*ps->p == ' ' || *ps->p == '\t' || *ps->p == '\n' || *ps->p == '\r')) ps->p++;
++}
++
++static hj* hj_new(hj_parser* ps, hj_type t)
++{
++    if (++ps->a->nodes > ps->max_nodes) { ps->err = "too many values"; return NULL; }
++    hj* v = (hj*)hj_alloc(ps->a, sizeof(hj));
++    if (!v) { ps->err = "out of memory"; return NULL; }
++    v->t = t;
++    return v;
++}
++
++static int hj_hex4(const char* s, unsigned* out)
++{
++    unsigned v = 0;
++    for (int i = 0; i < 4; i++) {
++        char c = s[i];
++        int d = c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
++        if (d < 0) return -1;
++        v = v * 16 + (unsigned)d;
++    }
++    *out = v;
++    return 0;
++}
++
++/* Length of one valid UTF-8 sequence at s (n bytes available), or 0 if invalid. */
++static size_t hj_utf8_len(const unsigned char* s, size_t n)
++{
++    unsigned c = s[0];
++    if (c < 0x80) return 1;
++    if (c >= 0xC2 && c <= 0xDF) return n >= 2 && (s[1] & 0xC0) == 0x80 ? 2 : 0;
++    if (c >= 0xE0 && c <= 0xEF) {
++        if (n < 3 || (s[1] & 0xC0) != 0x80 || (s[2] & 0xC0) != 0x80) return 0;
++        if (c == 0xE0 && s[1] < 0xA0) return 0;   /* overlong */
++        if (c == 0xED && s[1] >= 0xA0) return 0;  /* UTF-16 surrogate */
++        return 3;
++    }
++    if (c >= 0xF0 && c <= 0xF4) {
++        if (n < 4 || (s[1] & 0xC0) != 0x80 || (s[2] & 0xC0) != 0x80 || (s[3] & 0xC0) != 0x80) return 0;
++        if (c == 0xF0 && s[1] < 0x90) return 0;   /* overlong */
++        if (c == 0xF4 && s[1] >= 0x90) return 0;  /* above U+10FFFF */
++        return 4;
++    }
++    return 0;
++}
++
++static size_t hj_put_utf8(char* o, unsigned cp)
++{
++    if (cp < 0x80) { o[0] = (char)cp; return 1; }
++    if (cp < 0x800) { o[0] = (char)(0xC0 | (cp >> 6)); o[1] = (char)(0x80 | (cp & 63)); return 2; }
++    if (cp < 0x10000) { o[0] = (char)(0xE0 | (cp >> 12)); o[1] = (char)(0x80 | ((cp >> 6) & 63)); o[2] = (char)(0x80 | (cp & 63)); return 3; }
++    o[0] = (char)(0xF0 | (cp >> 18)); o[1] = (char)(0x80 | ((cp >> 12) & 63)); o[2] = (char)(0x80 | ((cp >> 6) & 63)); o[3] = (char)(0x80 | (cp & 63));
++    return 4;
++}
++
++/* Parses a string starting at the opening quote; returns an arena copy, sets *len. */
++static char* hj_string(hj_parser* ps, size_t* len)
++{
++    ps->p++; /* opening quote */
++    const char* start = ps->p;
++    size_t raw = 0;
++    while (ps->p < ps->end && *ps->p != '"') {
++        if (*ps->p == '\\') { ps->p++; if (ps->p >= ps->end) break; }
++        ps->p++; raw++;
++        if (raw > HJ_MAX_STR * 2) { ps->err = "string too long"; return NULL; }
++    }
++    if (ps->p >= ps->end) { ps->err = "unterminated string"; return NULL; }
++    const char* stop = ps->p;
++    ps->p++; /* closing quote */
++    char* out = (char*)hj_alloc(ps->a, (size_t)(stop - start) + 1);
++    if (!out) { ps->err = "out of memory"; return NULL; }
++    size_t o = 0;
++    for (const char* s = start; s < stop;) {
++        unsigned char c = (unsigned char)*s;
++        if (c < 0x20) { ps->err = "control character in string"; return NULL; }
++        if (c == '\\') {
++            s++;
++            char e = *s++;
++            switch (e) {
++            case '"': out[o++] = '"'; break;
++            case '\\': out[o++] = '\\'; break;
++            case '/': out[o++] = '/'; break;
++            case 'b': out[o++] = '\b'; break;
++            case 'f': out[o++] = '\f'; break;
++            case 'n': out[o++] = '\n'; break;
++            case 'r': out[o++] = '\r'; break;
++            case 't': out[o++] = '\t'; break;
++            case 'u': {
++                unsigned cp;
++                if (stop - s < 4 || hj_hex4(s, &cp)) { ps->err = "bad \\u escape"; return NULL; }
++                s += 4;
++                if (cp >= 0xD800 && cp <= 0xDBFF) {
++                    unsigned lo;
++                    if (stop - s < 6 || s[0] != '\\' || s[1] != 'u' || hj_hex4(s + 2, &lo) || lo < 0xDC00 || lo > 0xDFFF) {
++                        ps->err = "lone surrogate"; return NULL;
++                    }
++                    s += 6;
++                    cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
++                } else if (cp >= 0xDC00 && cp <= 0xDFFF) { ps->err = "lone surrogate"; return NULL; }
++                if (cp == 0) { ps->err = "\\u0000 not allowed"; return NULL; }
++                o += hj_put_utf8(out + o, cp);
++                break;
++            }
++            default: ps->err = "bad escape"; return NULL;
++            }
++        } else {
++            size_t n = hj_utf8_len((const unsigned char*)s, (size_t)(stop - s));
++            if (!n) { ps->err = "invalid UTF-8"; return NULL; }
++            memcpy(out + o, s, n); o += n; s += n;
++        }
++        if (o > HJ_MAX_STR) { ps->err = "string too long"; return NULL; }
++    }
++    out[o] = 0;
++    *len = o;
++    return out;
++}
++
++static hj* hj_value(hj_parser* ps);
++
++static hj* hj_number(hj_parser* ps)
++{
++    const char* s = ps->p;
++    if (ps->p < ps->end && *ps->p == '-') ps->p++;
++    if (ps->p >= ps->end) { ps->err = "bad number"; return NULL; }
++    if (*ps->p == '0') ps->p++;
++    else if (*ps->p >= '1' && *ps->p <= '9') { while (ps->p < ps->end && *ps->p >= '0' && *ps->p <= '9') ps->p++; }
++    else { ps->err = "bad number"; return NULL; }
++    if (ps->p < ps->end && *ps->p == '.') {
++        ps->p++;
++        if (ps->p >= ps->end || *ps->p < '0' || *ps->p > '9') { ps->err = "bad number"; return NULL; }
++        while (ps->p < ps->end && *ps->p >= '0' && *ps->p <= '9') ps->p++;
++    }
++    if (ps->p < ps->end && (*ps->p == 'e' || *ps->p == 'E')) {
++        ps->p++;
++        if (ps->p < ps->end && (*ps->p == '+' || *ps->p == '-')) ps->p++;
++        if (ps->p >= ps->end || *ps->p < '0' || *ps->p > '9') { ps->err = "bad number"; return NULL; }
++        while (ps->p < ps->end && *ps->p >= '0' && *ps->p <= '9') ps->p++;
++    }
++    size_t n = (size_t)(ps->p - s);
++    if (n > 64) { ps->err = "number too long"; return NULL; }
++    char tmp[72];
++    memcpy(tmp, s, n); tmp[n] = 0;
++    hj* v = hj_new(ps, HJ_NUM);
++    if (!v) return NULL;
++    v->num = strtod(tmp, NULL);
++    if (v->num != v->num || v->num > 1.7e308 || v->num < -1.7e308) { ps->err = "number out of range"; return NULL; }
++    return v;
++}
++
++static int hj_lit(hj_parser* ps, const char* w)
++{
++    size_t n = strlen(w);
++    if ((size_t)(ps->end - ps->p) < n || memcmp(ps->p, w, n)) return -1;
++    ps->p += n;
++    return 0;
++}
++
++static hj* hj_value(hj_parser* ps)
++{
++    hj_ws(ps);
++    if (ps->p >= ps->end) { ps->err = "unexpected end"; return NULL; }
++    char c = *ps->p;
++    if (c == '{' || c == '[') {
++        if (++ps->depth > HJ_MAX_DEPTH) { ps->err = "nested too deeply"; return NULL; }
++        int obj = c == '{';
++        hj* v = hj_new(ps, obj ? HJ_OBJ : HJ_ARR);
++        if (!v) return NULL;
++        ps->p++;
++        hj_ws(ps);
++        hj** tail = &v->child;
++        if (ps->p < ps->end && *ps->p == (obj ? '}' : ']')) { ps->p++; ps->depth--; return v; }
++        for (;;) {
++            char* key = NULL;
++            if (obj) {
++                hj_ws(ps);
++                if (ps->p >= ps->end || *ps->p != '"') { ps->err = "expected member name"; return NULL; }
++                size_t kl;
++                key = hj_string(ps, &kl);
++                if (!key) return NULL;
++                for (hj* m = v->child; m; m = m->next)
++                    if (!strcmp(m->key, key)) { ps->err = "duplicate key"; return NULL; }
++                hj_ws(ps);
++                if (ps->p >= ps->end || *ps->p != ':') { ps->err = "expected ':'"; return NULL; }
++                ps->p++;
++            }
++            hj* e = hj_value(ps);
++            if (!e) return NULL;
++            e->key = key;
++            *tail = e; tail = &e->next;
++            hj_ws(ps);
++            if (ps->p >= ps->end) { ps->err = "unexpected end"; return NULL; }
++            if (*ps->p == ',') { ps->p++; continue; }
++            if (*ps->p == (obj ? '}' : ']')) { ps->p++; break; }
++            ps->err = obj ? "expected ',' or '}'" : "expected ',' or ']'";
++            return NULL;
++        }
++        ps->depth--;
++        return v;
++    }
++    if (c == '"') {
++        hj* v = hj_new(ps, HJ_STR);
++        if (!v) return NULL;
++        v->str = hj_string(ps, &v->len);
++        return v->str ? v : NULL;
++    }
++    if (c == '-' || (c >= '0' && c <= '9')) return hj_number(ps);
++    if (!hj_lit(ps, "true")) return hj_new(ps, HJ_TRUE);
++    if (!hj_lit(ps, "false")) return hj_new(ps, HJ_FALSE);
++    if (!hj_lit(ps, "null")) return hj_new(ps, HJ_NULL);
++    ps->err = "unexpected character";
++    return NULL;
++}
++
++/* Parses buf[0..n) into arena a with at most max_nodes values. Returns the root, or NULL with *err set. */
++static hj* hj_parse_lim(const char* buf, size_t n, hj_arena* a, const char** err, int max_nodes)
++{
++    hj_parser ps = { buf, buf + n, a, 0, NULL, max_nodes };
++    hj* v = hj_value(&ps);
++    if (v) {
++        hj_ws(&ps);
++        if (ps.p != ps.end) { v = NULL; ps.err = "trailing characters"; }
++    }
++    if (!v && err) *err = ps.err ? ps.err : "parse error";
++    return v;
++}
++static hj* hj_parse(const char* buf, size_t n, hj_arena* a, const char** err) { return hj_parse_lim(buf, n, a, err, HJ_MAX_NODES); }
++
++static hj* hj_get(const hj* obj, const char* key)
++{
++    if (!obj || obj->t != HJ_OBJ) return NULL;
++    for (hj* m = obj->child; m; m = m->next) if (!strcmp(m->key, key)) return m;
++    return NULL;
++}
++static const char* hj_getstr(const hj* obj, const char* key)
++{
++    hj* v = hj_get(obj, key);
++    return v && v->t == HJ_STR ? v->str : NULL;
++}
++/* Integer member in [lo, hi], or -1 when missing, not a number, fractional or out of range. */
++static long hj_getint(const hj* obj, const char* key, long lo, long hi)
++{
++    hj* v = hj_get(obj, key);
++    if (!v || v->t != HJ_NUM) return -1;
++    if (v->num != (double)(long)v->num || v->num < (double)lo || v->num > (double)hi) return -1;
++    return (long)v->num;
++}
++
++/* ------------------------------------------------------------- growable output buffer */
++typedef struct { char* p; size_t n, cap, max; int overflow; } hsb;
++
++static void hsb_init(hsb* b, size_t max) { b->p = NULL; b->n = 0; b->cap = 0; b->max = max; b->overflow = 0; }
++static void hsb_free(hsb* b) { free(b->p); b->p = NULL; b->n = b->cap = 0; }
++static int hsb_grow(hsb* b, size_t extra)
++{
++    if (b->overflow) return -1;
++    if (b->n + extra + 1 > b->max) { b->overflow = 1; return -1; }
++    if (b->n + extra + 1 <= b->cap) return 0;
++    size_t cap = b->cap ? b->cap : 1024;
++    while (cap < b->n + extra + 1) cap *= 2;
++    if (cap > b->max + 1) cap = b->max + 1;
++    char* p = (char*)realloc(b->p, cap);
++    if (!p) { b->overflow = 1; return -1; }
++    b->p = p; b->cap = cap;
++    return 0;
++}
++static void hsb_put(hsb* b, const char* s, size_t n)
++{
++    if (hsb_grow(b, n)) return;
++    memcpy(b->p + b->n, s, n); b->n += n; b->p[b->n] = 0;
++}
++static void hsb_puts(hsb* b, const char* s) { hsb_put(b, s, strlen(s)); }
++static void hsb_printf(hsb* b, const char* fmt, ...)
++{
++    char tmp[512];
++    va_list ap;
++    va_start(ap, fmt);
++    int n = vsnprintf(tmp, sizeof tmp, fmt, ap);
++    va_end(ap);
++    if (n < 0) return;
++    if ((size_t)n >= sizeof tmp) n = (int)sizeof tmp - 1;
++    hsb_put(b, tmp, (size_t)n);
++}
++static void hsb_jstr(hsb* b, const char* s)
++{
++    static const char hex[] = "0123456789abcdef";
++    hsb_put(b, "\"", 1);
++    for (const unsigned char* c = (const unsigned char*)s; *c; c++) {
++        if (*c == '"') hsb_put(b, "\\\"", 2);
++        else if (*c == '\\') hsb_put(b, "\\\\", 2);
++        else if (*c < 0x20 || *c == '<' || *c == '>' || *c == '&' || *c == 0x7f) {
++            char e[6] = { '\\', 'u', '0', '0', hex[*c >> 4], hex[*c & 15] };
++            hsb_put(b, e, 6);
++        } else hsb_put(b, (const char*)c, 1);
++    }
++    hsb_put(b, "\"", 1);
++}
++static void hj_emit(hsb* b, const hj* v)
++{
++    switch (v->t) {
++    case HJ_NULL: hsb_puts(b, "null"); break;
++    case HJ_FALSE: hsb_puts(b, "false"); break;
++    case HJ_TRUE: hsb_puts(b, "true"); break;
++    case HJ_NUM:
++        if (v->num == (double)(long long)v->num && v->num < 9e15 && v->num > -9e15) hsb_printf(b, "%lld", (long long)v->num);
++        else hsb_printf(b, "%.17g", v->num);
++        break;
++    case HJ_STR: hsb_jstr(b, v->str); break;
++    case HJ_ARR:
++    case HJ_OBJ: {
++        int obj = v->t == HJ_OBJ;
++        hsb_put(b, obj ? "{" : "[", 1);
++        for (const hj* e = v->child; e; e = e->next) {
++            if (e != v->child) hsb_put(b, ",", 1);
++            if (obj) { hsb_jstr(b, e->key); hsb_put(b, ":", 1); }
++            hj_emit(b, e);
++        }
++        hsb_put(b, obj ? "}" : "]", 1);
++        break;
++    }
++    }
++}
++#endif
+diff --git a/files-broker/src/ofb_port.h b/files-broker/src/ofb_port.h
+new file mode 100644
+index 0000000..e6e7d94
+--- /dev/null
++++ b/files-broker/src/ofb_port.h
+@@ -0,0 +1,75 @@
++/* SPDX-License-Identifier: GPL-3.0-or-later
++ * Files service port configuration. No sockets, launches or file operations on user data.
++ */
++#ifndef OFB_PORT_CONFIG_H
++#define OFB_PORT_CONFIG_H
++#include "hub_json.h"
++#include <fcntl.h>
++#include <sys/stat.h>
++#include <unistd.h>
++#include <time.h>
++
++#ifndef OFB_CARD_PATH
++#define OFB_CARD_PATH "/data/hub/apps/files-broker.json"
++#endif
++#ifndef OFB_RUNTIME_PATH
++#define OFB_RUNTIME_PATH "/data/hub/runtime/files-broker.json"
++#endif
++
++static int ofb_card_port(const char* path)
++{
++    char buf[32769];
++    FILE* f = fopen(path, "rb");
++    if (!f) return 0;
++    size_t n = fread(buf, 1, sizeof buf, f);
++    int bad = ferror(f) || n >= sizeof buf;
++    fclose(f);
++    if (bad) return 0;
++    hj_arena ar = {0};
++    const char* err = NULL;
++    const hj* value = hj_parse(buf, n, &ar, &err);
++    const char* id = hj_getstr(value, "id");
++    long port = hj_getint(value, "port", 8761, 8899);
++    int out = value && value->t == HJ_OBJ && id && !strcmp(id, "files-broker")
++        && hj_getint(value, "hub_api", 1, 1) == 1 && port >= 8761 ? (int)port : 0;
++    hj_arena_free(&ar);
++    return out;
++}
++
++static int ofb_runtime_write(const char* path, int port, long pid, long started_at)
++{
++    char tmp[1200], body[256];
++    if (port < 8761 || port > 8899 || pid <= 0) return 0;
++    int len = snprintf(tmp, sizeof tmp, "%s.%ld.new", path, pid);
++    if (len < 0 || (size_t)len >= sizeof tmp) return 0;
++    len = snprintf(body, sizeof body,
++        "{\"id\":\"files-broker\",\"host\":\"127.0.0.1\",\"port\":%d,\"pid\":%ld,\"started_at\":%ld}\n",
++        port, pid, started_at);
++    if (len < 0 || (size_t)len >= sizeof body) return 0;
++    int fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0600);
++    if (fd < 0) return 0;
++    int ok = write(fd, body, (size_t)len) == len && fsync(fd) == 0;
++    if (close(fd) != 0) ok = 0;
++    if (ok) ok = rename(tmp, path) == 0;
++    if (!ok) unlink(tmp);
++    return ok;
++}
++
++static void ofb_runtime_remove(const char* path, long pid)
++{
++    char buf[1024];
++    FILE* f = fopen(path, "rb");
++    if (!f) return;
++    size_t n = fread(buf, 1, sizeof buf, f);
++    int bad = ferror(f) || n == sizeof buf;
++    fclose(f);
++    if (bad) return;
++    hj_arena ar = {0};
++    const char* err = NULL;
++    const hj* value = hj_parse(buf, n, &ar, &err);
++    const char* id = hj_getstr(value, "id");
++    if (id && !strcmp(id, "files-broker") && hj_getint(value, "pid", 1, 2147483647) == pid)
++        unlink(path);
++    hj_arena_free(&ar);
++}
++#endif
+diff --git a/files-broker/src/omni-files.c b/files-broker/src/omni-files.c
+index 602d6c3..145868c 100644
+--- a/files-broker/src/omni-files.c
++++ b/files-broker/src/omni-files.c
+@@ -37,7 +37,9 @@
+ #include <sys/mount.h>
+ #endif
+ 
+-#define OFB_PORT 8767
++#include "ofb_port.h"
++static int ofb_port = 0;
++#define OFB_PORT ofb_port
+ #define OFB_DIR "/data/omni/native"
+ #define OFB_MAX_IO (8u << 20)
+ #define OFB_MAX_LIST_BYTES (4u << 20)
+@@ -338,6 +340,8 @@ int ofb_main(void)
+     if (!p || fscanf(p, "%d %d", &ofb_parent, &uid) < 1) { if (p) fclose(p); ofb_log("no broker.parent: exiting"); return 1; }
+     fclose(p);
+     if (ofb_parent_gone()) { ofb_log("parent %d already gone: exiting", ofb_parent); return 1; }
++    ofb_port = ofb_card_port(OFB_CARD_PATH);
++    if (!ofb_port) { ofb_log("files-broker card has no assigned suite port"); return 1; }
+     int s = socket(AF_INET, SOCK_STREAM, 0);
+     int one = 1;
+     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
+@@ -349,6 +353,9 @@ int ofb_main(void)
+         return 1;
+     }
+     if (ofb_make_token(uid)) { ofb_log("token file failed errno=%d", errno); close(s); return 1; }
++    if (!ofb_runtime_write(OFB_RUNTIME_PATH, ofb_port, (long)getpid(), (long)time(NULL))) {
++        ofb_log("runtime port could not be published"); close(s); return 1;
++    }
+     ofb_log("omni-files OMNI_FILES_BROKER_V1 ready on 127.0.0.1:%d for title pid %d uid %d", OFB_PORT, ofb_parent, uid);
+     for (;;) {
+         struct pollfd pfd = { s, POLLIN, 0 };
+@@ -374,6 +381,7 @@ int ofb_main(void)
+     char tok[1200];
+     snprintf(tok, sizeof tok, "%s/broker.token", ofb_dir);
+     unlink(tok);
++    ofb_runtime_remove(OFB_RUNTIME_PATH, (long)getpid());
+     ofb_log("title %d gone: exiting", ofb_parent);
+     return 0;
+ }
+diff --git a/files-broker/tests/test_broker.c b/files-broker/tests/test_broker.c
+index e391a77..7b0ec83 100644
+--- a/files-broker/tests/test_broker.c
++++ b/files-broker/tests/test_broker.c
+@@ -4,6 +4,9 @@
+ #ifndef OFB_TEST
+ #define OFB_TEST
+ #endif
++static char test_card_path[1024], test_runtime_path[1024];
++#define OFB_CARD_PATH test_card_path
++#define OFB_RUNTIME_PATH test_runtime_path
+ #include "../src/omni-files.c"
+ #include <assert.h>
+ 
+@@ -49,6 +52,10 @@ int main(void)
+     assert(!system(cmd));
+     snprintf(ofb_prefix, sizeof ofb_prefix, "%s", base);
+     snprintf(ofb_dir, sizeof ofb_dir, "%s/data", base);
++    snprintf(test_card_path, sizeof test_card_path, "%s/data/files-broker.json", base);
++    snprintf(test_runtime_path, sizeof test_runtime_path, "%s/data/runtime-files-broker.json", base);
++    FILE* cf = fopen(test_card_path, "w"); assert(cf);
++    fputs("{\"hub_api\":1,\"id\":\"files-broker\",\"port\":8787}", cf); fclose(cf);
+ 
+     /* path rules */
+     CHECK(ofb_root_of("/mnt/usb0") == 0, "root itself allowed");
+diff --git a/setup/omnibloom_setup/port_registry.py b/setup/omnibloom_setup/port_registry.py
+new file mode 100644
+index 0000000..c40b2ed
+--- /dev/null
++++ b/setup/omnibloom_setup/port_registry.py
+@@ -0,0 +1,53 @@
++# SPDX-License-Identifier: GPL-3.0-or-later
++"""Port claims from Bloom Core's current status, without contacting any app."""
++import re
++import time
++
++ID = re.compile(r"[a-z0-9][a-z0-9-]{0,39}\Z")
++
++
++def suite_port(value):
++    """Assigned suite ports; 8760 remains Bloom Core's fixed endpoint."""
++    return type(value) is int and 8761 <= value <= 8899
++
++
++def live_claims(snapshot, now=None):
++    """Only a fresh, verified, running status row reserves a live port.
++
++    Card claims remain independently reserved by PortPicker. A stale status
++    cannot establish that a PID still belongs to the same running service.
++    """
++    now = time.time() if now is None else now
++    if not isinstance(snapshot, dict):
++        return {}
++    stamp = snapshot.get("written_at")
++    if type(stamp) not in (int, float) or not 0 <= now - stamp <= 30:
++        return {}
++    rows = snapshot.get("apps")
++    if not isinstance(rows, list):
++        return {}
++    claims = {}
++    for row in rows[:128]:
++        if not isinstance(row, dict):
++            continue
++        ident, port = row.get("id"), row.get("port")
++        if (isinstance(ident, str) and ID.fullmatch(ident) and suite_port(port)
++                and row.get("verified") is True and row.get("up") is True):
++            claims.setdefault(port, set()).add(ident)
++        runtime = row.get("runtime")
++        if (isinstance(ident, str) and ID.fullmatch(ident) and isinstance(runtime, dict)
++                and row.get("verified") is True and row.get("up") is True
++                and not row.get("runtime_note") and type(runtime.get("pid")) is int
++                and runtime["pid"] > 0 and suite_port(runtime.get("port"))):
++            claims.setdefault(runtime["port"], set()).add(ident)
++    return claims
++
++
++def read_live_claims(console, now=None):
++    # Reader is the existing bounded Setup metadata reader, not an app probe.
++    from .doctor import Reader
++    try:
++        snapshot = Reader(console).json("/data/hub/status.json", 1024 * 1024)
++    except (OSError, ValueError, UnicodeError, TypeError):
++        return {}
++    return live_claims(snapshot, now)
+diff --git a/setup/omnibloom_setup/ports.py b/setup/omnibloom_setup/ports.py
+index 694b5da..c868d61 100644
+--- a/setup/omnibloom_setup/ports.py
++++ b/setup/omnibloom_setup/ports.py
+@@ -13,6 +13,7 @@ import json
+ 
+ from . import config
+ from .ps5 import port_open
++from .port_registry import read_live_claims
+ 
+ 
+ def read_cards(console):
+@@ -30,18 +31,24 @@ def read_cards(console):
+ 
+ 
+ class PortPicker:
+-    def __init__(self, console, probe=True):
++    def __init__(self, console, probe=True, now=None):
+         self.console = console
+         self.probe = probe
+         self.claimed = {}   # port -> app id, from cards and from picks made in this run
+         for app_id, card in read_cards(console).items():
+             if type(card.get("port")) is int:
+                 self.claimed[card["port"]] = app_id
++        # A service may publish a live port different from its static card.
++        # Keep both reservations; the PC cannot probe a loopback-only listener.
++        self.live_claimed = read_live_claims(console, now)
+ 
+     def owner(self, port, app_id):
+         """Who else uses this port, or None if `app_id` may have it."""
+         if self.claimed.get(port) not in (None, app_id):
+             return self.claimed[port]
++        others = self.live_claimed.get(port, set()) - {app_id}
++        if others:
++            return ", ".join(sorted(others))
+         reserved = config.RESERVED_PORTS.get(port)
+         if reserved and not _owns_reserved(app_id, port):
+             return reserved
+diff --git a/setup/tools/make_package.py b/setup/tools/make_package.py
+index 6bfa983..ef049b3 100644
+--- a/setup/tools/make_package.py
++++ b/setup/tools/make_package.py
+@@ -1,167 +1,167 @@
+-"""Build a console package for a release: <prefix><version>.zip + .sha256.
+-
+-  python tools/make_package.py --package omnibloom --stage stage --version 0.5.0 --out dist
+-  python tools/make_package.py --package master-control --stage stage-mc --version 0.4.3 --out dist
+-
+-`stage` mirrors the console (stage/data/homebrew/PPSA99732/eboot.bin, ...). Each file is assigned
+-to the app whose roots contain it; a file no app owns is refused, and so is anything outside
+-Omnibloom's install folders or inside the user's data (Setup would refuse those too).
+-App versions default to the package version; override with --app-version id=1.2.3.
+-"""
+-import argparse
+-import copy
+-import hashlib
+-import json
+-import os
+-import sys
+-import zipfile
+-
+-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+-from omnibloom_setup import config  # noqa: E402
+-from omnibloom_setup.release import SCHEMA, Package, _under, check_dest  # noqa: E402
+-
+-PKG_PAYLOADS = config.PLDMGR_DIR + "payloads/"
+-ICONS = config.ICONS_DIR
+-
+-# The apps each repo ships, with their ID-card templates (Setup adds hub_api, id, version, port, icon).
+-APPS = {
+-    "hub": {
+-        "package": "omnibloom", "name": config.HUB_NAME, "autoload": "required",
+-        "roots": [PKG_PAYLOADS + "BloomCore/", ICONS + "hub/"],
+-        "port": {"preferred": config.HUB_PORT, "movable": False},
+-        "card": {"name": config.HUB_NAME, "kind": "service",
+-                 "launch": {"elf": PKG_PAYLOADS + "BloomCore/hub.elf", "autoload": "required"},
+-                 "health": "/api/health", "pages": {}, "provides": ["theme.changed"], "consumes": [],
+-                 "public_pages": []},
+-    },
+-    "omni": {
+-        "package": "omnibloom", "name": "Omni", "autoload": "never",
+-        "roots": [config.TITLE_DIR, "/data/omni/native/omni-engine-child.elf", "/data/omni/fonts/", ICONS + "omni/"],
+-        "port": None,
+-        "card": {"name": "Omni", "kind": "title", "title_id": config.TITLE_ID,
+-                 "launch": {"title_id": config.TITLE_ID, "autoload": "never"},
+-                 "health": None, "pages": {}, "provides": ["open.url"],
+-                 "consumes": ["theme", "download.url", "files.pick", "overlay.show"], "public_pages": []},
+-    },
+-    "downloads": {
+-        "package": "omnibloom", "name": "Omni Downloads", "autoload": "never",
+-        # Not /data/omni-downloader/ as a whole: jdownloader/ belongs to the JDownloader 2 engine app.
+-        "roots": ["/data/omni-downloader/python-worker.elf", "/data/omni-downloader/worker/", "/data/omni-downloader/runtime/",
+-                  "/data/omni-downloader/.deps/", ICONS + "downloads/"],
+-        "port": {"preferred": 8765, "movable": False},   # movable once Omni reads ports from the cards
+-        "card": {"name": "Omni Downloads", "kind": "service",
+-                 "launch": {"elf": "/data/omni-downloader/python-worker.elf", "autoload": "never"},
+-                 "health": "/api/health", "pages": {"main": "/"}, "provides": ["download.url"],
+-                 "consumes": ["theme", "files.pick"], "public_pages": ["/", "/downloads", "/assets/"],
+-                 "page_apis": ["/api/"]},   # s2: Omni's port block lets only the downloads page itself call /api/
+-    },
+-    "files-broker": {
+-        "package": "omnibloom", "name": "USB Files", "autoload": "never",
+-        "roots": ["/data/omni/native/omni-files.elf", ICONS + "files-broker/"],
+-        "port": {"preferred": 8767, "movable": False},
+-        "card": {"name": "USB Files", "kind": "service",
+-                 "launch": {"elf": "/data/omni/native/omni-files.elf", "autoload": "never"},
+-                 "health": "/api/health", "pages": {}, "provides": ["files.pick", "files.open"],
+-                 "consumes": [], "public_pages": []},
+-    },
+-    "jdownloader": {
+-        # Our java-worker.elf + the PS5 Java 25 runtime built from mateo-cogeanu/ps5-java25-homebrew (GPLv2+CPE parts,
+-        # notices shipped unchanged under notices/) + our bridge classes. JDownloader 2 itself is the user's own copy.
+-        "package": "omnibloom-jd-engine", "name": "JDownloader 2 engine", "autoload": "never",
+-        "roots": [config.JD_CONSOLE_ROOT + "java-worker.elf", config.JD_CONSOLE_ROOT + "native/",
+-                  config.JD_CONSOLE_ROOT + "runtime/classes/", config.JD_CONSOLE_ROOT + "notices/"],
+-        # Item 15: no card port. The bridge binds a loopback port per session; Bloom Core takes the live port from
+-        # /data/hub/runtime/jdownloader.json. health null: the bridge speaks its own session protocol, not HTTP, so
+-        # Bloom Core checks the runtime pid instead and never routes intents to it.
+-        "port": None,
+-        "card": {"name": "JDownloader 2 engine", "kind": "service",
+-                 "launch": {"elf": config.JD_CONSOLE_ROOT + "java-worker.elf", "autoload": "never", "started_by": "downloads"},
+-                 "health": None, "pages": {}, "provides": ["download.engine.jdownloader"], "consumes": [], "public_pages": []},
+-    },
+-    "master-control": {
+-        "package": "master-control", "name": "Master Control", "autoload": "optional",
+-        # Standard v1.1 item 7: the payload ELF and its icon live together in /data/pldmgr/payloads/<id>/.
+-        "roots": [PKG_PAYLOADS + "master-control/"],
+-        "port": {"preferred": 8766, "movable": True},
+-        "card": {"name": "Master Control", "kind": "payload",
+-                 "launch": {"elf": PKG_PAYLOADS + "master-control/master-control.elf", "autoload": "optional"},
+-                 "health": "/api/health", "pages": {"main": "/", "overlay": "/overlay"},
+-                 # Exactly what Master Control 0.4.3 answers on POST /hub/intent; it serves no
+-                 # /fonts/ or /assets/ (fonts are embedded); its own page calls /api/*.
+-                 "provides": ["overlay.show", "input.remap.profile"],
+-                 "consumes": ["theme"], "public_pages": ["/", "/overlay", "/icon.png", "/classic"],
+-                 "page_apis": ["/api/"]},
+-    },
+-}
+-PREFIX = {s["package"]: s["prefix"] for s in config.SOURCES}
+-
+-
+-def engine_block(rows, stage):
+-    """Pins the console needs to approve the engine (native-install.json is written by Setup after its check)."""
+-    root = config.JD_CONSOLE_ROOT
+-    by = {r["dest"]: r for r in rows}
+-    elf, image = by.get(root + "java-worker.elf"), by.get(root + "native/image-manifest.json")
+-    if not elf or not image:
+-        raise SystemExit("The engine package needs java-worker.elf and native/image-manifest.json")
+-    for need in ("runtime/classes/OmniJDownloaderBridge.class",
+-                 "runtime/classes/org/jdownloader/api/myjdownloader/MyJDownloaderController.class"):
+-        if root + need not in by:
+-            raise SystemExit("The engine package is missing " + need)
+-    return {"ready": True, "elf": elf["dest"], "elf_sha256": elf["sha256"], "elf_bytes": elf["bytes"],
+-            "image_manifest": image["dest"], "image_manifest_sha256": image["sha256"],
+-            "jd_tested_revision": config.JD_TESTED_REVISION,
+-            "java_port": {"repo": config.JAVA_PORT_REPO, "commit": config.JAVA_PORT_COMMIT, "url": config.JAVA_PORT_URL,
+-                          "source": config.JAVA_PORT_SOURCE_URL, "openjdk_source": config.OPENJDK_SOURCE_URL,
+-                          "licence": "OpenJDK parts: GPLv2 with the Classpath Exception (notices under notices/)"}}
+-
+-
+-def main():
+-    p = argparse.ArgumentParser()
+-    p.add_argument("--package", required=True, choices=sorted(PREFIX))
+-    p.add_argument("--stage", required=True)
+-    p.add_argument("--version", required=True)
+-    p.add_argument("--out", required=True)
+-    p.add_argument("--app-version", action="append", default=[])
+-    p.add_argument("--jd-engine-ready", action="store_true")
+-    a = p.parse_args()
+-    versions = dict(v.split("=", 1) for v in a.app_version)
+-    apps = {k: v for k, v in APPS.items() if v["package"] == a.package}
+-    rows = []
+-    for dirpath, _, names in os.walk(a.stage):
+-        for n in sorted(names):
+-            full = os.path.join(dirpath, n)
+-            dest = "/" + os.path.relpath(full, a.stage).replace(os.sep, "/")
+-            owner = [k for k, v in apps.items() if _under(dest, v["roots"])]
+-            if len(owner) != 1:
+-                raise SystemExit("No single app owns %s" % dest)
+-            check_dest(dest, apps[owner[0]]["roots"])
+-            data = open(full, "rb").read()
+-            rows.append({"app": owner[0], "src": "files" + dest, "dest": dest,
+-                         "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)})
+-    rows.sort(key=lambda r: r["dest"])
+-    shipped = sorted({r["app"] for r in rows})
+-    manifest_apps = {}
+-    for k in shipped:
+-        app = copy.deepcopy(apps[k])
+-        app.pop("package")
+-        app["version"] = versions.get(k, a.version)
+-        manifest_apps[k] = app
+-    manifest = {"schema": SCHEMA, "package": a.package, "version": a.version,
+-                "tested_firmware": config.TESTED_FIRMWARE, "apps": manifest_apps, "files": rows}
+-    if a.package == "omnibloom-jd-engine":
+-        manifest["jdownloader_engine"] = engine_block(rows, a.stage) if a.jd_engine_ready else {"ready": False}
+-    os.makedirs(a.out, exist_ok=True)
+-    name = os.path.join(a.out, "%s%s.zip" % (PREFIX[a.package], a.version))
+-    with zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED) as z:
+-        z.writestr(config.RELEASE_MANIFEST, json.dumps(manifest, indent=1))
+-        for r in rows:
+-            z.write(os.path.join(a.stage, r["dest"].lstrip("/")), r["src"])
+-    Package(name).verify_all()   # the same checks Setup runs
+-    digest = hashlib.sha256(open(name, "rb").read()).hexdigest()
+-    with open(name + ".sha256", "w") as f:
+-        f.write("%s  %s\n" % (digest, os.path.basename(name)))
+-    print(name, digest, len(rows), "files", ",".join(shipped))
+-
+-
+-if __name__ == "__main__":
+-    main()
++"""Build a console package for a release: <prefix><version>.zip + .sha256.
++
++  python tools/make_package.py --package omnibloom --stage stage --version 0.5.0 --out dist
++  python tools/make_package.py --package master-control --stage stage-mc --version 0.4.4 --out dist
++
++`stage` mirrors the console (stage/data/homebrew/PPSA99732/eboot.bin, ...). Each file is assigned
++to the app whose roots contain it; a file no app owns is refused, and so is anything outside
++Omnibloom's install folders or inside the user's data (Setup would refuse those too).
++App versions default to the package version; override with --app-version id=1.2.3.
++"""
++import argparse
++import copy
++import hashlib
++import json
++import os
++import sys
++import zipfile
++
++sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
++from omnibloom_setup import config  # noqa: E402
++from omnibloom_setup.release import SCHEMA, Package, _under, check_dest  # noqa: E402
++
++PKG_PAYLOADS = config.PLDMGR_DIR + "payloads/"
++ICONS = config.ICONS_DIR
++
++# The apps each repo ships, with their ID-card templates (Setup adds hub_api, id, version, port, icon).
++APPS = {
++    "hub": {
++        "package": "omnibloom", "name": config.HUB_NAME, "autoload": "required",
++        "roots": [PKG_PAYLOADS + "BloomCore/", ICONS + "hub/"],
++        "port": {"preferred": config.HUB_PORT, "movable": False},
++        "card": {"name": config.HUB_NAME, "kind": "service",
++                 "launch": {"elf": PKG_PAYLOADS + "BloomCore/hub.elf", "autoload": "required"},
++                 "health": "/api/health", "pages": {}, "provides": ["theme.changed"], "consumes": [],
++                 "public_pages": []},
++    },
++    "omni": {
++        "package": "omnibloom", "name": "Omni", "autoload": "never",
++        "roots": [config.TITLE_DIR, "/data/omni/native/omni-engine-child.elf", "/data/omni/fonts/", ICONS + "omni/"],
++        "port": None,
++        "card": {"name": "Omni", "kind": "title", "title_id": config.TITLE_ID,
++                 "launch": {"title_id": config.TITLE_ID, "autoload": "never"},
++                 "health": None, "pages": {}, "provides": ["open.url"],
++                 "consumes": ["theme", "download.url", "files.pick", "overlay.show"], "public_pages": []},
++    },
++    "downloads": {
++        "package": "omnibloom", "name": "Omni Downloads", "autoload": "never",
++        # Not /data/omni-downloader/ as a whole: jdownloader/ belongs to the JDownloader 2 engine app.
++        "roots": ["/data/omni-downloader/python-worker.elf", "/data/omni-downloader/worker/", "/data/omni-downloader/runtime/",
++                  "/data/omni-downloader/.deps/", ICONS + "downloads/"],
++        "port": {"preferred": 8765, "movable": True},
++        "card": {"name": "Omni Downloads", "kind": "service",
++                 "launch": {"elf": "/data/omni-downloader/python-worker.elf", "autoload": "never"},
++                 "health": "/api/health", "pages": {"main": "/"}, "provides": ["download.url"],
++                 "consumes": ["theme", "files.pick"], "public_pages": ["/", "/downloads", "/assets/"],
++                 "page_apis": ["/api/"]},   # s2: Omni's port block lets only the downloads page itself call /api/
++    },
++    "files-broker": {
++        "package": "omnibloom", "name": "USB Files", "autoload": "never",
++        "roots": ["/data/omni/native/omni-files.elf", ICONS + "files-broker/"],
++        "port": {"preferred": 8767, "movable": True},
++        "card": {"name": "USB Files", "kind": "service",
++                 "launch": {"elf": "/data/omni/native/omni-files.elf", "autoload": "never"},
++                 "health": None, "pages": {}, "provides": ["files.pick", "files.open"],
++                 "consumes": [], "public_pages": []},
++    },
++    "jdownloader": {
++        # Our java-worker.elf + the PS5 Java 25 runtime built from mateo-cogeanu/ps5-java25-homebrew (GPLv2+CPE parts,
++        # notices shipped unchanged under notices/) + our bridge classes. JDownloader 2 itself is the user's own copy.
++        "package": "omnibloom-jd-engine", "name": "JDownloader 2 engine", "autoload": "never",
++        "roots": [config.JD_CONSOLE_ROOT + "java-worker.elf", config.JD_CONSOLE_ROOT + "native/",
++                  config.JD_CONSOLE_ROOT + "runtime/classes/", config.JD_CONSOLE_ROOT + "notices/"],
++        # Item 15: no card port. The bridge binds a loopback port per session; Bloom Core takes the live port from
++        # /data/hub/runtime/jdownloader.json. health null: the bridge speaks its own session protocol, not HTTP, so
++        # Bloom Core checks the runtime pid instead and never routes intents to it.
++        "port": None,
++        "card": {"name": "JDownloader 2 engine", "kind": "service",
++                 "launch": {"elf": config.JD_CONSOLE_ROOT + "java-worker.elf", "autoload": "never", "started_by": "downloads"},
++                 "health": None, "pages": {}, "provides": ["download.engine.jdownloader"], "consumes": [], "public_pages": []},
++    },
++    "master-control": {
++        "package": "master-control", "name": "Master Control", "autoload": "optional",
++        # Standard v1.1 item 7: the payload ELF and its icon live together in /data/pldmgr/payloads/<id>/.
++        "roots": [PKG_PAYLOADS + "master-control/"],
++        "port": {"preferred": 8766, "movable": True},
++        "card": {"name": "Master Control", "kind": "payload",
++                 "launch": {"elf": PKG_PAYLOADS + "master-control/master-control.elf", "autoload": "optional"},
++                 "health": "/api/health", "pages": {"main": "/", "overlay": "/overlay"},
++                 # Exactly what Master Control 0.4.3 answers on POST /hub/intent; it serves no
++                 # /fonts/ or /assets/ (fonts are embedded); its own page calls /api/*.
++                 "provides": ["overlay.show", "input.remap.profile"],
++                 "consumes": ["theme"], "public_pages": ["/", "/overlay", "/icon.png", "/classic"],
++                 "page_apis": ["/api/"]},
++    },
++}
++PREFIX = {s["package"]: s["prefix"] for s in config.SOURCES}
++
++
++def engine_block(rows, stage):
++    """Pins the console needs to approve the engine (native-install.json is written by Setup after its check)."""
++    root = config.JD_CONSOLE_ROOT
++    by = {r["dest"]: r for r in rows}
++    elf, image = by.get(root + "java-worker.elf"), by.get(root + "native/image-manifest.json")
++    if not elf or not image:
++        raise SystemExit("The engine package needs java-worker.elf and native/image-manifest.json")
++    for need in ("runtime/classes/OmniJDownloaderBridge.class",
++                 "runtime/classes/org/jdownloader/api/myjdownloader/MyJDownloaderController.class"):
++        if root + need not in by:
++            raise SystemExit("The engine package is missing " + need)
++    return {"ready": True, "elf": elf["dest"], "elf_sha256": elf["sha256"], "elf_bytes": elf["bytes"],
++            "image_manifest": image["dest"], "image_manifest_sha256": image["sha256"],
++            "jd_tested_revision": config.JD_TESTED_REVISION,
++            "java_port": {"repo": config.JAVA_PORT_REPO, "commit": config.JAVA_PORT_COMMIT, "url": config.JAVA_PORT_URL,
++                          "source": config.JAVA_PORT_SOURCE_URL, "openjdk_source": config.OPENJDK_SOURCE_URL,
++                          "licence": "OpenJDK parts: GPLv2 with the Classpath Exception (notices under notices/)"}}
++
++
++def main():
++    p = argparse.ArgumentParser()
++    p.add_argument("--package", required=True, choices=sorted(PREFIX))
++    p.add_argument("--stage", required=True)
++    p.add_argument("--version", required=True)
++    p.add_argument("--out", required=True)
++    p.add_argument("--app-version", action="append", default=[])
++    p.add_argument("--jd-engine-ready", action="store_true")
++    a = p.parse_args()
++    versions = dict(v.split("=", 1) for v in a.app_version)
++    apps = {k: v for k, v in APPS.items() if v["package"] == a.package}
++    rows = []
++    for dirpath, _, names in os.walk(a.stage):
++        for n in sorted(names):
++            full = os.path.join(dirpath, n)
++            dest = "/" + os.path.relpath(full, a.stage).replace(os.sep, "/")
++            owner = [k for k, v in apps.items() if _under(dest, v["roots"])]
++            if len(owner) != 1:
++                raise SystemExit("No single app owns %s" % dest)
++            check_dest(dest, apps[owner[0]]["roots"])
++            data = open(full, "rb").read()
++            rows.append({"app": owner[0], "src": "files" + dest, "dest": dest,
++                         "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)})
++    rows.sort(key=lambda r: r["dest"])
++    shipped = sorted({r["app"] for r in rows})
++    manifest_apps = {}
++    for k in shipped:
++        app = copy.deepcopy(apps[k])
++        app.pop("package")
++        app["version"] = versions.get(k, a.version)
++        manifest_apps[k] = app
++    manifest = {"schema": SCHEMA, "package": a.package, "version": a.version,
++                "tested_firmware": config.TESTED_FIRMWARE, "apps": manifest_apps, "files": rows}
++    if a.package == "omnibloom-jd-engine":
++        manifest["jdownloader_engine"] = engine_block(rows, a.stage) if a.jd_engine_ready else {"ready": False}
++    os.makedirs(a.out, exist_ok=True)
++    name = os.path.join(a.out, "%s%s.zip" % (PREFIX[a.package], a.version))
++    with zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED) as z:
++        z.writestr(config.RELEASE_MANIFEST, json.dumps(manifest, indent=1))
++        for r in rows:
++            z.write(os.path.join(a.stage, r["dest"].lstrip("/")), r["src"])
++    Package(name).verify_all()   # the same checks Setup runs
++    digest = hashlib.sha256(open(name, "rb").read()).hexdigest()
++    with open(name + ".sha256", "w") as f:
++        f.write("%s  %s\n" % (digest, os.path.basename(name)))
++    print(name, digest, len(rows), "files", ",".join(shipped))
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/src-title/OmniGpuPresent.cpp b/src-title/OmniGpuPresent.cpp
+index daf1162..9cf47ff 100644
+--- a/src-title/OmniGpuPresent.cpp
++++ b/src-title/OmniGpuPresent.cpp
+@@ -36,6 +36,8 @@
+ //    is mapped to PQ with SDR white at 203 nits (`hdrwhite=N`) by a compute pass, checked against a CPU reference
+ //    at set-up. Flag words: hdr, hdrwhite=N; failsetup (fails the set-up on purpose: the fallback check).
+ #include <vulkan/vulkan.h>
++#include "../engine/media/OmniHdrPreference.h"
++#include "../engine/media/OmniVideoStats.h"
+ #include "OmniPqOutShader.h"   // V2 HDR: SPIR-V of omni_pq_out.comp
+ 
+ #include <algorithm>
+@@ -924,8 +926,17 @@ bool bringUp()
+     if (!hasDisplay || !hasSurface) { plog(true, "VK_KHR_display/VK_KHR_surface missing"); return false; }
+     VkApplicationInfo app { VK_STRUCTURE_TYPE_APPLICATION_INFO }; app.pApplicationName = "Omni present"; app.pEngineName = "OmniGpuPresent"; app.apiVersion = VK_API_VERSION_1_3;
+     // V2 phase 2: HDR needs the requested flag word, Omni's HDR setting and the colour-space extension
+-    const bool hdrSetting = access("/data/omni/hdr-auto.flag", F_OK) == 0 || access("/data/omni/hdr-presenter-test.flag", F_OK) == 0;
++    bool hdrSetting = access("/data/omni/hdr-auto.flag", F_OK) == 0 || access("/data/omni/hdr-presenter-test.flag", F_OK) == 0;
+     const bool hdrWanted = g.optHdr && hdrSetting && hasColourSpace;
++    // OMNI_HDR_PREFERENCE_V1: explicit UI preference overrides legacy flags only when saved.
++    OmniHdrPreference::Value preference;
++    if (!OmniHdrPreference::read("/data/omni/video-hdr-preference.txt",preference)) {
++        g.optHdr=false; hdrSetting=false; plog(true,"HDR preference unreadable: SDR fallback");
++    } else if (preference.exists) {
++        // Auto remains SDR until source transfer/mastering metadata and passthrough exist.
++        g.optHdr=preference.mode=="on"; hdrSetting=g.optHdr;
++        if(preference.mode=="auto") plog(true,"HDR Auto pending source passthrough: SDR fallback");
++    }
+     if (g.optHdr) plog(true, "HDR requested: Omni's HDR setting %s, %s %s", hdrSetting ? "on" : "OFF (hdr-auto.flag / hdr-presenter-test.flag absent)",
+         VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME, hasColourSpace ? "present" : "MISSING");
+     const char* ie[3] = { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_DISPLAY_EXTENSION_NAME, VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME };
+@@ -1278,10 +1289,21 @@ extern "C" int omni_gpu_video_preinit() __attribute__((weak));
+ static const char* const kFpsPath = "/data/omni/native/video-fps.log";
+ struct FpsWindow {
+     std::mutex m; bool on = false; unsigned lines = 0;
++    OmniVideoStatsSnapshot snapshot; bool previousTelemetryCounters = false;
+     double start = 0, last = 0, sumInterval = 0, maxInterval = 0, sumCpu = 0, sumGpu = 0; unsigned n = 0, gpuN = 0, intervals = 0;
+     uint64_t hw[4] {}, vid[3] {}; bool haveHw = false;
+ };
+ static FpsWindow g_fps;
++// OMNI_VIDEO_STATS_BRIDGE_V1. Bounded read; never waits on a present.
++extern "C" int omni_video_stats_snapshot(OmniVideoStatsSnapshot* out)
++{
++    if (!out) return 0;
++    std::unique_lock<std::mutex> lock(g_fps.m, std::try_to_lock);
++    if (!lock.owns_lock() || g_fps.snapshot.atMs <= 0 || nowMs()-g_fps.snapshot.atMs > 2000) return 0;
++    *out=g_fps.snapshot;
++    return 1;
++}
++
+ static void fpsStart()
+ {
+     g_fps.on = access(kFlagPath, F_OK) == 0 || access("/data/omni/gpu-video.flag", F_OK) == 0 || access("/data/omni/video-fps.flag", F_OK) == 0;
+@@ -1295,7 +1317,7 @@ static void fpsStart()
+ // whole present call, flip wait included; no GPU time).
+ static void fpsTick(const char* path, double cpuMs, double gpuMs)
+ {
+-    if (!g_fps.on) return;
++    // Sampling is available without enabling disk logging.
+     std::lock_guard<std::mutex> l(g_fps.m);
+     FpsWindow& f = g_fps;
+     const double now = nowMs();
+@@ -1308,9 +1330,13 @@ static void fpsTick(const char* path, double cpuMs, double gpuMs)
+     if (omni_gpu_video_stats) omni_gpu_video_stats(&vid[0], &vid[1], &vid[2]);
+     auto d = [](uint64_t now, uint64_t before) { return now >= before ? now - before : 0; };   // a new stream restarts its counts
+     const double secs = (now - f.start) / 1000.0;
++    const bool countsValid=haveHw && f.previousTelemetryCounters && hw[1]>=f.hw[1] && hw[2]>=f.hw[2];
++    f.snapshot={now,secs,double(countsValid?hw[1]-f.hw[1]:0),double(countsValid?hw[2]-f.hw[2]:0),countsValid,!strcmp(path,"gpu"),!strcmp(path,"gpu")&&g.hdr};
++    f.previousTelemetryCounters=haveHw;
++
+     const uint64_t vp = d(vid[0], f.vid[0]);
+     char gpuText[32]; if (f.gpuN) snprintf(gpuText, sizeof gpuText, "%.3f", f.sumGpu / f.gpuN); else snprintf(gpuText, sizeof gpuText, "-");
+-    if (f.lines++ < 20000)
++    if (f.on && f.lines++ < 20000)
+         if (FILE* out = fopen(kFpsPath, "a")) {
+             fprintf(out, "FPS t=%.3f path=%s out=%ux%u hdr=%d presents=%u fps=%.2f decoded=%llu shown=%llu dropped=%llu late=%llu interval_avg_ms=%.2f interval_max_ms=%.2f present_cpu_ms=%.3f present_gpu_ms=%s video_gpu_pictures=%llu video_wall_ms=%.3f video_gpu_ms=%.3f%s\n",
+                 now / 1000.0, path, g.extent.width, g.extent.height, int(g.hdr), f.n, f.n / secs,
