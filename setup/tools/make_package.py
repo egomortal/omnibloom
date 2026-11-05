@@ -1,7 +1,7 @@
 """Build a console package for a release: <prefix><version>.zip + .sha256.
 
   python tools/make_package.py --package omnibloom --stage stage --version 0.5.0 --out dist
-  python tools/make_package.py --package master-control --stage stage-mc --version 0.4.3 --out dist
+  python tools/make_package.py --package master-control --stage stage-mc --version 0.4.4 --out dist
 
 `stage` mirrors the console (stage/data/homebrew/PPSA99732/eboot.bin, ...). Each file is assigned
 to the app whose roots contain it; a file no app owns is refused, and so is anything outside
@@ -48,7 +48,7 @@ APPS = {
         # Not /data/omni-downloader/ as a whole: jdownloader/ belongs to the JDownloader 2 engine app.
         "roots": ["/data/omni-downloader/python-worker.elf", "/data/omni-downloader/worker/", "/data/omni-downloader/runtime/",
                   "/data/omni-downloader/.deps/", ICONS + "downloads/"],
-        "port": {"preferred": 8765, "movable": False},   # movable once Omni reads ports from the cards
+        "port": {"preferred": 8765, "movable": True},
         "card": {"name": "Omni Downloads", "kind": "service",
                  "launch": {"elf": "/data/omni-downloader/python-worker.elf", "autoload": "never"},
                  "health": "/api/health", "pages": {"main": "/"}, "provides": ["download.url"],
@@ -58,10 +58,10 @@ APPS = {
     "files-broker": {
         "package": "omnibloom", "name": "USB Files", "autoload": "never",
         "roots": ["/data/omni/native/omni-files.elf", ICONS + "files-broker/"],
-        "port": {"preferred": 8767, "movable": False},
+        "port": {"preferred": 8767, "movable": True},
         "card": {"name": "USB Files", "kind": "service",
                  "launch": {"elf": "/data/omni/native/omni-files.elf", "autoload": "never"},
-                 "health": "/api/health", "pages": {}, "provides": ["files.pick", "files.open"],
+                 "health": None, "pages": {}, "provides": ["files.pick", "files.open"],
                  "consumes": [], "public_pages": []},
     },
     "jdownloader": {

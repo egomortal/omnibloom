@@ -37,7 +37,9 @@
 #include <sys/mount.h>
 #endif
 
-#define OFB_PORT 8767
+#include "ofb_port.h"
+static int ofb_port = 0;
+#define OFB_PORT ofb_port
 #define OFB_DIR "/data/omni/native"
 #define OFB_MAX_IO (8u << 20)
 #define OFB_MAX_LIST_BYTES (4u << 20)
@@ -367,6 +369,8 @@ int ofb_main(void)
     if (!p || fscanf(p, "%d %d", &ofb_parent, &uid) < 1) { if (p) fclose(p); ofb_log("no broker.parent: exiting"); return 1; }
     fclose(p);
     if (ofb_parent_gone()) { ofb_log("parent %d already gone: exiting", ofb_parent); return 1; }
+    ofb_port = ofb_card_port(OFB_CARD_PATH);
+    if (!ofb_port) { ofb_log("files-broker card has no assigned suite port"); return 1; }
     int s = socket(AF_INET, SOCK_STREAM, 0);
     int one = 1;
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
@@ -378,6 +382,9 @@ int ofb_main(void)
         return 1;
     }
     if (ofb_make_token(uid)) { ofb_log("token file failed errno=%d", errno); close(s); return 1; }
+    if (!ofb_runtime_write(OFB_RUNTIME_PATH, ofb_port, (long)getpid(), (long)time(NULL))) {
+        ofb_log("runtime port could not be published"); close(s); return 1;
+    }
     ofb_log("omni-files OMNI_FILES_BROKER_V1 ready on 127.0.0.1:%d for title pid %d uid %d", OFB_PORT, ofb_parent, uid);
     for (;;) {
         struct pollfd pfd = { s, POLLIN, 0 };
@@ -403,6 +410,7 @@ int ofb_main(void)
     char tok[1200];
     snprintf(tok, sizeof tok, "%s/broker.token", ofb_dir);
     unlink(tok);
+    ofb_runtime_remove(OFB_RUNTIME_PATH, (long)getpid());
     ofb_log("title %d gone: exiting", ofb_parent);
     return 0;
 }

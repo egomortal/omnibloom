@@ -575,6 +575,8 @@ class WorkerHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.trusted_host():
             return self.reply(403, {'error': 'Forbidden host'})
+        if self.path == '/api/health':
+            return self.reply(200, dict(ok=True, service='omni-media-worker', api_version=1))
         if self.path == '/healthz':
             return self.reply(200, dict(service='omni-media-worker', api_version=1))
         if self.path in self.PAGES:

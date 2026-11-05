@@ -4,6 +4,9 @@
 #ifndef OFB_TEST
 #define OFB_TEST
 #endif
+static char test_card_path[1024], test_runtime_path[1024];
+#define OFB_CARD_PATH test_card_path
+#define OFB_RUNTIME_PATH test_runtime_path
 #include "../src/omni-files.c"
 #include <assert.h>
 
@@ -49,6 +52,10 @@ int main(void)
     assert(!system(cmd));
     snprintf(ofb_prefix, sizeof ofb_prefix, "%s", base);
     snprintf(ofb_dir, sizeof ofb_dir, "%s/data", base);
+    snprintf(test_card_path, sizeof test_card_path, "%s/data/files-broker.json", base);
+    snprintf(test_runtime_path, sizeof test_runtime_path, "%s/data/runtime-files-broker.json", base);
+    FILE* cf = fopen(test_card_path, "w"); assert(cf);
+    fputs("{\"hub_api\":1,\"id\":\"files-broker\",\"port\":8787}", cf); fclose(cf);
 
     /* path rules */
     CHECK(ofb_root_of("/mnt/usb0") == 0, "root itself allowed");

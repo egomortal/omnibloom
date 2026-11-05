@@ -116,15 +116,21 @@ def self_test():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--self-test', action='store_true')
-    parser.add_argument('--port', type=int, default=8765)
+    parser.add_argument('--port', type=int, default=None)
     parser.add_argument('--downloads', default='/data/omni/downloads/media-worker')
     parser.add_argument('--state', default='/data/omni-downloader/state/jobs.json')
     parser.add_argument('--jdownloader-ready', default='/data/omni-downloader/jdownloader/bridge-ready.json')
     args = parser.parse_args()
     if args.self_test:
         raise SystemExit(self_test())
-    if not 1024 <= args.port <= 65535:
-        parser.error('port must be between 1024 and 65535')
+    from suite_port import read_port, publish, remove
+    try:
+        assigned_port = read_port()
+    except (OSError, ValueError, UnicodeError) as error:
+        parser.error(str(error))
+    if args.port is not None and args.port != assigned_port:
+        parser.error('--port must match the downloads ID card')
+    args.port = assigned_port
     configure_detached_output()
     os.environ.setdefault('SSL_CERT_FILE', str(root / '.deps/certifi/cacert.pem'))
     from worker import make_server
@@ -142,6 +148,8 @@ if __name__ == '__main__':
                          jd_adapter=ReadyFileJDownloaderAdapter(args.jdownloader_ready),
                          jd_lifecycle=lifecycle)
     try:
+        publish(server.server_port)
         server.serve_forever()
     finally:
         server.server_close()
+        remove()
