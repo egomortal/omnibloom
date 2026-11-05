@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","vi",{"action.back":"Quay lại","copy.static.50a3f9523122":"Đóng thẻ","copy.static.736612d4d0a9":"Chuyển lên trước","copy.static.743b9c60cda6":"Tùy chọn thẻ","copy.static.d6e856081ebe":"Chuyển ra sau","ui.19766ed6ccb2":"Hủy"});

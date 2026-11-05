@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","zh-Hans",{"copy.static.09d6cda1b645":"队列运行中 · 模拟任务","copy.static.4190c0c7ec72":"打开文件","copy.static.670d8a3ad3e8":"你的下载","copy.static.7819c5101a22":"发送到 USB","copy.static.dafc444796fc":"暂停队列","ui.19766ed6ccb2":"取消"});

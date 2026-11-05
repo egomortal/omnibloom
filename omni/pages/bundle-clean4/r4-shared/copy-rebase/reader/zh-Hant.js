@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("reader","zh-Hant",{"copy.d68761cc1eb2":"文字大小","copy.static.0dce058f47ef":"更寧靜的閱讀空間。","copy.static.35045eff549e":"紙張","copy.static.3907fa7f8072":"外觀","copy.static.590498d318da":"返回頁面","copy.static.60acc53f13a5":"深色","copy.static.8f4fd9eda8f5":"開啟文章","copy.static.d91b5d6c8a77":"本機範例 · Mozilla Readability"});

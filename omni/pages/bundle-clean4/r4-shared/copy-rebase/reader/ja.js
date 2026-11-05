@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("reader","ja",{"copy.d68761cc1eb2":"文字サイズ","copy.static.0dce058f47ef":"もっと静かに読める場所。","copy.static.35045eff549e":"ペーパー","copy.static.3907fa7f8072":"外観","copy.static.590498d318da":"ページに戻る","copy.static.60acc53f13a5":"ダーク","copy.static.8f4fd9eda8f5":"記事を開く","copy.static.d91b5d6c8a77":"ローカルサンプル · Mozilla Readability"});

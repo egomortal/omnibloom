@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+:root{--mq-bg:#070C12;--mq-panel:#0E1821;--mq-raised:#152634;--mq-text:#E6EDF3;--mq-muted:#9FB1C2;--mq-accent:#6CCBFF;--mq-ink:#06202F;--mq-border:#476579;--mq-focus:#FFF;--mq-coral:#FFB09D;--mq-mint:#A2F3CC;--mq-radius:.65rem;--mq-target:2.5rem;--mq-space-1:.5rem;--mq-space-2:1rem;--mq-space-3:1.5rem;--mq-space-4:2rem}
+.mq-page{background:var(--mq-bg);color:var(--mq-text)}.mq-page button,.mq-page .button,.mq-page select,.mq-page input{min-height:var(--mq-target);font:inherit;border-radius:var(--mq-radius)}.mq-page button:focus-visible,.mq-page a:focus-visible,.mq-page select:focus-visible,.mq-page .pad-focus{outline:.18rem solid var(--mq-focus);outline-offset:.2rem}.mq-page [hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.mq-page *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+html{font-size:22px;scroll-padding-bottom:5rem}@media(min-width:3000px){html{font-size:44px}}

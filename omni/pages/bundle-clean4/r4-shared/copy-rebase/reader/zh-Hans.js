@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("reader","zh-Hans",{"copy.d68761cc1eb2":"文字大小","copy.static.0dce058f47ef":"更宁静的阅读空间。","copy.static.35045eff549e":"纸张","copy.static.3907fa7f8072":"外观","copy.static.590498d318da":"返回页面","copy.static.60acc53f13a5":"深色","copy.static.8f4fd9eda8f5":"打开文章","copy.static.d91b5d6c8a77":"本地示例 · Mozilla Readability"});

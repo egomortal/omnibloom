@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","pl",{"action.dismiss":"Odrzuć","copy.dynamic.2150d8df37e4":"Pokaż wszystko","copy.dynamic.6c006b5f27c9":"Nie udało się odrzucić powiadomienia. Spróbuj ponownie.","copy.dynamic.a65a13b013fd":"Powiadomienia są niedostępne.","copy.static.db15e320dc5c":"Pokaż nowe"});

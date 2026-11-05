@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("library","ru",{"copy.dynamic.2c1c3c0d8d5e":"Используйте адрес HTTP или HTTPS.","copy.dynamic.54b4c4b0cff5":"Открытие запрошено в предпросмотре.","ui.d47d7cb0e4f8":"Ещё","ui.ed077f3d8125":"Открыть"});

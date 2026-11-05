@@ -1,0 +1,21 @@
+/* GPL-3.0-or-later. Original presentation extension; existing actions unchanged. */
+[data-mq-universe=aurora] main:has(>#header-anchor){max-width:86rem}
+[data-mq-universe=aurora] .browser-chrome{border-radius:0 0 2rem 2rem;background:#12283A}
+[data-mq-universe=aurora] .masthead{min-height:10rem;border-radius:4rem .6rem 4rem .6rem;padding:1.2rem 2rem;border-bottom:.3rem solid #ABF1E5}
+[data-mq-universe=aurora] .masthead h1{font-size:3.2rem}
+[data-mq-universe=aurora] .app-grid{grid-template-columns:repeat(2,1fr);gap:1.3rem 3rem}
+[data-mq-universe=aurora] .app-grid button{min-height:8rem;flex-direction:row;align-items:center;border-radius:3rem .5rem;gap:1rem}
+[data-mq-universe=aurora] .app-grid button:nth-child(even){margin-top:1.4rem;background:#29334A}
+[data-mq-universe=aurora] .option-groups{grid-template-columns:1fr 1fr}
+[data-mq-universe=aurora] .option-groups section{display:grid;grid-template-columns:1fr 1fr;background:#12283A;padding:1rem;border-radius:2rem .4rem}
+[data-mq-universe=aurora] .option-groups h3{grid-column:1/-1}
+[data-mq-universe=aurora] .mq-status .intro,[data-mq-universe=aurora] .mq-addons .intro,[data-mq-universe=aurora] .mq-passwords .mq-masthead{min-height:9rem;border-radius:4rem .5rem;padding:1.3rem 2rem;border-bottom:.3rem solid #ABF1E5}
+[data-mq-universe=aurora] .mq-status .intro h1,[data-mq-universe=aurora] .mq-addons .intro h1,[data-mq-universe=aurora] .mq-passwords .mq-masthead h1{font-size:3rem}
+[data-mq-universe=aurora] .mq-status .section{margin-left:5rem}
+[data-mq-universe=aurora] .mq-addons .addon-list{grid-template-columns:1fr 1fr;gap:1.6rem}
+[data-mq-universe=aurora] .mq-addons .addon:nth-child(even){margin-top:2rem}
+[data-mq-universe=aurora] .mq-passwords nav:not(.ob-breadcrumb){display:grid;grid-template-columns:repeat(3,1fr);padding:1rem;background:#12283A;border-radius:3rem .4rem}
+[data-mq-universe=aurora] .mq-passwords #view{margin-left:5rem}
+[data-mq-universe=aurora] main:has(>#header-anchor){min-height:0;height:100%;max-height:100%;margin:0 auto;align-content:start;overflow:auto}
+[data-mq-universe=aurora] body:not(.mq-start) :is(button,select){min-height:2.55rem}
+[data-mq-universe=aurora] :is(.intro,.mq-masthead)>:is(h1,p){background:#070C12;color:#E6EDF3;width:fit-content;padding:.2rem .4rem;border-radius:.2rem;position:relative;z-index:1}

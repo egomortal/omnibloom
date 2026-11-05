@@ -1,0 +1,52 @@
+/* Three supported layout families; other IDs retain their art and Bloom geometry. */
+[data-mq-universe=arcade] .browser-chrome{border-bottom:.35rem solid #FFB09D;background:#25182F}
+[data-mq-universe=arcade] main:has(>#header-anchor){display:grid;grid-template-columns:18rem 1fr;gap:1rem}
+[data-mq-universe=arcade] #header-anchor{grid-column:1/-1;justify-self:start}
+[data-mq-universe=arcade] .masthead{grid-column:1;grid-row:2 / span 2;border-radius:.2rem;border:.2rem solid #FFB09D;min-height:23rem;padding:1.5rem;background-position:65% center}
+[data-mq-universe=arcade] .masthead h1{font-size:3.5rem;background:#25182F;padding:.4rem;line-height:1}
+[data-mq-universe=arcade] .masthead p{background:#25182F;padding:.4rem}
+[data-mq-universe=arcade] #content{grid-column:2;align-self:start}
+[data-mq-universe=arcade] .app-grid{grid-template-columns:1fr 1fr}
+[data-mq-universe=arcade] .app-grid button{border-radius:0;min-height:11rem;border:.16rem solid #6CCBFF}
+[data-mq-universe=arcade] .option-groups,[data-mq-universe=atlas] .option-groups{grid-template-columns:14rem 1fr 1fr}
+[data-mq-universe=arcade] .option-groups section:first-child,[data-mq-universe=atlas] .option-groups section:first-child{grid-row:1 / span 2;border-right:.2rem solid #FFB09D;padding-right:1rem}
+[data-mq-universe=arcade] .option-groups section:last-child,[data-mq-universe=atlas] .option-groups section:last-child{grid-column:2 / span 2;display:grid;grid-template-columns:1fr 1fr}
+[data-mq-universe=arcade] .option-groups section:last-child h3,[data-mq-universe=atlas] .option-groups section:last-child h3{grid-column:1/-1}
+[data-mq-universe=arcade] .mq-status .shell,[data-mq-universe=arcade] .mq-addons .shell{display:grid;grid-template-columns:17rem 1fr;gap:1.2rem}
+[data-mq-universe=arcade] .mq-page .topline{grid-column:1/-1}
+[data-mq-universe=arcade] .mq-status .intro,[data-mq-universe=arcade] .mq-addons .intro{grid-column:1;grid-row:2 / span 2;min-height:25rem;border-radius:0}
+[data-mq-universe=arcade] .mq-status .intro h1,[data-mq-universe=arcade] .mq-addons .intro h1{font-size:3rem}
+[data-mq-universe=arcade] .mq-status .card,[data-mq-universe=arcade] .mq-status .section,[data-mq-universe=arcade] .mq-addons .addon-list,[data-mq-universe=arcade] .mq-addons .addon-quick{grid-column:2}
+[data-mq-universe=arcade] .mq-addons .addon-list{grid-template-columns:1fr;margin-top:0}
+[data-mq-universe=arcade] .mq-passwords main{display:grid;grid-template-columns:14rem 1fr;gap:1rem}
+[data-mq-universe=arcade] .mq-passwords main>p,[data-mq-universe=arcade] .mq-passwords main>.ob-breadcrumb,[data-mq-universe=arcade] .mq-passwords .mq-masthead,[data-mq-universe=arcade] .mq-passwords footer,[data-mq-universe=arcade] .mq-passwords #glyph-toggle{grid-column:1/-1}
+[data-mq-universe=arcade] .mq-passwords nav:not(.ob-breadcrumb){grid-column:1;flex-direction:column;margin:0}
+[data-mq-universe=arcade] .mq-passwords #view{grid-column:2}
+[data-mq-universe=atlas] .masthead{min-height:9rem;border-radius:.4rem 3rem .4rem .4rem;border-bottom:.35rem solid #A2F3CC;background-position:center}
+[data-mq-universe=atlas] .masthead h1{font-size:3rem;max-width:none}
+[data-mq-universe=atlas] .app-grid{grid-template-columns:1.3fr 1fr 1fr;grid-template-rows:1fr 1fr}
+[data-mq-universe=atlas] .app-grid button:first-child{grid-row:1 / span 2;min-height:17rem;border-radius:3rem .4rem .4rem .4rem;justify-content:center}
+[data-mq-universe=atlas] .app-grid button:last-child{grid-column:2 / span 2;min-height:6rem;flex-direction:row;align-items:center}
+[data-mq-universe=atlas] .option-groups section:first-child{background:#17362E;padding:1rem;border-radius:2rem .4rem}
+[data-mq-universe=atlas] .mq-status .shell{display:grid;grid-template-columns:1fr 16rem;gap:1.2rem}
+[data-mq-universe=atlas] .mq-status .intro{grid-column:2;grid-row:2 / span 2;border-radius:.5rem 3rem .5rem .5rem;padding:1.4rem}
+[data-mq-universe=atlas] .mq-status .intro h1{font-size:2.7rem}
+[data-mq-universe=atlas] .mq-status .card,[data-mq-universe=atlas] .mq-status .section{grid-column:1}
+[data-mq-universe=atlas] .mq-status .topline{grid-column:1/-1}
+[data-mq-universe=atlas] .mq-addons .addon-list{grid-template-columns:1.3fr 1fr}
+[data-mq-universe=atlas] .mq-addons .addon:first-child{border-radius:3rem .6rem .6rem .6rem;min-height:17rem}
+[data-mq-universe=atlas] .mq-passwords main{display:grid;grid-template-columns:1fr 18rem;gap:1.2rem}
+[data-mq-universe=atlas] .mq-passwords main>p,[data-mq-universe=atlas] .mq-passwords main>.ob-breadcrumb,[data-mq-universe=atlas] .mq-passwords footer,[data-mq-universe=atlas] .mq-passwords #glyph-toggle{grid-column:1/-1}
+[data-mq-universe=atlas] .mq-passwords .mq-masthead{grid-column:2;grid-row:3 / span 2;min-height:20rem;padding:1.3rem}
+[data-mq-universe=atlas] .mq-passwords .mq-masthead h1{font-size:3rem}
+[data-mq-universe=atlas] .mq-passwords nav:not(.ob-breadcrumb),[data-mq-universe=atlas] .mq-passwords #view{grid-column:1}
+
+/* Atlas text backplates: keep pale map art visible without placing text on it. */
+[data-mq-universe] .masthead>:is(h1,p),
+[data-mq-universe=atlas] :is(.intro,.mq-masthead)>:is(h1,p),
+[data-mq-universe] #options>header>:is(h2,p){
+ position:relative;z-index:1;background:#070C12;color:#E6EDF3;
+ width:fit-content;max-width:100%;padding:.2rem .45rem;border-radius:.2rem;
+}
+[data-mq-universe=atlas] .masthead>.eyebrow,
+[data-mq-universe=atlas] #options>header>.eyebrow{color:#A2F3CC}

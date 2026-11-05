@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","ar",{"copy.dynamic.839a9ca74e81":"طُلب الرجوع في المعاينة.","copy.error.413fc4be33df":"لقطة المقال كبيرة جدًا","copy.error.81b14d388e08":"لم يُعثر على مقال قابل للقراءة"});

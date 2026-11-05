@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("library","tr",{"copy.dynamic.2c1c3c0d8d5e":"HTTP veya HTTPS adresi kullanın.","copy.dynamic.54b4c4b0cff5":"Önizlemede açma istendi.","ui.d47d7cb0e4f8":"Daha fazla","ui.ed077f3d8125":"Aç"});

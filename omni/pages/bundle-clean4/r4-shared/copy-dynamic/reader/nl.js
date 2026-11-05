@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","nl",{"copy.dynamic.839a9ca74e81":"Terugkeer aangevraagd in het voorbeeld.","copy.error.413fc4be33df":"De momentopname van het artikel is te groot","copy.error.81b14d388e08":"Geen leesbaar artikel gevonden"});

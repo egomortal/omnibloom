@@ -1,0 +1,22 @@
+{
+  "mime": "video/mp4;codecs=avc1.42E01E",
+  "durationSeconds": 8,
+  "frames": 97,
+  "width": 640,
+  "height": 360,
+  "file": "original-test-pattern.mp4",
+  "created": "2026-11-03",
+  "author": "Omnibloom project",
+  "rights": "Original test geometry and text; GPL-3.0-or-later",
+  "purpose": "Direct-file player control tests; not console hardware decode evidence",
+  "generator": "build-fixture.cjs: build-time Canvas + MediaRecorder; no canvas shipped in runtime UI",
+  "decodedDurationSeconds": 8.015,
+  "audioFixtures": "Original 220 Hz and 440 Hz sine tones, 8 seconds, mono PCM16 at 8000 Hz; generated mathematically.",
+  "sha256": {
+    "original-test-pattern.mp4": "dada479c378c6ebcd2c931867b707a4d7876cb7c445a701d84ffeef29b38f982",
+    "sample.srt": "daabb26112b5dda898de099e6a9244fc04867141907f2be7a9abb8671f8e4fdb",
+    "sample.vtt": "5ab405a9650b0180dfd15648a11b648fbc6a162cdb6b9fae3268a2037664ae4b",
+    "tone-high.wav": "1921bf6dccec470beba15f27bf68364959c836bc67ddf02cb46b7387a5f19c99",
+    "tone-low.wav": "7c14833d3823be8a056c360109f0e69c1b40a65b5bb1c6320bd9cc2633ba6caf"
+  }
+}

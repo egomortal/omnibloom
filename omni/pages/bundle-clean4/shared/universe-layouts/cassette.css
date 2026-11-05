@@ -1,0 +1,34 @@
+/* GPL-3.0-or-later. Cassette: paired tape decks and a transport control strip. */
+[data-mq-universe=cassette] .mq-page:not(.mq-start) button,[data-mq-universe=cassette] .mq-page:not(.mq-start) .button{min-height:2.55rem}
+[data-mq-universe=cassette] .browser-chrome{background:#2C1D16;border-bottom:.3rem solid #E8AE68;justify-content:space-between;gap:3rem}
+[data-mq-universe=cassette] #quick{gap:.15rem;padding:.3rem;background:#100F10;border:1px solid #D5A778;border-radius:.4rem}
+[data-mq-universe=cassette] #quick button{border-radius:.2rem;background:#3E3023;border-bottom:.2rem solid #A88661}
+[data-mq-universe=cassette] main:has(>#header-anchor){display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+[data-mq-universe=cassette] #header-anchor{grid-column:1/-1;justify-self:center}
+[data-mq-universe=cassette] .masthead{grid-column:1;grid-row:2;min-height:24rem;margin:0;border-radius:2rem;border:.3rem solid #8C6746;background-position:70% center;display:flex;flex-direction:column;justify-content:end;padding:1.3rem}
+[data-mq-universe=cassette] .masthead h1{font-size:3rem;max-width:13ch}
+[data-mq-universe=cassette] .masthead :is(h1,p),[data-mq-universe=cassette] .intro :is(h1,p),[data-mq-universe=cassette] .mq-masthead :is(h1,p){background:#2C1D16;color:#FFF0DB;padding:.35rem .5rem;border-radius:.2rem;position:relative;z-index:1}
+[data-mq-universe=cassette] #content{grid-column:2;grid-row:2;align-self:stretch;border:.3rem solid #8C6746;border-radius:2rem;padding:1rem;background:#171515}
+[data-mq-universe=cassette] .app-grid{grid-template-columns:1fr 1fr;gap:.7rem;height:100%}
+[data-mq-universe=cassette] .app-grid button{min-height:10rem;border-radius:1rem;background:#3E3023;border-bottom:.4rem solid #A88661}
+[data-mq-universe=cassette] :is(#notice,.preview-note){grid-column:1/-1}
+[data-mq-universe=cassette] #options{border:.3rem solid #D5A778;border-radius:2rem;background:#211A17}
+[data-mq-universe=cassette] #options>header{background:#2C1D16;border-radius:1rem}
+[data-mq-universe=cassette] .option-groups{grid-template-columns:1fr 1fr;gap:1rem}
+[data-mq-universe=cassette] .option-groups section{background:#372B22;border:.12rem solid #A88661;border-radius:1rem;padding:1rem;display:grid;grid-template-columns:1fr 1fr}
+[data-mq-universe=cassette] .option-groups h3{grid-column:1/-1;color:#FFD296}
+[data-mq-universe=cassette] .mq-status .shell{display:grid;grid-template-columns:1fr 1.4fr;gap:1.2rem}
+[data-mq-universe=cassette] .mq-status .topline,[data-mq-universe=cassette] .mq-status .section{grid-column:1/-1}
+[data-mq-universe=cassette] .mq-status .intro{grid-column:1;align-self:start;min-height:23rem;margin:0;border:.25rem solid #D5A778;background:#2C1D16}
+[data-mq-universe=cassette] .mq-status .card{grid-column:2;align-self:start;border:.25rem solid #D5A778;background:#171515}
+[data-mq-universe=cassette] .mq-status .intro::after{inset:0;opacity:1;mask-image:none;background-position:68% center}
+[data-mq-universe=cassette] .mq-status .intro h1{font-size:2.6rem}
+[data-mq-universe=cassette] .mq-addons .intro{min-height:8rem;border-radius:1rem 1rem 0 0;border-bottom:.3rem solid #D5A778;margin-bottom:0}
+[data-mq-universe=cassette] .mq-addons .addon-list{padding:1rem;background:#2C1D16;border-radius:0 0 1rem 1rem;grid-template-columns:1fr 1fr;margin-top:0}
+[data-mq-universe=cassette] .mq-addons .addon{border:.15rem solid #D5A778;border-radius:1.2rem;background:#171515}
+[data-mq-universe=cassette] .mq-passwords main{display:grid;grid-template-columns:1fr 1.4fr;gap:1rem}
+[data-mq-universe=cassette] .mq-passwords main>p,[data-mq-universe=cassette] .mq-passwords .ob-breadcrumb,[data-mq-universe=cassette] .mq-passwords footer,[data-mq-universe=cassette] .mq-passwords #glyph-toggle{grid-column:1/-1}
+[data-mq-universe=cassette] .mq-passwords .mq-masthead{grid-column:1;grid-row:3/5;min-height:20rem;background:#2C1D16;border:.25rem solid #D5A778;border-radius:2rem;padding:1rem}
+[data-mq-universe=cassette] .mq-passwords .mq-masthead h1{font-size:2.8rem}
+[data-mq-universe=cassette] .mq-passwords nav:not(.ob-breadcrumb){grid-column:2;display:grid;grid-template-columns:1fr 1fr;margin:0}
+[data-mq-universe=cassette] .mq-passwords #view{grid-column:2}

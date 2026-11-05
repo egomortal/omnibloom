@@ -1,0 +1,24 @@
+/* GPL-3.0-or-later. Original presentation extension; existing actions unchanged. */
+[data-mq-universe=abyss] .browser-chrome{border-bottom:.2rem solid #9BDBC7;background:#09292D}
+[data-mq-universe=abyss] #content{border-bottom:.4rem solid #B99C68;padding-bottom:1rem}
+[data-mq-universe=abyss] .masthead{min-height:9rem;padding:1rem 2rem;border-radius:.4rem;border-inline-start:1rem solid #B99C68;background-position:center 65%}
+[data-mq-universe=abyss] .masthead h1{font-size:3rem}
+[data-mq-universe=abyss] .app-grid{grid-template-columns:1fr;gap:.6rem}
+[data-mq-universe=abyss] .app-grid button{min-height:4.5rem;flex-direction:row;align-items:center;border-radius:.3rem;gap:1rem;border-left:.4rem solid #82D5BE}
+[data-mq-universe=abyss] .app-grid small{margin-left:auto}
+[data-mq-universe=abyss] .app-grid img{height:2.6rem;width:2.6rem}
+[data-mq-universe=abyss] .option-groups{grid-template-columns:1fr 1fr 1fr;gap:1rem}
+[data-mq-universe=abyss] .option-groups section:last-child{grid-column:1/-1;display:grid;grid-template-columns:12rem 1fr 1fr;align-items:center;border-top:.2rem solid #82D5BE;padding-top:1rem}
+[data-mq-universe=abyss] .mq-status .intro,[data-mq-universe=abyss] .mq-addons .intro,[data-mq-universe=abyss] .mq-passwords .mq-masthead{min-height:8rem;border-radius:.3rem;border-inline-start:.7rem solid #B99C68;padding:1rem 2rem}
+[data-mq-universe=abyss] .mq-status .intro h1,[data-mq-universe=abyss] .mq-addons .intro h1,[data-mq-universe=abyss] .mq-passwords .mq-masthead h1{font-size:3rem}
+[data-mq-universe=abyss] .mq-status .card{border-radius:0;border-top:0;border-left:.4rem solid #82D5BE}
+[data-mq-universe=abyss] .mq-addons .addon-list{grid-template-columns:1fr}
+[data-mq-universe=abyss] .mq-addons .addon{display:grid;grid-template-columns:1fr 1fr;border-radius:.3rem;gap:1rem}
+[data-mq-universe=abyss] .mq-addons .addon-head{grid-column:1/-1}
+[data-mq-universe=abyss] .mq-passwords main{display:flex;flex-direction:column}
+[data-mq-universe=abyss] .mq-passwords nav:not(.ob-breadcrumb){order:10;padding:1rem;background:#09292D;border-top:.2rem solid #82D5BE}
+[data-mq-universe=abyss] .mq-passwords footer{order:11}
+[data-mq-universe=abyss] .mq-passwords #view{border-left:.4rem solid #82D5BE;padding-left:1.2rem}
+[data-mq-universe=abyss] main:has(>#header-anchor){min-height:0;height:100%;max-height:100%;margin:0 auto;align-content:start;overflow:auto}
+[data-mq-universe=abyss] body:not(.mq-start) :is(button,select){min-height:2.55rem}
+[data-mq-universe=abyss] :is(.intro,.mq-masthead)>:is(h1,p){background:#070C12;color:#E6EDF3;width:fit-content;padding:.2rem .4rem;border-radius:.2rem;position:relative;z-index:1}

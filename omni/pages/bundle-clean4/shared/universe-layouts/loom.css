@@ -1,0 +1,34 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later; original loom layout. */
+[data-mq-universe=loom] .browser-chrome{background:#251b30;border-top:.35rem solid #dba35e;border-bottom:.35rem solid #c98c99}
+[data-mq-universe=loom] #quick{gap:.7rem}
+[data-mq-universe=loom] #quick button{border-radius:.2rem;border-width:0 0 .25rem;border-color:#e2b6a5}
+[data-mq-universe=loom] .masthead{min-height:8rem;padding:1rem 2rem;margin:0 0 1.1rem;border-radius:0;border-left:1.2rem solid #aa718a;border-right:1.2rem solid #e0b166;background-position:center 47%}
+[data-mq-universe=loom] .masthead h1{font-size:3rem;max-width:none;line-height:1.05}
+[data-mq-universe=loom] .masthead p{max-width:48ch}
+[data-mq-universe=loom] .app-grid{grid-template-columns:1fr;gap:.65rem}
+[data-mq-universe=loom] .app-grid button{min-height:4.8rem;display:grid;grid-template-columns:3.5rem 1fr 1.3fr;align-items:center;gap:1rem;border-radius:0;padding:.7rem 1.3rem;border-left:1rem solid #bb7894;background:#302338}
+[data-mq-universe=loom] .app-grid button small{margin:0;justify-self:end}
+[data-mq-universe=loom] .app-grid button:nth-child(even){margin-left:4rem;border-left-color:#d9ad64;background:#342c26}
+[data-mq-universe=loom] .app-grid button:nth-child(odd){margin-right:4rem}
+[data-mq-universe=loom] .app-grid img{width:3rem;height:3rem}
+[data-mq-universe=loom] #options{border-radius:0;background:#241b2d;border-width:.5rem .15rem;border-color:#d9ad64}
+[data-mq-universe=loom] #options>header{background-image:var(--mq-universe-art);background-size:cover;border-radius:0;border-left:1rem solid #bd8093}
+[data-mq-universe=loom] .option-groups{display:flex;flex-direction:column;gap:.8rem}
+[data-mq-universe=loom] .option-groups section{display:grid;grid-template-columns:11rem repeat(3,minmax(0,1fr));align-items:center;gap:.8rem;padding:.8rem;background:#33253a;border-left:.7rem solid #bd8093}
+[data-mq-universe=loom] .option-groups section:nth-child(even){margin-left:3rem;background:#332b25;border-left-color:#d9ad64}
+[data-mq-universe=loom] .option-groups section:nth-child(odd){margin-right:3rem}
+[data-mq-universe=loom] .option-groups h3{margin:0;color:#f1d2b8}
+[data-mq-universe=loom] .option-groups #more-items{grid-column:2/-1}
+[data-mq-universe=loom] .mq-status .intro,[data-mq-universe=loom] .mq-addons .intro,[data-mq-universe=loom] .mq-passwords .mq-masthead{min-height:8rem;padding:1rem 2rem;border-radius:0;background:#2b1d34;border-left:1rem solid #c58da1;border-right:1rem solid #ddb778;margin-bottom:1rem}
+[data-mq-universe=loom] .mq-page .intro h1,[data-mq-universe=loom] .mq-passwords .mq-masthead h1{font-size:3rem;background:#2b1d34;width:fit-content;padding:.2rem .4rem}
+[data-mq-universe=loom] .mq-page .intro p{background:#2b1d34;width:fit-content;padding:.2rem .4rem}
+[data-mq-universe=loom] .mq-status .card{border-radius:0;border-top:0;border-left:.8rem solid #c58da1;margin-right:3rem}
+[data-mq-universe=loom] .mq-status .section{margin-left:3rem;border-top:.3rem solid #ddb778;padding-top:.7rem}
+[data-mq-universe=loom] .mq-addons .addon-list{grid-template-columns:1fr;gap:1rem}
+[data-mq-universe=loom] .mq-addons .addon{border-radius:0;border-left:.8rem solid #c58da1;border-top:0;margin-right:3rem}
+[data-mq-universe=loom] .mq-addons .addon:nth-child(even){margin-right:0;margin-left:3rem;border-left-color:#ddb778}
+[data-mq-universe=loom] .mq-passwords nav:not(.ob-breadcrumb){display:flex;border-left:.8rem solid #ddb778;padding:.7rem;background:#332b25;margin-left:3rem}
+[data-mq-universe=loom] .mq-passwords [data-view]{border-radius:0}
+[data-mq-universe=loom] .mq-passwords #view{padding:1.5rem;background:#302338;border-left:.8rem solid #c58da1;margin-right:3rem;min-height:8rem}
+
+[data-mq-universe=loom] .mq-page:not(.mq-start) button,[data-mq-universe=loom] .mq-page:not(.mq-start) .button,[data-mq-universe=loom] .mq-page:not(.mq-start) select{min-height:2.55rem}

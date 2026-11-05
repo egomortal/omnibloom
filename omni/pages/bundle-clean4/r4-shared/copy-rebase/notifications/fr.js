@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","fr",{"copy.complete.0b78998db7d7":"Aucune notification.","copy.static.1a3302e0d2c2":"Messages récents de vos applications.","copy.static.788011833a5a":"Notifications","copy.static.db15e320dc5c":"Afficher les nouvelles","ui.0e9161011702":"Actualiser","ui.9499cea73f3b":"OMNIBLOOM"});

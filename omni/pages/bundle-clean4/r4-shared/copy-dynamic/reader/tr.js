@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","tr",{"copy.dynamic.839a9ca74e81":"Önizlemede geri dönüş istendi.","copy.error.413fc4be33df":"Makale anlık görüntüsü çok büyük","copy.error.81b14d388e08":"Okunabilir makale bulunamadı"});

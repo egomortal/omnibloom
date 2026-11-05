@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+(function(r,f){if(typeof module==='object')module.exports=f();else r.Catalog=f()})(this,function(){
+ const licences=['GPL-3.0-or-later','GPL-3.0-only','MIT','BSD-2-Clause','BSD-3-Clause','Apache-2.0'];
+ function safeSource(s){try{const u=new URL(s);return u.protocol==='https:'&&u.hostname==='github.com'&&!u.username&&!u.password&&!u.port&&/^\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/?$/.test(u.pathname)&&!u.search&&!u.hash}catch(_){return false}}
+ function validate(index){if(!index||index.schema!=='bloom-catalog/v1'||!Array.isArray(index.apps)||index.apps.length>100)throw Error('Invalid catalog');const seen=new Set();return index.apps.map(a=>{if(!a||!/^[a-z0-9][a-z0-9-]{0,39}$/.test(a.id)||seen.has(a.id)||typeof a.name!=='string'||a.name.length>80||typeof a.summary!=='string'||a.summary.length>180||!licences.includes(a.license)||!safeSource(a.source))throw Error('Invalid catalog entry');seen.add(a.id);return {id:a.id,name:a.name,summary:a.summary,license:a.license,source:a.source}})}
+ function merge(available,installed){if(!Array.isArray(installed))throw Error('Invalid installed apps');const rows=new Map(available.map(a=>[a.id,{...a,installed:false}]));installed.slice(0,100).forEach(a=>{if(a&&typeof a.id==='string'&&/^[a-z0-9][a-z0-9-]{0,39}$/.test(a.id)){const known=rows.get(a.id);rows.set(a.id,{...(known||{id:a.id,name:String(a.name||a.id).slice(0,80),summary:'Installed on this console.',license:'Not declared',source:null}),installed:true,version:String(a.version||'Unknown').slice(0,32),up:a.up===true,verified:a.verified===true})}});return [...rows.values()].sort((a,b)=>Number(b.installed)-Number(a.installed)||a.name.localeCompare(b.name))}
+ return {validate,merge,safeSource};
+});

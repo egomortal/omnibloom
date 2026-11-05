@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","es",{"action.back":"Atrás","copy.static.50a3f9523122":"Cerrar pestaña","copy.static.736612d4d0a9":"Mover antes","copy.static.743b9c60cda6":"Opciones de pestaña","copy.static.d6e856081ebe":"Mover después","ui.19766ed6ccb2":"Cancelar"});

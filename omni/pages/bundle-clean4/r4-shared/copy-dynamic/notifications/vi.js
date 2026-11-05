@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","vi",{"action.dismiss":"Ẩn","copy.dynamic.2150d8df37e4":"Hiển thị tất cả","copy.dynamic.6c006b5f27c9":"Không thể ẩn thông báo. Hãy thử lại.","copy.dynamic.a65a13b013fd":"Thông báo không khả dụng.","copy.static.db15e320dc5c":"Hiện thông báo mới"});

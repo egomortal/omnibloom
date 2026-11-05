@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","hi",{"copy.dynamic.839a9ca74e81":"पूर्वावलोकन में वापस जाने का अनुरोध किया गया।","copy.error.413fc4be33df":"लेख का स्नैपशॉट बहुत बड़ा है","copy.error.81b14d388e08":"कोई पढ़ने योग्य लेख नहीं मिला"});

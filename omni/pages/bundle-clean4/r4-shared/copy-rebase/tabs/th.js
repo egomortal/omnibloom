@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","th",{"action.back":"ย้อนกลับ","copy.static.50a3f9523122":"ปิดแท็บ","copy.static.736612d4d0a9":"ย้ายไปก่อนหน้า","copy.static.743b9c60cda6":"ตัวเลือกแท็บ","copy.static.d6e856081ebe":"เลื่อนไปไว้ลำดับถัดไป","ui.19766ed6ccb2":"ยกเลิก"});

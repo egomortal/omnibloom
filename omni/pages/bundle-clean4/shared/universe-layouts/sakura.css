@@ -1,0 +1,28 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later; original sakura layout. */
+[data-mq-universe=sakura] .browser-chrome{background:#281923;border-bottom:.28rem solid #f3b7c8}
+[data-mq-universe=sakura] #quick button{border-radius:.2rem .8rem .2rem .2rem;border-color:#d59cac}
+[data-mq-universe=sakura] .masthead{min-height:10rem;margin:0 3rem 2rem 0;padding:1.5rem 2rem;border-radius:.1rem 3rem .1rem .1rem;border-left:.65rem solid #e29aab;box-shadow:1rem 1rem 0 #35242e;background-position:right 42%}
+[data-mq-universe=sakura] .masthead h1{font-size:3.2rem;max-width:17ch}
+[data-mq-universe=sakura] .app-grid{grid-template-columns:1fr 1fr;gap:1rem 2rem;padding:.5rem 1.4rem 1rem 0}
+[data-mq-universe=sakura] .app-grid button{min-height:7rem;display:grid;grid-template-columns:3.5rem 1fr;align-items:center;border-radius:.1rem 1.8rem .1rem .1rem;border-left:.35rem solid #e5a9bb;background:#2b202c;box-shadow:.45rem .45rem 0 #59404d}
+[data-mq-universe=sakura] .app-grid button small{grid-column:2}
+[data-mq-universe=sakura] .app-grid button:nth-child(even){margin-top:1rem;transform:translateX(1rem);background:#302b3c}
+[data-mq-universe=sakura] #options{border-radius:.2rem 3rem .2rem .2rem;border-color:#efb7c7;background:#211a26}
+[data-mq-universe=sakura] #options>header{margin-right:2rem;border-radius:.1rem 2rem .1rem .1rem;background-image:var(--mq-universe-art);background-size:cover}
+[data-mq-universe=sakura] .option-groups{grid-template-columns:1fr 1fr;gap:1rem 2rem}
+[data-mq-universe=sakura] .option-groups section{padding:1rem;border:1px solid #a67b8e;border-top:.4rem solid #e4b2c2;border-radius:.1rem 1.2rem .1rem .1rem;background:#302431}
+[data-mq-universe=sakura] .option-groups section:nth-child(even){margin-left:1rem}
+[data-mq-universe=sakura] .option-groups h3{color:#f4c9d6;background:#302431}
+[data-mq-universe=sakura] .mq-status .intro,[data-mq-universe=sakura] .mq-addons .intro,[data-mq-universe=sakura] .mq-passwords .mq-masthead{min-height:9rem;margin:0 2rem 2rem 0;border-radius:.1rem 3rem .1rem .1rem;border-left:.6rem solid #e5a9bb;box-shadow:.8rem .8rem 0 #4d3442;background:#2b202c}
+[data-mq-universe=sakura] .mq-page .intro h1,[data-mq-universe=sakura] .mq-passwords .mq-masthead h1{font-size:3rem}
+[data-mq-universe=sakura] .mq-page .intro h1,[data-mq-universe=sakura] .mq-page .intro p,[data-mq-universe=sakura] .mq-passwords .mq-masthead h1{background:#2b202c;position:relative;width:fit-content;padding:.2rem .5rem}
+[data-mq-universe=sakura] .mq-status .card{border-radius:.1rem 1.2rem .1rem .1rem;border-top-color:#e5a9bb}
+[data-mq-universe=sakura] .mq-addons .addon-list{grid-template-columns:1fr 1fr;gap:1.3rem;margin-right:1rem}
+[data-mq-universe=sakura] .mq-addons .addon:nth-child(even){margin-top:1.2rem}
+[data-mq-universe=sakura] .mq-addons .addon{border-radius:.1rem 1.2rem .1rem .1rem;border-color:#a67b8e}
+[data-mq-universe=sakura] .mq-passwords nav:not(.ob-breadcrumb){display:flex;border-bottom:.3rem solid #e5a9bb;padding-bottom:.5rem}
+[data-mq-universe=sakura] .mq-passwords [data-view]{border-radius:1rem 1rem 0 0;background:#302431}
+[data-mq-universe=sakura] .mq-passwords #view{padding:1.5rem;border-left:.4rem solid #e5a9bb;background:#211a26;min-height:6rem}
+
+[data-mq-universe=sakura] .app-grid{grid-template-columns:1fr 1.1fr;grid-template-rows:repeat(3,minmax(5.6rem,auto));gap:.8rem 2rem}[data-mq-universe=sakura] .app-grid button{grid-column:1;min-height:5.6rem;margin:0;transform:none;padding:.8rem 1.2rem}[data-mq-universe=sakura] .app-grid button:nth-child(4){grid-column:2;grid-row:1/4;min-height:100%;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;border-radius:.2rem 3rem .2rem .2rem;background:#322637;border-left-width:.6rem;padding:2rem}[data-mq-universe=sakura] .app-grid button:nth-child(4) img{width:5rem;height:5rem}[data-mq-universe=sakura] .app-grid button span{text-align:left}[data-mq-universe=sakura] .app-grid button:nth-child(4) span{font-size:1.4rem}
+[data-mq-universe=sakura] .mq-page:not(.mq-start) button,[data-mq-universe=sakura] .mq-page:not(.mq-start) .button,[data-mq-universe=sakura] .mq-page:not(.mq-start) select{min-height:2.55rem}

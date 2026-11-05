@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","fr",{"copy.dynamic.839a9ca74e81":"Retour demandé dans l’aperçu.","copy.error.413fc4be33df":"L’instantané de l’article est trop volumineux","copy.error.81b14d388e08":"Aucun article lisible trouvé"});

@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","zh-Hant",{"copy.static.09d6cda1b645":"佇列執行中 · 模擬工作","copy.static.4190c0c7ec72":"開啟檔案","copy.static.670d8a3ad3e8":"你的下載","copy.static.7819c5101a22":"傳送至 USB","copy.static.dafc444796fc":"暫停佇列","ui.19766ed6ccb2":"取消"});

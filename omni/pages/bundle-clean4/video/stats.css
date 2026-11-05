@@ -1,0 +1,1 @@
+#video-stats{width:min(42rem,85vw);max-height:80vh;overflow:auto;font-size:1rem;background:#0e1821;color:#e6edf3;border:2px solid #6ccbff;padding:1.5rem}#stats-values{display:grid;grid-template-columns:1fr 1fr;gap:.65rem 1.1rem}#stats-values dd{margin:0;overflow-wrap:anywhere}#video-stats button{min-height:2.2rem;font-size:1rem}#stats-status{min-height:2.5em}

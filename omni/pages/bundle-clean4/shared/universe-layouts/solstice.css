@@ -1,0 +1,38 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later; original solstice layout. */
+[data-mq-universe=solstice] .browser-chrome{background:#2b2117;border-bottom:.3rem double #f5c677}
+[data-mq-universe=solstice] #quick button{border-radius:.15rem;border-color:#dfb971}
+[data-mq-universe=solstice] main:has(>#header-anchor){display:grid;grid-template-columns:20rem 1fr;gap:1.3rem;max-width:83rem}
+[data-mq-universe=solstice] #header-anchor{grid-column:1/-1;justify-self:start}
+[data-mq-universe=solstice] .masthead{grid-column:1;grid-row:2/5;min-height:24rem;margin:0;padding:1.4rem;border-radius:0;border-top:.7rem solid #e8a850;background-position:65% center}
+[data-mq-universe=solstice] .masthead h1{font-size:3.6rem;max-width:8ch;line-height:1.05}
+[data-mq-universe=solstice] #content,[data-mq-universe=solstice] #notice,[data-mq-universe=solstice] .preview-note{grid-column:2}
+[data-mq-universe=solstice] .app-grid{grid-template-columns:1fr 1fr;gap:1.3rem}
+[data-mq-universe=solstice] .app-grid button{min-height:11rem;border-radius:0;border-top:.45rem solid #e6b35e;background:#28261f;padding:1.3rem;justify-content:space-between}
+[data-mq-universe=solstice] #options{border-radius:0;border:.2rem solid #f0c777;background:#211e18}
+[data-mq-universe=solstice] #options>header{background-image:var(--mq-universe-art);background-size:cover;border-radius:0;border-bottom:.4rem solid #e6b35e}
+[data-mq-universe=solstice] .option-groups{grid-template-columns:1.5fr 1fr 1fr;gap:1.4rem;border-top:.1rem solid #c7a76b;padding-top:1rem}
+[data-mq-universe=solstice] .option-groups section{padding:.7rem;border-left:.14rem solid #bc9d64}
+[data-mq-universe=solstice] .option-groups section:first-child{grid-column:1;grid-row:1/3;background:#302819}
+[data-mq-universe=solstice] .option-groups section:last-child{grid-column:2/4;display:grid;grid-template-columns:1fr 1fr}
+[data-mq-universe=solstice] .option-groups section:last-child h3,[data-mq-universe=solstice] .option-groups section:last-child #more-items{grid-column:1/-1}
+[data-mq-universe=solstice] .option-groups h3{color:#ffdb97;font-size:1.5rem}
+[data-mq-universe=solstice] .mq-status .shell,[data-mq-universe=solstice] .mq-addons .shell{display:grid;grid-template-columns:1fr 18rem;gap:1.3rem}
+[data-mq-universe=solstice] .mq-page .topline{grid-column:1/-1}
+[data-mq-universe=solstice] .mq-status .intro,[data-mq-universe=solstice] .mq-addons .intro{grid-column:2;grid-row:2/5;min-height:23rem;border-radius:0;padding:1.4rem;background:#2b2117;border-top:.6rem solid #e8b865}
+[data-mq-universe=solstice] .mq-page .intro h1{font-size:2.8rem;line-height:1.06}
+[data-mq-universe=solstice] .mq-page .intro h1,[data-mq-universe=solstice] .mq-page .intro p{background:#2b2117;position:relative;padding:.2rem .3rem}
+[data-mq-universe=solstice] .mq-page .intro::after{inset:40% 0 0;mask-image:none;opacity:.6}
+[data-mq-universe=solstice] .mq-status .card,[data-mq-universe=solstice] .mq-status .section,[data-mq-universe=solstice] .mq-addons .addon-list,[data-mq-universe=solstice] .mq-addons #mq-addon-more,[data-mq-universe=solstice] .mq-addons .addon-quick{grid-column:1}
+[data-mq-universe=solstice] .mq-status .card{border-radius:0;border-top-color:#e8b865}
+[data-mq-universe=solstice] .mq-addons .addon-list{grid-template-columns:1fr;margin-top:0}
+[data-mq-universe=solstice] .mq-addons .addon{border-radius:0;border-left:.45rem solid #e8b865}
+[data-mq-universe=solstice] .mq-passwords main{display:grid;grid-template-columns:20rem 1fr;gap:1.3rem}
+[data-mq-universe=solstice] .mq-passwords main>p,[data-mq-universe=solstice] .mq-passwords .ob-breadcrumb,[data-mq-universe=solstice] .mq-passwords footer,[data-mq-universe=solstice] .mq-passwords #glyph-toggle{grid-column:1/-1}
+[data-mq-universe=solstice] .mq-passwords .mq-masthead{grid-column:1;grid-row:3/6;min-height:18rem;border-radius:0;border-top:.6rem solid #e8b865;padding:1.3rem;background:#2b2117}
+[data-mq-universe=solstice] .mq-passwords .mq-masthead h1{font-size:3rem;background:#2b2117;padding:.3rem}
+[data-mq-universe=solstice] .mq-passwords nav:not(.ob-breadcrumb),[data-mq-universe=solstice] .mq-passwords #view,[data-mq-universe=solstice] .mq-passwords #notice{grid-column:2}
+[data-mq-universe=solstice] .mq-passwords nav:not(.ob-breadcrumb){display:grid;grid-template-columns:1fr 1fr;margin:0}
+[data-mq-universe=solstice] .mq-passwords [data-view]{border-radius:0;background:#302819}
+[data-mq-universe=solstice] .mq-passwords #view{background:#24221d;padding:1.3rem;border-top:.2rem solid #e8b865;min-height:10rem}
+
+[data-mq-universe=solstice] .mq-page:not(.mq-start) button,[data-mq-universe=solstice] .mq-page:not(.mq-start) .button,[data-mq-universe=solstice] .mq-page:not(.mq-start) select{min-height:2.55rem}

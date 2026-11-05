@@ -1,0 +1,31 @@
+/* GPL-3.0-or-later. Relay: patchbay matrix with a horizontal bus and connected modules. */
+[data-mq-universe=relay] .mq-page:not(.mq-start) button,[data-mq-universe=relay] .mq-page:not(.mq-start) .button{min-height:2.55rem}
+[data-mq-universe=relay] .browser-chrome{border-bottom:.3rem double #A2E4C9;background:#132D29}
+[data-mq-universe=relay] #quick{border:.15rem solid #A2E4C9;padding:.3rem;border-radius:0;gap:1rem}
+[data-mq-universe=relay] #quick button{border-radius:.2rem;background:#10221F}
+[data-mq-universe=relay] .masthead{min-height:10rem;border-radius:.3rem;border:.2rem solid #77B9A5;border-left:1rem solid #77B9A5;background-position:80% 45%;padding:1rem 2rem}
+[data-mq-universe=relay] .masthead h1{font-size:3rem;max-width:18ch}
+[data-mq-universe=relay] :is(.masthead,.intro,.mq-masthead) :is(h1,p){background:#10221F;color:#E9FFF2;padding:.3rem .5rem;position:relative;z-index:1}
+[data-mq-universe=relay] .app-grid{grid-template-columns:repeat(3,1fr);gap:1.4rem;border-top:.4rem solid #D8B777;padding:1.4rem 0 0}
+[data-mq-universe=relay] .app-grid button{border-radius:.3rem;border:.16rem solid #77B9A5;background:#183D35;min-height:8rem;position:relative}
+[data-mq-universe=relay] .app-grid button:first-child{grid-row:auto;justify-content:start}
+[data-mq-universe=relay] .app-grid button:last-child{grid-column:1/-1;min-height:5rem;flex-direction:row;align-items:center}
+[data-mq-universe=relay] .app-grid button::before{content:'';position:absolute;top:-1.7rem;left:2rem;height:1.4rem;width:.3rem;background:#D8B777;pointer-events:none}
+[data-mq-universe=relay] #options{border-radius:.3rem;border:.2rem solid #77B9A5;background:#10221F}
+[data-mq-universe=relay] #options>header{background:#183D35;border-radius:0;border-left:.5rem solid #D8B777}
+[data-mq-universe=relay] .option-groups{grid-template-columns:repeat(4,1fr);border-top:.4rem solid #D8B777;padding-top:1.2rem}
+[data-mq-universe=relay] .option-groups section{border:.15rem solid #77B9A5;padding:.8rem;background:#183D35}
+[data-mq-universe=relay] .mq-status .intro{min-height:9rem;border-radius:0;border-left:1rem solid #D8B777;padding:1rem 2rem}
+[data-mq-universe=relay] .mq-status .intro h1{font-size:3rem}
+[data-mq-universe=relay] .mq-status .card{border-radius:.3rem;border:.2rem solid #77B9A5}
+[data-mq-universe=relay] .mq-status tbody tr{background:#10221F;border-block:.15rem solid #77B9A5}
+[data-mq-universe=relay] .mq-status td{padding:.8rem;border-inline-end:.15rem solid #77B9A5}
+[data-mq-universe=relay] .mq-addons .intro{min-height:8rem;border-radius:0;border-bottom:.3rem solid #D8B777}
+[data-mq-universe=relay] .mq-addons .addon-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:1.2rem}
+[data-mq-universe=relay] .mq-addons .addon{border:.15rem solid #77B9A5;border-radius:.3rem;background:#10221F}
+[data-mq-universe=relay] .mq-addons .addon-row{flex-direction:column}
+[data-mq-universe=relay] .mq-addons .addon-row button{flex:auto}
+[data-mq-universe=relay] .mq-passwords .mq-masthead{min-height:8rem;border-radius:0;border-left:1rem solid #D8B777}
+[data-mq-universe=relay] .mq-passwords nav:not(.ob-breadcrumb){display:grid;grid-template-columns:repeat(4,1fr);padding:1rem;background:#183D35;border-block:.2rem solid #77B9A5}
+[data-mq-universe=relay] .mq-passwords [data-view]{border-radius:.2rem;min-width:0}
+[data-mq-universe=relay] .mq-passwords #view{max-width:64rem;margin:1.5rem auto;border:.2rem solid #77B9A5;padding:1rem}

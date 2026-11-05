@@ -1,0 +1,1 @@
+#article{font-size:var(--reader-size,28px);line-height:1.7;max-height:560px;max-width:70ch;margin:auto;padding:24px}#article p{margin:0 0 1em}#article :is(h1,h2,h3){font-family:Inter;font-size:1.2em}@media(min-width:3000px){#article{font-size:calc(var(--reader-size,28px)*2);max-height:1120px}}

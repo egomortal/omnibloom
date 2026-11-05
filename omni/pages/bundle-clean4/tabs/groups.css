@@ -1,0 +1,3 @@
+#filters{gap:.6rem}#filters button[aria-pressed=true]{background:#6ccbff;color:#06202f}#count{color:#9fb1c2}.group-mark{border-left:5px solid #6ccbff;padding-left:.5rem;font-size:1rem}.color-pink{border-color:#edadd1}.color-mint{border-color:#83f0d2}.color-amber{border-color:#ffc875}.color-violet{border-color:#c6a5ff}.color-silver{border-color:#c2d1dc}.pinned{font-size:1rem;color:#a6e2ff}.group-row{padding:1rem 0;border-bottom:1px solid #365063}.group-row h3{font-size:1.3rem;margin:0 0 .5rem}
+
+.thumbnail{width:100%;height:130px;object-fit:cover;border-radius:12px}.tile .open{width:100%}@media(min-width:3000px){.thumbnail{height:260px}}

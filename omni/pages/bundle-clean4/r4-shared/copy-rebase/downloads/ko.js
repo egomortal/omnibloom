@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","ko",{"copy.static.09d6cda1b645":"대기열 실행 중 · 모의 작업","copy.static.4190c0c7ec72":"파일 열기","copy.static.670d8a3ad3e8":"내 다운로드","copy.static.7819c5101a22":"USB로 보내기","copy.static.dafc444796fc":"대기열 일시정지","ui.19766ed6ccb2":"취소"});

@@ -1,0 +1,13 @@
+/* OMNI_ADDONS_V1 add-ons page: plain and functional (Astra's R5-033 restyles it). */
+.addon-list{display:flex;flex-direction:column;gap:var(--ob-space-3);margin-top:var(--ob-space-3)}
+.addon{display:flex;flex-direction:column;gap:var(--ob-space-2)}
+.addon-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--ob-space-2);flex-wrap:wrap}
+.addon-meta{color:var(--ob-muted)}
+.addon-row{display:flex;flex-wrap:wrap;gap:var(--ob-space-2);align-items:center}
+.addon-field{display:flex;gap:var(--ob-space-2);align-items:center;flex-wrap:wrap}
+.addon-field>span{min-width:12em}
+.addon-error{color:var(--ob-danger)}
+.addon-settings{display:flex;flex-direction:column;gap:var(--ob-space-2);border-top:2px solid #24384a;padding-top:var(--ob-space-2)}
+.addon-quick{margin-top:var(--ob-space-4)}
+button[aria-pressed=true]{color:var(--ob-accent-ink);background:var(--ob-accent);border-color:var(--ob-accent)}
+.addon-value{min-width:3em;display:inline-block}

@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","id",{"copy.complete.0b78998db7d7":"Tidak ada notifikasi.","copy.static.1a3302e0d2c2":"Pesan terbaru dari aplikasi Anda.","copy.static.788011833a5a":"Notifikasi","copy.static.db15e320dc5c":"Tampilkan yang baru","ui.0e9161011702":"Segarkan","ui.9499cea73f3b":"OMNIBLOOM"});

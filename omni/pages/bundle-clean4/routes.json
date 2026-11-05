@@ -1,0 +1,305 @@
+{
+ "version": 1,
+ "routes": [
+  {
+   "path": "start/index.html",
+   "source": "20261103-start-pinned-sites-fix",
+   "round": 1,
+   "title": "New tab / start page"
+  },
+  {
+   "path": "welcome/index.html",
+   "source": "20261103-welcome-fix",
+   "round": 1,
+   "title": "First-run welcome"
+  },
+  {
+   "path": "info/index.html",
+   "source": "20261103-info-pages-fix",
+   "round": 1,
+   "title": "Error and info states"
+  },
+  {
+   "path": "status/index.html",
+   "source": "20261103-core-status-fix",
+   "round": 1,
+   "title": "Bloom Core status"
+  },
+  {
+   "path": "passwords/index.html",
+   "source": "20261103-password-manager-fix",
+   "round": 1,
+   "title": "Password manager (prototype UI; vault is native)"
+  },
+  {
+   "path": "keyboard/index.html",
+   "source": "20261103-r3-001-keyboard-v2-fix",
+   "round": 3,
+   "title": "Controller keyboard v2"
+  },
+  {
+   "path": "address/index.html",
+   "source": "20261103-r3-002-address-suggestions",
+   "round": 3,
+   "title": "Address bar suggestions"
+  },
+  {
+   "path": "tabs/index.html",
+   "source": "20261103-r3-004-tab-groups-fix",
+   "round": 3,
+   "title": "Tabs: overview, groups and pinned tabs"
+  },
+  {
+   "path": "restore/index.html",
+   "source": "20261103-r3-005-session-restore",
+   "round": 3,
+   "title": "Session restore"
+  },
+  {
+   "path": "context-menu/index.html",
+   "source": "20261103-r3-006-context-menu",
+   "round": 3,
+   "title": "Link/image/video context menu"
+  },
+  {
+   "path": "share/index.html",
+   "source": "20261103-r3-007-qr-page",
+   "round": 3,
+   "title": "Share current page as QR"
+  },
+  {
+   "path": "library/index.html",
+   "source": "20261102-r2-library",
+   "round": 2,
+   "title": "Bookmarks and history"
+  },
+  {
+   "path": "reading-list/index.html",
+   "source": "20261103-r3-030-reading-list",
+   "round": 3,
+   "title": "Reading list / watch later"
+  },
+  {
+   "path": "settings/index.html",
+   "source": "20261103-r2-settings-fix",
+   "round": 2,
+   "title": "Settings"
+  },
+  {
+   "path": "site-settings/index.html",
+   "source": "20261102-r2-site-settings",
+   "round": 2,
+   "title": "Site settings panel"
+  },
+  {
+   "path": "site-mode/index.html",
+   "source": "20261103-r3-015-site-mode",
+   "round": 3,
+   "title": "Desktop/TV site mode"
+  },
+  {
+   "path": "site-data/index.html",
+   "source": "20261103-r3-032-site-data",
+   "round": 3,
+   "title": "Cookies and site data"
+  },
+  {
+   "path": "https-only/index.html",
+   "source": "20261103-r3-033-https-only",
+   "round": 3,
+   "title": "HTTPS-only mode"
+  },
+  {
+   "path": "trackers/index.html",
+   "source": "20261103-r3-034-tracker-lists",
+   "round": 3,
+   "title": "Tracker lists"
+  },
+  {
+   "path": "permissions/index.html",
+   "source": "20261103-r3-035-permission-prompts",
+   "round": 3,
+   "title": "Permission prompts"
+  },
+  {
+   "path": "private/index.html",
+   "source": "20261103-r3-031-private-mode",
+   "round": 3,
+   "title": "Private browsing"
+  },
+  {
+   "path": "accessibility/index.html",
+   "source": "20261103-r3-040-accessibility",
+   "round": 3,
+   "title": "Accessibility modes"
+  },
+  {
+   "path": "rtl/index.html",
+   "source": "20261103-r3-041-rtl-fix",
+   "round": 3,
+   "title": "Right-to-left adapter (reference page)"
+  },
+  {
+   "path": "themes/index.html",
+   "source": "20261103-r3-060-shared-themes",
+   "round": 3,
+   "title": "Shared themes"
+  },
+  {
+   "path": "accents/index.html",
+   "source": "20261102-r2-seasonal-accents",
+   "round": 2,
+   "title": "Seasonal Bloom accents"
+  },
+  {
+   "path": "reader/index.html",
+   "source": "20261102-r2-reader",
+   "round": 2,
+   "title": "Reader mode"
+  },
+  {
+   "path": "find/index.html",
+   "source": "20261102-r2-find-zoom",
+   "round": 2,
+   "title": "Find in page and zoom"
+  },
+  {
+   "path": "translate/index.html",
+   "source": "20261103-r3-039-translate-page",
+   "round": 3,
+   "title": "Translate page"
+  },
+  {
+   "path": "pip/index.html",
+   "source": "20261102-r2-mini-player",
+   "round": 2,
+   "title": "Picture-in-picture controls"
+  },
+  {
+   "path": "media-controls/index.html",
+   "source": "20261103-r3-012-media-session",
+   "round": 3,
+   "title": "Media Session controls overlay"
+  },
+  {
+   "path": "video/index.html",
+   "source": "20261103-r3-009-direct-video",
+   "round": 3,
+   "title": "Direct-file video player"
+  },
+  {
+   "path": "pdf/index.html",
+   "source": "20261103-r3-010-pdf-viewer",
+   "round": 3,
+   "title": "PDF viewer (PDF.js)"
+  },
+  {
+   "path": "images/index.html",
+   "source": "20261103-r3-011-image-viewer-fix",
+   "round": 3,
+   "title": "Image viewer"
+  },
+  {
+   "path": "media/index.html",
+   "source": "20261103-r2-media-center-fix",
+   "round": 2,
+   "title": "Media Center"
+  },
+  {
+   "path": "downloads/index.html",
+   "source": "20261102-r2-downloads-overlay",
+   "round": 2,
+   "title": "Downloads overlay"
+  },
+  {
+   "path": "notes/index.html",
+   "source": "20261103-r3-038-notes",
+   "round": 3,
+   "title": "Notes"
+  },
+  {
+   "path": "totp/index.html",
+   "source": "20261103-r3-036-totp",
+   "round": 3,
+   "title": "2FA codes (needs the encrypted native vault)"
+  },
+  {
+   "path": "password-tools/index.html",
+   "source": "20261103-r3-037-password-health",
+   "round": 3,
+   "title": "Password generator and health (needs the vault)"
+  },
+  {
+   "path": "device-login/index.html",
+   "source": "20261103-r3-016-device-login",
+   "round": 3,
+   "title": "Sign in on another device"
+  },
+  {
+   "path": "notifications/index.html",
+   "source": "20261103-r3-058-notifications",
+   "round": 3,
+   "title": "Notifications centre"
+  },
+  {
+   "path": "catalog/index.html",
+   "source": "20261103-r3-059-app-catalog",
+   "round": 3,
+   "title": "App catalog"
+  },
+  {
+   "path": "logs/index.html",
+   "source": "20261103-r3-023-log-viewer",
+   "round": 3,
+   "title": "Suite log viewer (diagnostics)"
+  },
+  {
+   "path": "polyfills/index.html",
+   "source": "20261103-r3-014-polyfill-audit-fix",
+   "round": 3,
+   "title": "Web API audit (diagnostics)"
+  },
+  {
+   "path": "site-fixes/index.html",
+   "source": "20261103-r3-013-site-fixes",
+   "round": 3,
+   "title": "Site fixes on/off (shims run as an add-on)"
+  },
+  {
+   "path": "dark-reader/index.html",
+   "source": "20261103-dark-reader-fix",
+   "round": 3,
+   "title": "Dark Reader settings and HUD switch (engine runs as an add-on)"
+  },
+  {
+   "path": "splash/index.html",
+   "source": "20261102-r2-boot-splash",
+   "round": 2,
+   "title": "Boot splash"
+  },
+  {
+   "path": "toasts/index.html",
+   "source": "20261102-r2-achievement-toasts",
+   "round": 2,
+   "title": "Milestone toasts (off by default)"
+  },
+  {
+   "path": "speed-dial/index.html",
+   "source": "20261103-r3-003-speed-dial",
+   "round": 3,
+   "title": "Speed dial"
+  },
+  {
+   "path": "tab-groups/index.html",
+   "source": "20261103-r3-004-tab-groups",
+   "round": 3,
+   "title": "Tab groups and pinned tabs"
+  },
+  {
+   "path": "hdr/index.html",
+   "source": "20261104-ui-clean4-final-pages",
+   "round": 4,
+   "title": "HDR playback preference"
+  }
+ ]
+}

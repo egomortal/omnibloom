@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","zh-Hans",{"action.dismiss":"关闭通知","copy.dynamic.2150d8df37e4":"显示全部","copy.dynamic.6c006b5f27c9":"无法关闭。请重试。","copy.dynamic.a65a13b013fd":"通知不可用。","copy.static.db15e320dc5c":"显示新通知"});

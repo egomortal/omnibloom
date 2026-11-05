@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","tr",{"copy.complete.0b78998db7d7":"Bildirim yok.","copy.static.1a3302e0d2c2":"Uygulamalarınızdan gelen son mesajlar.","copy.static.788011833a5a":"Bildirimler","copy.static.db15e320dc5c":"Yenileri göster","ui.0e9161011702":"Yenile","ui.9499cea73f3b":"OMNIBLOOM"});

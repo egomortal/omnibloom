@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","ru",{"action.back":"Назад","copy.static.50a3f9523122":"Закрыть вкладку","copy.static.736612d4d0a9":"Переместить ближе к началу","copy.static.743b9c60cda6":"Параметры вкладки","copy.static.d6e856081ebe":"Переместить дальше","ui.19766ed6ccb2":"Отмена"});

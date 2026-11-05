@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","de",{"action.dismiss":"Ausblenden","copy.dynamic.2150d8df37e4":"Alle anzeigen","copy.dynamic.6c006b5f27c9":"Konnte nicht ausgeblendet werden. Versuche es erneut.","copy.dynamic.a65a13b013fd":"Benachrichtigungen sind nicht verfügbar.","copy.static.db15e320dc5c":"Neue anzeigen"});

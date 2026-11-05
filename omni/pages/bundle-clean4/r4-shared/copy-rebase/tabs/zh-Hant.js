@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","zh-Hant",{"action.back":"返回","copy.static.50a3f9523122":"關閉分頁","copy.static.736612d4d0a9":"向前移動","copy.static.743b9c60cda6":"分頁選項","copy.static.d6e856081ebe":"往後移動","ui.19766ed6ccb2":"取消"});

@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","ko",{"action.back":"뒤로","copy.static.50a3f9523122":"탭 닫기","copy.static.736612d4d0a9":"앞으로 이동","copy.static.743b9c60cda6":"탭 옵션","copy.static.d6e856081ebe":"뒤로 이동","ui.19766ed6ccb2":"취소"});

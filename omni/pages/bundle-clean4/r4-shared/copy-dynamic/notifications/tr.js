@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","tr",{"action.dismiss":"Kaldır","copy.dynamic.2150d8df37e4":"Tümünü göster","copy.dynamic.6c006b5f27c9":"Bildirim kaldırılamadı. Tekrar deneyin.","copy.dynamic.a65a13b013fd":"Bildirimler kullanılamıyor.","copy.static.db15e320dc5c":"Yenileri göster"});

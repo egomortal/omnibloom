@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","vi",{"copy.complete.0b78998db7d7":"Không có thông báo.","copy.static.1a3302e0d2c2":"Tin nhắn gần đây từ các ứng dụng của bạn.","copy.static.788011833a5a":"Thông báo","copy.static.db15e320dc5c":"Hiện thông báo mới","ui.0e9161011702":"Làm mới","ui.9499cea73f3b":"OMNIBLOOM"});

@@ -1,0 +1,11 @@
+/* Shared arrangement affordances; each Universe owns its composition. */
+.ob-arrange-bar{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.7rem 1rem;border:2px solid var(--ob-accent);background:var(--ob-panel);color:var(--ob-text)}
+.ob-arranging .topline{flex-wrap:wrap}
+body[data-ob-universe] #pins{grid-auto-rows:minmax(2.8rem,auto)}
+.ob-arrange-status{flex:1 1 24rem;font-size:1rem}
+.ob-arrange-handle{position:relative!important;display:inline-flex!important;width:max-content!important;max-width:100%;min-height:2.5rem!important;padding:.3rem .7rem!important;font:600 1rem Inter,system-ui,sans-serif!important;cursor:grab!important;border:2px dashed var(--ob-accent)!important;background:var(--ob-panel)!important;color:var(--ob-text)!important;margin-bottom:.4rem;z-index:1}
+.ob-arrange-handle[hidden]{display:none!important}
+.ob-arrange-handle[aria-pressed=true]{outline:4px solid var(--ob-focus);outline-offset:3px}
+.ob-slot-hero{grid-area:hero!important}.ob-slot-apps{grid-area:apps!important}.ob-slot-pins{grid-area:pins!important}.ob-slot-recents{grid-area:recents!important}
+#ob-arrange-toggle{margin-left:auto;min-height:2.5rem;padding:.3rem .8rem}
+.ob-arranging .hero,.ob-arranging .ob-apps-panel,.ob-arranging .ob-pins-panel,.ob-arranging .ob-recents-panel{outline:1px dashed var(--ob-muted)}

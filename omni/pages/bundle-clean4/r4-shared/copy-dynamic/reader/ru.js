@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","ru",{"copy.dynamic.839a9ca74e81":"В предпросмотре запрошен возврат.","copy.error.413fc4be33df":"Снимок статьи слишком велик","copy.error.81b14d388e08":"Не удалось найти статью для чтения"});

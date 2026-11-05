@@ -1,0 +1,1562 @@
+{
+  "languages": [
+    "en",
+    "es",
+    "pt-BR",
+    "fr",
+    "de",
+    "ja",
+    "it",
+    "ko"
+  ],
+  "strings": {
+    "Java runtime: OK.": {
+      "es": "Entorno Java: correcto.",
+      "pt-BR": "Runtime Java: OK.",
+      "fr": "Environnement Java : OK.",
+      "de": "Java-Laufzeit: OK.",
+      "ja": "Java ランタイム：正常。",
+      "it": "Runtime Java: OK.",
+      "ko": "Java 런타임: 정상."
+    },
+    "JDownloader 2 from this computer: OK.": {
+      "es": "JDownloader 2 de este ordenador: correcto.",
+      "pt-BR": "JDownloader 2 deste computador: OK.",
+      "fr": "JDownloader 2 de cet ordinateur : OK.",
+      "de": "JDownloader 2 von diesem Computer: OK.",
+      "ja": "このコンピューターの JDownloader 2：正常。",
+      "it": "JDownloader 2 da questo computer: OK.",
+      "ko": "이 컴퓨터의 JDownloader 2: 정상."
+    },
+    "--jd-folder is required": {
+      "es": "Se requiere --jd-folder",
+      "pt-BR": "--jd-folder é obrigatório",
+      "fr": "--jd-folder est requis",
+      "de": "--jd-folder ist erforderlich",
+      "ja": "--jd-folder が必要です",
+      "it": "--jd-folder è obbligatorio",
+      "ko": "--jd-folder가 필요합니다"
+    },
+    "↑ ↓ ← → Move · A / × Select · B / ○ Back": {
+      "es": "↑ ↓ ← → Mover · A / × Seleccionar · B / ○ Atrás",
+      "pt-BR": "↑ ↓ ← → Mover · A / × Selecionar · B / ○ Voltar",
+      "fr": "↑ ↓ ← → Déplacer · A / × Sélectionner · B / ○ Retour",
+      "de": "↑ ↓ ← → Bewegen · A / × Auswählen · B / ○ Zurück",
+      "ja": "↑ ↓ ← → 移動 · A / × 選択 · B / ○ 戻る",
+      "it": "↑ ↓ ← → Muovi · A / × Seleziona · B / ○ Indietro",
+      "ko": "↑ ↓ ← → 이동 · A / × 선택 · B / ○ 뒤로"
+    },
+    "× / A · Select": {
+      "es": "× / A · Seleccionar",
+      "pt-BR": "× / A · Selecionar",
+      "fr": "× / A · Sélectionner",
+      "de": "× / A · Auswählen",
+      "ja": "× / A · 選択",
+      "it": "× / A · Seleziona",
+      "ko": "× / A · 선택"
+    },
+    "○ / B · Back": {
+      "es": "○ / B · Atrás",
+      "pt-BR": "○ / B · Voltar",
+      "fr": "○ / B · Retour",
+      "de": "○ / B · Zurück",
+      "ja": "○ / B · 戻る",
+      "it": "○ / B · Indietro",
+      "ko": "○ / B · 뒤로"
+    },
+    "1 of 1": {
+      "es": "1 de 1",
+      "pt-BR": "1 de 1",
+      "fr": "1 sur 1",
+      "de": "1 von 1",
+      "ja": "1 / 1",
+      "it": "1 di 1",
+      "ko": "1 / 1"
+    },
+    "1 of 4": {
+      "es": "1 de 4",
+      "pt-BR": "1 de 4",
+      "fr": "1 sur 4",
+      "de": "1 von 4",
+      "ja": "1 / 4",
+      "it": "1 di 4",
+      "ko": "1 / 4"
+    },
+    "A trusted app can be allowed through its verified installation card; websites cannot grant themselves access.": {
+      "es": "Una aplicación de confianza puede obtener acceso mediante su ficha de instalación verificada; los sitios web no pueden concederse acceso.",
+      "pt-BR": "Um aplicativo confiável pode receber acesso por sua ficha de instalação verificada; sites não podem conceder acesso a si mesmos.",
+      "fr": "Une application de confiance peut être autorisée par sa fiche d’installation vérifiée ; les sites ne peuvent pas s’accorder cet accès.",
+      "de": "Eine vertrauenswürdige App kann über ihre geprüfte Installationskarte zugelassen werden; Websites können sich keinen Zugriff erteilen.",
+      "ja": "信頼できるアプリは検証済みのインストールカードで許可できます。ウェブサイトが自らアクセスを許可することはできません。",
+      "it": "Un’app attendibile può essere autorizzata tramite la scheda d’installazione verificata; i siti non possono autorizzarsi da soli.",
+      "ko": "신뢰할 수 있는 앱은 검증된 설치 카드로 허용할 수 있습니다. 웹사이트는 스스로 접근 권한을 부여할 수 없습니다."
+    },
+    "About blocked connections": {
+      "es": "Acerca de las conexiones bloqueadas",
+      "pt-BR": "Sobre conexões bloqueadas",
+      "fr": "À propos des connexions bloquées",
+      "de": "Über blockierte Verbindungen",
+      "ja": "ブロックされた接続について",
+      "it": "Informazioni sulle connessioni bloccate",
+      "ko": "차단된 연결 정보"
+    },
+    "Action": {
+      "es": "Acción",
+      "pt-BR": "Ação",
+      "fr": "Action",
+      "de": "Aktion",
+      "ja": "操作",
+      "it": "Azione",
+      "ko": "동작"
+    },
+    "Add site": {
+      "es": "Añadir sitio",
+      "pt-BR": "Adicionar site",
+      "fr": "Ajouter un site",
+      "de": "Website hinzufügen",
+      "ja": "サイトを追加",
+      "it": "Aggiungi sito",
+      "ko": "사이트 추가"
+    },
+    "Address": {
+      "es": "Dirección",
+      "pt-BR": "Endereço",
+      "fr": "Adresse",
+      "de": "Adresse",
+      "ja": "アドレス",
+      "it": "Indirizzo",
+      "ko": "주소"
+    },
+    "After 5 minutes": {
+      "es": "Tras 5 minutos",
+      "pt-BR": "Após 5 minutos",
+      "fr": "Après 5 minutes",
+      "de": "Nach 5 Minuten",
+      "ja": "5分後",
+      "it": "Dopo 5 minuti",
+      "ko": "5분 후"
+    },
+    "Allowed": {
+      "es": "Permitido",
+      "pt-BR": "Permitido",
+      "fr": "Autorisé",
+      "de": "Erlaubt",
+      "ja": "許可済み",
+      "it": "Consentito",
+      "ko": "허용됨"
+    },
+    "App": {
+      "es": "Aplicación",
+      "pt-BR": "Aplicativo",
+      "fr": "Application",
+      "de": "App",
+      "ja": "アプリ",
+      "it": "App",
+      "ko": "앱"
+    },
+    "App launch requires the trusted Bloom Core bridge.": {
+      "es": "Iniciar aplicaciones requiere el puente de confianza de Bloom Core.",
+      "pt-BR": "Iniciar aplicativos requer a ponte confiável do Bloom Core.",
+      "fr": "Le lancement nécessite le pont de confiance Bloom Core.",
+      "de": "Der App-Start benötigt die vertrauenswürdige Bloom-Core-Schnittstelle.",
+      "ja": "アプリの起動には信頼できる Bloom Core ブリッジが必要です。",
+      "it": "L’avvio richiede il bridge attendibile Bloom Core.",
+      "ko": "앱 실행에는 신뢰할 수 있는 Bloom Core 브리지가 필요합니다."
+    },
+    "App list unavailable. You can still browse.": {
+      "es": "Lista de aplicaciones no disponible. Puedes seguir navegando.",
+      "pt-BR": "Lista de aplicativos indisponível. Você ainda pode navegar.",
+      "fr": "Liste des applications indisponible. Vous pouvez toujours naviguer.",
+      "de": "App-Liste nicht verfügbar. Du kannst weiter surfen.",
+      "ja": "アプリ一覧を利用できません。ウェブ閲覧は引き続き利用できます。",
+      "it": "Elenco app non disponibile. Puoi comunque navigare.",
+      "ko": "앱 목록을 사용할 수 없습니다. 웹 탐색은 계속할 수 있습니다."
+    },
+    "App not running": {
+      "es": "Aplicación detenida",
+      "pt-BR": "Aplicativo parado",
+      "fr": "Application arrêtée",
+      "de": "App läuft nicht",
+      "ja": "アプリは実行されていません",
+      "it": "App non in esecuzione",
+      "ko": "앱 실행 안 됨"
+    },
+    "App status refreshed.": {
+      "es": "Estado de las aplicaciones actualizado.",
+      "pt-BR": "Status dos aplicativos atualizado.",
+      "fr": "État des applications actualisé.",
+      "de": "App-Status aktualisiert.",
+      "ja": "アプリの状態を更新しました。",
+      "it": "Stato delle app aggiornato.",
+      "ko": "앱 상태를 새로 고쳤습니다."
+    },
+    "Apps": {
+      "es": "Aplicaciones",
+      "pt-BR": "Aplicativos",
+      "fr": "Applications",
+      "de": "Apps",
+      "ja": "アプリ",
+      "it": "App",
+      "ko": "앱"
+    },
+    "Apps unavailable": {
+      "es": "Aplicaciones no disponibles",
+      "pt-BR": "Aplicativos indisponíveis",
+      "fr": "Applications indisponibles",
+      "de": "Apps nicht verfügbar",
+      "ja": "アプリを利用できません",
+      "it": "App non disponibili",
+      "ko": "앱을 사용할 수 없음"
+    },
+    "Ask every time": {
+      "es": "Preguntar siempre",
+      "pt-BR": "Perguntar sempre",
+      "fr": "Toujours demander",
+      "de": "Jedes Mal fragen",
+      "ja": "毎回確認",
+      "it": "Chiedi ogni volta",
+      "ko": "항상 확인"
+    },
+    "Autofill": {
+      "es": "Autocompletar",
+      "pt-BR": "Preenchimento automático",
+      "fr": "Remplissage automatique",
+      "de": "Automatisch ausfüllen",
+      "ja": "自動入力",
+      "it": "Compilazione automatica",
+      "ko": "자동 입력"
+    },
+    "Autofill picker": {
+      "es": "Selector de autocompletado",
+      "pt-BR": "Seletor de preenchimento automático",
+      "fr": "Sélecteur de remplissage automatique",
+      "de": "Auswahl zum automatischen Ausfüllen",
+      "ja": "自動入力の選択",
+      "it": "Selettore di compilazione automatica",
+      "ko": "자동 입력 항목 선택"
+    },
+    "Back": {
+      "es": "Atrás",
+      "pt-BR": "Voltar",
+      "fr": "Retour",
+      "de": "Zurück",
+      "ja": "戻る",
+      "it": "Indietro",
+      "ko": "뒤로"
+    },
+    "Back to Omni": {
+      "es": "Volver a Omni",
+      "pt-BR": "Voltar ao Omni",
+      "fr": "Retour à Omni",
+      "de": "Zurück zu Omni",
+      "ja": "Omni に戻る",
+      "it": "Torna a Omni",
+      "ko": "Omni로 돌아가기"
+    },
+    "Bloom Core": {
+      "es": "Bloom Core",
+      "pt-BR": "Bloom Core",
+      "fr": "Bloom Core",
+      "de": "Bloom Core",
+      "ja": "Bloom Core",
+      "it": "Bloom Core",
+      "ko": "Bloom Core"
+    },
+    "Bloom Core · Omnibloom": {
+      "es": "Bloom Core · Omnibloom",
+      "pt-BR": "Bloom Core · Omnibloom",
+      "fr": "Bloom Core · Omnibloom",
+      "de": "Bloom Core · Omnibloom",
+      "ja": "Bloom Core · Omnibloom",
+      "it": "Bloom Core · Omnibloom",
+      "ko": "Bloom Core · Omnibloom"
+    },
+    "Bloom Core is unavailable. Apps can still start independently.": {
+      "es": "Bloom Core no está disponible. Las aplicaciones pueden iniciarse por separado.",
+      "pt-BR": "O Bloom Core está indisponível. Os aplicativos ainda podem iniciar separadamente.",
+      "fr": "Bloom Core est indisponible. Les applications peuvent démarrer indépendamment.",
+      "de": "Bloom Core ist nicht verfügbar. Apps können weiterhin unabhängig starten.",
+      "ja": "Bloom Core を利用できません。アプリは個別に起動できます。",
+      "it": "Bloom Core non è disponibile. Le app possono avviarsi autonomamente.",
+      "ko": "Bloom Core를 사용할 수 없습니다. 앱은 개별적으로 실행할 수 있습니다."
+    },
+    "Cancel": {
+      "es": "Cancelar",
+      "pt-BR": "Cancelar",
+      "fr": "Annuler",
+      "de": "Abbrechen",
+      "ja": "キャンセル",
+      "it": "Annulla",
+      "ko": "취소"
+    },
+    "Certificate": {
+      "es": "Certificado",
+      "pt-BR": "Certificado",
+      "fr": "Certificat",
+      "de": "Zertifikat",
+      "ja": "証明書",
+      "it": "Certificato",
+      "ko": "인증서"
+    },
+    "Check the console clock or contact the site owner; do not send passwords here.": {
+      "es": "Comprueba el reloj de la consola o contacta al propietario del sitio; no envíes contraseñas aquí.",
+      "pt-BR": "Verifique o relógio do console ou contate o responsável pelo site; não envie senhas aqui.",
+      "fr": "Vérifiez l’horloge de la console ou contactez le propriétaire du site ; n’y saisissez pas de mots de passe.",
+      "de": "Prüfe die Konsolenuhr oder kontaktiere den Websitebetreiber; übermittle hier keine Passwörter.",
+      "ja": "本体の時計を確認するか、サイトの管理者に連絡してください。ここでパスワードを送信しないでください。",
+      "it": "Controlla l’orologio della console o contatta il proprietario del sito; non inviare password qui.",
+      "ko": "콘솔 시계를 확인하거나 사이트 관리자에게 문의하세요. 여기서 비밀번호를 보내지 마세요."
+    },
+    "Check your connection and try the page again.": {
+      "es": "Comprueba la conexión y vuelve a intentar abrir la página.",
+      "pt-BR": "Verifique a conexão e tente abrir a página novamente.",
+      "fr": "Vérifiez votre connexion et réessayez la page.",
+      "de": "Prüfe deine Verbindung und lade die Seite erneut.",
+      "ja": "接続を確認して、ページを再度開いてください。",
+      "it": "Controlla la connessione e riprova ad aprire la pagina.",
+      "ko": "연결을 확인하고 페이지를 다시 여세요."
+    },
+    "Choose a look now; you can change it later.": {
+      "es": "Elige un aspecto ahora; podrás cambiarlo después.",
+      "pt-BR": "Escolha um visual agora; você pode alterá-lo depois.",
+      "fr": "Choisissez une apparence maintenant ; vous pourrez la changer plus tard.",
+      "de": "Wähle jetzt ein Design; du kannst es später ändern.",
+      "ja": "外観を選んでください。後で変更できます。",
+      "it": "Scegli un aspetto ora; potrai cambiarlo in seguito.",
+      "ko": "지금 디자인을 선택하세요. 나중에 변경할 수 있습니다."
+    },
+    "Choose a universe": {
+      "es": "Elige un universo",
+      "pt-BR": "Escolha um universo",
+      "fr": "Choisissez un univers",
+      "de": "Universum auswählen",
+      "ja": "ユニバースを選択",
+      "it": "Scegli un universo",
+      "ko": "유니버스 선택"
+    },
+    "Choose universe": {
+      "es": "Elegir universo",
+      "pt-BR": "Escolher universo",
+      "fr": "Choisir un univers",
+      "de": "Universum auswählen",
+      "ja": "ユニバースを選択",
+      "it": "Scegli universo",
+      "ko": "유니버스 선택"
+    },
+    "Clear": {
+      "es": "Borrar",
+      "pt-BR": "Limpar",
+      "fr": "Effacer",
+      "de": "Löschen",
+      "ja": "消去",
+      "it": "Cancella",
+      "ko": "지우기"
+    },
+    "Coming soon": {
+      "es": "Próximamente",
+      "pt-BR": "Em breve",
+      "fr": "Bientôt disponible",
+      "de": "Demnächst verfügbar",
+      "ja": "近日公開",
+      "it": "In arrivo",
+      "ko": "출시 예정"
+    },
+    "Coming soon. Ex-Box 360 is moving to a new install layout, and its Xbox 360 artwork has to come from your own console backups, so Setup can't install it yet.": {
+      "es": "Próximamente. Ex-Box 360 está adoptando una nueva estructura de instalación y sus imágenes de Xbox 360 deben proceder de las copias de seguridad de tu propia consola, así que Setup aún no puede instalarlo.",
+      "pt-BR": "Em breve. O Ex-Box 360 está migrando para uma nova estrutura de instalação e as imagens do Xbox 360 devem vir dos backups do seu próprio console. Por isso, o Setup ainda não pode instalá-lo.",
+      "fr": "Bientôt disponible. Ex-Box 360 adopte une nouvelle structure d’installation, et ses visuels Xbox 360 doivent provenir des sauvegardes de votre propre console. Setup ne peut donc pas encore l’installer.",
+      "de": "Demnächst verfügbar. Ex-Box 360 erhält eine neue Installationsstruktur, und seine Xbox-360-Grafiken müssen aus Sicherungen deiner eigenen Konsole stammen. Setup kann es deshalb noch nicht installieren.",
+      "ja": "近日公開予定です。Ex-Box 360 は新しいインストール構成への移行中です。また、Xbox 360 のアートワークにはご自身のコンソールのバックアップが必要なため、Setup ではまだインストールできません。",
+      "it": "In arrivo. Ex-Box 360 sta passando a una nuova struttura di installazione e la grafica Xbox 360 deve provenire dai backup della tua console. Setup non può quindi ancora installarlo.",
+      "ko": "출시 예정입니다. Ex-Box 360은 새 설치 구조로 전환 중이며 Xbox 360 그래픽은 본인 콘솔의 백업에서 가져와야 하므로 Setup으로 아직 설치할 수 없습니다."
+    },
+    "Console block": {
+      "es": "Bloqueo de la consola",
+      "pt-BR": "Bloqueio do console",
+      "fr": "Protection de la console",
+      "de": "Konsolensperre",
+      "ja": "本体へのアクセス制限",
+      "it": "Blocco della console",
+      "ko": "콘솔 접근 차단"
+    },
+    "Continue": {
+      "es": "Continuar",
+      "pt-BR": "Continuar",
+      "fr": "Continuer",
+      "de": "Weiter",
+      "ja": "続行",
+      "it": "Continua",
+      "ko": "계속"
+    },
+    "Copy my JDownloader 2 to the PS5": {
+      "es": "Copiar mi JDownloader 2 a la PS5",
+      "pt-BR": "Copiar meu JDownloader 2 para o PS5",
+      "fr": "Copier mon JDownloader 2 sur la PS5",
+      "de": "Mein JDownloader 2 auf die PS5 kopieren",
+      "ja": "自分の JDownloader 2 を PS5 にコピー",
+      "it": "Copia il mio JDownloader 2 sulla PS5",
+      "ko": "내 JDownloader 2를 PS5로 복사"
+    },
+    "Could not open this app. Try again.": {
+      "es": "No se pudo abrir esta aplicación. Inténtalo de nuevo.",
+      "pt-BR": "Não foi possível abrir este aplicativo. Tente novamente.",
+      "fr": "Impossible d’ouvrir cette application. Réessayez.",
+      "de": "Diese App konnte nicht geöffnet werden. Versuche es erneut.",
+      "ja": "このアプリを開けませんでした。もう一度試してください。",
+      "it": "Impossibile aprire questa app. Riprova.",
+      "ko": "이 앱을 열 수 없습니다. 다시 시도하세요."
+    },
+    "Couldn't get any Omnibloom packages.": {
+      "es": "No se pudo obtener ningún paquete Omnibloom.",
+      "pt-BR": "Não foi possível obter nenhum pacote Omnibloom.",
+      "fr": "Impossible de récupérer des paquets Omnibloom.",
+      "de": "Es konnten keine Omnibloom-Pakete abgerufen werden.",
+      "ja": "Omnibloom パッケージを取得できませんでした。",
+      "it": "Impossibile recuperare pacchetti Omnibloom.",
+      "ko": "Omnibloom 패키지를 가져오지 못했습니다."
+    },
+    "D-pad · Move": {
+      "es": "Cruceta · Mover",
+      "pt-BR": "Direcional · Mover",
+      "fr": "Croix directionnelle · Déplacer",
+      "de": "Steuerkreuz · Bewegen",
+      "ja": "方向キー · 移動",
+      "it": "Croce direzionale · Muovi",
+      "ko": "방향 패드 · 이동"
+    },
+    "Development fixture ·": {
+      "es": "Datos de desarrollo ·",
+      "pt-BR": "Dados de desenvolvimento ·",
+      "fr": "Données de développement ·",
+      "de": "Entwicklungsdaten ·",
+      "ja": "開発用データ ·",
+      "it": "Dati di sviluppo ·",
+      "ko": "개발용 데이터 ·"
+    },
+    "don't download; only use packages next to Setup": {
+      "es": "no descargar; usar solo paquetes junto a Setup",
+      "pt-BR": "não baixar; usar apenas pacotes junto do Setup",
+      "fr": "ne pas télécharger ; utiliser uniquement les paquets à côté de Setup",
+      "de": "nicht herunterladen; nur Pakete neben Setup verwenden",
+      "ja": "ダウンロードせず、Setup と同じ場所のパッケージのみ使用",
+      "it": "non scaricare; usa solo i pacchetti accanto a Setup",
+      "ko": "다운로드하지 않고 Setup과 같은 폴더의 패키지만 사용"
+    },
+    "Enter an http or https address.": {
+      "es": "Introduce una dirección HTTP o HTTPS.",
+      "pt-BR": "Digite um endereço HTTP ou HTTPS.",
+      "fr": "Saisissez une adresse HTTP ou HTTPS.",
+      "de": "Gib eine HTTP- oder HTTPS-Adresse ein.",
+      "ja": "HTTP または HTTPS のアドレスを入力してください。",
+      "it": "Inserisci un indirizzo HTTP o HTTPS.",
+      "ko": "HTTP 또는 HTTPS 주소를 입력하세요."
+    },
+    "Go": {
+      "es": "Ir",
+      "pt-BR": "Ir",
+      "fr": "Aller",
+      "de": "Los",
+      "ja": "移動",
+      "it": "Vai",
+      "ko": "이동"
+    },
+    "Go to start": {
+      "es": "Ir al inicio",
+      "pt-BR": "Ir ao início",
+      "fr": "Aller à l’accueil",
+      "de": "Zur Startseite",
+      "ja": "スタートページへ",
+      "it": "Vai all’inizio",
+      "ko": "시작으로 이동"
+    },
+    "Help": {
+      "es": "Ayuda",
+      "pt-BR": "Ajuda",
+      "fr": "Aide",
+      "de": "Hilfe",
+      "ja": "ヘルプ",
+      "it": "Aiuto",
+      "ko": "도움말"
+    },
+    "Help · Omnibloom": {
+      "es": "Ayuda · Omnibloom",
+      "pt-BR": "Ajuda · Omnibloom",
+      "fr": "Aide · Omnibloom",
+      "de": "Hilfe · Omnibloom",
+      "ja": "ヘルプ · Omnibloom",
+      "it": "Aiuto · Omnibloom",
+      "ko": "도움말 · Omnibloom"
+    },
+    "Identify": {
+      "es": "Identificar",
+      "pt-BR": "Identificar",
+      "fr": "Identifier",
+      "de": "Identifizieren",
+      "ja": "識別",
+      "it": "Identifica",
+      "ko": "식별"
+    },
+    "installed apps": {
+      "es": "aplicaciones instaladas",
+      "pt-BR": "aplicativos instalados",
+      "fr": "applications installées",
+      "de": "installierte Apps",
+      "ja": "インストール済みアプリ",
+      "it": "app installate",
+      "ko": "설치된 앱"
+    },
+    "Installed apps": {
+      "es": "Aplicaciones instaladas",
+      "pt-BR": "Aplicativos instalados",
+      "fr": "Applications installées",
+      "de": "Installierte Apps",
+      "ja": "インストール済みアプリ",
+      "it": "App installate",
+      "ko": "설치된 앱"
+    },
+    "JDownloader 2 is running on the PS5 right now (or its last start didn't finish). Close Media downloads in Omni, wait a minute, then try again.": {
+      "es": "JDownloader 2 está funcionando en la PS5 (o su último inicio no terminó). Cierra Descargas multimedia en Omni, espera un minuto e inténtalo de nuevo.",
+      "pt-BR": "O JDownloader 2 está em execução no PS5 (ou a última inicialização não terminou). Feche Downloads de mídia no Omni, espere um minuto e tente novamente.",
+      "fr": "JDownloader 2 fonctionne actuellement sur la PS5 (ou son dernier démarrage ne s’est pas terminé). Fermez Téléchargements multimédias dans Omni, attendez une minute, puis réessayez.",
+      "de": "JDownloader 2 läuft gerade auf der PS5 (oder der letzte Start wurde nicht abgeschlossen). Schließe Medien-Downloads in Omni, warte eine Minute und versuche es erneut.",
+      "ja": "JDownloader 2 は現在 PS5 で動作中です（または前回の起動が完了していません）。Omni のメディアダウンロードを閉じ、1 分待ってから再試行してください。",
+      "it": "JDownloader 2 è in esecuzione sulla PS5 (o l’ultimo avvio non è terminato). Chiudi Download multimediali in Omni, attendi un minuto e riprova.",
+      "ko": "JDownloader 2가 현재 PS5에서 실행 중이거나 마지막 시작이 완료되지 않았습니다. Omni에서 미디어 다운로드를 닫고 1분 후 다시 시도하세요."
+    },
+    "JDownloader 2 runs on the PS5 thanks to the PS5 Java 25 port by mateo-cogeanu. Its OpenJDK parts are GPLv2 with the Classpath Exception; the source is at the port's repo.": {
+      "es": "JDownloader 2 funciona en la PS5 gracias al port PS5 Java 25 de mateo-cogeanu. Sus componentes OpenJDK usan GPLv2 con la excepción Classpath; el código está en el repositorio del port.",
+      "pt-BR": "O JDownloader 2 roda no PS5 graças ao port PS5 Java 25 de mateo-cogeanu. As partes OpenJDK usam GPLv2 com a Classpath Exception; o código-fonte está no repositório do port.",
+      "fr": "JDownloader 2 fonctionne sur PS5 grâce au portage PS5 Java 25 de mateo-cogeanu. Ses composants OpenJDK sont sous GPLv2 avec l’exception Classpath ; leur source est dans le dépôt du portage.",
+      "de": "JDownloader 2 läuft dank der PS5-Java-25-Portierung von mateo-cogeanu auf der PS5. Die OpenJDK-Teile stehen unter GPLv2 mit Classpath-Ausnahme; der Quellcode liegt im Repository der Portierung.",
+      "ja": "JDownloader 2 は mateo-cogeanu による PS5 Java 25 移植版を利用して PS5 で動作します。OpenJDK 部分は Classpath 例外付き GPLv2 で提供され、ソースは移植版のリポジトリにあります。",
+      "it": "JDownloader 2 funziona su PS5 grazie al port PS5 Java 25 di mateo-cogeanu. Le parti OpenJDK sono sotto GPLv2 con Classpath Exception; il sorgente è nel repository del port.",
+      "ko": "JDownloader 2는 mateo-cogeanu의 PS5 Java 25 포팅 덕분에 PS5에서 실행됩니다. OpenJDK 구성 요소는 Classpath 예외가 적용된 GPLv2이며 소스는 포팅 저장소에 있습니다."
+    },
+    "JDownloader could not start:": {
+      "es": "No se pudo iniciar JDownloader:",
+      "pt-BR": "Não foi possível iniciar o JDownloader:",
+      "fr": "Impossible de démarrer JDownloader :",
+      "de": "JDownloader konnte nicht gestartet werden:",
+      "ja": "JDownloaderを起動できませんでした:",
+      "it": "Impossibile avviare JDownloader:",
+      "ko": "JDownloader를 시작하지 못했습니다:"
+    },
+    "Keep login": {
+      "es": "Conservar inicio de sesión",
+      "pt-BR": "Manter login",
+      "fr": "Conserver les identifiants",
+      "de": "Anmeldedaten behalten",
+      "ja": "ログイン情報を保持",
+      "it": "Mantieni credenziali",
+      "ko": "로그인 정보 유지"
+    },
+    "L1/R1 · Switch tabs": {
+      "es": "L1/R1 · Cambiar pestañas",
+      "pt-BR": "L1/R1 · Trocar abas",
+      "fr": "L1/R1 · Changer d’onglet",
+      "de": "L1/R1 · Tabs wechseln",
+      "ja": "L1/R1 · タブ切り替え",
+      "it": "L1/R1 · Cambia scheda",
+      "ko": "L1/R1 · 탭 전환"
+    },
+    "Language": {
+      "es": "Idioma",
+      "pt-BR": "Idioma",
+      "fr": "Langue",
+      "de": "Sprache",
+      "ja": "言語",
+      "it": "Lingua",
+      "ko": "언어"
+    },
+    "Loading the local development fixture…": {
+      "es": "Cargando datos locales de desarrollo…",
+      "pt-BR": "Carregando dados locais de desenvolvimento…",
+      "fr": "Chargement des données locales de développement…",
+      "de": "Lokale Entwicklungsdaten werden geladen…",
+      "ja": "ローカルの開発用データを読み込み中…",
+      "it": "Caricamento dei dati locali di sviluppo…",
+      "ko": "로컬 개발용 데이터 불러오는 중…"
+    },
+    "Lock vault": {
+      "es": "Bloquear bóveda",
+      "pt-BR": "Bloquear cofre",
+      "fr": "Verrouiller le coffre-fort",
+      "de": "Tresor sperren",
+      "ja": "保管庫をロック",
+      "it": "Blocca cassaforte",
+      "ko": "보관함 잠금"
+    },
+    "Make yourself at home": {
+      "es": "Siéntete como en casa",
+      "pt-BR": "Sinta-se em casa",
+      "fr": "Installez-vous",
+      "de": "Fühl dich wie zu Hause",
+      "ja": "使いやすく、自分らしく",
+      "it": "Mettiti a tuo agio",
+      "ko": "편하게 시작하세요"
+    },
+    "Meet Omnibloom": {
+      "es": "Conoce Omnibloom",
+      "pt-BR": "Conheça o Omnibloom",
+      "fr": "Découvrez Omnibloom",
+      "de": "Lerne Omnibloom kennen",
+      "ja": "Omnibloom へようこそ",
+      "it": "Scopri Omnibloom",
+      "ko": "Omnibloom 소개"
+    },
+    "Name": {
+      "es": "Nombre",
+      "pt-BR": "Nome",
+      "fr": "Nom",
+      "de": "Name",
+      "ja": "名前",
+      "it": "Nome",
+      "ko": "이름"
+    },
+    "Never for this site": {
+      "es": "Nunca para este sitio",
+      "pt-BR": "Nunca para este site",
+      "fr": "Jamais pour ce site",
+      "de": "Nie für diese Website",
+      "ja": "このサイトでは保存しない",
+      "it": "Mai per questo sito",
+      "ko": "이 사이트에서는 저장 안 함"
+    },
+    "Next apps": {
+      "es": "Aplicaciones siguientes",
+      "pt-BR": "Próximos aplicativos",
+      "fr": "Applications suivantes",
+      "de": "Nächste Apps",
+      "ja": "次のアプリ",
+      "it": "App successive",
+      "ko": "다음 앱"
+    },
+    "No apps installed yet.": {
+      "es": "Aún no hay aplicaciones instaladas.",
+      "pt-BR": "Nenhum aplicativo instalado ainda.",
+      "fr": "Aucune application installée pour le moment.",
+      "de": "Noch keine Apps installiert.",
+      "ja": "まだアプリがインストールされていません。",
+      "it": "Nessuna app ancora installata.",
+      "ko": "아직 설치된 앱이 없습니다."
+    },
+    "No connection": {
+      "es": "Sin conexión",
+      "pt-BR": "Sem conexão",
+      "fr": "Aucune connexion",
+      "de": "Keine Verbindung",
+      "ja": "接続できません",
+      "it": "Nessuna connessione",
+      "ko": "연결 없음"
+    },
+    "No engine could download this link.": {
+      "es": "Ningún motor pudo descargar este enlace.",
+      "pt-BR": "Nenhum mecanismo conseguiu baixar este link.",
+      "fr": "Aucun moteur n’a pu télécharger ce lien.",
+      "de": "Keine Download-Engine konnte diesen Link herunterladen.",
+      "ja": "どのエンジンでもこのリンクをダウンロードできませんでした。",
+      "it": "Nessun motore è riuscito a scaricare questo link.",
+      "ko": "어떤 엔진도 이 링크를 다운로드하지 못했습니다."
+    },
+    "No installed apps reported.": {
+      "es": "No se informaron aplicaciones instaladas.",
+      "pt-BR": "Nenhum aplicativo instalado informado.",
+      "fr": "Aucune application installée signalée.",
+      "de": "Keine installierten Apps gemeldet.",
+      "ja": "インストール済みアプリの報告はありません。",
+      "it": "Nessuna app installata segnalata.",
+      "ko": "설치된 앱 정보가 없습니다."
+    },
+    "No saved passwords": {
+      "es": "No hay contraseñas guardadas",
+      "pt-BR": "Nenhuma senha salva",
+      "fr": "Aucun mot de passe enregistré",
+      "de": "Keine gespeicherten Passwörter",
+      "ja": "保存済みパスワードはありません",
+      "it": "Nessuna password salvata",
+      "ko": "저장된 비밀번호 없음"
+    },
+    "Nothing is deleted from your PS5. Anything Setup replaces is kept as a backup, and Uninstall puts it back.": {
+      "es": "No se elimina nada de tu PS5. Todo lo que Setup sustituye se guarda como copia de seguridad, y Desinstalar lo restaura.",
+      "pt-BR": "Nada é excluído do seu PS5. Tudo que o Setup substitui é guardado como backup, e a desinstalação restaura esses arquivos.",
+      "fr": "Rien n’est supprimé de votre PS5. Tout élément remplacé par Setup est sauvegardé, et la désinstallation le restaure.",
+      "de": "Von deiner PS5 wird nichts gelöscht. Alles, was Setup ersetzt, wird gesichert und bei der Deinstallation wiederhergestellt.",
+      "ja": "PS5 から何も削除されません。Setup が置き換えるファイルはバックアップされ、アンインストール時に元に戻されます。",
+      "it": "Non viene eliminato nulla dalla PS5. Tutto ciò che Setup sostituisce viene conservato come backup e ripristinato dalla disinstallazione.",
+      "ko": "PS5의 데이터는 삭제되지 않습니다. Setup이 교체하는 파일은 백업으로 보관되며 제거 시 복원됩니다."
+    },
+    "of": {
+      "es": "de",
+      "pt-BR": "de",
+      "fr": "sur",
+      "de": "von",
+      "ja": "/",
+      "it": "di",
+      "ko": "/"
+    },
+    "of 4": {
+      "es": "de 4",
+      "pt-BR": "de 4",
+      "fr": "sur 4",
+      "de": "von 4",
+      "ja": "/ 4",
+      "it": "di 4",
+      "ko": "/ 4"
+    },
+    "Off": {
+      "es": "Desactivado",
+      "pt-BR": "Desativado",
+      "fr": "Désactivé",
+      "de": "Aus",
+      "ja": "オフ",
+      "it": "Disattivo",
+      "ko": "꺼짐"
+    },
+    "Offer to save passwords": {
+      "es": "Ofrecer guardar contraseñas",
+      "pt-BR": "Oferecer salvar senhas",
+      "fr": "Proposer d’enregistrer les mots de passe",
+      "de": "Speichern von Passwörtern anbieten",
+      "ja": "パスワードの保存を確認",
+      "it": "Proponi di salvare le password",
+      "ko": "비밀번호 저장 제안"
+    },
+    "Omni": {
+      "es": "Omni",
+      "pt-BR": "Omni",
+      "fr": "Omni",
+      "de": "Omni",
+      "ja": "Omni",
+      "it": "Omni",
+      "ko": "Omni"
+    },
+    "Omni · Omnibloom": {
+      "es": "Omni · Omnibloom",
+      "pt-BR": "Omni · Omnibloom",
+      "fr": "Omni · Omnibloom",
+      "de": "Omni · Omnibloom",
+      "ja": "Omni · Omnibloom",
+      "it": "Omni · Omnibloom",
+      "ko": "Omni · Omnibloom"
+    },
+    "Omni's downloads already work for most sites with yt-dlp, which is built in. JDownloader 2 adds file hosts and link containers. We can't include it, so we use the copy on this computer.": {
+      "es": "Las descargas de Omni ya funcionan en la mayoría de los sitios con yt-dlp, que está incluido. JDownloader 2 añade servicios de alojamiento y contenedores de enlaces. No podemos incluirlo, así que usamos la copia de este ordenador.",
+      "pt-BR": "Os downloads do Omni já funcionam na maioria dos sites com o yt-dlp integrado. O JDownloader 2 adiciona serviços de hospedagem e contêineres de links. Não podemos incluí-lo, então usamos a cópia deste computador.",
+      "fr": "Les téléchargements d’Omni fonctionnent déjà sur la plupart des sites grâce à yt-dlp, qui est intégré. JDownloader 2 ajoute des hébergeurs et des conteneurs de liens. Nous ne pouvons pas l’inclure ; nous utilisons donc la copie présente sur cet ordinateur.",
+      "de": "Omnis Downloads funktionieren mit dem integrierten yt-dlp bereits auf den meisten Websites. JDownloader 2 ergänzt Dateihoster und Linkcontainer. Wir können es nicht mitliefern und verwenden deshalb die Kopie auf diesem Computer.",
+      "ja": "Omni には yt-dlp が内蔵されており、多くのサイトからダウンロードできます。JDownloader 2 はファイルホスティングサービスやリンクコンテナーへの対応を追加します。同梱できないため、このコンピューターにあるコピーを使用します。",
+      "it": "I download di Omni funzionano già sulla maggior parte dei siti con yt-dlp integrato. JDownloader 2 aggiunge servizi di hosting e contenitori di link. Non possiamo includerlo, quindi usiamo la copia presente su questo computer.",
+      "ko": "Omni는 내장된 yt-dlp로 대부분의 사이트에서 다운로드할 수 있습니다. JDownloader 2는 파일 호스팅 및 링크 컨테이너 지원을 추가합니다. 함께 배포할 수 없으므로 이 컴퓨터에 있는 사본을 사용합니다."
+    },
+    "Omni's downloads already work for most sites with yt-dlp, which is built in. JDownloader 2 adds file hosts and link containers. We can't include JDownloader 2, so Setup uses the copy on this computer.": {
+      "es": "Las descargas de Omni ya funcionan en la mayoría de los sitios con yt-dlp, que está incluido. JDownloader 2 añade servicios de alojamiento y contenedores de enlaces. No podemos incluir JDownloader 2, así que Setup usa la copia de este ordenador.",
+      "pt-BR": "Os downloads do Omni já funcionam na maioria dos sites com o yt-dlp integrado. O JDownloader 2 adiciona serviços de hospedagem e contêineres de links. Não podemos incluir o JDownloader 2, então o Setup usa a cópia deste computador.",
+      "fr": "Les téléchargements d’Omni fonctionnent déjà sur la plupart des sites grâce à yt-dlp intégré. JDownloader 2 ajoute des hébergeurs et des conteneurs de liens. Nous ne pouvons pas inclure JDownloader 2 ; Setup utilise donc la copie de cet ordinateur.",
+      "de": "Omnis Downloads funktionieren mit dem integrierten yt-dlp bereits auf den meisten Websites. JDownloader 2 ergänzt Dateihoster und Linkcontainer. Wir können JDownloader 2 nicht mitliefern, daher nutzt Setup die Kopie auf diesem Computer.",
+      "ja": "Omni には yt-dlp が内蔵されており、多くのサイトからダウンロードできます。JDownloader 2 はファイルホスティングサービスやリンクコンテナーへの対応を追加します。JDownloader 2 は同梱できないため、Setup はこのコンピューターにあるコピーを使用します。",
+      "it": "I download di Omni funzionano già sulla maggior parte dei siti con yt-dlp integrato. JDownloader 2 aggiunge servizi di hosting e contenitori di link. Non possiamo includere JDownloader 2, quindi Setup usa la copia su questo computer.",
+      "ko": "Omni는 내장된 yt-dlp로 대부분의 사이트에서 다운로드할 수 있습니다. JDownloader 2는 파일 호스팅 및 링크 컨테이너 지원을 추가합니다. JDownloader 2는 함께 배포할 수 없으므로 Setup은 이 컴퓨터의 사본을 사용합니다."
+    },
+    "OMNIBLOOM": {
+      "es": "OMNIBLOOM",
+      "pt-BR": "OMNIBLOOM",
+      "fr": "OMNIBLOOM",
+      "de": "OMNIBLOOM",
+      "ja": "OMNIBLOOM",
+      "it": "OMNIBLOOM",
+      "ko": "OMNIBLOOM"
+    },
+    "OMNIBLOOM / OMNI": {
+      "es": "OMNIBLOOM / OMNI",
+      "pt-BR": "OMNIBLOOM / OMNI",
+      "fr": "OMNIBLOOM / OMNI",
+      "de": "OMNIBLOOM / OMNI",
+      "ja": "OMNIBLOOM / OMNI",
+      "it": "OMNIBLOOM / OMNI",
+      "ko": "OMNIBLOOM / OMNI"
+    },
+    "Omnibloom Setup puts the Omnibloom apps on your PS5 over your home network: Omni, the web browser, and Master Control for other controllers. Pick what you want; you can add, update or remove apps any time.": {
+      "es": "Omnibloom Setup instala las aplicaciones Omnibloom en tu PS5 a través de tu red doméstica: el navegador Omni y Master Control para otros mandos. Elige lo que quieras; puedes añadir, actualizar o quitar aplicaciones cuando quieras.",
+      "pt-BR": "O Omnibloom Setup instala os aplicativos Omnibloom no seu PS5 pela rede doméstica: o navegador Omni e o Master Control para outros controles. Escolha o que quiser; você pode adicionar, atualizar ou remover aplicativos a qualquer momento.",
+      "fr": "Omnibloom Setup installe les applications Omnibloom sur votre PS5 via votre réseau domestique : le navigateur Omni et Master Control pour les autres manettes. Choisissez ce que vous voulez ; vous pourrez ajouter, mettre à jour ou supprimer des applications à tout moment.",
+      "de": "Omnibloom Setup installiert die Omnibloom-Apps über dein Heimnetzwerk auf deiner PS5: den Browser Omni und Master Control für andere Controller. Wähle aus, was du möchtest. Du kannst Apps jederzeit hinzufügen, aktualisieren oder entfernen.",
+      "ja": "Omnibloom Setup はホームネットワーク経由で PS5 に Omnibloom アプリをインストールします。ブラウザーの Omni と、ほかのコントローラーを使うための Master Control があります。必要なものを選んでください。アプリはいつでも追加、更新、削除できます。",
+      "it": "Omnibloom Setup installa le app Omnibloom sulla PS5 tramite la rete domestica: il browser Omni e Master Control per altri controller. Scegli ciò che vuoi; puoi aggiungere, aggiornare o rimuovere app in qualsiasi momento.",
+      "ko": "Omnibloom Setup은 홈 네트워크를 통해 PS5에 웹 브라우저 Omni와 다른 컨트롤러를 위한 Master Control을 설치합니다. 원하는 앱을 선택하세요. 언제든 앱을 추가, 업데이트 또는 제거할 수 있습니다."
+    },
+    "On": {
+      "es": "Activado",
+      "pt-BR": "Ativado",
+      "fr": "Activé",
+      "de": "Ein",
+      "ja": "オン",
+      "it": "Attivo",
+      "ko": "켜짐"
+    },
+    "One suite for browsing, downloads, files and controllers.": {
+      "es": "Una suite para navegar, descargar, gestionar archivos y mandos.",
+      "pt-BR": "Uma suíte para navegar, baixar, acessar arquivos e usar controles.",
+      "fr": "Une suite pour naviguer, télécharger, gérer les fichiers et les manettes.",
+      "de": "Eine Suite für Surfen, Downloads, Dateien und Controller.",
+      "ja": "ウェブ閲覧、ダウンロード、ファイル、コントローラーをまとめたスイート。",
+      "it": "Una suite per navigazione, download, file e controller.",
+      "ko": "웹 탐색, 다운로드, 파일, 컨트롤러를 위한 통합 앱."
+    },
+    "Only logins matching this page’s verified origin appear.": {
+      "es": "Solo aparecen los inicios de sesión que coinciden con el origen verificado de esta página.",
+      "pt-BR": "Somente logins que correspondem à origem verificada desta página aparecem.",
+      "fr": "Seuls les identifiants correspondant à l’origine vérifiée de cette page apparaissent.",
+      "de": "Es erscheinen nur Anmeldedaten, die zum geprüften Ursprung dieser Seite passen.",
+      "ja": "このページの検証済みオリジンに一致するログイン情報だけが表示されます。",
+      "it": "Vengono mostrati solo gli accessi corrispondenti all’origine verificata di questa pagina.",
+      "ko": "이 페이지의 검증된 출처와 일치하는 로그인 정보만 표시됩니다."
+    },
+    "Open": {
+      "es": "Abrir",
+      "pt-BR": "Abrir",
+      "fr": "Ouvrir",
+      "de": "Öffnen",
+      "ja": "開く",
+      "it": "Apri",
+      "ko": "열기"
+    },
+    "Open it": {
+      "es": "Abrir",
+      "pt-BR": "Abrir",
+      "fr": "Ouvrir",
+      "de": "Öffnen",
+      "ja": "開く",
+      "it": "Apri",
+      "ko": "열기"
+    },
+    "Open Omni from your PS5's home screen (the tile is called Omni). It can take up to 15 seconds to appear.": {
+      "es": "Abre Omni desde la pantalla de inicio de tu PS5 (el icono se llama Omni). Puede tardar hasta 15 segundos en aparecer.",
+      "pt-BR": "Abra o Omni pela tela inicial do PS5 (o ícone se chama Omni). Ele pode levar até 15 segundos para aparecer.",
+      "fr": "Ouvrez Omni depuis l’écran d’accueil de votre PS5 (la vignette s’appelle Omni). Elle peut mettre jusqu’à 15 secondes à apparaître.",
+      "de": "Öffne Omni auf dem Startbildschirm deiner PS5 (die Kachel heißt Omni). Es kann bis zu 15 Sekunden dauern, bis sie erscheint.",
+      "ja": "PS5 のホーム画面から Omni を開いてください（タイル名は Omni です）。表示まで最大 15 秒かかる場合があります。",
+      "it": "Apri Omni dalla schermata principale della PS5 (il riquadro si chiama Omni). Potrebbero servire fino a 15 secondi perché appaia.",
+      "ko": "PS5 홈 화면에서 Omni를 여세요(타일 이름은 Omni입니다). 표시되기까지 최대 15초가 걸릴 수 있습니다."
+    },
+    "Open request sent.": {
+      "es": "Solicitud de apertura enviada.",
+      "pt-BR": "Solicitação de abertura enviada.",
+      "fr": "Demande d’ouverture envoyée.",
+      "de": "Anfrage zum Öffnen gesendet.",
+      "ja": "起動要求を送信しました。",
+      "it": "Richiesta di apertura inviata.",
+      "ko": "열기 요청을 보냈습니다."
+    },
+    "Open the installed app to continue.": {
+      "es": "Abre la aplicación instalada para continuar.",
+      "pt-BR": "Abra o aplicativo instalado para continuar.",
+      "fr": "Ouvrez l’application installée pour continuer.",
+      "de": "Öffne die installierte App, um fortzufahren.",
+      "ja": "インストール済みのアプリを開いて続行してください。",
+      "it": "Apri l’app installata per continuare.",
+      "ko": "설치된 앱을 열어 계속하세요."
+    },
+    "Passwords": {
+      "es": "Contraseñas",
+      "pt-BR": "Senhas",
+      "fr": "Mots de passe",
+      "de": "Passwörter",
+      "ja": "パスワード",
+      "it": "Password",
+      "ko": "비밀번호"
+    },
+    "Pick your universe": {
+      "es": "Elige tu universo",
+      "pt-BR": "Escolha seu universo",
+      "fr": "Choisissez votre univers",
+      "de": "Wähle dein Universum",
+      "ja": "ユニバースを選びましょう",
+      "it": "Scegli il tuo universo",
+      "ko": "내 유니버스 선택"
+    },
+    "Pin a site": {
+      "es": "Fijar un sitio",
+      "pt-BR": "Fixar um site",
+      "fr": "Épingler un site",
+      "de": "Website anheften",
+      "ja": "サイトを固定",
+      "it": "Fissa un sito",
+      "ko": "사이트 고정"
+    },
+    "Pin a site to keep it close.": {
+      "es": "Fija un sitio para tenerlo a mano.",
+      "pt-BR": "Fixe um site para mantê-lo por perto.",
+      "fr": "Épinglez un site pour le garder à portée de main.",
+      "de": "Hefte eine Website an, um sie griffbereit zu haben.",
+      "ja": "よく使うサイトを固定しましょう。",
+      "it": "Fissa un sito per averlo a portata di mano.",
+      "ko": "사이트를 고정해 쉽게 찾아보세요."
+    },
+    "Pin site": {
+      "es": "Fijar sitio",
+      "pt-BR": "Fixar site",
+      "fr": "Épingler le site",
+      "de": "Website anheften",
+      "ja": "サイトを固定",
+      "it": "Fissa sito",
+      "ko": "사이트 고정"
+    },
+    "Pinned sites": {
+      "es": "Sitios fijados",
+      "pt-BR": "Sites fixados",
+      "fr": "Sites épinglés",
+      "de": "Angeheftete Websites",
+      "ja": "固定したサイト",
+      "it": "Siti fissati",
+      "ko": "고정된 사이트"
+    },
+    "PlayStation glyphs": {
+      "es": "Símbolos de PlayStation",
+      "pt-BR": "Símbolos do PlayStation",
+      "fr": "Symboles PlayStation",
+      "de": "PlayStation-Symbole",
+      "ja": "PlayStation 表記",
+      "it": "Simboli PlayStation",
+      "ko": "PlayStation 기호"
+    },
+    "Potential birth from possibility": {
+      "es": "El potencial nace de la posibilidad",
+      "pt-BR": "O potencial nasce da possibilidade",
+      "fr": "Le potentiel naît des possibles",
+      "de": "Potenzial entsteht aus Möglichkeiten",
+      "ja": "可能性から生まれる力",
+      "it": "Il potenziale nasce dalla possibilità",
+      "ko": "가능성에서 태어나는 잠재력"
+    },
+    "Preview data only. Saved passwords belong to the console’s secure vault.": {
+      "es": "Solo datos de vista previa. Las contraseñas guardadas pertenecen a la bóveda segura de la consola.",
+      "pt-BR": "Apenas dados de prévia. Senhas salvas pertencem ao cofre seguro do console.",
+      "fr": "Données d’aperçu uniquement. Les mots de passe enregistrés appartiennent au coffre sécurisé de la console.",
+      "de": "Nur Vorschaudaten. Gespeicherte Passwörter gehören in den sicheren Tresor der Konsole.",
+      "ja": "プレビュー用データのみです。保存済みのパスワードは本体の安全な保管庫で管理されます。",
+      "it": "Solo dati di anteprima. Le password salvate appartengono alla cassaforte sicura della console.",
+      "ko": "미리 보기 데이터입니다. 저장된 비밀번호는 콘솔의 안전한 보관함에서 관리합니다."
+    },
+    "Preview only. App launch needs the Omni bridge.": {
+      "es": "Solo vista previa. Iniciar aplicaciones requiere el puente de Omni.",
+      "pt-BR": "Apenas prévia. Iniciar aplicativos requer a ponte do Omni.",
+      "fr": "Aperçu uniquement. Le lancement nécessite le pont Omni.",
+      "de": "Nur Vorschau. Der App-Start benötigt die Omni-Schnittstelle.",
+      "ja": "プレビューのみです。アプリの起動には Omni ブリッジが必要です。",
+      "it": "Solo anteprima. L’avvio richiede il bridge Omni.",
+      "ko": "미리 보기입니다. 앱 실행에는 Omni 브리지가 필요합니다."
+    },
+    "Preview only. Retry needs the original navigation context.": {
+      "es": "Solo vista previa. Reintentar requiere el contexto de navegación original.",
+      "pt-BR": "Apenas prévia. Tentar novamente requer o contexto de navegação original.",
+      "fr": "Aperçu uniquement. Réessayer nécessite le contexte de navigation d’origine.",
+      "de": "Nur Vorschau. Ein erneuter Versuch benötigt den ursprünglichen Navigationskontext.",
+      "ja": "プレビューのみです。再試行には元のナビゲーション情報が必要です。",
+      "it": "Solo anteprima. Il nuovo tentativo richiede il contesto di navigazione originale.",
+      "ko": "미리 보기입니다. 다시 시도하려면 원래 탐색 정보가 필요합니다."
+    },
+    "Preview states": {
+      "es": "Estados de vista previa",
+      "pt-BR": "Estados da prévia",
+      "fr": "États de l’aperçu",
+      "de": "Vorschauzustände",
+      "ja": "プレビューの状態",
+      "it": "Stati di anteprima",
+      "ko": "미리 보기 상태"
+    },
+    "Preview: no password was filled.": {
+      "es": "Vista previa: no se rellenó ninguna contraseña.",
+      "pt-BR": "Prévia: nenhuma senha foi preenchida.",
+      "fr": "Aperçu : aucun mot de passe n’a été rempli.",
+      "de": "Vorschau: Kein Passwort wurde ausgefüllt.",
+      "ja": "プレビュー：パスワードは入力されていません。",
+      "it": "Anteprima: nessuna password compilata.",
+      "ko": "미리 보기: 비밀번호를 입력하지 않았습니다."
+    },
+    "Preview: no password was stored.": {
+      "es": "Vista previa: no se guardó ninguna contraseña.",
+      "pt-BR": "Prévia: nenhuma senha foi salva.",
+      "fr": "Aperçu : aucun mot de passe n’a été enregistré.",
+      "de": "Vorschau: Kein Passwort wurde gespeichert.",
+      "ja": "プレビュー：パスワードは保存されていません。",
+      "it": "Anteprima: nessuna password salvata.",
+      "ko": "미리 보기: 비밀번호를 저장하지 않았습니다."
+    },
+    "Preview: site exclusion selected.": {
+      "es": "Vista previa: exclusión del sitio seleccionada.",
+      "pt-BR": "Prévia: exclusão do site selecionada.",
+      "fr": "Aperçu : exclusion du site sélectionnée.",
+      "de": "Vorschau: Website-Ausnahme ausgewählt.",
+      "ja": "プレビュー：サイトの除外を選択しました。",
+      "it": "Anteprima: esclusione del sito selezionata.",
+      "ko": "미리 보기: 사이트 제외를 선택했습니다."
+    },
+    "Previous apps": {
+      "es": "Aplicaciones anteriores",
+      "pt-BR": "Aplicativos anteriores",
+      "fr": "Applications précédentes",
+      "de": "Vorherige Apps",
+      "ja": "前のアプリ",
+      "it": "App precedenti",
+      "ko": "이전 앱"
+    },
+    "Privacy": {
+      "es": "Privacidad",
+      "pt-BR": "Privacidade",
+      "fr": "Confidentialité",
+      "de": "Datenschutz",
+      "ja": "プライバシー",
+      "it": "Privacy",
+      "ko": "개인정보 보호"
+    },
+    "Protected": {
+      "es": "Protegido",
+      "pt-BR": "Protegido",
+      "fr": "Protégé",
+      "de": "Geschützt",
+      "ja": "保護されています",
+      "it": "Protetto",
+      "ko": "보호됨"
+    },
+    "Protected download": {
+      "es": "Descarga protegida",
+      "pt-BR": "Download protegido",
+      "fr": "Téléchargement protégé",
+      "de": "Geschützter Download",
+      "ja": "保護されたダウンロード",
+      "it": "Download protetto",
+      "ko": "보호된 다운로드"
+    },
+    "Ready to open": {
+      "es": "Listo para abrir",
+      "pt-BR": "Pronto para abrir",
+      "fr": "Prêt à ouvrir",
+      "de": "Bereit zum Öffnen",
+      "ja": "開く準備ができました",
+      "it": "Pronto da aprire",
+      "ko": "열기 준비 완료"
+    },
+    "Recent sites": {
+      "es": "Sitios recientes",
+      "pt-BR": "Sites recentes",
+      "fr": "Sites récents",
+      "de": "Zuletzt besuchte Websites",
+      "ja": "最近のサイト",
+      "it": "Siti recenti",
+      "ko": "최근 사이트"
+    },
+    "Recent sites cleared on this device.": {
+      "es": "Sitios recientes borrados en este dispositivo.",
+      "pt-BR": "Sites recentes apagados neste dispositivo.",
+      "fr": "Sites récents effacés sur cet appareil.",
+      "de": "Zuletzt besuchte Websites auf diesem Gerät gelöscht.",
+      "ja": "このデバイスの最近のサイトを消去しました。",
+      "it": "Siti recenti cancellati su questo dispositivo.",
+      "ko": "이 기기에서 최근 사이트를 지웠습니다."
+    },
+    "Refresh": {
+      "es": "Actualizar",
+      "pt-BR": "Atualizar",
+      "fr": "Actualiser",
+      "de": "Aktualisieren",
+      "ja": "更新",
+      "it": "Aggiorna",
+      "ko": "새로 고침"
+    },
+    "Remove": {
+      "es": "Eliminar",
+      "pt-BR": "Remover",
+      "fr": "Supprimer",
+      "de": "Entfernen",
+      "ja": "削除",
+      "it": "Rimuovi",
+      "ko": "삭제"
+    },
+    "Remove login": {
+      "es": "Eliminar inicio de sesión",
+      "pt-BR": "Remover login",
+      "fr": "Supprimer les identifiants",
+      "de": "Anmeldedaten entfernen",
+      "ja": "ログイン情報を削除",
+      "it": "Rimuovi credenziali",
+      "ko": "로그인 정보 삭제"
+    },
+    "Remove this saved login?": {
+      "es": "¿Eliminar este inicio de sesión guardado?",
+      "pt-BR": "Remover este login salvo?",
+      "fr": "Supprimer ces identifiants enregistrés ?",
+      "de": "Diese gespeicherten Anmeldedaten entfernen?",
+      "ja": "このログイン情報を削除しますか？",
+      "it": "Rimuovere queste credenziali salvate?",
+      "ko": "저장된 로그인 정보를 삭제할까요?"
+    },
+    "Retry": {
+      "es": "Reintentar",
+      "pt-BR": "Tentar novamente",
+      "fr": "Réessayer",
+      "de": "Erneut versuchen",
+      "ja": "再試行",
+      "it": "Riprova",
+      "ko": "다시 시도"
+    },
+    "Running": {
+      "es": "En ejecución",
+      "pt-BR": "Em execução",
+      "fr": "En cours",
+      "de": "Läuft",
+      "ja": "実行中",
+      "it": "In esecuzione",
+      "ko": "실행 중"
+    },
+    "Running JDownloader 2 on the PS5 needs one more piece we're still finishing. You can skip this step; yt-dlp downloads work right away.": {
+      "es": "Ejecutar JDownloader 2 en la PS5 necesita un componente que aún estamos terminando. Puedes saltarte este paso; las descargas con yt-dlp funcionan de inmediato.",
+      "pt-BR": "Executar o JDownloader 2 no PS5 precisa de mais um componente que ainda estamos finalizando. Você pode pular esta etapa; os downloads com yt-dlp já funcionam.",
+      "fr": "L’exécution de JDownloader 2 sur la PS5 nécessite un composant encore en développement. Vous pouvez ignorer cette étape ; les téléchargements avec yt-dlp fonctionnent immédiatement.",
+      "de": "Für JDownloader 2 auf der PS5 fehlt noch eine Komponente, an der wir arbeiten. Du kannst diesen Schritt überspringen; Downloads mit yt-dlp funktionieren sofort.",
+      "ja": "PS5 で JDownloader 2 を動かすには、現在開発中の追加コンポーネントが必要です。この手順はスキップできます。yt-dlp によるダウンロードはすぐに使えます。",
+      "it": "Per eseguire JDownloader 2 sulla PS5 serve un componente che stiamo ancora completando. Puoi saltare questo passaggio; i download con yt-dlp funzionano subito.",
+      "ko": "PS5에서 JDownloader 2를 실행하려면 아직 개발 중인 구성 요소가 필요합니다. 이 단계를 건너뛰어도 yt-dlp 다운로드는 바로 사용할 수 있습니다."
+    },
+    "Save login": {
+      "es": "Guardar inicio de sesión",
+      "pt-BR": "Salvar login",
+      "fr": "Enregistrer les identifiants",
+      "de": "Anmeldedaten speichern",
+      "ja": "ログイン情報を保存",
+      "it": "Salva credenziali",
+      "ko": "로그인 정보 저장"
+    },
+    "Save prompt": {
+      "es": "Solicitud para guardar",
+      "pt-BR": "Solicitação para salvar",
+      "fr": "Invite d’enregistrement",
+      "de": "Speicherabfrage",
+      "ja": "保存の確認",
+      "it": "Richiesta di salvataggio",
+      "ko": "저장 확인"
+    },
+    "Save this login for example.com?": {
+      "es": "¿Guardar este inicio de sesión para example.com?",
+      "pt-BR": "Salvar este login para example.com?",
+      "fr": "Enregistrer ces identifiants pour example.com ?",
+      "de": "Diese Anmeldedaten für example.com speichern?",
+      "ja": "example.com のログイン情報を保存しますか？",
+      "it": "Salvare queste credenziali per example.com?",
+      "ko": "example.com 로그인 정보를 저장할까요?"
+    },
+    "Search": {
+      "es": "Buscar",
+      "pt-BR": "Pesquisar",
+      "fr": "Rechercher",
+      "de": "Suchen",
+      "ja": "検索",
+      "it": "Cerca",
+      "ko": "검색"
+    },
+    "Search or enter an address": {
+      "es": "Busca o introduce una dirección",
+      "pt-BR": "Pesquise ou digite um endereço",
+      "fr": "Recherchez ou saisissez une adresse",
+      "de": "Suchen oder Adresse eingeben",
+      "ja": "検索またはアドレスを入力",
+      "it": "Cerca o inserisci un indirizzo",
+      "ko": "검색어 또는 주소 입력"
+    },
+    "Select": {
+      "es": "Seleccionar",
+      "pt-BR": "Selecionar",
+      "fr": "Sélectionner",
+      "de": "Auswählen",
+      "ja": "選択",
+      "it": "Seleziona",
+      "ko": "선택"
+    },
+    "Service status": {
+      "es": "Estado del servicio",
+      "pt-BR": "Status do serviço",
+      "fr": "État du service",
+      "de": "Dienststatus",
+      "ja": "サービスの状態",
+      "it": "Stato del servizio",
+      "ko": "서비스 상태"
+    },
+    "Settings": {
+      "es": "Ajustes",
+      "pt-BR": "Configurações",
+      "fr": "Paramètres",
+      "de": "Einstellungen",
+      "ja": "設定",
+      "it": "Impostazioni",
+      "ko": "설정"
+    },
+    "Settings are a preview and reset when this page reloads.": {
+      "es": "Los ajustes son una vista previa y se restablecen al recargar esta página.",
+      "pt-BR": "As configurações são uma prévia e são redefinidas ao recarregar esta página.",
+      "fr": "Les paramètres sont un aperçu et se réinitialisent au rechargement de la page.",
+      "de": "Die Einstellungen sind eine Vorschau und werden beim Neuladen zurückgesetzt.",
+      "ja": "設定はプレビュー用で、ページを再読み込みするとリセットされます。",
+      "it": "Le impostazioni sono un’anteprima e si azzerano ricaricando la pagina.",
+      "ko": "설정은 미리 보기이며 페이지를 새로 고치면 초기화됩니다."
+    },
+    "Setup copies your JDownloader 2, adds the PS5 engine (about 70 MB, downloaded once), and runs a short check on the PS5 before switching it on. The check can take a few minutes.": {
+      "es": "Setup copia tu JDownloader 2, añade el motor PS5 (unos 70 MB, descargados una vez) y ejecuta una comprobación en la PS5 antes de activarlo. La comprobación puede tardar unos minutos.",
+      "pt-BR": "O Setup copia seu JDownloader 2, adiciona o mecanismo PS5 (cerca de 70 MB, baixado uma vez) e faz uma verificação no PS5 antes de ativá-lo. A verificação pode levar alguns minutos.",
+      "fr": "Setup copie votre JDownloader 2, ajoute le moteur PS5 (environ 70 Mo, téléchargé une fois), puis effectue une vérification sur la PS5 avant de l’activer. Cela peut prendre quelques minutes.",
+      "de": "Setup kopiert dein JDownloader 2, ergänzt die PS5-Engine (etwa 70 MB, einmaliger Download) und prüft sie vor der Aktivierung auf der PS5. Die Prüfung kann einige Minuten dauern.",
+      "ja": "Setup はお持ちの JDownloader 2 をコピーし、PS5 エンジン（約 70 MB、ダウンロードは初回のみ）を追加して、有効化前に PS5 で動作確認を行います。確認には数分かかる場合があります。",
+      "it": "Setup copia il tuo JDownloader 2, aggiunge il motore PS5 (circa 70 MB, scaricato una volta) ed esegue una verifica sulla PS5 prima di attivarlo. La verifica può richiedere alcuni minuti.",
+      "ko": "Setup은 본인의 JDownloader 2를 복사하고 PS5 엔진(약 70 MB, 한 번 다운로드)을 추가한 후 활성화 전에 PS5에서 확인 작업을 실행합니다. 확인에 몇 분 정도 걸릴 수 있습니다."
+    },
+    "Sites opened here appear on this device.": {
+      "es": "Los sitios abiertos aquí aparecen en este dispositivo.",
+      "pt-BR": "Os sites abertos aqui aparecem neste dispositivo.",
+      "fr": "Les sites ouverts ici apparaissent sur cet appareil.",
+      "de": "Hier geöffnete Websites erscheinen auf diesem Gerät.",
+      "ja": "ここで開いたサイトはこのデバイスに表示されます。",
+      "it": "I siti aperti qui compaiono su questo dispositivo.",
+      "ko": "여기서 연 사이트는 이 기기에 표시됩니다."
+    },
+    "Skip to content": {
+      "es": "Saltar al contenido",
+      "pt-BR": "Pular para o conteúdo",
+      "fr": "Aller au contenu",
+      "de": "Zum Inhalt springen",
+      "ja": "本文へ移動",
+      "it": "Vai al contenuto",
+      "ko": "본문으로 건너뛰기"
+    },
+    "Start": {
+      "es": "Iniciar",
+      "pt-BR": "Iniciar",
+      "fr": "Démarrer",
+      "de": "Starten",
+      "ja": "起動",
+      "it": "Avvia",
+      "ko": "시작"
+    },
+    "Start exploring": {
+      "es": "Empieza a explorar",
+      "pt-BR": "Comece a explorar",
+      "fr": "Commencer à explorer",
+      "de": "Jetzt entdecken",
+      "ja": "探索を始める",
+      "it": "Inizia a esplorare",
+      "ko": "탐색 시작"
+    },
+    "Status": {
+      "es": "Estado",
+      "pt-BR": "Status",
+      "fr": "État",
+      "de": "Status",
+      "ja": "状態",
+      "it": "Stato",
+      "ko": "상태"
+    },
+    "Stopped": {
+      "es": "Detenido",
+      "pt-BR": "Parado",
+      "fr": "Arrêté",
+      "de": "Beendet",
+      "ja": "停止中",
+      "it": "Arrestato",
+      "ko": "중지됨"
+    },
+    "The connection is not secure": {
+      "es": "La conexión no es segura",
+      "pt-BR": "A conexão não é segura",
+      "fr": "La connexion n’est pas sécurisée",
+      "de": "Die Verbindung ist nicht sicher",
+      "ja": "接続は安全ではありません",
+      "it": "La connessione non è sicura",
+      "ko": "연결이 안전하지 않습니다"
+    },
+    "The service uses DRM, so Omnibloom cannot save this media.": {
+      "es": "El servicio utiliza DRM, por lo que Omnibloom no puede guardar este contenido.",
+      "pt-BR": "O serviço usa DRM, então o Omnibloom não pode salvar esta mídia.",
+      "fr": "Le service utilise des DRM ; Omnibloom ne peut donc pas enregistrer ce média.",
+      "de": "Der Dienst verwendet DRM, daher kann Omnibloom diese Medien nicht speichern.",
+      "ja": "このサービスは DRM を使用しているため、Omnibloom はこのメディアを保存できません。",
+      "it": "Il servizio utilizza DRM, quindi Omnibloom non può salvare questo contenuto.",
+      "ko": "이 서비스는 DRM을 사용하므로 Omnibloom에서 이 미디어를 저장할 수 없습니다."
+    },
+    "The site’s certificate could not be verified.": {
+      "es": "No se pudo verificar el certificado del sitio.",
+      "pt-BR": "Não foi possível verificar o certificado do site.",
+      "fr": "Le certificat du site n’a pas pu être vérifié.",
+      "de": "Das Zertifikat der Website konnte nicht geprüft werden.",
+      "ja": "サイトの証明書を検証できませんでした。",
+      "it": "Impossibile verificare il certificato del sito.",
+      "ko": "사이트 인증서를 확인할 수 없습니다."
+    },
+    "This app is not running": {
+      "es": "Esta aplicación no está en ejecución",
+      "pt-BR": "Este aplicativo não está em execução",
+      "fr": "Cette application n’est pas en cours d’exécution",
+      "de": "Diese App läuft nicht",
+      "ja": "このアプリは起動していません",
+      "it": "Questa app non è in esecuzione",
+      "ko": "이 앱이 실행 중이 아닙니다"
+    },
+    "This download is protected": {
+      "es": "Esta descarga está protegida",
+      "pt-BR": "Este download está protegido",
+      "fr": "Ce téléchargement est protégé",
+      "de": "Dieser Download ist geschützt",
+      "ja": "このダウンロードは保護されています",
+      "it": "Questo download è protetto",
+      "ko": "이 다운로드는 보호됩니다"
+    },
+    "This only removes the demo entry.": {
+      "es": "Esto solo elimina la entrada de demostración.",
+      "pt-BR": "Isso remove apenas a entrada de demonstração.",
+      "fr": "Cela supprime uniquement l’entrée de démonstration.",
+      "de": "Dies entfernt nur den Demo-Eintrag.",
+      "ja": "デモの項目だけを削除します。",
+      "it": "Questo rimuove solo la voce dimostrativa.",
+      "ko": "데모 항목만 삭제합니다."
+    },
+    "This page tried to reach a console service that web content cannot access.": {
+      "es": "Esta página intentó acceder a un servicio de la consola que no está disponible para el contenido web.",
+      "pt-BR": "Esta página tentou acessar um serviço do console indisponível para conteúdo da web.",
+      "fr": "Cette page a tenté d’accéder à un service de la console inaccessible au contenu web.",
+      "de": "Diese Seite hat versucht, einen Konsolendienst aufzurufen, auf den Webinhalte nicht zugreifen dürfen.",
+      "ja": "このページは、ウェブコンテンツからアクセスできない本体サービスに接続しようとしました。",
+      "it": "Questa pagina ha tentato di accedere a un servizio della console non accessibile ai contenuti web.",
+      "ko": "이 페이지가 웹 콘텐츠에서 접근할 수 없는 콘솔 서비스에 접근하려 했습니다."
+    },
+    "This preview does not change network settings.": {
+      "es": "Esta vista previa no cambia los ajustes de red.",
+      "pt-BR": "Esta prévia não altera as configurações de rede.",
+      "fr": "Cet aperçu ne modifie pas les paramètres réseau.",
+      "de": "Diese Vorschau ändert keine Netzwerkeinstellungen.",
+      "ja": "このプレビューはネットワーク設定を変更しません。",
+      "it": "Questa anteprima non modifica le impostazioni di rete.",
+      "ko": "이 미리 보기는 네트워크 설정을 변경하지 않습니다."
+    },
+    "This preview saves your choices and recent sites on this device.": {
+      "es": "Esta vista previa guarda tus opciones y sitios recientes en este dispositivo.",
+      "pt-BR": "Esta prévia salva suas escolhas e sites recentes neste dispositivo.",
+      "fr": "Cet aperçu enregistre vos choix et sites récents sur cet appareil.",
+      "de": "Diese Vorschau speichert deine Auswahl und zuletzt besuchte Websites auf diesem Gerät.",
+      "ja": "このプレビューは選択内容と最近のサイトをこのデバイスに保存します。",
+      "it": "Questa anteprima salva le tue scelte e i siti recenti su questo dispositivo.",
+      "ko": "이 미리 보기는 선택 사항과 최근 사이트를 이 기기에 저장합니다."
+    },
+    "This session cannot save sites.": {
+      "es": "Esta sesión no puede guardar sitios.",
+      "pt-BR": "Esta sessão não pode salvar sites.",
+      "fr": "Cette session ne peut pas enregistrer de sites.",
+      "de": "Diese Sitzung kann keine Websites speichern.",
+      "ja": "このセッションではサイトを保存できません。",
+      "it": "Questa sessione non può salvare siti.",
+      "ko": "이 세션에서는 사이트를 저장할 수 없습니다."
+    },
+    "Try again": {
+      "es": "Volver a intentar",
+      "pt-BR": "Tentar novamente",
+      "fr": "Réessayer",
+      "de": "Erneut versuchen",
+      "ja": "再試行",
+      "it": "Riprova",
+      "ko": "다시 시도"
+    },
+    "Universe of the day": {
+      "es": "Universo del día",
+      "pt-BR": "Universo do dia",
+      "fr": "Univers du jour",
+      "de": "Universum des Tages",
+      "ja": "今日のユニバース",
+      "it": "Universo del giorno",
+      "ko": "오늘의 유니버스"
+    },
+    "Universe of the day ·": {
+      "es": "Universo del día ·",
+      "pt-BR": "Universo do dia ·",
+      "fr": "Univers du jour ·",
+      "de": "Universum des Tages ·",
+      "ja": "今日のユニバース ·",
+      "it": "Universo del giorno ·",
+      "ko": "오늘의 유니버스 ·"
+    },
+    "Unknown": {
+      "es": "Desconocido",
+      "pt-BR": "Desconhecido",
+      "fr": "Inconnu",
+      "de": "Unbekannt",
+      "ja": "不明",
+      "it": "Sconosciuto",
+      "ko": "알 수 없음"
+    },
+    "Unverified": {
+      "es": "Sin verificar",
+      "pt-BR": "Não verificado",
+      "fr": "Non vérifié",
+      "de": "Nicht geprüft",
+      "ja": "未検証",
+      "it": "Non verificato",
+      "ko": "미확인"
+    },
+    "Update": {
+      "es": "Actualizar",
+      "pt-BR": "Atualizar",
+      "fr": "Mettre à jour",
+      "de": "Aktualisieren",
+      "ja": "更新",
+      "it": "Aggiorna",
+      "ko": "업데이트"
+    },
+    "Use a saved login on example.com": {
+      "es": "Usar un inicio de sesión guardado en example.com",
+      "pt-BR": "Usar um login salvo em example.com",
+      "fr": "Utiliser des identifiants enregistrés sur example.com",
+      "de": "Gespeicherte Anmeldedaten auf example.com verwenden",
+      "ja": "example.com で保存済みのログイン情報を使用",
+      "it": "Usa credenziali salvate su example.com",
+      "ko": "example.com에서 저장된 로그인 정보 사용"
+    },
+    "Use the D-pad to move, Select to open and Back to return.": {
+      "es": "Usa la cruceta para moverte, Seleccionar para abrir y Atrás para volver.",
+      "pt-BR": "Use o direcional para mover, Selecionar para abrir e Voltar para retornar.",
+      "fr": "Utilisez la croix directionnelle pour vous déplacer, Sélectionner pour ouvrir et Retour pour revenir.",
+      "de": "Nutze das Steuerkreuz zum Bewegen, Auswählen zum Öffnen und Zurück zum Zurückgehen.",
+      "ja": "方向キーで移動、選択で開く、戻るで前の画面に戻ります。",
+      "it": "Usa la croce direzionale per muoverti, Seleziona per aprire e Indietro per tornare.",
+      "ko": "방향 패드로 이동하고, ‘선택’으로 열고, ‘뒤로’로 돌아가세요."
+    },
+    "Use the service’s supported app or official offline option.": {
+      "es": "Usa la aplicación compatible del servicio o su opción oficial sin conexión.",
+      "pt-BR": "Use o aplicativo compatível do serviço ou a opção oficial offline.",
+      "fr": "Utilisez l’application prise en charge ou l’option hors ligne officielle du service.",
+      "de": "Verwende die unterstützte App oder die offizielle Offline-Funktion des Dienstes.",
+      "ja": "サービスが対応するアプリか、公式のオフライン機能を使用してください。",
+      "it": "Usa l’app supportata dal servizio o la sua opzione offline ufficiale.",
+      "ko": "서비스에서 지원하는 앱이나 공식 오프라인 옵션을 사용하세요."
+    },
+    "Vault": {
+      "es": "Bóveda",
+      "pt-BR": "Cofre",
+      "fr": "Coffre-fort",
+      "de": "Tresor",
+      "ja": "保管庫",
+      "it": "Cassaforte",
+      "ko": "보관함"
+    },
+    "Version": {
+      "es": "Versión",
+      "pt-BR": "Versão",
+      "fr": "Version",
+      "de": "Version",
+      "ja": "バージョン",
+      "it": "Versione",
+      "ko": "버전"
+    },
+    "View installed apps": {
+      "es": "Ver aplicaciones instaladas",
+      "pt-BR": "Ver aplicativos instalados",
+      "fr": "Voir les applications installées",
+      "de": "Installierte Apps anzeigen",
+      "ja": "インストール済みアプリを表示",
+      "it": "Visualizza app installate",
+      "ko": "설치된 앱 보기"
+    },
+    "Web pages cannot reach console administration ports; trusted app pages use a narrow allowlist.": {
+      "es": "Las páginas web no pueden acceder a los puertos de administración de la consola; las páginas de aplicaciones de confianza usan una lista de permisos limitada.",
+      "pt-BR": "Páginas da web não podem acessar portas administrativas do console; páginas de aplicativos confiáveis usam uma lista restrita de permissões.",
+      "fr": "Les pages web ne peuvent pas accéder aux ports d’administration de la console ; les pages d’applications de confiance utilisent une liste d’autorisation limitée.",
+      "de": "Webseiten können keine Verwaltungsports der Konsole erreichen; vertrauenswürdige App-Seiten nutzen eine eng begrenzte Freigabeliste.",
+      "ja": "ウェブページから本体の管理ポートにはアクセスできません。信頼できるアプリのページは限定された許可リストを使います。",
+      "it": "Le pagine web non possono accedere alle porte amministrative della console; le pagine delle app attendibili usano un elenco limitato di autorizzazioni.",
+      "ko": "웹페이지는 콘솔 관리 포트에 접근할 수 없습니다. 신뢰할 수 있는 앱 페이지는 제한된 허용 목록을 사용합니다."
+    },
+    "Welcome": {
+      "es": "Bienvenido",
+      "pt-BR": "Boas-vindas",
+      "fr": "Bienvenue",
+      "de": "Willkommen",
+      "ja": "ようこそ",
+      "it": "Benvenuto",
+      "ko": "환영합니다"
+    },
+    "Welcome · Omnibloom": {
+      "es": "Bienvenido · Omnibloom",
+      "pt-BR": "Boas-vindas · Omnibloom",
+      "fr": "Bienvenue · Omnibloom",
+      "de": "Willkommen · Omnibloom",
+      "ja": "ようこそ · Omnibloom",
+      "it": "Benvenuto · Omnibloom",
+      "ko": "환영합니다 · Omnibloom"
+    },
+    "When Omni closes": {
+      "es": "Al cerrar Omni",
+      "pt-BR": "Ao fechar o Omni",
+      "fr": "À la fermeture d’Omni",
+      "de": "Beim Schließen von Omni",
+      "ja": "Omni を終了したとき",
+      "it": "Alla chiusura di Omni",
+      "ko": "Omni 종료 시"
+    },
+    "Where next?": {
+      "es": "¿Adónde vamos?",
+      "pt-BR": "Para onde agora?",
+      "fr": "Où aller ensuite ?",
+      "de": "Wohin als Nächstes?",
+      "ja": "次はどこへ？",
+      "it": "Dove andiamo?",
+      "ko": "다음은 어디로?"
+    },
+    "Worker is busy; retry shortly.": {
+      "es": "El servicio está ocupado; vuelve a intentarlo en breve.",
+      "pt-BR": "O serviço está ocupado; tente novamente em breve.",
+      "fr": "Le service est occupé ; réessayez dans un instant.",
+      "de": "Der Dienst ist beschäftigt; versuche es gleich erneut.",
+      "ja": "サービスがビジー状態です。しばらくしてから再試行してください。",
+      "it": "Il servizio è occupato; riprova tra poco.",
+      "ko": "서비스가 사용 중입니다. 잠시 후 다시 시도하세요."
+    },
+    "Your apps": {
+      "es": "Tus aplicaciones",
+      "pt-BR": "Seus aplicativos",
+      "fr": "Vos applications",
+      "de": "Deine Apps",
+      "ja": "あなたのアプリ",
+      "it": "Le tue app",
+      "ko": "내 앱"
+    },
+    "Your apps, together.": {
+      "es": "Tus aplicaciones, juntas.",
+      "pt-BR": "Seus aplicativos, juntos.",
+      "fr": "Vos applications, ensemble.",
+      "de": "Deine Apps, vereint.",
+      "ja": "アプリをひとつに。",
+      "it": "Le tue app, insieme.",
+      "ko": "앱을 한곳에."
+    },
+    "Your console is protected": {
+      "es": "Tu consola está protegida",
+      "pt-BR": "Seu console está protegido",
+      "fr": "Votre console est protégée",
+      "de": "Deine Konsole ist geschützt",
+      "ja": "本体は保護されています",
+      "it": "La tua console è protetta",
+      "ko": "콘솔이 보호됩니다"
+    },
+    "Your console stays protected": {
+      "es": "Tu consola permanece protegida",
+      "pt-BR": "Seu console permanece protegido",
+      "fr": "Votre console reste protégée",
+      "de": "Deine Konsole bleibt geschützt",
+      "ja": "本体は保護されたままです",
+      "it": "La tua console resta protetta",
+      "ko": "콘솔은 계속 보호됩니다"
+    },
+    "Your universe ·": {
+      "es": "Tu universo ·",
+      "pt-BR": "Seu universo ·",
+      "fr": "Votre univers ·",
+      "de": "Dein Universum ·",
+      "ja": "あなたのユニバース ·",
+      "it": "Il tuo universo ·",
+      "ko": "내 유니버스 ·"
+    }
+  }
+}

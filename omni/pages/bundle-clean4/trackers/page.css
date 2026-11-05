@@ -1,0 +1,2 @@
+.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tile h2{min-height:2rem}.tile p{color:var(--ob-muted);overflow-wrap:anywhere}textarea:focus{outline:4px solid white;outline-offset:5px}.tile .row button{flex:1}#error{color:#ffacab}
+#content>section.tile{display:flex;align-items:center;gap:1rem;margin-top:1rem;flex-wrap:wrap}#content>section.tile h2,#content>section.tile p{margin:0}#content>section.tile button{margin-left:auto}

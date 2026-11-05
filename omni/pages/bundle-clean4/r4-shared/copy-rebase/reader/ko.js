@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("reader","ko",{"copy.d68761cc1eb2":"글자 크기","copy.static.0dce058f47ef":"더 조용히 읽을 수 있는 곳.","copy.static.35045eff549e":"종이","copy.static.3907fa7f8072":"모양","copy.static.590498d318da":"페이지로 돌아가기","copy.static.60acc53f13a5":"어두움","copy.static.8f4fd9eda8f5":"기사 열기","copy.static.d91b5d6c8a77":"로컬 샘플 · Mozilla Readability"});

@@ -1,0 +1,31 @@
+/* GPL-3.0-or-later. Original presentation extension; existing actions unchanged. */
+[data-mq-universe=cosmic] main:has(>#header-anchor){display:grid;grid-template-columns:1fr 24rem 1fr;gap:1.2rem}
+[data-mq-universe=cosmic] #header-anchor{grid-column:1/-1;justify-self:start}
+[data-mq-universe=cosmic] .masthead{grid-column:2;grid-row:2;min-height:25rem;border-radius:50% 50% 1rem 1rem;padding:5rem 1.5rem 2rem;border:.16rem solid #DEC9FF;background-position:60% center;z-index:1}
+[data-mq-universe=cosmic] .masthead h1{font-size:3.3rem}
+[data-mq-universe=cosmic] #content{grid-column:1/-1;grid-row:3}
+[data-mq-universe=cosmic] main:has(.app-grid) #content{grid-row:2}
+[data-mq-universe=cosmic] .app-grid{display:grid;grid-template-columns:1fr 24rem 1fr;grid-template-rows:1fr 1fr;gap:1.2rem;min-height:25rem}
+[data-mq-universe=cosmic] .app-grid button{border-radius:3rem 1rem;min-height:11rem;align-items:center;text-align:center;justify-content:center;background:#281C40}
+[data-mq-universe=cosmic] .app-grid button:nth-child(1){grid-column:1;grid-row:1}
+[data-mq-universe=cosmic] .app-grid button:nth-child(2){grid-column:3;grid-row:1}
+[data-mq-universe=cosmic] .app-grid button:nth-child(3){grid-column:1;grid-row:2;margin-left:2rem}
+[data-mq-universe=cosmic] .app-grid button:nth-child(4){grid-column:3;grid-row:2;margin-right:2rem}
+[data-mq-universe=cosmic] main>#notice,[data-mq-universe=cosmic] main>.preview-note{grid-column:1/-1}
+[data-mq-universe=cosmic] .option-groups{grid-template-columns:1fr 1fr;gap:2rem}
+[data-mq-universe=cosmic] .option-groups section{border:1px solid #AA8FD1;border-radius:3rem;padding:1rem 2rem;background:#211A32}
+[data-mq-universe=cosmic] .mq-status .shell,[data-mq-universe=cosmic] .mq-addons .shell{display:grid;grid-template-columns:22rem 1fr;gap:1.5rem}
+[data-mq-universe=cosmic] .mq-page .topline{grid-column:1/-1}
+[data-mq-universe=cosmic] .mq-status .intro,[data-mq-universe=cosmic] .mq-addons .intro{grid-column:1;grid-row:2 / span 3;min-height:25rem;border-radius:10rem 10rem 1rem 1rem;padding:4rem 1.5rem}
+[data-mq-universe=cosmic] .mq-status .intro h1,[data-mq-universe=cosmic] .mq-addons .intro h1{font-size:2.8rem}
+[data-mq-universe=cosmic] .mq-status .card,[data-mq-universe=cosmic] .mq-status .section,[data-mq-universe=cosmic] .mq-addons .addon-list,[data-mq-universe=cosmic] .mq-addons #mq-addon-more,[data-mq-universe=cosmic] .mq-addons .addon-quick{grid-column:2}
+[data-mq-universe=cosmic] .mq-addons .addon-list{grid-template-columns:1fr}
+[data-mq-universe=cosmic] .mq-addons .addon{border-radius:3rem 1rem;padding:1.7rem}
+[data-mq-universe=cosmic] .mq-passwords main{display:grid;grid-template-columns:20rem 1fr;gap:1.4rem}
+[data-mq-universe=cosmic] .mq-passwords main>p,[data-mq-universe=cosmic] .mq-passwords .ob-breadcrumb,[data-mq-universe=cosmic] .mq-passwords footer{grid-column:1/-1}
+[data-mq-universe=cosmic] .mq-passwords .mq-masthead{grid-column:1;grid-row:3 / span 3;border-radius:10rem 10rem 1rem 1rem;padding:4rem 1.4rem}
+[data-mq-universe=cosmic] .mq-passwords .mq-masthead h1{font-size:2.7rem}
+[data-mq-universe=cosmic] .mq-passwords nav:not(.ob-breadcrumb),[data-mq-universe=cosmic] .mq-passwords #view{grid-column:2}
+[data-mq-universe=cosmic] main:has(>#header-anchor){min-height:0;height:100%;max-height:100%;margin:0 auto;align-content:start;overflow:auto}
+[data-mq-universe=cosmic] body:not(.mq-start) :is(button,select){min-height:2.55rem}
+[data-mq-universe=cosmic] :is(.intro,.mq-masthead)>:is(h1,p){background:#070C12;color:#E6EDF3;width:fit-content;padding:.2rem .4rem;border-radius:.2rem;position:relative;z-index:1}

@@ -1,0 +1,28 @@
+/* GPL-3.0-or-later. Original presentation extension; existing actions unchanged. */
+[data-mq-universe=prism] main:has(>#header-anchor){display:grid;grid-template-columns:1fr 22rem;gap:1.3rem}
+[data-mq-universe=prism] #header-anchor{grid-column:1/-1;justify-self:start}
+[data-mq-universe=prism] .masthead{grid-column:2;grid-row:2;min-height:26rem;border-radius:.4rem 5rem .4rem .4rem;padding:2rem 1.5rem;border-left:.35rem solid #BDE9FF;background-position:60% center}
+[data-mq-universe=prism] .masthead h1{font-size:3rem}
+[data-mq-universe=prism] #content{grid-column:1;grid-row:2}
+[data-mq-universe=prism] .app-grid{grid-template-columns:1fr 1fr;gap:1rem}
+[data-mq-universe=prism] .app-grid button{min-height:12rem;border-radius:.4rem 3rem .4rem .4rem;border-top:.35rem solid #C7A9EF}
+[data-mq-universe=prism] .app-grid button:nth-child(even){border-top-color:#BDE9FF;border-radius:3rem .4rem .4rem .4rem}
+[data-mq-universe=prism] .option-groups{grid-template-columns:1fr 1.4fr 1fr}
+[data-mq-universe=prism] .option-groups section{padding:1rem;background:#19253A;border-radius:.2rem 2rem .2rem .2rem;border-top:.25rem solid #BDE9FF}
+[data-mq-universe=prism] .option-groups section:last-child{grid-column:1/-1;display:grid;grid-template-columns:12rem 1fr 1fr;align-items:center}
+[data-mq-universe=prism] .mq-status .shell,[data-mq-universe=prism] .mq-addons .shell{display:grid;grid-template-columns:1fr 20rem;gap:1.3rem}
+[data-mq-universe=prism] .mq-page .topline{grid-column:1/-1}
+[data-mq-universe=prism] .mq-status .intro,[data-mq-universe=prism] .mq-addons .intro{grid-column:2;grid-row:2 / span 3;min-height:24rem;padding:1.5rem;border-radius:.4rem 4rem .4rem .4rem}
+[data-mq-universe=prism] .mq-status .intro h1,[data-mq-universe=prism] .mq-addons .intro h1{font-size:2.8rem}
+[data-mq-universe=prism] .mq-status .card,[data-mq-universe=prism] .mq-status .section,[data-mq-universe=prism] .mq-addons .addon-list,[data-mq-universe=prism] .mq-addons #mq-addon-more,[data-mq-universe=prism] .mq-addons .addon-quick{grid-column:1}
+[data-mq-universe=prism] .mq-addons .addon-list{grid-template-columns:1fr}
+[data-mq-universe=prism] .mq-addons .addon{border-radius:.3rem 3rem .3rem .3rem}
+[data-mq-universe=prism] .mq-passwords main{display:grid;grid-template-columns:12rem 1fr 19rem;gap:1rem}
+[data-mq-universe=prism] .mq-passwords main>p,[data-mq-universe=prism] .mq-passwords .ob-breadcrumb,[data-mq-universe=prism] .mq-passwords footer{grid-column:1/-1}
+[data-mq-universe=prism] .mq-passwords .mq-masthead{grid-column:3;grid-row:3 / span 3;padding:1.2rem;border-radius:.4rem 4rem .4rem .4rem}
+[data-mq-universe=prism] .mq-passwords .mq-masthead h1{font-size:2.7rem}
+[data-mq-universe=prism] .mq-passwords nav:not(.ob-breadcrumb){grid-column:1;flex-direction:column}
+[data-mq-universe=prism] .mq-passwords #view{grid-column:2}
+[data-mq-universe=prism] main:has(>#header-anchor){min-height:0;height:100%;max-height:100%;margin:0 auto;align-content:start;overflow:auto}
+[data-mq-universe=prism] body:not(.mq-start) :is(button,select){min-height:2.55rem}
+[data-mq-universe=prism] :is(.intro,.mq-masthead)>:is(h1,p){background:#070C12;color:#E6EDF3;width:fit-content;padding:.2rem .4rem;border-radius:.2rem;position:relative;z-index:1}

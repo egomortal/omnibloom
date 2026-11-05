@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","ar",{"copy.static.09d6cda1b645":"قائمة الانتظار قيد التشغيل · مهام محاكاة","copy.static.4190c0c7ec72":"فتح الملف","copy.static.670d8a3ad3e8":"تنزيلاتك","copy.static.7819c5101a22":"إرسال إلى USB","copy.static.dafc444796fc":"إيقاف قائمة الانتظار مؤقتًا","ui.19766ed6ccb2":"إلغاء"});

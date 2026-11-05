@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later; original tide layout. */
+[data-mq-universe=tide] .browser-chrome{background:#12343c;border-bottom:.3rem solid #85d4cd}
+[data-mq-universe=tide] #quick button{border-radius:2rem .3rem;border-color:#8dcac8}
+[data-mq-universe=tide] main:has(>#header-anchor){display:grid;grid-template-columns:1fr 19rem;gap:1rem;max-width:82rem}
+[data-mq-universe=tide] #header-anchor{grid-column:1/-1;justify-self:start}
+[data-mq-universe=tide] .masthead{grid-column:2;grid-row:2/5;min-height:24rem;margin:0;padding:1.4rem;border-radius:6rem 1rem 1rem 1rem;border-bottom:.65rem solid #8fd2cb;background-position:63% center}
+[data-mq-universe=tide] .masthead h1{font-size:3rem;max-width:8ch;line-height:1.1}
+[data-mq-universe=tide] #content,[data-mq-universe=tide] #notice,[data-mq-universe=tide] .preview-note{grid-column:1}
+[data-mq-universe=tide] .app-grid{grid-template-columns:1fr 1fr;gap:1.2rem;padding-top:1rem}
+[data-mq-universe=tide] .app-grid button{min-height:10rem;border-radius:2.5rem .4rem .4rem .4rem;border-bottom:.45rem solid #8dcac8;background:#16383e}
+[data-mq-universe=tide] .app-grid button:nth-child(even){margin-top:2rem;background:#24434b}
+[data-mq-universe=tide] .app-grid button:nth-child(3){margin-left:1.5rem;background:#203c4d}
+[data-mq-universe=tide] .app-grid button:nth-child(4){margin-right:1rem;background:#263e45}
+[data-mq-universe=tide] #options{border-radius:3rem .5rem;background:#102b34;border-color:#9ed8cf}
+[data-mq-universe=tide] #options>header{background-image:var(--mq-universe-art);background-size:cover;border-radius:2rem .3rem}
+[data-mq-universe=tide] .option-groups{grid-template-columns:1.1fr 1fr;gap:1rem 1.5rem;padding:.6rem}
+[data-mq-universe=tide] .option-groups section{padding:1rem;background:#1c3d46;border-bottom:.45rem solid #8dcac8;border-radius:2rem .3rem .3rem .3rem}
+[data-mq-universe=tide] .option-groups section:nth-child(even){margin-top:1.6rem;margin-right:1rem}
+[data-mq-universe=tide] .option-groups section:nth-child(3){margin-left:2rem}
+[data-mq-universe=tide] .option-groups h3{color:#c1eee3}
+[data-mq-universe=tide] .mq-status .shell{display:grid;grid-template-columns:16rem 1fr;gap:1.3rem}
+[data-mq-universe=tide] .mq-page .topline{grid-column:1/-1}
+[data-mq-universe=tide] .mq-status .intro{grid-column:1;grid-row:2/4;min-height:24rem;border-radius:4rem .4rem .4rem .4rem;padding:1.3rem;background:#16343e;border-bottom:.6rem solid #8dcac8}
+[data-mq-universe=tide] .mq-status .intro h1{font-size:2.8rem;line-height:1.1}
+[data-mq-universe=tide] .mq-page .intro h1,[data-mq-universe=tide] .mq-page .intro p,[data-mq-universe=tide] .mq-passwords .mq-masthead h1{background:#16343e;position:relative;width:fit-content;padding:.25rem .4rem}
+[data-mq-universe=tide] .mq-status .card,[data-mq-universe=tide] .mq-status .section{grid-column:2}
+[data-mq-universe=tide] .mq-status .card{border-radius:2rem .3rem .3rem .3rem;border-top:0;border-bottom:.45rem solid #8dcac8}
+[data-mq-universe=tide] .mq-status .section{padding-left:1rem}
+[data-mq-universe=tide] .mq-addons .intro{min-height:8rem;margin-right:10rem;border-radius:3rem .5rem;background:#16343e;border-bottom:.45rem solid #8dcac8;padding:1.2rem 2rem}
+[data-mq-universe=tide] .mq-addons .intro h1{font-size:3rem}
+[data-mq-universe=tide] .mq-addons .addon-list{grid-template-columns:1fr 1fr;gap:1.5rem}
+[data-mq-universe=tide] .mq-addons .addon{border-radius:2rem .3rem .3rem .3rem;border-top:0;border-bottom:.45rem solid #8dcac8}
+[data-mq-universe=tide] .mq-addons .addon:nth-child(even){margin-top:3rem}
+[data-mq-universe=tide] .mq-passwords .mq-masthead{min-height:10rem;margin-right:5rem;border-radius:4rem .4rem;background:#16343e;border-bottom:.6rem solid #8dcac8}
+[data-mq-universe=tide] .mq-passwords nav:not(.ob-breadcrumb){display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-left:3rem}
+[data-mq-universe=tide] .mq-passwords [data-view]{border-radius:2rem .3rem;border-bottom:.25rem solid #8dcac8}
+[data-mq-universe=tide] .mq-passwords #view{padding:1.5rem;margin:1rem 6rem 0 0;background:#17343d;border-radius:2rem .4rem;border-bottom:.45rem solid #8dcac8;min-height:7rem}
+
+[data-mq-universe=tide] .app-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;gap:1rem}[data-mq-universe=tide] .app-grid button{margin:0;min-height:6.5rem;padding:1rem;border-radius:2rem .3rem .3rem .3rem}[data-mq-universe=tide] .app-grid button:first-child,[data-mq-universe=tide] .app-grid button:last-child{grid-column:1/-1;min-height:5.5rem;display:grid;grid-template-columns:3rem 1fr;align-items:center;gap:1.2rem}[data-mq-universe=tide] .app-grid button:first-child{margin-right:2rem}[data-mq-universe=tide] .app-grid button:last-child{margin-left:2rem}[data-mq-universe=tide] .app-grid img{width:2.8rem;height:2.8rem}[data-mq-universe=tide] .app-grid button span{text-align:left}
+[data-mq-universe=tide] .mq-page:not(.mq-start) button,[data-mq-universe=tide] .mq-page:not(.mq-start) .button,[data-mq-universe=tide] .mq-page:not(.mq-start) select{min-height:2.55rem}

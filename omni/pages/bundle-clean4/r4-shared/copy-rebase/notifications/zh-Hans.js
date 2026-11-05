@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","zh-Hans",{"copy.complete.0b78998db7d7":"暂无通知。","copy.static.1a3302e0d2c2":"来自应用的近期消息。","copy.static.788011833a5a":"通知","copy.static.db15e320dc5c":"显示新通知","ui.0e9161011702":"刷新","ui.9499cea73f3b":"OMNIBLOOM"});

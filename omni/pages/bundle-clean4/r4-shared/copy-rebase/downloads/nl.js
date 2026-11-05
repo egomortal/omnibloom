@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","nl",{"copy.static.09d6cda1b645":"Wachtrij actief · gesimuleerde taken","copy.static.4190c0c7ec72":"Bestand openen","copy.static.670d8a3ad3e8":"Jouw downloads","copy.static.7819c5101a22":"Naar USB verzenden","copy.static.dafc444796fc":"Wachtrij pauzeren","ui.19766ed6ccb2":"Annuleren"});

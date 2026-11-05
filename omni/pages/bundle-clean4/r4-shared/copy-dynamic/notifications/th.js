@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","th",{"action.dismiss":"ปิดการแจ้งเตือน","copy.dynamic.2150d8df37e4":"แสดงทั้งหมด","copy.dynamic.6c006b5f27c9":"ปิดไม่ได้ ลองอีกครั้ง","copy.dynamic.a65a13b013fd":"การแจ้งเตือนไม่พร้อมใช้งาน","copy.static.db15e320dc5c":"แสดงรายการใหม่"});

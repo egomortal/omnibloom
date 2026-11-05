@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("tabs","ar",{"action.back":"رجوع","copy.static.50a3f9523122":"إغلاق علامة التبويب","copy.static.736612d4d0a9":"نقل إلى موضع سابق","copy.static.743b9c60cda6":"خيارات علامة التبويب","copy.static.d6e856081ebe":"نقل إلى موضع لاحق","ui.19766ed6ccb2":"إلغاء"});

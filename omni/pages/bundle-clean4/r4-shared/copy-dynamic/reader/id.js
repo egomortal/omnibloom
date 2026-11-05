@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("reader","id",{"copy.dynamic.839a9ca74e81":"Permintaan kembali dibuat dalam pratinjau.","copy.error.413fc4be33df":"Salinan artikel terlalu besar","copy.error.81b14d388e08":"Tidak ditemukan artikel yang dapat dibaca"});

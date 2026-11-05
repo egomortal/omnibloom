@@ -1,0 +1,37 @@
+/* GPL-3.0-or-later. Kinetic: stepped asymmetric tiles; controls themselves stay level. */
+[data-mq-universe=kinetic] .mq-page:not(.mq-start) button,[data-mq-universe=kinetic] .mq-page:not(.mq-start) .button{min-height:2.55rem}
+[data-mq-universe=kinetic] .browser-chrome{background:#17181C;border-bottom:.35rem solid #D7FF35}
+[data-mq-universe=kinetic] #quick{align-items:center;gap:.8rem}
+[data-mq-universe=kinetic] #quick button{border-radius:0;border-bottom:.25rem solid #D7FF35;background:#242837}
+[data-mq-universe=kinetic] #quick button:nth-child(even){border-bottom-color:#FFAB71}
+[data-mq-universe=kinetic] main:has(>#header-anchor){display:grid;grid-template-columns:1.25fr 1fr;gap:1.3rem;align-items:start}
+[data-mq-universe=kinetic] #header-anchor{grid-column:1/-1;justify-self:start}
+[data-mq-universe=kinetic] .masthead{grid-column:1;grid-row:2;min-height:20rem;border-radius:0 4rem 0 0;background-position:70% center;border-left:.6rem solid #D7FF35;margin:0;padding:1.5rem}
+[data-mq-universe=kinetic] .masthead h1{font-size:4rem;max-width:10ch;line-height:.95}
+[data-mq-universe=kinetic] :is(.masthead,.intro,.mq-masthead) :is(h1,p){background:#17181C;color:#F5F5EF;padding:.35rem .6rem;position:relative;z-index:1}
+[data-mq-universe=kinetic] #content{grid-column:2;grid-row:2;margin-top:3rem}
+[data-mq-universe=kinetic] .app-grid{grid-template-columns:1fr 1fr;gap:.9rem}
+[data-mq-universe=kinetic] .app-grid button{min-height:9rem;border-radius:0;border-left:.5rem solid #D7FF35;background:#242837}
+[data-mq-universe=kinetic] .app-grid button:first-child{grid-column:1/-1;min-height:7rem;flex-direction:row;align-items:center;gap:1rem;border-color:#FFAB71}
+[data-mq-universe=kinetic] .app-grid button:last-child{margin-top:2rem;background:#253858}
+[data-mq-universe=kinetic] :is(#notice,.preview-note){grid-column:1/-1}
+[data-mq-universe=kinetic] #options{border-radius:0 3rem 0 0;border-left:.7rem solid #D7FF35;background:#17181C}
+[data-mq-universe=kinetic] #options>header{background:#242837;border-radius:0 2rem 0 0}
+[data-mq-universe=kinetic] .option-groups{grid-template-columns:1.2fr 1fr 1fr;align-items:start}
+[data-mq-universe=kinetic] .option-groups section{padding:1rem;background:#242837;border-left:.35rem solid #D7FF35}
+[data-mq-universe=kinetic] .option-groups section:first-child{grid-row:1/3}
+[data-mq-universe=kinetic] .option-groups section:nth-child(3){margin-top:1.5rem;border-color:#FFAB71}
+[data-mq-universe=kinetic] .option-groups section:last-child{grid-column:2/4;display:grid;grid-template-columns:1fr 1fr}
+[data-mq-universe=kinetic] .option-groups section:last-child h3{grid-column:1/-1}
+[data-mq-universe=kinetic] .mq-status .intro{max-width:72%;min-height:10rem;border-radius:0 4rem 0 0;border-left:.6rem solid #D7FF35;margin-bottom:0}
+[data-mq-universe=kinetic] .mq-status .intro h1{font-size:3.8rem}
+[data-mq-universe=kinetic] .mq-status .card{margin:1.2rem 0 0 5rem;border-radius:0;border-left:.6rem solid #FFAB71;border-top:0}
+[data-mq-universe=kinetic] .mq-status .section{margin-left:5rem}
+[data-mq-universe=kinetic] .mq-addons .intro{width:75%;min-height:10rem;border-radius:0 4rem 0 0;border-left:.6rem solid #D7FF35}
+[data-mq-universe=kinetic] .mq-addons .addon-list{grid-template-columns:1.2fr 1fr;gap:1.5rem;align-items:start;margin-left:3rem}
+[data-mq-universe=kinetic] .mq-addons .addon{border-radius:0;border-left:.5rem solid #D7FF35;background:#242837}
+[data-mq-universe=kinetic] .mq-addons .addon:nth-child(even){margin-top:3rem;border-color:#FFAB71;background:#253858}
+[data-mq-universe=kinetic] .mq-passwords .mq-masthead{max-width:72%;min-height:10rem;border-radius:0 4rem 0 0;border-left:.6rem solid #D7FF35}
+[data-mq-universe=kinetic] .mq-passwords nav:not(.ob-breadcrumb){margin-left:3rem;display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:.8rem}
+[data-mq-universe=kinetic] .mq-passwords [data-view]{border-radius:0;border-bottom:.25rem solid #FFAB71;min-width:0}
+[data-mq-universe=kinetic] .mq-passwords #view{margin-left:6rem;border-left:.6rem solid #D7FF35;padding-left:1rem}

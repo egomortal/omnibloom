@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","ru",{"action.dismiss":"Скрыть","copy.dynamic.2150d8df37e4":"Показать всё","copy.dynamic.6c006b5f27c9":"Не удалось скрыть уведомление. Попробуйте снова.","copy.dynamic.a65a13b013fd":"Уведомления недоступны.","copy.static.db15e320dc5c":"Показать новые"});

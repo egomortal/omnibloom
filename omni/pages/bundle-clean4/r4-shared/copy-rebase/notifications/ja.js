@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("notifications","ja",{"copy.complete.0b78998db7d7":"通知はありません。","copy.static.1a3302e0d2c2":"アプリからの最近のメッセージ。","copy.static.788011833a5a":"通知","copy.static.db15e320dc5c":"新着を表示","ui.0e9161011702":"更新","ui.9499cea73f3b":"OMNIBLOOM"});

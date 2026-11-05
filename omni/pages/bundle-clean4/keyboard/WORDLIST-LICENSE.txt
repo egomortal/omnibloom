@@ -1,0 +1,5 @@
+Original compact word lists created for Omnibloom.
+To the extent copyright or related rights exist, the contributor dedicates this word-list data to the public domain under CC0 1.0 Universal. No third-party corpus was copied.
+https://creativecommons.org/publicdomain/zero/1.0/
+
+This dedication applies only to dictionary-data.js data, not the application code or bundled OFL fonts. Native-language review is required.

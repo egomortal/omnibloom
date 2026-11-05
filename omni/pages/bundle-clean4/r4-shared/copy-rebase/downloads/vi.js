@@ -1,0 +1,1 @@
+window.BloomRebasedCopy.register("downloads","vi",{"copy.static.09d6cda1b645":"Hàng đợi đang chạy · tác vụ mô phỏng","copy.static.4190c0c7ec72":"Mở tệp","copy.static.670d8a3ad3e8":"Nội dung tải xuống của bạn","copy.static.7819c5101a22":"Gửi đến USB","copy.static.dafc444796fc":"Tạm dừng hàng đợi","ui.19766ed6ccb2":"Hủy"});

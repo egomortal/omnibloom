@@ -1,0 +1,1 @@
+window.BloomDynamicCopy.register("notifications","it",{"action.dismiss":"Ignora","copy.dynamic.2150d8df37e4":"Mostra tutto","copy.dynamic.6c006b5f27c9":"Impossibile ignorare la notifica. Riprova.","copy.dynamic.a65a13b013fd":"Notifiche non disponibili.","copy.static.db15e320dc5c":"Mostra nuove"});
