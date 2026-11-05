@@ -8,4 +8,4 @@ We’re here to build something together. Treat people with kindness and respect
 
 Maintainers may remove harmful comments or limit participation to keep this space welcoming.
 
-If something needs private attention, ask a maintainer for a confidential way to talk. Don’t post private incident details in an issue or pull request. A dedicated private contact has not been named yet.
+If something needs private attention, email **egomortalist@gmail.com**. Don’t post private incident details in an issue or pull request.

@@ -18,6 +18,6 @@ Preserve source credits, copyright and license notices. Document the origin, ver
 
 For support, provide `/data/omni/native/crash.log`, `boot.log` from the installed build’s documented log location, and `/data/hub/logs/<app>/` (replace `<app>` with the affected app ID). If a file is absent or its location is unknown, say so; do not create an empty log.
 
-Review and redact copies before attaching them. Never send a full unreviewed console folder. If a report may reveal a security problem, use [SECURITY.md](SECURITY.md). Community participation follows [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). A dedicated confidential reporting contact has not been named yet; ask a maintainer for a private way to talk.
+Review and redact copies before attaching them. Never send a full unreviewed console folder. If a report may reveal a security problem, use [SECURITY.md](SECURITY.md). Community participation follows [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). For conduct concerns, email egomortalist@gmail.com.
 
 Maintainers review and publish accepted changes. A proposed patch, CI result or draft release note is not release approval.
