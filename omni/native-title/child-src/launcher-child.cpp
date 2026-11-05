@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <time.h>
+#include <unistd.h>
 #include <signal.h>
 #include <string.h>
 #include <vector>
@@ -43,9 +46,19 @@ static bool nativeTitleClosing(int parent)
     snprintf(path, sizeof(path), "/data/omni/native/closing-%d", parent);
     return !access(path, F_OK);
 }
+// s2: every time the parent-gone / closing safety net fires it also leaves one durable line (append + fsync) in
+// /data/omni/native/close-events.log, so a PS-button close test can prove the children left on their own.
+static void nativeCloseEvent(int parent, const char* why, const char* kind)
+{
+    char line[200];
+    const int n = snprintf(line, sizeof(line), "%ld child %d (%s): parent title %d %s; leaving\n", (long)time(nullptr), (int)getpid(), kind, parent, why);
+    const int fd = open("/data/omni/native/close-events.log", O_WRONLY | O_CREAT | O_APPEND, 0666);
+    if (fd >= 0) { if (n > 0) (void)!write(fd, line, size_t(n) < sizeof(line) ? size_t(n) : sizeof(line) - 1); fsync(fd); close(fd); }
+}
 [[noreturn]] static void nativeChildLeave(int parent, const char* why)
 {
     omni_launcher_trace("native child: parent title %d %s; leaving (pid %d)\n", parent, why, (int)getpid());
+    nativeCloseEvent(parent, why, "engine");
     _exit(0);
 }
 static void* nativeChildWatch(void* value)
@@ -156,11 +169,12 @@ extern "C" int omni_child_bootstrap(char** argvOut, int maxArgs, int* argcOut)
             t = claimTicket("req-", parent);
             if (!t.empty())
                 break;
+#if defined(OMNI_NATIVE_CHILD)
+            if (i % 25 == 0 && !processAlive(parent)) { nativeCloseEvent(parent, "is gone", "spare"); _exit(0); } // parent gone: nothing will ever ask
+            if (i % 5 == 0 && nativeTitleClosing(parent)) { nativeCloseEvent(parent, "is closing", "spare"); _exit(0); } // the title is closing: never take a request now
+#else
             if (i % 25 == 0 && !processAlive(parent))
                 _exit(0); // parent gone: nothing will ever ask
-#if defined(OMNI_NATIVE_CHILD)
-            if (i % 5 == 0 && nativeTitleClosing(parent))
-                _exit(0); // the title is closing: never take a request now
 #endif
             usleep(20000);
         }

@@ -1,0 +1,36 @@
+--- a/WebCore/platform/network/curl/CurlContext.h
++++ b/WebCore/platform/network/curl/CurlContext.h
+@@ -38,6 +38,7 @@
+ #include <wtf/TZoneMalloc.h>
+ #include <wtf/URL.h>
+ #include <wtf/text/UTF8CStringView.h>
++#include <string>   // OMNI_SEC_PNA_CONNECT_V1
+ 
+ #if OS(WINDOWS)
+ #include <windows.h>
+@@ -270,6 +271,8 @@
+ 
+     void enableConnectionOnly();
+ 
++    void setOmniInitiator(const URL& firstParty);   // OMNI_SEC_PNA_CONNECT_V1: the page that started this request
++
+     void enableAcceptEncoding();
+     void enableAllowedProtocols();
+     void enableAltSvc();
+@@ -334,6 +337,7 @@
+     CURLcode willSetupSslCtx(void* sslCtx);
+ 
+     std::optional<SSL*> sslConnection() const;
++    static curl_socket_t omniOpenSocket(void*, curlsocktype, struct curl_sockaddr*);   // OMNI_SEC_PNA_CONNECT_V1
+ 
+     CURL* m_handle { nullptr };
+     char m_errorBuffer[CURL_ERROR_SIZE] { };
+@@ -346,6 +350,8 @@
+     const std::unique_ptr<CurlSSLVerifier> m_sslVerifier;
+     const std::unique_ptr<TLSConnectionInfo> m_tlsConnectionInfo;
+     mutable std::unique_ptr<CertificateInfo> m_certificateInfo;
++    std::string m_omniTarget;      // OMNI_SEC_PNA_CONNECT_V1: request URL and first-party site, handed to the child's connect()
++    std::string m_omniInitiator;
+ };
+ 
+ } // namespace WebCore

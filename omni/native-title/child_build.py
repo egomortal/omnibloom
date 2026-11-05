@@ -13,12 +13,12 @@ import hashlib, json, os, shutil, subprocess, sys, time
 from pathlib import Path
 HERE = Path(__file__).resolve().parent; OUTS = HERE.parent; ROOT = OUTS.parent
 DL1 = ROOT / 'baseline/DL1'; ENG = Path('/home/builder/s1/engine'); S1LC = Path('/home/builder/s1/link-command.json')
-OUT = HERE / 'child'; OLD, NEW = '/path/to/downloads/', '/path/to/downloads/'
+OUT = HERE / 'child'; OLD, NEW = '/home/builder/Downloads/jailbreak stuff/', '/home/builder/Downloads/ps5 stuff/'
 fix = lambda s: s.replace(OLD, NEW) if isinstance(s, str) else s
 def sha(p):
     h = hashlib.sha256()
     with open(p, 'rb') as f:
-        for b in iter(lambda: f.read(1 << 22), b''): h.update(b)
+        for b in iter(lambda: f.read(1 << 20), b''): h.update(b)
     return h.hexdigest()
 def run(cmd, out=None, **kw):
     r = subprocess.run([str(c) for c in cmd], capture_output=True, text=True, **kw)
@@ -71,7 +71,7 @@ used = {}
 for n in SECNAMES:
     p = SECLIBS / n
     if not p.is_symlink(): used[n] = sha(p)
-rc = {'label': 'omni-native-s1-child', 'base': 's1 in-tree engine (JIT compiled in, gamepad, CVE fixes, PNA; 57 + sec1-shell + sec-job2 shell)', 'jit_strings': [k for k in ('jit: on (baseline', 'jit: off (interpreter)') if k.encode() in open(final, 'rb').read()], 'sec': 'OMNI_SEC_LOCALHOST_V1 connect wrap', 'seclibs': used, 'define': 'OMNI_NATIVE_CHILD=1 (launcher-child.cpp only)',
+rc = {'label': 'omni-native-s3.1b-child', 's31b': 'OMNI_NO_VIEW_TRANSITION_V1 (jit2 build 6)', 's3': 'OMNI_JSC_JIT_V3 + OMNI_NO_ACCEL_CANVAS_V1 safety net', 's31': 'OMNI_SEC_PNA_CONNECT_V1 (audit OS-001) + OMNI_CRASH_V2 (jit2)', 'base': 's1 in-tree engine (JIT compiled in, gamepad, CVE fixes, PNA; 57 + sec1-shell + sec-job2 shell)', 'jit_strings': [k for k in ('jit: on (baseline', 'jit: off (interpreter)') if k.encode() in open(final, 'rb').read()], 'sec': 'OMNI_SEC_LOCALHOST_V1 connect wrap', 'seclibs': used, 'define': 'OMNI_NATIVE_CHILD=1 (launcher-child.cpp only)',
       'archive_sha256': sha(wt / 'libWebKitRequirements.a'), 'unstripped_sha256': sha(unstr), 'engine_sha256': sha(final),
       'engine_bytes': final.stat().st_size,
       'seconds': round(time.time() - t0)}

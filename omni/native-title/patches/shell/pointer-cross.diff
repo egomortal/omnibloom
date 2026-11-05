@@ -1,0 +1,225 @@
+diff -ruN a/engine/entry/OmniBrowser.cpp b/engine/entry/OmniBrowser.cpp
+--- a/engine/entry/OmniBrowser.cpp
++++ b/engine/entry/OmniBrowser.cpp
+@@ -510,6 +510,9 @@
+ #include "OmniFeatures2Decl.h" // OMNI_FEATURES_V2: passwords, file picker, permissions
+ #include "OmniFeatures3Decl.h" // OMNI_FEATURES_V3: star, suggestions, page tools, dark pages, tab memory
+ #include "OmniAddonsDecl.h" // OMNI_ADDONS_V1: add-ons (definitions in OmniAddons.h)
++#include "OmniPointerCross.h" // OMNI_POINTER_CROSS_V1: Cross at the pointer while the pointer leads
++static void omniPtrHover();     // OMNI_POINTER_CROSS_V1 (after OmniFeatures.h): the row under the pointer is highlighted
++static long omniPtrSelSig();    // OMNI_POINTER_CROSS_V1: the open lists' highlights, to see a scroll move one
+ float pointerX = 640, pointerY = 360;
+ int keySelection = 0;
+ uint32_t startTime = 0;
+@@ -1779,7 +1782,8 @@
+ }
+ void scroll(double amount)
+ {
+-    if (omniOverlayScroll(amount)) return; // OMNI_DIALOGS_V1
++    const long omniPtrSig = omniPtrSelSig(); // OMNI_POINTER_CROSS_V1
++    if (omniOverlayScroll(amount)) { if (omniPtrSelSig() != omniPtrSig) omniPtrCrossListNav(); return; } // OMNI_DIALOGS_V1; OMNI_POINTER_CROSS_V1
+     if (settingsOpen || pageFullscreen) return;
+     if (omniSavedScroll(amount)) return; // OMNI_DOWNLOADS_NAV_V1: an open Media downloads dialog scrolls first
+     omniPageWheel(amount);
+@@ -4866,7 +4870,7 @@
+         omniMenuSel = item;
+         if (item == omniMenuZoom && x >= omniMenuX() + omniMenuW - 210) omniZoomStep(x >= omniMenuX() + omniMenuW - 70 ? 1 : x < omniMenuX() + omniMenuW - 160 ? -1 : 0);
+         else omniMenuActivate(item);
+-    } else if (x < omniMenuX() || x >= omniMenuX() + omniMenuW || y < omniMenuY() || y >= listY + omniMenuCount * omniMenuRowH + 18) omniMenuOpenFlag = false;
++    } else if (!omniPtrCross.inCross && (x < omniMenuX() || x >= omniMenuX() + omniMenuW || y < omniMenuY() || y >= listY + omniMenuCount * omniMenuRowH + 18)) omniMenuOpenFlag = false; // OMNI_POINTER_CROSS_V1: not on Cross
+     return true;
+ }
+ static void omniMenuDraw()
+@@ -5843,6 +5847,14 @@
+ 
+ void button(int button)
+ {
++    // OMNI_POINTER_CROSS_V1: while the pointer leads, Cross is a click at the pointer (before the built-in pages, the Master
++    // Control page, Media downloads, overlays and panels, which act on their D-pad highlight). The D-pad hands the lead back.
++    if (omniPtrCrossRoute(button, omniPtrAlpha() > 0)) {
++        fprintf(stderr, "OMNI_POINTER_CROSS_V1: Cross at the pointer %d,%d\n", int(pointerX), int(pointerY));
++        { OmniPtrCrossScope scope; click(); }
++        omniShellDirty = true;
++        return;
++    }
+     if (omniSavedButton(button)) { omniShellDirty = true; return; }
+     if (omniPagesButton(button)) { omniShellDirty = true; return; } // s3 OMNI_PAGES_V1: built-in pages first
+     if (omniMcButton(button)) { omniShellDirty = true; return; } // OMNI_PAD_CONTROLLER_V1: Master Control page first
+@@ -6250,6 +6262,46 @@
+ #include "OmniFeatures2.h" // OMNI_FEATURES_V2
+ #include "OmniFeatures3.h" // OMNI_FEATURES_V3
+ #include "OmniAddons.h" // OMNI_ADDONS_V1
++// OMNI_POINTER_CROSS_V1: the pointer moved: the item under it becomes the highlight, so what is shown is what Cross runs.
++// Only on pointer motion: a still pointer leaves the D-pad highlight alone.
++static void omniPtrHover()
++{
++    const int x = int(pointerX), y = int(pointerY);
++    bool changed = false;
++    if (OmniModal* m = omniModalCurrent()) {
++        if (!(editing && omniKbTarget)) {
++            const int hit = omniModalHit(*m, x, y);
++            if (hit >= 0 && hit != m->focus) { m->focus = hit; changed = true; }
++        }
++    } else {
++        changed |= omniFxHover(x, y);
++        if (omniHistoryOpenFlag) {
++            const int row = omniHistoryRowAt(x, y);
++            if (row >= 0 && row != omniHistorySel) { omniHistorySel = row; changed = true; }
++        }
++        if (omniMenuOpenFlag) {
++            const int listY = omniMenuY() + 96;
++            if (x >= omniMenuX() && x < omniMenuX() + omniMenuW && y >= listY && y < listY + omniMenuCount * omniMenuRowH) {
++                const int item = (y - listY) / omniMenuRowH;
++                if (item != omniMenuSel) { omniMenuSel = item; changed = true; }
++            }
++        }
++        if (settingsOpen) {
++            const int row = omniPtrSettingsRowAt(x, y);
++            if (row >= 0 && row != omniSettingsRow) { omniSettingsRow = row; changed = true; }
++        }
++    }
++    if (changed) omniShellDirty = true;
++}
++static long omniPtrSelSig()
++{
++    long s = 0;
++    if (OmniModal* m = omniModalCurrent()) s = s * 131 + m->focus + 7;
++    if (!omniFxStack.empty()) s = s * 131 + omniFxStack.back().sel + 11;
++    if (omniHistoryOpenFlag) s = s * 131 + omniHistorySel + 13;
++    if (omniMenuOpenFlag) s = s * 131 + omniMenuSel + 17;
++    return s;
++}
+ #include "OmniPages.h" // s3 OMNI_PAGES_V1: omni://pages built-in pages
+ 
+ // OMNI_YT_TIMELINE_V1 ---------------------------------------------------------------------------
+@@ -6780,7 +6832,7 @@
+             if (event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT)
+                 omniSavedAxis(event.caxis);
+         } else if (event.type == SDL_CONTROLLERBUTTONDOWN || event.type == SDL_CONTROLLERBUTTONUP) { if (!omniFxButtonEvent(event.cbutton)) omniShoulderButton(event.cbutton); } // OMNI_FEATURES_V1: hold Cross
+-        else if (event.type == SDL_MOUSEMOTION) { pointerX = event.motion.x * float(width) / screen->w; pointerY = event.motion.y * float(height) / screen->h; mouse(kWKEventMouseMove); }
++        else if (event.type == SDL_MOUSEMOTION) { pointerX = event.motion.x * float(width) / screen->w; pointerY = event.motion.y * float(height) / screen->h; mouse(kWKEventMouseMove); omniPtrCrossMoved(); omniPtrHover(); } // OMNI_POINTER_CROSS_V1
+         else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) click();
+         else if (event.type == SDL_MOUSEWHEEL) scroll(event.wheel.y * 80);
+         else if (event.type == SDL_TEXTINPUT && active()) {
+@@ -6866,6 +6918,7 @@
+             omniDrawReasons = omniReasonsBefore | added;
+             omniShellDirty.on = omniDirtyBefore || added;
+         }
++        if (pointerX != omniPx || pointerY != omniPy) { omniPtrCrossMoved(); omniPtrHover(); } // OMNI_POINTER_CROSS_V1: the stick moved the pointer
+         omniDirtyPhase = omniDrInput;
+     }
+     OmniMedia::Hw::holePunchShellPhase(1); // OMNI_HOLEPUNCH_V7_STALLTRACE: input done
+diff -ruN a/engine/entry/OmniFeaturesPanel.h b/engine/entry/OmniFeaturesPanel.h
+--- a/engine/entry/OmniFeaturesPanel.h
++++ b/engine/entry/OmniFeaturesPanel.h
+@@ -185,20 +185,46 @@
+     }
+     return true;   // a panel takes every button while it is open
+ }
+-static bool omniFxClick(int x, int y)
++// OMNI_POINTER_CROSS_V1: the row under (x, y), shared by the click, Cross at the pointer and the hover highlight.
++// omniFxOutside: off the panel; omniFxNoRow: on the panel but on no row (title, padding, past the last row).
++// visibleOnly: the bottom padding of a list does not reach the first row below the visible ones.
++enum { omniFxNoRow = -1, omniFxOutside = -2 };
++static int omniFxRowAt(const OmniFxPanel& p, const OmniFxGeom& g, int x, int y, bool visibleOnly)
+ {
+-    if (omniFxStack.empty()) return false;
+-    OmniFxPanel& p = omniFxStack.back();
+-    const OmniFxGeom g = omniFxGeometry(p);
+-    if (x < g.x || x >= g.x + g.w || y < g.y || y >= g.y + g.h) { omniFxPop(); return true; }
+-    if (y < g.listY) return true;
++    if (x < g.x || x >= g.x + g.w || y < g.y || y >= g.y + g.h) return omniFxOutside;
++    if (y < g.listY) return omniFxNoRow;
+     int row = -1;
+     if (p.cols > 1) {
+         const int gap = 8, tw = (g.w - 24 - (p.cols - 1) * gap) / p.cols;
+         const int c = (x - g.x - 12) / (tw + gap), r = (y - g.listY) / p.rowH;
+         if (c >= 0 && c < p.cols) row = r * p.cols + c;
+-    } else row = p.scroll + (y - g.listY) / p.rowH;
+-    if (row < 0 || row >= int(p.rows.size())) return true;
++    } else {
++        const int k = (y - g.listY) / p.rowH;
++        if (visibleOnly && k >= g.vis) return omniFxNoRow;
++        row = p.scroll + k;
++    }
++    if (row < 0 || row >= int(p.rows.size())) return omniFxNoRow;
++    return row;
++}
++// OMNI_POINTER_CROSS_V1: the pointer moved: the row under it becomes the highlight (true: changed).
++static bool omniFxHover(int x, int y)
++{
++    if (!omniFxPanelOpen()) return false;
++    OmniFxPanel& p = omniFxStack.back();
++    const int row = omniFxRowAt(p, omniFxGeometry(p), x, y, true);
++    if (row < 0 || row == p.sel) return false;
++    p.sel = row;
++    return true;
++}
++static bool omniFxClick(int x, int y)
++{
++    if (omniFxStack.empty()) return false;
++    OmniFxPanel& p = omniFxStack.back();
++    const OmniFxGeom g = omniFxGeometry(p);
++    const int row = omniFxRowAt(p, g, x, y, omniPtrCross.inCross);
++    // OMNI_POINTER_CROSS_V1: a mouse click off the panel closes it as before; Cross there does nothing (Circle closes).
++    if (row == omniFxOutside) { if (!omniPtrCross.inCross) omniFxPop(); return true; }
++    if (row < 0) return true;
+     p.sel = row;
+     if (p.rows[row].stepper && p.cols == 1) {   // the arrows of a stepper row change its value
+         if (x >= g.x + g.w - 70) { omniFxAct(row, SDL_CONTROLLER_BUTTON_DPAD_RIGHT); return true; }
+diff -ruN a/engine/entry/OmniPointerCross.h b/engine/entry/OmniPointerCross.h
+--- a/engine/entry/OmniPointerCross.h
++++ b/engine/entry/OmniPointerCross.h
+@@ -0,0 +1,52 @@
++// OMNI_POINTER_CROSS_V1: Cross acts where the pointer is while the pointer is the active input.
++// Before: Cross went to button(A), whose handlers (built-in pages, the Master Control page, overlays, the Options/fx
++// panels) all acted on their own D-pad highlight, so with the stick-driven pointer over "Apps" in Options, Cross ran the
++// highlighted (disabled) "Back" tile, and on the Master Control page the page's own Cross handler took it before any
++// click could reach the element under the pointer. Only a real SDL mouse button reached click(), the pointer hit-test.
++// Now: the pointer leads after the stick or a mouse moves it and the D-pad hands the lead back to the highlight
++// (also a list scrolled by the right stick, which moves the highlight). While the pointer leads and is visible, Cross
++// runs click() at the pointer, exactly as a mouse click, except that Cross on no item of an open panel does nothing
++// (a mouse click there closes the panel; Circle still does). Moving the pointer over a row highlights it.
++// Pure state and decisions only: unit-tested on the host (hosttest/pointer_cross_test.cpp).
++#pragma once
++
++struct OmniPtrCrossState {
++    bool active = false;    // the pointer leads (stick or mouse moved it since the last D-pad press)
++    bool inCross = false;   // a Cross press is running as a pointer click right now
++    unsigned crossClicks = 0, dpadHandBacks = 0;
++};
++static OmniPtrCrossState omniPtrCross;
++
++static inline bool omniPtrCrossIsDpad(int b)
++{
++    return b == SDL_CONTROLLER_BUTTON_DPAD_UP || b == SDL_CONTROLLER_BUTTON_DPAD_DOWN
++        || b == SDL_CONTROLLER_BUTTON_DPAD_LEFT || b == SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
++}
++// The stick or a mouse moved the pointer.
++static inline void omniPtrCrossMoved() { omniPtrCross.active = true; }
++// The highlight moved by list navigation (D-pad, right stick in a list): Cross follows the highlight again.
++static inline void omniPtrCrossListNav() { if (omniPtrCross.active) ++omniPtrCross.dpadHandBacks; omniPtrCross.active = false; }
++// First thing in button(): the D-pad hands the lead back; true when this button is a Cross to run as a pointer click.
++static inline bool omniPtrCrossRoute(int b, bool pointerVisible)
++{
++    if (omniPtrCrossIsDpad(b)) { omniPtrCrossListNav(); return false; }
++    return b == SDL_CONTROLLER_BUTTON_A && omniPtrCross.active && pointerVisible;
++}
++// Marks the click() that a Cross runs (panels then ignore a press off their items instead of closing).
++struct OmniPtrCrossScope {
++    OmniPtrCrossScope() { omniPtrCross.inCross = true; ++omniPtrCross.crossClicks; }
++    ~OmniPtrCrossScope() { omniPtrCross.inCross = false; }
++    OmniPtrCrossScope(const OmniPtrCrossScope&) = delete;
++    OmniPtrCrossScope& operator=(const OmniPtrCrossScope&) = delete;
++};
++// Browser settings panel (settingsOpen): the row a point is on, -1 none (the same bands as omniSettingsClick).
++static inline int omniPtrSettingsRowAt(int x, int y)
++{
++    if (x < 332 || x >= 948) return -1;
++    if (y >= 232 && y < 316) return 0;
++    if (y >= 360 && y < 412) return 1;
++    if (y >= 426 && y < 496) return 2;
++    if (y >= 534 && y < 574) return 3;
++    if (y >= 588 && y < 632) return 4;
++    return -1;
++}

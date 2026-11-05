@@ -1,0 +1,1681 @@
+--- a/entry/OmniBlocker.cpp
++++ b/entry/OmniBlocker.cpp
+@@ -38,6 +38,18 @@
+ #endif
+ #include <expected>
+ #include <memory>
++// s3 OMNI_PAGES_V1: Omni's built-in pages (omni://pages/...) served from the title package by a URL scheme handler,
++// plus the trusted page bridge (window.omnibloomHost) for those documents only.
++#include "APIFrameInfo.h"
++#include "APIPageConfiguration.h"
++#include "WebFrameProxy.h"
++#include "WebURLSchemeHandler.h"
++#include "WebURLSchemeTask.h"
++#include <WebCore/HTTPHeaderNames.h>
++#include <WebCore/ResourceError.h>
++#include <WebCore/ResourceResponse.h>
++#include <WebCore/SharedBuffer.h>
++#include <fstream>
+ 
+ // Defined by engine/scripts/patch-user-script-world.py (named isolated world).
+ extern "C" WKUserScriptRef WKUserScriptCreateWithSourceInWorldOmni(WKStringRef source, _WKUserScriptInjectionTime, bool forMainFrameOnly, WKStringRef worldName);
+@@ -68,6 +80,7 @@
+     if (privateController) WKUserContentControllerAddUserContentFilter(privateController.get(), f);
+ }
+ void addonsReaddScripts();   // OMNI_ADDONS_V1: add-on scripts survive RemoveAllUserScripts (defined below)
++void pagesReaddBridge();     // s3 OMNI_PAGES_V1: the built-in pages bridge survives it too (defined below)
+ WKRetainPtr<WKUserContentExtensionStoreRef> store;
+ WKRetainPtr<WKUserContentFilterRef> filter;
+ bool enabled = false;
+@@ -367,6 +380,7 @@
+     ucRemoveAllScripts();   // OMNI_ADDONS_V1: both controllers
+     for (auto& script : shellScripts) ucAddScript(script.get());
+     addonsReaddScripts();   // OMNI_ADDONS_V1
++    pagesReaddBridge();     // s3 OMNI_PAGES_V1
+     contentActive = false;
+     siteActive = false;  // OMNI_UBO_SITE_V1: per-site scripts went with RemoveAllUserScripts
+     siteHosts.clear();
+@@ -700,3 +714,168 @@
+             completion(ok);
+         });
+ }
++
++// ---- s3 OMNI_PAGES_V1: omni://pages/<path> ------------------------------------------------------------------------
++// Files come from one read-only root (the title's /app0/pages, or the developer override the shell picks). The shell's
++// allow function decides every load: a built-in page may load its own files and other built-in pages; a main-frame load
++// from anything else is allowed only for an address Omni itself opened in that tab. Web content can't frame or fetch
++// these pages. Every response carries ENGINE-CONTRACT §1's Content-Security-Policy.
++namespace {
++std::string pagesRoot;
++OmniPagesAllowFn pagesAllow = nullptr;
++OmniPagesMessageFn pagesMessage = nullptr;
++RefPtr<API::UserScript> pagesBridge;
++bool pagesHandlerAdded = false;
++const char* const pagesCSP = "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; worker-src 'self'; "
++    "connect-src 'self'; media-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'; object-src 'none'";
++std::string pagesStd(const WTF::String& s)
++{
++    auto u = s.utf8();
++    return std::string(reinterpret_cast<const char*>(u.data()), u.length());   // CString::data(): const char8_t*
++}
++const char* pagesMime(const std::string& path)
++{
++    const size_t dot = path.rfind('.');
++    const std::string ext = dot == std::string::npos ? std::string() : path.substr(dot + 1);
++    static const std::pair<const char*, const char*> table[] = {
++        { "html", "text/html" }, { "htm", "text/html" }, { "js", "text/javascript" }, { "mjs", "text/javascript" }, { "css", "text/css" },
++        { "json", "application/json" }, { "svg", "image/svg+xml" }, { "png", "image/png" }, { "jpg", "image/jpeg" }, { "jpeg", "image/jpeg" },
++        { "webp", "image/webp" }, { "gif", "image/gif" }, { "ico", "image/x-icon" }, { "woff2", "font/woff2" }, { "woff", "font/woff" },
++        { "ttf", "font/ttf" }, { "otf", "font/otf" }, { "txt", "text/plain" }, { "md", "text/plain" }, { "vtt", "text/vtt" }, { "srt", "text/plain" },
++        { "ogg", "audio/ogg" }, { "mp3", "audio/mpeg" }, { "wav", "audio/wav" }, { "mp4", "video/mp4" }, { "webm", "video/webm" },
++        { "pdf", "application/pdf" }, { "wasm", "application/wasm" }, { "map", "application/json" },
++    };
++    for (auto& e : table) if (ext == e.first) return e.second;
++    return "application/octet-stream";
++}
++bool pagesTextMime(const char* mime)
++{
++    const std::string m = mime;
++    return m.rfind("text/", 0) == 0 || m == "application/json" || m == "image/svg+xml";
++}
++// "omni://pages/a/b.html?x#y" -> "a/b.html" ("" = refused). No "..", no backslashes, no NUL, no hidden files; a
++// directory (empty or trailing "/") means its index.html.
++std::string pagesRelPath(const std::string& url)
++{
++    static const std::string base = "omni://pages/";
++    if (url.compare(0, base.size(), base)) return std::string();
++    std::string path = url.substr(base.size());
++    path = path.substr(0, path.find_first_of("?#"));
++    std::string decoded;
++    for (size_t i = 0; i < path.size(); ++i) {
++        if (path[i] == '%' && i + 2 < path.size() && isxdigit((unsigned char)path[i + 1]) && isxdigit((unsigned char)path[i + 2])) {
++            decoded += char(strtol(path.substr(i + 1, 2).c_str(), nullptr, 16)); i += 2;
++        } else decoded += path[i];
++    }
++    if (decoded.empty() || decoded.back() == '/') decoded += "index.html";
++    if (decoded.size() > 512 || decoded.find('\\') != std::string::npos || decoded.find('\0') != std::string::npos || decoded[0] == '/') return std::string();
++    size_t start = 0;
++    while (start <= decoded.size()) {
++        const size_t end = decoded.find('/', start);
++        const std::string seg = decoded.substr(start, end == std::string::npos ? std::string::npos : end - start);
++        if (seg.empty() || seg == "." || seg == ".." || seg[0] == '.') return std::string();
++        if (end == std::string::npos) break;
++        start = end + 1;
++    }
++    return decoded;
++}
++class PagesSchemeHandler final : public WebKit::WebURLSchemeHandler {
++public:
++    static Ref<PagesSchemeHandler> create() { return adoptRef(*new PagesSchemeHandler); }
++private:
++    PagesSchemeHandler() = default;
++    void platformStartTask(WebKit::WebPageProxy& page, WebKit::WebURLSchemeTask& task) final
++    {
++        const WTF::URL wurl = task.request().url();
++        const std::string url = pagesStd(wurl.string());
++        auto& frame = task.frameInfo();
++        const auto& origin = frame.securityOrigin();
++        const std::string frameOrigin = pagesStd(origin.protocol()) + "://" + pagesStd(origin.host());
++        auto fail = [&](int code, const char* why) {
++            fprintf(stderr, "pages: refused %s (%s)\n", url.substr(0, 160).c_str(), why);
++            task.didComplete(WebCore::ResourceError(WTF::String::fromLatin1("OmniPages"), code, wurl, WTF::String::fromLatin1(why)));
++        };
++        if (!pagesAllow || !pagesAllow(WebKit::toAPI(&page), url, frame.isMainFrame(), frameOrigin)) { fail(403, "not allowed"); return; }
++        const std::string rel = pagesRelPath(url);
++        if (rel.empty() || pagesRoot.empty()) { fail(400, "bad path"); return; }
++        const std::string file = pagesRoot + "/" + rel;
++        struct stat st {};
++        if (stat(file.c_str(), &st) || !S_ISREG(st.st_mode) || st.st_size > (24 << 20)) { fail(404, "not found"); return; }
++        std::ifstream in(file, std::ios::binary);
++        std::vector<uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
++        if (!in.good() && !in.eof()) { fail(500, "read failed"); return; }
++        const char* mime = pagesMime(rel);
++        WebCore::ResourceResponse response { WTF::URL { wurl }, WTF::String::fromLatin1(mime), static_cast<long long>(data.size()),
++            pagesTextMime(mime) ? WTF::String::fromLatin1("utf-8") : WTF::String() };
++        response.setHTTPStatusCode(200);
++        response.setHTTPHeaderField(WebCore::HTTPHeaderName::ContentSecurityPolicy, WTF::String::fromLatin1(pagesCSP));
++        response.setHTTPHeaderField(WTF::String::fromLatin1("X-Content-Type-Options"), WTF::String::fromLatin1("nosniff"));
++        response.setHTTPHeaderField(WTF::String::fromLatin1("Cache-Control"), WTF::String::fromLatin1("no-cache"));
++        task.didReceiveResponse(WTF::move(response));
++        task.didReceiveData(WebCore::SharedBuffer::create(std::span<const uint8_t>(data.data(), data.size())));
++        task.didComplete(WebCore::ResourceError());
++    }
++    void platformStopTask(WebKit::WebPageProxy&, WebKit::WebURLSchemeTask&) final { }   // every task completes synchronously
++};
++// webkit.messageHandlers.omnibloomHost: it exists in the page world of every document, so each message is checked here:
++// only the main frame of a document whose origin is omni://pages gets an answer.
++class PagesMessageClient final : public WebKit::WebScriptMessageHandler::Client {
++    void didPostMessage(WebKit::WebPageProxy& page, WebKit::FrameInfoData&& info, API::ContentWorld&, WebKit::JavaScriptEvaluationResult&& result,
++        WTF::CompletionHandler<void(std::expected<WebKit::JavaScriptEvaluationResult, WTF::String>&&)>&& completion) override
++    {
++        std::string reply = "{\"ok\":false,\"code\":\"DENIED\"}";
++        auto* main = page.mainFrame();
++        const bool trusted = pagesStd(info.securityOrigin.protocol()) == "omni" && pagesStd(info.securityOrigin.host()) == "pages"
++            && main && main->frameID() == info.frameID && pagesStd(info.request.url().string()).rfind("omni://pages/", 0) == 0;
++        if (trusted && pagesMessage) {
++            const std::string body = pagesStd(result.toString());
++            reply = body.size() > (64u << 10) ? std::string("{\"ok\":false,\"code\":\"INVALID_VALUE\"}") : pagesMessage(WebKit::toAPI(&page), body);
++        } else if (!trusted) fprintf(stderr, "pages: bridge message refused from %s\n", pagesStd(info.securityOrigin.toString()).substr(0, 80).c_str());
++        Ref<API::String> text = API::String::create(addonString(reply));
++        if (auto value = WebKit::JavaScriptEvaluationResult::extract(text.ptr())) completion(WTF::move(*value));
++        else completion(std::unexpected<WTF::String>(WTF::String()));
++    }
++};
++void pagesReaddBridge()
++{
++    if (!pagesBridge) return;
++    addonAddTo(controller.get(), *pagesBridge, false);
++    if (privateController) addonAddTo(privateController.get(), *pagesBridge, false);
++}
++}
++void omniPagesSetup(const std::string& root, OmniPagesAllowFn allow, OmniPagesMessageFn message)
++{
++    pagesRoot = root; pagesAllow = allow; pagesMessage = message;
++    if (!controller || pagesHandlerAdded) return;
++    for (WKUserContentControllerRef target : { controller.get(), privateController.get() }) {
++        if (!target) continue;
++        auto handler = WebKit::WebScriptMessageHandler::create(std::make_unique<PagesMessageClient>(), WTF::String::fromLatin1("omnibloomHost"),
++            API::ContentWorld::pageContentWorldSingleton());
++        WebKit::toImpl(target)->addUserScriptMessageHandler(handler.get());
++    }
++    pagesHandlerAdded = true;
++}
++bool omniPagesInstall(WKPageConfigurationRef config)
++{
++    if (!config || pagesRoot.empty()) return false;
++    auto* impl = WebKit::toImpl(config);
++    const auto scheme = WTF::String::fromLatin1("omni");
++    if (impl->urlSchemeHandlerForURLScheme(scheme)) return true;   // popups reuse the opener's configuration
++    impl->setURLSchemeHandlerForURLScheme(PagesSchemeHandler::create(), scheme);
++    return true;
++}
++bool omniPagesSetBridge(const std::string& source)
++{
++    if (!controller) return false;
++    auto* main = WebKit::toImpl(controller.get());
++    auto* mirror = privateController ? WebKit::toImpl(privateController.get()) : nullptr;
++    if (pagesBridge) { main->removeUserScript(*pagesBridge); if (mirror) mirror->removeUserScript(*pagesBridge); }
++    WebCore::UserScript script { addonString(source), { }, addonList({ "omni://pages/*" }), { },
++        WebCore::UserScriptInjectionTime::DocumentStart, WebCore::UserContentInjectedFrames::InjectInTopFrameOnly,
++        WebCore::UserContentMatchParentFrame::ForOpaqueOrigins };
++    Ref<API::UserScript> userScript = API::UserScript::create(WTF::move(script), API::ContentWorld::pageContentWorldSingleton());
++    pagesBridge = userScript.ptr();
++    addonAddTo(controller.get(), userScript.get(), true);
++    if (privateController) addonAddTo(privateController.get(), userScript.get(), true);
++    return true;
++}
+--- a/entry/OmniBlocker.h
++++ b/entry/OmniBlocker.h
+@@ -1,5 +1,6 @@
+ #pragma once
+ #include <WebKit/WKUserContentControllerRef.h>
++#include <WebKit/WKPageConfigurationRef.h>
+ #include <string>
+ #include <vector>
+ void omniBlockerInitialize(bool testing, void (*ready)(bool));
+@@ -37,3 +38,10 @@
+     bool allFrames, bool authorLevel, bool privateToo);
+ void omniAddonsRemove(const std::string& id);
+ bool omniAddonsAddMessageHandler(const std::string& id);   // webkit.messageHandlers.omniAddon in that world only
++// s3 OMNI_PAGES_V1: Omni's built-in pages (omni://pages/...). allow() decides every load (url, main frame?, the requesting
++// frame's origin "scheme://host"); message() answers window.omnibloomHost (trusted documents only; JSON in, JSON out).
++using OmniPagesAllowFn = bool (*)(WKPageRef page, const std::string& url, bool mainFrame, const std::string& frameOrigin);
++using OmniPagesMessageFn = std::string (*)(WKPageRef page, const std::string& body);
++void omniPagesSetup(const std::string& root, OmniPagesAllowFn allow, OmniPagesMessageFn message);
++bool omniPagesInstall(WKPageConfigurationRef config);    // each page configuration; true = omni:// is served for it
++bool omniPagesSetBridge(const std::string& source);      // page-world document-start script, omni://pages/* top frames only
+--- a/entry/OmniBrowser.cpp
++++ b/entry/OmniBrowser.cpp
+@@ -146,6 +146,8 @@
+     std::string omniDialogBlockHost;
+     // OMNI_EVERYDAY_V1
+     bool omniPrivate = false, omniMobileUA = false, omniReader = false, omniNewTabPage = false;
++    bool omniPagesTab = false; // s3 OMNI_PAGES_V1: the committed document is an omni://pages built-in page
++    bool omniPagesCapable = false; // s3 OMNI_PAGES_V1: this tab's configuration serves omni://
+     bool omniMediaSection = false; // OMNI_MEDIA_DOWNLOADS_V1: explicit section ownership
+     uintptr_t omniMediaIdentity = OmniMediaDownloads::nextTabIdentity();
+     uint64_t omniSavedDocument = 1;
+@@ -165,6 +167,15 @@
+ WKRetainPtr<WKWebsiteDataStoreRef> websiteDataStore;
+ std::vector<std::unique_ptr<Tab>> tabs;
+ size_t selected = 0;
++// s3 OMNI_PAGES_V1: Omni's built-in pages (definitions in OmniPages.h)
++static bool omniPagesNewTab(Tab* tab);
++static bool omniPagesFailed(Tab& tab, const std::string& domain, int code);
++static bool omniPagesButton(int b);
++static bool omniPagesIsNewTab(const std::string& url);
++static bool omniPagesIsPagesURL(const std::string& url);
++static void omniPagesRefreshBridge();
++static void omniPagesTick();
++static void omniPagesInit();
+ // OMNI_SHELL_DRAW_V1: what changed since the last presented frame.
+ // OMNI_PERF_A_COUNTER: why the shell draws. `omniShellDirty = true` records the phase of tick() it happens in (WebKit:
+ // outside tick, i.e. callbacks and other timers); tick() adds the page, video, refresh and busy reasons itself. Aggregated
+@@ -392,6 +403,7 @@
+     if (FILE* file = fopen("/data/omni/controller-style.txt", "w")) {
+         fputs(playStationIcons ? "playstation\n" : "xbox\n", file); fclose(file);
+     }
++    omniPagesRefreshBridge(); // s3 OMNI_PAGES_V1: built-in pages read the button labels
+ }
+ // OMNI_STYLE_V1 --------------------------------------------------------------------------------
+ // Style refresh (REQ-9): one theme for every shell surface, rounded drawing, auto-hiding bars.
+@@ -668,6 +680,7 @@
+         ? "HTTPS certificate verification failed. Connection blocked."
+         : "Page failed to load. Check the address or try Reload.";
+     omniFxRecordFailure(tab, error); // OMNI_FEATURES_V1: error panel (Retry / Back)
++    if (omniPagesFailed(tab, domain, code)) { fprintf(stderr, "browser: page failed: domain=%s code=%d (built-in info page)\n", domain.c_str(), code); fflush(stderr); return; } // s3 OMNI_PAGES_V1
+     fprintf(stderr, "browser: page failed: domain=%s code=%d description=%s\n", domain.c_str(), code, description.c_str());
+     fflush(stderr);
+ }
+@@ -763,8 +776,10 @@
+         WKPageConfigurationSetPreferences(config.get(), preferences.get());
+         WKPageConfigurationSetWebsiteDataStore(config.get(), websiteDataStore.get());
+     }
++    const bool omniPagesOnConfig = omniPagesInstall(config.get()); // s3 OMNI_PAGES_V1: omni://pages (before the view is created)
+     WKPageConfigurationSetUserContentController(config.get(), omniAdControllerFor(config.get())); // OMNI_ADDONS_V1: private tabs: their own controller
+     auto tab = std::make_unique<Tab>();
++    tab->omniPagesCapable = omniPagesOnConfig; // s3 OMNI_PAGES_V1
+     tab->view = adoptWK(WKViewCreate(config.get()));
+     tab->page = WKViewGetPage(tab->view.get());
+     WKViewClientV0 viewClient {};
+@@ -4161,6 +4176,7 @@
+ static void omniOpenNewTabPage(Tab* tab)
+ {
+     if (!tab) return;
++    if (omniPagesNewTab(tab)) return; // s3 OMNI_PAGES_V1: the built-in start page
+     std::string html = omniNewTabHtml();
+     const std::string url = omniNewTabPrefix + omniPercentEncode(html);
+     tab->url.clear(); tab->title = "New tab"; tab->omniNewTabPage = true; tab->loading = true;
+@@ -4473,7 +4489,8 @@
+         if (!tab) return;
+         tab->omniNetRing.clear(); // OMNI_NET_GRABBER_V1: a new page starts with no observed media
+         if (auto url = adoptWK(WKPageCopyActiveURL(page))) tab->url = OmniTest::toStd(adoptWK(WKURLCopyString(url.get())).get());
+-        if (tab->url.rfind(omniNewTabPrefix, 0) == 0) tab->url.clear();
++        tab->omniPagesTab = omniPagesIsPagesURL(tab->url); // s3 OMNI_PAGES_V1
++        if (tab->url.rfind(omniNewTabPrefix, 0) == 0 || omniPagesIsNewTab(tab->url)) tab->url.clear();
+         omniApplySiteZoom(tab);
+     };
+ }
+@@ -4932,7 +4949,7 @@
+         if (theme >= 0) {
+             const std::string js = "document.documentElement.setAttribute('style','" + omniNewTabVars(omniTheme()) + "')";
+             auto script = adoptWK(WKStringCreateWithUTF8CString(js.c_str()));
+-            for (auto& t : tabs) if (t->omniNewTabPage && !t->loading)
++            for (auto& t : tabs) if (t->omniNewTabPage && !t->loading && !t->omniPagesTab) // s3: built-in pages theme themselves
+                 WKPageEvaluateJavaScriptInMainFrame(t->page, script.get(), nullptr, [](WKTypeRef, WKErrorRef, void*) { });
+         }
+         theme = omniThemeIndex;
+@@ -4952,7 +4969,7 @@
+ // --- hooks ---------------------------------------------------------------------------------------
+ static void omniEverydayFinished(Tab& tab)
+ {
+-    if (tab.url.rfind(omniNewTabPrefix, 0) == 0) { tab.url.clear(); tab.title = "New tab"; tab.omniNewTabPage = true; }
++    if (tab.url.rfind(omniNewTabPrefix, 0) == 0 || omniPagesIsNewTab(tab.url)) { tab.url.clear(); tab.title = "New tab"; tab.omniNewTabPage = true; } // s3 OMNI_PAGES_V1: + start/welcome
+     else tab.omniNewTabPage = false;
+     if (omniFindTab == &tab) omniFindOpenFlag = false;
+     const bool reader = std::exchange(tab.omniReader, false);
+@@ -5803,6 +5820,7 @@
+ void button(int button)
+ {
+     if (omniSavedButton(button)) { omniShellDirty = true; return; }
++    if (omniPagesButton(button)) { omniShellDirty = true; return; } // s3 OMNI_PAGES_V1: built-in pages first
+     if (omniMcButton(button)) { omniShellDirty = true; return; } // OMNI_PAD_CONTROLLER_V1: Master Control page first
+     if (omniOverlayButton(button)) { omniShellDirty = true; return; } // OMNI_DIALOGS_V1: modals and menus first
+     omniShellDirty = true; // OMNI_SHELL_DRAW_V1
+@@ -6208,6 +6226,7 @@
+ #include "OmniFeatures2.h" // OMNI_FEATURES_V2
+ #include "OmniFeatures3.h" // OMNI_FEATURES_V3
+ #include "OmniAddons.h" // OMNI_ADDONS_V1
++#include "OmniPages.h" // s3 OMNI_PAGES_V1: omni://pages built-in pages
+ void tick(void*)
+ {
+     // OMNI_HOLEPUNCH_V7_STALLTRACE: the main thread's phases for the stall log; after tick() returns
+@@ -6252,6 +6271,7 @@
+     omniF2Tick(); // OMNI_FEATURES_V2: permission prompts, picker cancel
+     omniF3Tick(); // OMNI_FEATURES_V3: suggestions, screenshot, dark pages, tab memory
+     omniAdTick(); // OMNI_ADDONS_V1
++    omniPagesTick(); // s3 OMNI_PAGES_V1
+     if (statusUntil && SDL_GetTicks() > statusUntil) { statusUntil = 0; status = "Ready"; }
+     static bool popupEngineWarm = false;
+     if (!popupEngineWarm && active() && active()->loadedAt && SDL_GetTicks() - active()->loadedAt > 4000) {
+@@ -7063,6 +7083,7 @@
+     WKContextSetUsesSingleWebProcess(context.get(), true);
+     preferences = adoptWK(WKPreferencesCreate());
+     WKPreferencesSetAcceleratedCompositingEnabled(preferences.get(), false);
++    WKPreferencesSetCanvasUsesAcceleratedDrawing(preferences.get(), false);   // OMNI_NO_ACCEL_CANVAS_V1: no Skia GL canvas without a shared PlatformDisplay (4K YouTube watch-page crash)
+     WKPreferencesSetFullScreenEnabled(preferences.get(), true);
+     WKPreferencesSetNeedsSiteSpecificQuirks(preferences.get(), true);
+     status = "Preparing content blocker...";
+@@ -7087,6 +7108,7 @@
+         stageTime = SDL_GetTicks();
+     });
+     omniAdInit(); // OMNI_ADDONS_V1: the controllers exist now
++    omniPagesInit(); // s3 OMNI_PAGES_V1: scheme handler + bridge (needs the controllers)
+     startTime = SDL_GetTicks();
+     stageTime = startTime;
+     log("display ready; browser running");
+--- a/entry/OmniBrowserSettings.h
++++ b/entry/OmniBrowserSettings.h
+@@ -132,7 +132,7 @@
+     add(omniFxSetDpad, "D-pad left / right", omniFxSet.dpad ? "Switch tabs" : "Back / forward", true);
+     omniF3SettingsRows(p); // OMNI_FEATURES_V3: dark pages, suggestions, tab limit, tabs kept loaded, tab memory
+     add(omniFxSetGamepad, "Web pages can use the controller", omniGamepadEnabled() ? "On" : "Off", true); // OMNI_GAMEPAD_V1
+-    add(omniFxSetJit, "JavaScript JIT (faster, less safe)", omniFxJitOn() ? "On" : "Off", true); // OMNI_JSC_JIT_V1
++    add(omniFxSetJit, "JavaScript JIT (experimental: faster, less safe)", omniFxJitOn() ? "On" : "Off", true); // OMNI_JSC_JIT_V1
+     add(omniFxSetDisplay, "Controller, theme and display...", "", false);
+     omniF2SettingsExtra(p); // OMNI_FEATURES_V2: Passwords, Autofill, Site permissions
+     add(omniFxSetAbout, "About Omni", std::string(OMNI_FEATURES_LABEL) + " \xc2\xb7 " + __DATE__, false);
+--- a/entry/OmniEngineSetup.cpp
++++ b/entry/OmniEngineSetup.cpp
+@@ -74,6 +74,7 @@
+     auto prefs = adoptWK(WKPreferencesCreate());
+     // CPU backing store so WKPagePaint can read the pixels back
+     WKPreferencesSetAcceleratedCompositingEnabled(prefs.get(), false);
++    WKPreferencesSetCanvasUsesAcceleratedDrawing(prefs.get(), false);   // OMNI_NO_ACCEL_CANVAS_V1
+     WKPreferencesSetNeedsSiteSpecificQuirks(prefs.get(), true);
+ 
+     auto pageCfg = adoptWK(WKPageConfigurationCreate());
+--- a/entry/OmniFeatures2.h
++++ b/entry/OmniFeatures2.h
+@@ -105,8 +105,8 @@
+     const std::string host = omniMenuHost();
+     OmniFxRow perms; perms.id = 900; perms.label = "Site permissions"; perms.enabled = !host.empty(); perms.icon = omniIconShield; p.rows.push_back(perms);
+     const auto logins = omniPwFor(omniF2OriginOf(active() ? active()->url : std::string()));
+-    OmniFxRow fill; fill.id = 901; fill.label = "Fill saved login"; fill.enabled = !logins.empty();
+-    fill.value = logins.empty() ? std::string("None saved") : std::to_string(logins.size()) + " saved";
++    OmniFxRow fill; fill.id = 901; fill.label = "Fill saved login"; fill.enabled = !logins.empty() || omniPwLocked();
++    fill.value = omniPwLocked() ? std::string("Locked") : logins.empty() ? std::string("None saved") : std::to_string(logins.size()) + " saved";
+     p.rows.push_back(fill);
+ }
+ static bool omniF2SiteInput(const OmniFxRow& r, int b)
+@@ -117,7 +117,7 @@
+ }
+ static void omniF2SettingsExtra(OmniFxPanel& p)
+ {
+-    OmniFxRow pw; pw.id = 900; pw.label = "Passwords"; omniPwLoad(); pw.value = omniPw.list.empty() ? std::string("None") : std::to_string(omniPw.list.size()); p.rows.push_back(pw);
++    OmniFxRow pw; pw.id = 900; pw.label = "Passwords"; omniPwLoad(); pw.value = omniPwLocked() ? std::string("Locked") : omniPw.list.empty() ? std::string("None") : std::to_string(omniPw.list.size()); p.rows.push_back(pw);
+     OmniFxRow af; af.id = 901; af.label = "Autofill"; af.value = omniAfEmpty() ? std::string("Off") : "On"; p.rows.push_back(af);
+     OmniFxRow sp; sp.id = 902; sp.label = "Site permissions"; p.rows.push_back(sp);
+ }
+--- a/entry/OmniFeatures2Includes.h
++++ b/entry/OmniFeatures2Includes.h
+@@ -30,3 +30,5 @@
+ #include <atomic>
+ // Defined only in the native title (outputs/omni-native-s1b/src/NativeFilesBroker.cpp); null in the big-app.
+ extern "C" int omni_native_title_active(void) __attribute__((weak));
++// OMNI_VAULT_V2: encrypted password/2FA storage (needs OpenSSL declarations at namespace scope)
++#include "OmniVault.h"
+--- /dev/null
++++ b/entry/OmniPages.h
+@@ -0,0 +1,307 @@
++// s3 OMNI_PAGES_V1: Omni's built-in pages (outputs/omni-pages, ENGINE-CONTRACT.md), shell side.
++// - Files: /app0/pages (packaged with the title); /data/omni/pages-dev replaces it only while /data/omni/pages-dev.flag
++//   exists. /data/omni/pages-off.flag turns the whole feature off (the old built-in new-tab page comes back).
++// - Origin: omni://pages, served by OmniBlocker.cpp's scheme handler with ENGINE-CONTRACT §1's CSP. A built-in page may
++//   load its own files and other built-in pages; any other main-frame load needs an address Omni itself opened in
++//   that tab (so Back/Forward work, while web content can't frame or fetch these pages).
++// - Which page opens when: new tab / Home -> start/; the first new tab of a session -> welcome/?firstRun=1 (which goes
++//   straight on to start/ once the user finished it); a main-frame offline / certificate / console-block failure ->
++//   info/?state=... in that tab (the native error panel is not shown on top). Never in self-test modes.
++// - window.omnibloomHost: a page-world document-start script, omni://pages/* top frames only; the native side answers
++//   only the main frame of an omni://pages document. Implemented: getLanguage, getGlyphs (sync), getApps, openApp,
++//   retryNavigation, getContext, search, addons.list/call, vault.list/status, request() with navigation.current /
++//   navigation.open; every other request() method answers UNSUPPORTED (the pages show their "unavailable" state).
++//   The Bloom Core token never reaches a page: the engine calls Bloom Core itself.
++// - Controller: on built-in pages the D-pad, Cross, Circle, L1 and R1 go first to window.omniMediaController(action)
++//   (actions up down left right cross circle l1 r1); false = Omni's own action.
++#pragma once
++
++static const char* const omniPagesBase = "omni://pages/";
++static int omniPagesState = -1;                 // -1 not decided yet, 0 off, 1 on
++static std::string omniPagesRoot;
++static bool omniPagesFirstNewTab = true;
++static std::unordered_map<const Tab*, std::vector<std::string>> omniPagesAllowed;   // addresses Omni opened per tab
++struct OmniPagesAction { int kind = 0; WKPageRef page = nullptr; std::string text; };   // done on the next tick
++static std::vector<OmniPagesAction> omniPagesQueue;
++enum { omniPagesActOpenApp = 1, omniPagesActLoad = 2 };
++
++static bool omniPagesIsPagesURL(const std::string& url) { return url.rfind(omniPagesBase, 0) == 0; }
++static bool omniPagesIsNewTab(const std::string& url)
++{
++    return url.rfind("omni://pages/start/", 0) == 0 || url.rfind("omni://pages/welcome/", 0) == 0;
++}
++static std::string omniPagesNoFragment(const std::string& url) { return url.substr(0, url.find('#')); }
++
++static bool omniPagesEnabled()
++{
++    if (omniTestMode()) return false;
++    if (omniPagesState < 0) {
++        omniPagesRoot = !access("/data/omni/pages-dev.flag", F_OK) && !access("/data/omni/pages-dev/start/index.html", R_OK)
++            ? std::string("/data/omni/pages-dev") : std::string("/app0/pages");
++        omniPagesState = access("/data/omni/pages-off.flag", F_OK) && !access((omniPagesRoot + "/start/index.html").c_str(), R_OK) ? 1 : 0;
++        fprintf(stderr, "pages: OMNI_PAGES_V1 %s (root %s)\n", omniPagesState ? "on" : "off", omniPagesRoot.c_str());
++    }
++    return omniPagesState == 1;
++}
++static bool omniPagesOpen(Tab* tab, const std::string& path)
++{
++    if (!tab || !omniPagesEnabled() || !tab->omniPagesCapable) return false;   // tabs made before omniPagesInit() keep the old pages
++    const std::string url = std::string(omniPagesBase) + path;
++    auto& allowed = omniPagesAllowed[tab];
++    const std::string key = omniPagesNoFragment(url);
++    if (std::find(allowed.begin(), allowed.end(), key) == allowed.end()) {
++        allowed.push_back(key);
++        if (allowed.size() > 64) allowed.erase(allowed.begin());
++    }
++    auto u = adoptWK(WKURLCreateWithUTF8CString(url.c_str()));
++    WKPageLoadURL(tab->page, u.get());
++    return true;
++}
++// New tab / Home. false: the feature is off (the caller shows the old new-tab page).
++static bool omniPagesNewTab(Tab* tab)
++{
++    if (!tab || !omniPagesEnabled() || !tab->omniPagesCapable) return false;
++    const bool first = std::exchange(omniPagesFirstNewTab, false);
++    tab->url.clear(); tab->title = "New tab"; tab->omniNewTabPage = true; tab->loading = true;
++    return omniPagesOpen(tab, first ? "welcome/index.html?firstRun=1" : "start/index.html");
++}
++
++// --- loads: the scheme handler asks for every omni://pages request ----------------------------------------------------
++static bool omniPagesAllow(WKPageRef page, const std::string& url, bool mainFrame, const std::string& frameOrigin)
++{
++    if (!omniPagesEnabled()) return false;
++    if (frameOrigin == "omni://pages") return true;          // a built-in page: its own files, and other built-in pages
++    if (!mainFrame) return false;                             // web content never frames or fetches these pages
++    Tab* tab = omniTabForPage(page);
++    if (!tab) return false;
++    const auto& allowed = omniPagesAllowed[tab];
++    return std::find(allowed.begin(), allowed.end(), omniPagesNoFragment(url)) != allowed.end();
++}
++
++// --- errors -> info page --------------------------------------------------------------------------------------------
++// Main-frame failures only (the navigation client reports main-frame navigations). The original address stays in the
++// tab's error state (omniFxState(tab).failURL), never in the info page's address; retryNavigation() reuses it.
++static bool omniPagesFailed(Tab& tab, const std::string& domain, int code)
++{
++    if (!omniPagesEnabled() || tab.omniPrivate || !tab.omniPagesCapable) return false;
++    const std::string failed = omniFxState(&tab).failURL;
++    if (!omniWebURL(failed)) return false;
++    const char* state = nullptr;
++    if (domain == "CurlErrorDomain") {
++        switch (code) {
++        case 6: case 7: case 28: case 52: case 55: case 56: state = "offline"; break;   // resolve, connect, timeout, empty reply, send, recv
++        case 35: case 51: case 58: case 59: case 60: case 77: case 83: case 90: case 91: state = "certificate"; break;
++        default: break;
++        }
++    }
++    const std::string lower = omniLower(domain);
++    if (!state && (lower.find("omnisec") != std::string::npos || lower.find("localhost") != std::string::npos || lower.find("pna") != std::string::npos))
++        state = "blocked";
++    if (!state) return false;
++    fprintf(stderr, "pages: main-frame failure (%s %d) -> info/?state=%s\n", domain.c_str(), code, state);
++    tab.message.clear();                                       // the info page replaces the native error panel
++    tab.title = state == std::string("offline") ? "No connection" : state == std::string("certificate") ? "Connection not private" : "Blocked";
++    return omniPagesOpen(&tab, std::string("info/index.html?state=") + state);
++}
++
++// --- controller ------------------------------------------------------------------------------------------------------
++static bool omniPagesSkip = false;
++static void omniPagesPadFallback(WKTypeRef result, WKErrorRef error, void* context)
++{
++    const bool handled = !error && result && WKGetTypeID(result) == WKStringGetTypeID() && OmniTest::toStd(static_cast<WKStringRef>(result)) == "1";
++    if (handled || !running) return;
++    omniPagesSkip = true;
++    button(static_cast<int>(reinterpret_cast<intptr_t>(context)));
++    omniPagesSkip = false;
++}
++static bool omniPagesButton(int b)
++{
++    if (omniPagesSkip || !active() || !active()->omniPagesTab || pageFullscreen || settingsOpen || editing || omniOverlayOpen() || active()->crashed) return false;
++    const char* script = nullptr;   // one fixed script per button: no URL or text from a page
++    switch (b) {
++    case SDL_CONTROLLER_BUTTON_DPAD_UP: script = "window.omniMediaController?.('up')===true?'1':'0'"; break;
++    case SDL_CONTROLLER_BUTTON_DPAD_DOWN: script = "window.omniMediaController?.('down')===true?'1':'0'"; break;
++    case SDL_CONTROLLER_BUTTON_DPAD_LEFT: script = "window.omniMediaController?.('left')===true?'1':'0'"; break;
++    case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: script = "window.omniMediaController?.('right')===true?'1':'0'"; break;
++    case SDL_CONTROLLER_BUTTON_A: script = "window.omniMediaController?.('cross')===true?'1':'0'"; break;
++    case SDL_CONTROLLER_BUTTON_B: script = "window.omniMediaController?.('circle')===true?'1':'0'"; break;
++    case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: script = "window.omniMediaController?.('l1')===true?'1':'0'"; break;
++    case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: script = "window.omniMediaController?.('r1')===true?'1':'0'"; break;
++    default: return false;
++    }
++    auto source = adoptWK(WKStringCreateWithUTF8CString(script));
++    WKPageEvaluateJavaScriptInMainFrame(active()->page, source.get(), reinterpret_cast<void*>(static_cast<intptr_t>(b)), omniPagesPadFallback);
++    return true;
++}
++
++// --- the bridge ------------------------------------------------------------------------------------------------------
++static std::string omniPagesJsonQuote(const std::string& s)
++{
++    std::string o = "\"";
++    for (unsigned char c : s) {
++        if (c == '"' || c == '\\') { o += '\\'; o += char(c); }
++        else if (c < 0x20 || c == 0x7f) { char b[8]; snprintf(b, sizeof b, "\\u%04x", c); o += b; }
++        else o += char(c);
++    }
++    return o + "\"";
++}
++// The value of a string field in a flat JSON object written by JSON.stringify ({"k":"v",...}); "" when missing.
++static std::string omniPagesField(const std::string& json, const char* key)
++{
++    const std::string k = std::string("\"") + key + "\":\"";
++    size_t i = json.find(k);
++    if (i == std::string::npos) return std::string();
++    std::string v;
++    for (i += k.size(); i < json.size() && json[i] != '"'; ++i) {
++        if (json[i] != '\\' || i + 1 >= json.size()) { v += json[i]; continue; }
++        const char e = json[++i];
++        if (e == 'n') v += '\n'; else if (e == 't') v += '\t'; else if (e == 'r') v += '\r';
++        else if (e == 'u' && i + 4 < json.size()) {
++            const unsigned cp = unsigned(strtoul(json.substr(i + 1, 4).c_str(), nullptr, 16)); i += 4;
++            if (cp < 0x80) v += char(cp);
++            else if (cp < 0x800) { v += char(0xc0 | (cp >> 6)); v += char(0x80 | (cp & 0x3f)); }
++            else { v += char(0xe0 | (cp >> 12)); v += char(0x80 | ((cp >> 6) & 0x3f)); v += char(0x80 | (cp & 0x3f)); }
++        } else v += e;
++        if (v.size() > 4096) break;
++    }
++    return v;
++}
++static std::string omniPagesOk(const std::string& resultJson) { return "{\"ok\":true,\"result\":" + resultJson + "}"; }
++static std::string omniPagesErr(const char* code) { return std::string("{\"ok\":false,\"code\":\"") + code + "\"}"; }
++
++static std::string omniPagesMessage(WKPageRef page, const std::string& body)
++{
++    // body: "<method>\n<JSON.stringify(params)>"
++    const size_t nl = body.find('\n');
++    const std::string m = body.substr(0, nl), a = nl == std::string::npos ? std::string("{}") : body.substr(nl + 1);
++    Tab* tab = omniTabForPage(page);
++    if (!tab) return omniPagesErr("STALE_STATE");
++    if (m == "getApps") {
++        std::vector<OmniHub::LiveApp> apps;
++        if (!OmniHub::liveApps(apps)) return omniPagesErr("UNAVAILABLE");
++        std::string o = "{\"apps\":[";
++        for (size_t i = 0; i < apps.size(); ++i) {
++            const auto& x = apps[i];
++            o += (i ? "," : "") + std::string("{\"id\":") + omniPagesJsonQuote(x.id) + ",\"name\":" + omniPagesJsonQuote(x.name.empty() ? x.id : x.name)
++                + ",\"version\":" + omniPagesJsonQuote(x.version) + ",\"kind\":" + omniPagesJsonQuote(x.kind)
++                + ",\"verified\":" + (x.verified ? "true" : "false") + ",\"up\":" + (x.up ? "true" : "false")
++                + ",\"hasPage\":" + (x.port && !x.mainPage.empty() ? "true" : "false") + "}";
++        }
++        return omniPagesOk(o + "]}");
++    }
++    if (m == "openApp") {
++        const std::string id = omniPagesField(a, "id");
++        if (id.empty() || id.size() > 64) return omniPagesErr("INVALID_VALUE");
++        omniPagesQueue.push_back({ omniPagesActOpenApp, page, id });
++        return omniPagesOk("null");
++    }
++    if (m == "retryNavigation") {
++        const std::string url = omniFxState(tab).failURL;
++        if (!omniWebURL(url)) return omniPagesErr("NOT_FOUND");
++        omniPagesQueue.push_back({ omniPagesActLoad, page, url });
++        return omniPagesOk("null");
++    }
++    if (m == "search") {
++        const std::string q = omniPagesField(a, "q");
++        if (q.empty() || q.size() > 2048) return omniPagesErr("INVALID_VALUE");
++        omniPagesQueue.push_back({ omniPagesActLoad, page, omniFxSearchPrefix() + omniPercentEncode(q) });
++        return omniPagesOk("null");
++    }
++    if (m == "addons.list") return omniPagesOk(omniAdListJson(std::string()));
++    if (m == "addons.call") {
++        const std::string r = omniAdHostCall(omniPagesField(a, "op"), omniPagesField(a, "id"), omniPagesField(a, "a"), omniPagesField(a, "b"));
++        return omniPagesOk(omniPagesJsonQuote(r));
++    }
++    if (m == "vault.status" || m == "vault.list") {
++        omniPwLoad();
++        const bool locked = omniPwLocked(), broken = omniPwBroken();
++        std::string o = std::string("{\"locked\":") + (locked ? "true" : "false") + ",\"broken\":" + (broken ? "true" : "false")
++            + ",\"pin\":" + (omniPw.vault && omniPw.vault->pinMode() ? "true" : "false");
++        if (m == "vault.list") {
++            o += ",\"items\":[";
++            if (!locked) for (size_t i = 0; i < omniPw.list.size() && i < 2000; ++i) {
++                const auto& e = omniPw.list[i];   // never the password
++                o += (i ? "," : "") + std::string("{\"id\":") + omniPagesJsonQuote(e.id) + ",\"origin\":" + omniPagesJsonQuote(e.origin)
++                    + ",\"username\":" + omniPagesJsonQuote(e.user) + ",\"updatedAt\":" + std::to_string(e.used ? e.used : e.created) + "}";
++            }
++            o += "]";
++        } else o += ",\"count\":" + std::to_string(locked ? 0 : omniPw.list.size());
++        return omniPagesOk(o + "}");
++    }
++    if (m == "request") {
++        const std::string method = omniPagesField(a, "method");
++        if (method == "navigation.current")
++            return omniPagesOk(std::string("{\"navigationEpoch\":0,\"title\":") + omniPagesJsonQuote(tab->title) + ",\"url\":"
++                + omniPagesJsonQuote(tab->omniPagesTab ? std::string() : tab->url) + ",\"private\":" + (tab->omniPrivate ? "true" : "false") + "}");
++        if (method == "navigation.open") {
++            const std::string url = omniPagesField(a, "url");
++            if (!omniWebURL(url) || url.size() > 4096 || url.find('@') != std::string::npos) return omniPagesErr("INVALID_VALUE");
++            omniPagesQueue.push_back({ omniPagesActLoad, page, url });
++            return omniPagesOk("null");
++        }
++        return omniPagesErr("UNSUPPORTED");
++    }
++    return omniPagesErr("UNSUPPORTED");
++}
++static void omniPagesTick()
++{
++    if (omniPagesQueue.empty()) return;
++    auto queue = std::move(omniPagesQueue); omniPagesQueue.clear();
++    for (auto& act : queue) {
++        Tab* tab = omniTabForPage(act.page);
++        if (!tab) continue;
++        if (act.kind == omniPagesActLoad) {
++            if (!omniWebURL(act.text)) continue;
++            auto u = adoptWK(WKURLCreateWithUTF8CString(act.text.c_str()));
++            WKPageLoadURL(tab->page, u.get());
++        } else if (act.kind == omniPagesActOpenApp) {
++            std::vector<OmniHub::LiveApp> apps;
++            if (!OmniHub::liveApps(apps)) { notice("Bloom Core is not running"); continue; }
++            const OmniHub::LiveApp* found = nullptr;
++            for (const auto& x : apps) if (x.id == act.text) found = &x;
++            if (!found || !found->verified || !found->port || found->mainPage.empty()) { notice("That app can't be opened"); continue; }
++            if (!found->up) notice(found->name.empty() ? std::string("That app isn't running") : found->name + " isn't running");
++            const std::string url = "http://127.0.0.1:" + std::to_string(found->port) + found->mainPage;
++            if (newTab()) navigate(url);
++        }
++    }
++}
++static void omniPagesRefreshBridge()
++{
++    if (omniPagesState != 1) return;
++    std::string js = R"JS((function(){'use strict';
++if(location.protocol!=='omni:'||location.host!=='pages'||window.top!==window)return;
++var h=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.omnibloomHost;if(!h)return;
++var LANG=%LANG%,GLYPHS=%GLYPHS%;
++function raw(m,a){return h.postMessage(m+'\n'+JSON.stringify(a||{})).then(function(r){return JSON.parse(String(r));});}
++function call(m,a){return raw(m,a).then(function(o){if(!o||o.ok!==true){var e=new Error((o&&o.code)||'UNSUPPORTED');e.code=(o&&o.code)||'UNSUPPORTED';throw e;}return o.result;});}
++var STATES={offline:1,blocked:1,certificate:1,'protected':1,app:1};
++var host={
++ version:1,
++ getLanguage:function(){return LANG;},
++ getGlyphs:function(){return GLYPHS;},
++ getApps:function(){return call('getApps');},
++ openApp:function(id){return call('openApp',{id:String(id)});},
++ retryNavigation:function(){return call('retryNavigation');},
++ getContext:function(){var s=new URLSearchParams(location.search).get('state');return {state:STATES[s]?s:'offline'};},
++ search:function(q){return call('search',{q:String(q)});},
++ request:function(req){var r=req||{};return raw('request',{method:String(r.method||''),url:r.params&&r.params.url?String(r.params.url):''}).then(function(o){return o&&o.ok===true?{ok:true,result:o.result}:{ok:false,code:(o&&o.code)||'UNSUPPORTED'};},function(){return {ok:false,code:'UNSUPPORTED'};});},
++ addons:Object.freeze({list:function(){return call('addons.list');},call:function(op,id,a,b){return call('addons.call',{op:String(op),id:String(id),a:a==null?'':String(a),b:b==null?'':String(b)});}}),
++ vault:Object.freeze({status:function(){return call('vault.status');},list:function(){return call('vault.list').then(function(r){return r.items||[];});}})
++};
++Object.defineProperty(window,'omnibloomHost',{value:Object.freeze(host),writable:false,configurable:false});
++try{localStorage.setItem('ob.glyphs',GLYPHS);}catch(e){}
++})();)JS";
++    auto put = [&](const char* key, const std::string& value) { const size_t at = js.find(key); if (at != std::string::npos) js.replace(at, strlen(key), value); };
++    put("%LANG%", "\"en\"");
++    put("%GLYPHS%", playStationIcons ? "\"playstation\"" : "\"xbox\"");
++    if (!omniPagesSetBridge(js)) fprintf(stderr, "pages: bridge not installed (no content controller)\n");
++}
++// After the content controllers exist (omniAdInit's place in main()).
++static void omniPagesInit()
++{
++    if (!omniPagesEnabled()) return;
++    omniPagesSetup(omniPagesRoot, omniPagesAllow, omniPagesMessage);
++    omniPagesRefreshBridge();
++    fprintf(stderr, "pages: OMNI_PAGES_V1 ready: scheme omni://pages, bridge on, root %s\n", omniPagesRoot.c_str());
++}
+--- a/entry/OmniPasswords.h
++++ b/entry/OmniPasswords.h
+@@ -1,133 +1,176 @@
+-// OMNI_FEATURES_V2: saved logins and fill-on-demand.
++// OMNI_FEATURES_V2 + OMNI_VAULT_V2: saved logins and fill-on-demand.
+ // Logins are added BY HAND on the Passwords page (site, username, password typed on Omni's keyboard)
+ // and edited or deleted there. Omni never watches login forms and never reads what is typed into a
+ // page; there is no "save password?" prompt. Filling is always a user action (the keyboard's fill
+-// row, Site settings > Fill saved login, or Triangle on the Passwords page); the fill script runs
++// row, Site settings > Fill saved login, or R1 on the Passwords page); the fill script runs
+ // only in the main frame and checks the page's origin first, so a login is only ever written into
+ // the site it belongs to.
+-// Storage: /data/omni/passwords.txt; each username and password is XORed with a keystream made from
+-// /data/omni/passwords.key and a per-value nonce, then hex encoded. This is OBFUSCATION, NOT
+-// encryption: the key is stored next to the data, so anyone who can read the console's files can read
+-// the passwords. The console has no keychain or secure storage Omni can use.
++// Storage (OMNI_VAULT_V2, OmniVault.h): /data/omni/vault.v2, AES-256-GCM per entry with a fresh nonce on
++// every save and authenticated data binding each login to its site. Without a PIN the data key is in
++// /data/omni/vault.key: that stops casual reading and any tampering, but anyone who can read the console's
++// files (FTP on the home network) can still read the key. With a PIN (Passwords > Set a PIN) the key is
++// derived from the PIN (PBKDF2-HMAC-SHA256, 600,000 rounds) and nothing on the console can open the vault.
++// The old OMNI_FEATURES_V2 files (XOR obfuscation) are migrated once and renamed *.xor-migrated; the
++// Passwords page offers to remove that old copy.
+ #pragma once
+ enum { omniPwKindList = 7102, omniPwKindChoose = 7104, omniPwKindEdit = 7105 };
+ 
+-struct OmniPwEntry { std::string origin, user, pass; long long created = 0, used = 0; };
++struct OmniPwEntry { std::string origin, user, pass; long long created = 0, used = 0; std::string id; };
+ struct OmniPwStore {
+-    std::vector<OmniPwEntry> list;
+-    std::vector<std::string> keepRaw;   // login lines that could not be decoded (key missing/changed): kept untouched
+-    bool loaded = false, haveKey = false;
+-    uint8_t key[32] {};
++    std::vector<OmniPwEntry> list;      // decrypted logins (empty while the vault is locked)
++    bool loaded = false;
++    OmniVault::Vault* vault = nullptr;  // never destroyed (the process ends with _exit)
++    int migrated = -1, undecodable = 0; // this session's migration result (-1 = none needed)
++    long long lastUse = 0;
++    int failedUnlocks = 0; long long retryAfter = 0;
+ };
+ static OmniPwStore omniPw;
+-static uint64_t omniPwMix(uint64_t& s)   // splitmix64
+-{
+-    uint64_t z = (s += 0x9E3779B97F4A7C15ull);
+-    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
+-    z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
+-    return z ^ (z >> 31);
+-}
+-static void omniPwRandom(uint8_t* out, size_t n)
+-{
+-    memset(out, 0, n);
+-    if (FILE* f = fopen("/dev/urandom", "rb")) { if (fread(out, 1, n, f) != n) { } fclose(f); }
+-    static uint64_t counter = 0;
+-    uint64_t s = SDL_GetPerformanceCounter() ^ (uint64_t(time(nullptr)) << 21) ^ uint64_t(uintptr_t(out)) ^ (uint64_t(getpid()) << 42) ^ (++counter * 0xD1B54A32D192ED03ull);
+-    for (size_t i = 0; i < n; i += 8) { const uint64_t r = omniPwMix(s); for (size_t k = 0; k < 8 && i + k < n; ++k) out[i + k] ^= uint8_t(r >> (8 * k)); }
+-}
+-static std::string omniPwHex(const std::string& b)
+-{
+-    static const char* h = "0123456789abcdef";
+-    std::string o;
+-    for (unsigned char c : b) { o += h[c >> 4]; o += h[c & 15]; }
+-    return o;
+-}
+-static bool omniPwUnhex(const std::string& h, std::string& out)
+-{
+-    out.clear();
+-    if (h.size() % 2) return false;
+-    auto v = [](char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1; };
+-    for (size_t i = 0; i < h.size(); i += 2) { const int a = v(h[i]), b = v(h[i + 1]); if (a < 0 || b < 0) return false; out += char(a * 16 + b); }
++static const int omniPwLockMinutes = 15;   // PIN mode: lock again after this long without using the vault
++static std::string omniPwPinA, omniPwPinB;
++static void omniPwWipe(std::string& s) { OmniVault::wipe(s); }
++static void omniPwClearList()
++{
++    for (auto& e : omniPw.list) { omniPwWipe(e.user); omniPwWipe(e.pass); }
++    omniPw.list.clear();
++}
++// vault entries (kind "login") -> omniPw.list
++static void omniPwFromVault()
++{
++    omniPwClearList();
++    if (!omniPw.vault || !omniPw.vault->unlocked()) return;
++    for (auto& v : omniPw.vault->entries) if (v.kind == "login") {
++        OmniPwEntry e; e.id = v.id; e.origin = v.origin; e.user = v.a; e.pass = v.b; e.created = v.created; e.used = v.used;
++        omniPw.list.push_back(std::move(e));
++    }
++}
++static bool omniPwLocked() { return omniPw.vault && omniPw.vault->pinMode() && !omniPw.vault->unlocked(); }
++static bool omniPwBroken() { return omniPw.vault && omniPw.vault->openFailed(); }
++static void omniPwLoad()
++{
++    const long long now = (long long)time(nullptr);
++    if (omniPw.loaded) {
++        if (omniPw.vault && omniPw.vault->pinMode() && omniPw.vault->unlocked() && now - omniPw.lastUse > omniPwLockMinutes * 60) {
++            omniPw.vault->lock(); omniPwClearList();   // auto-lock
++        }
++        omniPw.lastUse = now;
++        return;
++    }
++    omniPw.loaded = true; omniPw.lastUse = now;
++    if (!omniPw.vault) omniPw.vault = new OmniVault::Vault(OMNI_DATA_DIR);
++    omniPw.vault->load();
++    if (omniPw.vault->canSave()) {
++        int bad = 0;
++        const int n = omniPw.vault->migrateLegacy(&bad);
++        if (n > 0 || bad > 0) { omniPw.migrated = n; omniPw.undecodable = bad; }
++        if (n != 0 || bad > 0) fprintf(stderr, "vault: OMNI_VAULT_V2 migrated %d login(s) from passwords.txt (%d unreadable)\n", n, bad);
++    }
++    omniPwFromVault();
++    fprintf(stderr, "vault: OMNI_VAULT_V2 %s, %s, %zu login(s)%s%s\n", omniPw.vault->exists() ? "opened" : "new",
++            omniPw.vault->openFailed() ? "CAN'T OPEN" : omniPw.vault->pinMode() ? (omniPw.vault->unlocked() ? "PIN, unlocked" : "PIN, locked") : "key file",
++            omniPw.list.size(), omniPw.vault->recoveredFromBackup() ? ", restored from backup" : "", omniPw.vault->unreadable() ? ", some entries failed their check" : "");
++}
++// omniPw.list -> vault entries, then an encrypted atomic write. Returns false (and says why) if nothing was saved.
++static bool omniPwSave()
++{
++    omniPwLoad();
++    OmniVault::Vault& v = *omniPw.vault;
++    if (!v.canSave()) { notice(omniPwLocked() ? "Passwords are locked: unlock them first" : "Passwords can't be saved: " + v.error()); return false; }
++    std::vector<OmniVault::Entry> before = v.entries, keep;   // kept to undo the change if the write fails
++    for (auto& e : v.entries) if (e.kind != "login") keep.push_back(e);   // 2FA secrets etc. stay as they are
++    for (auto& e : v.entries) { OmniVault::wipe(e.a); OmniVault::wipe(e.b); OmniVault::wipe(e.c); }
++    v.entries.swap(keep);
++    auto wipeAll = [](std::vector<OmniVault::Entry>& list) { for (auto& e : list) { OmniVault::wipe(e.a); OmniVault::wipe(e.b); OmniVault::wipe(e.c); } list.clear(); };
++    for (auto& e : omniPw.list) {
++        OmniVault::Entry x; x.id = e.id.size() == 16 ? e.id : OmniVault::Vault::newId(); e.id = x.id;
++        x.kind = "login"; x.origin = e.origin; x.a = e.user; x.b = e.pass; x.created = e.created; x.used = e.used;
++        v.entries.push_back(std::move(x));
++    }
++    if (!v.save()) {
++        fprintf(stderr, "vault: save failed (%s)\n", v.error().c_str());
++        v.entries.swap(before); wipeAll(before);
++        omniPwFromVault();   // the list shows what is really stored
++        notice("Passwords weren't saved: " + v.error());
++        return false;
++    }
++    wipeAll(before);
+     return true;
+ }
+-static void omniPwStream(std::string& data, size_t from, const uint8_t* nonce)
+-{
+-    uint64_t s = 0xcbf29ce484222325ull;
+-    for (int i = 0; i < 32; ++i) s = (s ^ omniPw.key[i]) * 0x100000001b3ull;
+-    for (int i = 0; i < 8; ++i) s = (s ^ nonce[i]) * 0x100000001b3ull;
+-    for (size_t i = from; i < data.size(); i += 8) {
+-        const uint64_t r = omniPwMix(s);
+-        for (size_t k = 0; k < 8 && i + k < data.size(); ++k) data[i + k] = char(uint8_t(data[i + k]) ^ uint8_t(r >> (8 * k)));
+-    }
+-}
+-static std::string omniPwSeal(const std::string& plain)
+-{
+-    uint8_t nonce[8];
+-    omniPwRandom(nonce, 8);
+-    std::string out(reinterpret_cast<const char*>(nonce), 8);
+-    out += plain;
+-    omniPwStream(out, 8, nonce);
+-    return omniPwHex(out);
+-}
+-static bool omniPwUnseal(const std::string& hex, std::string& plain)
+-{
+-    std::string raw;
+-    if (!omniPwUnhex(hex, raw) || raw.size() < 8) return false;
+-    uint8_t nonce[8];
+-    memcpy(nonce, raw.data(), 8);
+-    omniPwStream(raw, 8, nonce);
+-    plain = raw.substr(8);
+-    return true;
+-}
+-static void omniPwLoad()
+-{
+-    if (omniPw.loaded) return;
+-    omniPw.loaded = true;
+-    if (FILE* f = fopen(omniData("passwords.key").c_str(), "r")) {
+-        char line[160] = {};
+-        if (fgets(line, sizeof(line), f)) {
+-            std::string s(line), raw;
+-            while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
+-            if (omniPwUnhex(s, raw) && raw.size() == 32) { memcpy(omniPw.key, raw.data(), 32); omniPw.haveKey = true; }
++// PIN prompts (typed on Omni's keyboard; the label contains "assword" so the keyboard shows dots).
++static void omniPwUnlockThen(std::function<void()> next)
++{
++    omniPwLoad();
++    if (!omniPwLocked()) { if (next) next(); return; }
++    const long long now = (long long)time(nullptr);
++    if (now < omniPw.retryAfter) { notice("Too many wrong tries: wait " + std::to_string(omniPw.retryAfter - now) + " s"); return; }
++    omniPwPinA.clear();
++    omniKbEdit(&omniPwPinA, "Vault password or PIN", [next](bool ok) {
++        if (!ok) { omniPwWipe(omniPwPinA); return; }
++        notice("Unlocking...");
++        const auto t0 = std::chrono::steady_clock::now();
++        const bool good = omniPw.vault->unlock(omniPwPinA);
++        omniPwWipe(omniPwPinA);
++        fprintf(stderr, "vault: unlock %s in %lld ms (%d PBKDF2 rounds)\n", good ? "ok" : "refused",
++                (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count(), omniPw.vault->iterations());
++        if (!good) {
++            if (++omniPw.failedUnlocks >= 5) { omniPw.retryAfter = (long long)time(nullptr) + 30; omniPw.failedUnlocks = 0; }
++            notice(omniPw.vault->error() == "Wrong PIN" ? std::string("Wrong vault password or PIN") : "Couldn't unlock: " + omniPw.vault->error());
++            return;
+         }
+-        fclose(f);
+-    }
+-    if (FILE* f = fopen(omniData("passwords.txt").c_str(), "r")) {
+-        char line[4096];
+-        while (fgets(line, sizeof(line), f)) {
+-            std::string s(line);
+-            while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
+-            std::vector<std::string> part;
+-            size_t from = 0;
+-            for (;;) { const size_t t = s.find('\t', from); part.push_back(s.substr(from, t == std::string::npos ? std::string::npos : t - from)); if (t == std::string::npos) break; from = t + 1; }
+-            if (part[0] == "login" && part.size() >= 6) {
+-                OmniPwEntry e;
+-                e.origin = part[1]; e.created = atoll(part[4].c_str()); e.used = atoll(part[5].c_str());
+-                if (omniPw.haveKey && omniPwUnseal(part[2], e.user) && omniPwUnseal(part[3], e.pass)) omniPw.list.push_back(std::move(e));
+-                else omniPw.keepRaw.push_back(s);
+-            }
+-        }
+-        fclose(f);
+-    }
+-}
+-static void omniPwSave()
+-{
+-    if (!omniPw.haveKey) {
+-        omniPwRandom(omniPw.key, 32);
+-        omniPw.haveKey = true;
+-        omniIoQueue(omniData("passwords.key"), omniPwHex(std::string(reinterpret_cast<const char*>(omniPw.key), 32)) + "\n", false);
+-    }
+-    std::string out = "omni-passwords\t1\n";
+-    for (auto& e : omniPw.list)
+-        out += "login\t" + omniOneLine(e.origin, 300) + "\t" + omniPwSeal(e.user) + "\t" + omniPwSeal(e.pass) + "\t" + std::to_string(e.created) + "\t" + std::to_string(e.used) + "\n";
+-    for (auto& r : omniPw.keepRaw) out += r + "\n";
+-    omniIoQueue(omniData("passwords.txt"), std::move(out), false);
++        omniPw.failedUnlocks = 0; omniPw.lastUse = (long long)time(nullptr);
++        int bad = 0; const int n = omniPw.vault->migrateLegacy(&bad);   // an older build may have written passwords.txt again
++        if (n > 0 || bad > 0) { omniPw.migrated = n; omniPw.undecodable = bad; }
++        omniPwFromVault();
++        notice("Passwords unlocked");
++        if (next) next();
++    });
++}
++static void omniPwSetPinFlow()
++{
++    omniPwUnlockThen([] {
++        omniPwPinA.clear(); omniPwPinB.clear();
++        omniKbEdit(&omniPwPinA, "New vault password or PIN (6+ characters)", [](bool ok) {
++            if (!ok) { omniPwWipe(omniPwPinA); return; }
++            if (omniPwPinA.size() < 6) { omniPwWipe(omniPwPinA); notice("Use at least 6 characters"); return; }
++            omniKbEdit(&omniPwPinB, "Type the vault password again", [](bool ok2) {
++                const bool same = ok2 && omniPwPinA == omniPwPinB;
++                omniPwWipe(omniPwPinB);
++                if (!same) { omniPwWipe(omniPwPinA); if (ok2) notice("They didn't match: nothing changed"); return; }
++                notice("Protecting the vault...");
++                const auto t0 = std::chrono::steady_clock::now();
++                const bool done = omniPw.vault->setPin(omniPwPinA);
++                omniPwWipe(omniPwPinA);
++                fprintf(stderr, "vault: set PIN %s in %lld ms\n", done ? "ok" : "failed", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count());
++                notice(done ? "Passwords are now protected by your PIN" : "PIN not set: " + omniPw.vault->error());
++                omniFxRefresh();
++            });
++        });
++    });
++}
++// vault.capabilities for the s3 omnibloomHost bridge (ENGINE-CONTRACT.md section 5 / R3-036).
++[[maybe_unused]] static std::string omniVaultCapabilitiesJson()
++{
++    omniPwLoad();
++    const bool pin = omniPw.vault && omniPw.vault->pinMode();
++    return std::string("{\"version\":1,\"encrypted\":true,\"authenticated\":true,\"protectedKey\":") + (pin ? "true" : "false")
++        + ",\"unlocked\":" + (omniPw.vault && omniPw.vault->unlocked() ? "true" : "false") + "}";
++}
++// Removes the renamed OMNI_FEATURES_V2 files (old XOR copy) after the user confirms.
++static int omniPwRemoveLegacyCopies()
++{
++    int n = 0;
++    if (DIR* d = opendir(OMNI_DATA_DIR)) {
++        std::vector<std::string> names;
++        while (dirent* e = readdir(d)) { const std::string s = e->d_name; if (s.rfind("passwords.txt.xor-migrated", 0) == 0 || s.rfind("passwords.key.xor-migrated", 0) == 0) names.push_back(s); }
++        closedir(d);
++        for (auto& s : names) if (unlink((std::string(OMNI_DATA_DIR) + s).c_str()) == 0) ++n;
++    }
++    return n;
+ }
+ static std::vector<int> omniPwFor(const std::string& origin)
+ {
+     omniPwLoad();
+     std::vector<int> out;
+-    if (origin.empty()) return out;
++    if (origin.empty() || omniPwLocked()) return out;
+     for (size_t i = 0; i < omniPw.list.size(); ++i) if (omniPw.list[i].origin == origin) out.push_back(int(i));
+     std::sort(out.begin(), out.end(), [](int a, int b) { return omniPw.list[a].used > omniPw.list[b].used; });
+     return out;
+@@ -189,6 +232,8 @@
+ }
+ static void omniPwFillCurrent()
+ {
++    omniPwLoad();
++    if (omniPwLocked()) { omniPwUnlockThen([] { omniPwFillCurrent(); }); return; }
+     Tab* t = active();
+     const auto idx = omniPwFor(t ? omniF2OriginOf(t->url) : std::string());
+     if (idx.empty()) { notice("No saved login for this site"); return; }
+@@ -233,9 +278,9 @@
+             OmniPwEntry& e = omniPw.list[omniPwEditIndex];
+             e.origin = origin; e.user = omniPwEditUser; e.pass = omniPwEditPass; e.used = time(nullptr);
+         } else {
+-            omniPw.list.push_back({ origin, omniPwEditUser, omniPwEditPass, (long long)time(nullptr), (long long)time(nullptr) });
++            omniPw.list.push_back({ origin, omniPwEditUser, omniPwEditPass, (long long)time(nullptr), (long long)time(nullptr), std::string() });
+         }
+-        omniPwSave();
++        if (!omniPwSave()) return true;
+         notice("Login saved for " + omniPwShownOrigin(origin));
+         omniFxPop();
+         return true;
+@@ -245,7 +290,7 @@
+         omniAsk("Delete this login?", omniPwShownOrigin(omniPwEditSite.empty() ? std::string() : omniPwEditSite) + " will be removed from this console.", "Delete", [](bool ok) {
+             if (!ok) return;
+             omniPwLoad();
+-            if (omniPwEditIndex >= 0 && omniPwEditIndex < int(omniPw.list.size())) { omniPw.list.erase(omniPw.list.begin() + omniPwEditIndex); omniPwSave(); notice("Login deleted"); }
++            if (omniPwEditIndex >= 0 && omniPwEditIndex < int(omniPw.list.size())) { omniPw.list.erase(omniPw.list.begin() + omniPwEditIndex); if (omniPwSave()) notice("Login deleted"); }
+             omniFxPop();
+         });
+         return true;
+@@ -265,7 +310,7 @@
+     OmniFxPanel p;
+     p.kind = omniPwKindEdit; p.w = 760;
+     p.title = index < 0 ? "Add a login" : "Edit login";
+-    p.subtitle = "Typed on this console. Not encrypted (see About).";
++    p.subtitle = "Typed on this console. Stored encrypted (AES-256-GCM).";
+     p.build = omniPwEditBuild; p.input = omniPwEditInput;
+     p.faces = { { 0, "Edit / save" }, { 1, "Back" } };
+     omniFxPush(std::move(p));
+@@ -273,6 +318,24 @@
+ static void omniPwListBuild(OmniFxPanel& p)
+ {
+     omniPwLoad();
++    OmniVault::Vault& v = *omniPw.vault;
++    if (omniPwBroken()) {
++        OmniFxRow r; r.id = 3; r.label = "The password vault can't be opened"; r.detail = v.error() + ". Nothing will be written over it."; r.enabled = false; p.rows.push_back(r);
++        return;
++    }
++    { OmniFxRow r; r.id = 4; r.label = "Protection"; r.enabled = false;
++      r.value = omniPwLocked() ? std::string("Locked (PIN)") : v.pinMode() ? std::string("Encrypted, PIN on") : std::string("Encrypted, no PIN");
++      p.rows.push_back(r); }
++    if (omniPwLocked()) { OmniFxRow r; r.id = 5; r.label = "Unlock with your vault password or PIN"; p.rows.push_back(r); }
++    else {
++        OmniFxRow s; s.id = 6; s.label = v.pinMode() ? "Change PIN" : "Set a PIN (recommended)";
++        if (!v.pinMode()) s.detail = "Without one, anyone who can read this console's files can read your passwords";
++        p.rows.push_back(s);
++        if (v.pinMode()) { OmniFxRow r; r.id = 7; r.label = "Remove PIN"; p.rows.push_back(r); OmniFxRow l; l.id = 8; l.label = "Lock now"; p.rows.push_back(l); }
++    }
++    if (v.legacyLeftovers()) { OmniFxRow r; r.id = 9; r.label = "Remove the old unencrypted copy"; r.danger = true; p.rows.push_back(r); }
++    if (v.recoveredFromBackup()) { OmniFxRow r; r.id = 3; r.label = "Restored from the backup copy (the vault file was damaged)"; r.enabled = false; p.rows.push_back(r); }
++    if (omniPwLocked()) return;
+     OmniFxRow addRow; addRow.id = 1; addRow.label = "Add a login"; addRow.icon = omniIconPlus; p.rows.push_back(addRow);
+     std::vector<int> order;
+     for (size_t i = 0; i < omniPw.list.size(); ++i) order.push_back(int(i));
+@@ -288,11 +351,31 @@
+         p.rows.push_back(r);
+     }
+     if (omniPw.list.empty()) { OmniFxRow r; r.id = 2; r.label = "No saved logins yet"; r.enabled = false; p.rows.push_back(r); }
+-    if (!omniPw.keepRaw.empty()) { OmniFxRow r; r.id = 3; r.label = std::to_string(omniPw.keepRaw.size()) + " login(s) can't be read (key changed)"; r.enabled = false; p.rows.push_back(r); }
++    if (v.unreadable()) { OmniFxRow r; r.id = 3; r.label = std::to_string(v.unreadable()) + " saved item(s) failed their integrity check and are hidden"; r.enabled = false; p.rows.push_back(r); }
+ }
+ static bool omniPwListInput(OmniFxPanel& p, const OmniFxRow& r, int b)
+ {
+-    if (r.id == 1 && b == SDL_CONTROLLER_BUTTON_A) { omniPwEditShow(-1); return true; }
++    if (r.id == 1 && b == SDL_CONTROLLER_BUTTON_A) { omniPwUnlockThen([] { omniPwEditShow(-1); }); return true; }
++    if (b == SDL_CONTROLLER_BUTTON_A && r.id == 5) { omniPwUnlockThen([] { omniFxRefresh(); }); return true; }
++    if (b == SDL_CONTROLLER_BUTTON_A && r.id == 6) { omniPwSetPinFlow(); return true; }
++    if (b == SDL_CONTROLLER_BUTTON_A && r.id == 7) {
++        omniAsk("Remove the PIN?", "Passwords stay encrypted, but the key will be stored on this console again, so anyone who can read its files could read them.", "Remove PIN", [](bool ok) {
++            if (!ok) return;
++            notice(omniPw.vault->removePin() ? "PIN removed" : "PIN not removed: " + omniPw.vault->error());
++            omniFxRefresh();
++        });
++        return true;
++    }
++    if (b == SDL_CONTROLLER_BUTTON_A && r.id == 8) { omniPw.vault->lock(); omniPwClearList(); notice("Passwords locked"); omniFxRefresh(); return true; }
++    if (b == SDL_CONTROLLER_BUTTON_A && r.id == 9) {
++        omniAsk("Remove the old unencrypted copy?", "Before this update, logins were stored with weak obfuscation. That old copy was kept as passwords.*.xor-migrated; your logins are now in the encrypted vault.", "Remove", [](bool ok) {
++            if (!ok) return;
++            const int n = omniPwRemoveLegacyCopies();
++            notice(n > 0 ? std::string("Old copy removed") : std::string("Nothing was removed"));
++            omniFxRefresh();
++        });
++        return true;
++    }
+     if (r.id < 1000) return b == SDL_CONTROLLER_BUTTON_A;
+     const int index = r.id - 1000;
+     if (b == SDL_CONTROLLER_BUTTON_A) { omniPwRevealRow = omniPwRevealRow == r.id ? -1 : r.id; (void)p; return true; }   // reveal toggles on press
+@@ -303,7 +386,7 @@
+             const std::string site = omniPwShownOrigin(omniPw.list[index].origin);
+             omniAsk("Delete the login for " + site + "?", "It will be removed from this console.", "Delete", [index](bool ok) {
+                 if (!ok) return; omniPwLoad();
+-                if (index >= 0 && index < int(omniPw.list.size())) { omniPw.list.erase(omniPw.list.begin() + index); omniPwSave(); notice("Login deleted"); omniFxRefresh(); }
++                if (index >= 0 && index < int(omniPw.list.size())) { omniPw.list.erase(omniPw.list.begin() + index); if (omniPwSave()) notice("Login deleted"); omniFxRefresh(); }
+             });
+         }
+         return true;
+@@ -317,6 +400,11 @@
+ static void omniPwListShow()
+ {
+     omniPwRevealRow = -1;
++    omniPwLoad();
++    if (omniPw.migrated > 0 || omniPw.undecodable > 0) {
++        notice(std::to_string(std::max(0, omniPw.migrated)) + " saved login(s) moved into the encrypted vault" + (omniPw.undecodable ? " (" + std::to_string(omniPw.undecodable) + " couldn't be read)" : std::string()));
++        omniPw.migrated = -1; omniPw.undecodable = 0;
++    }
+     OmniFxPanel p;
+     p.kind = omniPwKindList; p.w = 900; p.maxVisible = 10;
+     p.title = "Passwords"; p.subtitle = "Saved logins on this console";
+--- /dev/null
++++ b/entry/OmniVault.h
+@@ -0,0 +1,552 @@
++// OMNI_VAULT_V2: encrypted storage for saved logins and 2FA (TOTP) secrets.
++//
++// Replaces the OMNI_FEATURES_V2 password store, which XORed each value with a keystream made from a key
++// file stored next to the data (obfuscation, not encryption).
++//
++// Crypto: AES-256-GCM (OpenSSL EVP) for every entry, with a fresh random 96-bit nonce on every save and
++// authenticated data that binds the entry to its kind, id, origin and timestamps. A copied or edited entry
++// fails its tag and is never shown or filled.
++//
++// Keys: one random 256-bit data key (RAND_bytes).
++//  * Default ("file" mode): the data key is kept in /data/omni/vault.key (mode 0600).
++//    HONEST LIMIT: anyone who can read the console's files (for example over the jailbreak's FTP server on
++//    the home network) can read vault.key and decrypt the vault. This is much better than XOR (no fixed
++//    keystream, tamper detection, no key reuse across values) but it is NOT protection from someone with
++//    file access. Use PIN mode for that.
++//  * PIN mode: the data key is wrapped with AES-256-GCM under a key derived from the user's PIN with
++//    PBKDF2-HMAC-SHA256 (iterations stored in the file, default 600,000) and a random 128-bit salt.
++//    vault.key is removed. Nothing on the console can decrypt the vault without the PIN.
++//
++// Files (all in the data dir, written atomically: temp file + fsync + rename + directory fsync):
++//   vault.v2      the vault          vault.v2.bak   the previous good version (used if vault.v2 is damaged)
++//   vault.key     file mode only
++// The vault is never overwritten when it can't be opened (missing key, locked, unreadable): saves are refused.
++// Entries that fail authentication are kept byte-for-byte and written back unchanged, never dropped.
++//
++// Migration from OMNI_FEATURES_V2: passwords.txt + passwords.key are read once, re-encrypted, and renamed
++// to *.xor-migrated (never deleted). Lines that can't be decoded stay in the renamed file.
++#pragma once
++#include <string>
++#include <vector>
++#include <cstring>
++#include <cstdio>
++#include <cstdint>
++#include <cstdlib>
++#include <ctime>
++#include <fcntl.h>
++#include <unistd.h>
++#include <sys/stat.h>
++
++#if defined(__has_include) && !defined(OMNI_VAULT_NO_OPENSSL_HEADERS)
++#  if __has_include(<openssl/evp.h>) && __has_include(<openssl/rand.h>)
++#    include <openssl/evp.h>
++#    include <openssl/rand.h>
++#    include <openssl/crypto.h>
++#    define OMNI_VAULT_HAVE_OPENSSL_HEADERS 1
++#  endif
++#endif
++#ifndef OMNI_VAULT_HAVE_OPENSSL_HEADERS
++// The shell's compile flags may not carry OpenSSL's include path; the title links libcrypto.a (OpenSSL 3.5.9)
++// either way. These are the exact OpenSSL 3 declarations of the functions used below.
++extern "C" {
++typedef struct evp_cipher_ctx_st EVP_CIPHER_CTX;
++typedef struct evp_cipher_st EVP_CIPHER;
++typedef struct evp_md_st EVP_MD;
++typedef struct engine_st ENGINE;
++EVP_CIPHER_CTX* EVP_CIPHER_CTX_new(void);
++void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX* ctx);
++const EVP_CIPHER* EVP_aes_256_gcm(void);
++int EVP_EncryptInit_ex(EVP_CIPHER_CTX* ctx, const EVP_CIPHER* type, ENGINE* impl, const unsigned char* key, const unsigned char* iv);
++int EVP_DecryptInit_ex(EVP_CIPHER_CTX* ctx, const EVP_CIPHER* type, ENGINE* impl, const unsigned char* key, const unsigned char* iv);
++int EVP_EncryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl);
++int EVP_DecryptUpdate(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl, const unsigned char* in, int inl);
++int EVP_EncryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* out, int* outl);
++int EVP_DecryptFinal_ex(EVP_CIPHER_CTX* ctx, unsigned char* outm, int* outl);
++int EVP_CIPHER_CTX_ctrl(EVP_CIPHER_CTX* ctx, int type, int arg, void* ptr);
++int PKCS5_PBKDF2_HMAC(const char* pass, int passlen, const unsigned char* salt, int saltlen, int iter, const EVP_MD* digest, int keylen, unsigned char* out);
++const EVP_MD* EVP_sha256(void);
++int RAND_bytes(unsigned char* buf, int num);
++void OPENSSL_cleanse(void* ptr, size_t len);
++int CRYPTO_memcmp(const void* a, const void* b, size_t len);
++}
++#  define EVP_CTRL_GCM_SET_IVLEN 0x9
++#  define EVP_CTRL_GCM_GET_TAG 0x10
++#  define EVP_CTRL_GCM_SET_TAG 0x11
++#endif
++
++namespace OmniVault {
++
++static const int kDefaultIterations = 600000;
++static const size_t kMaxEntries = 2000, kMaxField = 4096, kMaxFile = 8u << 20;
++
++// ---- small helpers --------------------------------------------------------------------------------
++static inline std::string hex(const std::string& b)
++{
++    static const char* h = "0123456789abcdef";
++    std::string o; o.reserve(b.size() * 2);
++    for (unsigned char c : b) { o += h[c >> 4]; o += h[c & 15]; }
++    return o;
++}
++static inline bool unhex(const std::string& h, std::string& out)
++{
++    out.clear();
++    if (h.size() % 2) return false;
++    auto v = [](char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1; };
++    out.reserve(h.size() / 2);
++    for (size_t i = 0; i < h.size(); i += 2) { const int a = v(h[i]), b = v(h[i + 1]); if (a < 0 || b < 0) return false; out += char(a * 16 + b); }
++    return true;
++}
++static inline void wipe(std::string& s) { if (!s.empty()) OPENSSL_cleanse(&s[0], s.size()); s.clear(); }
++static inline void wipe(void* p, size_t n) { OPENSSL_cleanse(p, n); }
++static inline bool randomBytes(void* out, size_t n) { return RAND_bytes(static_cast<unsigned char*>(out), int(n)) == 1; }
++static inline std::vector<std::string> splitTabs(const std::string& s)
++{
++    std::vector<std::string> part; size_t from = 0;
++    for (;;) { const size_t t = s.find('\t', from); part.push_back(s.substr(from, t == std::string::npos ? std::string::npos : t - from)); if (t == std::string::npos) break; from = t + 1; }
++    return part;
++}
++static inline std::string oneLine(std::string s, size_t max)
++{
++    for (auto& c : s) if (c == '\t' || c == '\n' || c == '\r') c = ' ';
++    if (s.size() > max) s.resize(max);
++    return s;
++}
++
++// ---- AES-256-GCM ----------------------------------------------------------------------------------
++static inline bool gcmSeal(const uint8_t key[32], const std::string& aad, const std::string& plain, std::string& nonce, std::string& ct, std::string& tag)
++{
++    nonce.assign(12, '\0'); ct.assign(plain.size(), '\0'); tag.assign(16, '\0');
++    if (!randomBytes(&nonce[0], 12)) return false;
++    EVP_CIPHER_CTX* c = EVP_CIPHER_CTX_new();
++    if (!c) return false;
++    int n = 0, ok = 1;
++    ok &= EVP_EncryptInit_ex(c, EVP_aes_256_gcm(), nullptr, nullptr, nullptr);
++    ok &= EVP_CIPHER_CTX_ctrl(c, EVP_CTRL_GCM_SET_IVLEN, 12, nullptr);
++    ok &= EVP_EncryptInit_ex(c, nullptr, nullptr, key, reinterpret_cast<const unsigned char*>(nonce.data()));
++    if (ok && !aad.empty()) ok &= EVP_EncryptUpdate(c, nullptr, &n, reinterpret_cast<const unsigned char*>(aad.data()), int(aad.size()));
++    if (ok && !plain.empty()) ok &= EVP_EncryptUpdate(c, reinterpret_cast<unsigned char*>(&ct[0]), &n, reinterpret_cast<const unsigned char*>(plain.data()), int(plain.size()));
++    unsigned char fin[16]; int fl = 0;
++    if (ok) ok &= EVP_EncryptFinal_ex(c, fin, &fl);
++    if (ok) ok &= EVP_CIPHER_CTX_ctrl(c, EVP_CTRL_GCM_GET_TAG, 16, &tag[0]);
++    EVP_CIPHER_CTX_free(c);
++    return ok == 1;
++}
++static inline bool gcmOpen(const uint8_t key[32], const std::string& aad, const std::string& nonce, const std::string& ct, const std::string& tag, std::string& plain)
++{
++    plain.clear();
++    if (nonce.size() != 12 || tag.size() != 16) return false;
++    std::string out(ct.size(), '\0');
++    EVP_CIPHER_CTX* c = EVP_CIPHER_CTX_new();
++    if (!c) return false;
++    int n = 0, ok = 1;
++    ok &= EVP_DecryptInit_ex(c, EVP_aes_256_gcm(), nullptr, nullptr, nullptr);
++    ok &= EVP_CIPHER_CTX_ctrl(c, EVP_CTRL_GCM_SET_IVLEN, 12, nullptr);
++    ok &= EVP_DecryptInit_ex(c, nullptr, nullptr, key, reinterpret_cast<const unsigned char*>(nonce.data()));
++    if (ok && !aad.empty()) ok &= EVP_DecryptUpdate(c, nullptr, &n, reinterpret_cast<const unsigned char*>(aad.data()), int(aad.size()));
++    if (ok && !ct.empty()) ok &= EVP_DecryptUpdate(c, reinterpret_cast<unsigned char*>(&out[0]), &n, reinterpret_cast<const unsigned char*>(ct.data()), int(ct.size()));
++    std::string t = tag;
++    if (ok) ok &= EVP_CIPHER_CTX_ctrl(c, EVP_CTRL_GCM_SET_TAG, 16, &t[0]);
++    unsigned char fin[16]; int fl = 0;
++    if (ok) ok &= (EVP_DecryptFinal_ex(c, fin, &fl) > 0);   // fails when the tag doesn't match
++    EVP_CIPHER_CTX_free(c);
++    if (ok != 1) { wipe(out); return false; }
++    plain.swap(out);
++    return true;
++}
++static inline bool deriveKey(const std::string& pin, const std::string& salt, int iterations, uint8_t out[32])
++{
++    return PKCS5_PBKDF2_HMAC(pin.data(), int(pin.size()), reinterpret_cast<const unsigned char*>(salt.data()), int(salt.size()), iterations, EVP_sha256(), 32, out) == 1;
++}
++
++// ---- files ------------------------------------------------------------------------------------------
++static int (*testCrashPoint)(const char* where) = nullptr;   // host tests only: return nonzero to "crash" there
++static inline bool readFile(const std::string& path, std::string& out)
++{
++    out.clear();
++    FILE* f = fopen(path.c_str(), "rb");
++    if (!f) return false;
++    char buf[16384]; size_t n;
++    while ((n = fread(buf, 1, sizeof(buf), f)) > 0) { out.append(buf, n); if (out.size() > kMaxFile) { fclose(f); out.clear(); return false; } }
++    fclose(f);
++    return true;
++}
++static inline bool fileExists(const std::string& path) { struct stat st; return stat(path.c_str(), &st) == 0; }
++static inline void syncDir(const std::string& dir)
++{
++    const int fd = ::open(dir.c_str(), O_RDONLY);
++    if (fd >= 0) { (void)fsync(fd); close(fd); }
++}
++// temp file + fsync + rename + directory fsync. The old file stays intact until the rename.
++static inline bool writeAtomic(const std::string& dir, const std::string& path, const std::string& data, mode_t mode)
++{
++    const std::string tmp = path + ".tmp";
++    const int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
++    if (fd < 0) return false;
++    size_t done = 0;
++    if (testCrashPoint && testCrashPoint("mid-write")) { (void)!write(fd, data.data(), data.size() / 2); close(fd); return false; }
++    while (done < data.size()) { const ssize_t w = write(fd, data.data() + done, data.size() - done); if (w <= 0) { close(fd); unlink(tmp.c_str()); return false; } done += size_t(w); }
++    if (fsync(fd) != 0) { close(fd); unlink(tmp.c_str()); return false; }
++    close(fd);
++    (void)chmod(tmp.c_str(), mode);
++    if (testCrashPoint && testCrashPoint("before-rename")) return false;
++    if (rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
++    syncDir(dir);
++    return true;
++}
++
++// ---- the legacy OMNI_FEATURES_V2 format (read-only, for migration) ------------------------------
++static inline uint64_t legacyMix(uint64_t& s)
++{
++    uint64_t z = (s += 0x9E3779B97F4A7C15ull);
++    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
++    z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
++    return z ^ (z >> 31);
++}
++static inline bool legacyUnseal(const uint8_t key[32], const std::string& hexValue, std::string& plain)
++{
++    std::string raw;
++    if (!unhex(hexValue, raw) || raw.size() < 8) return false;
++    uint64_t s = 0xcbf29ce484222325ull;
++    for (int i = 0; i < 32; ++i) s = (s ^ key[i]) * 0x100000001b3ull;
++    for (int i = 0; i < 8; ++i) s = (s ^ uint8_t(raw[i])) * 0x100000001b3ull;
++    for (size_t i = 8; i < raw.size(); i += 8) {
++        const uint64_t r = legacyMix(s);
++        for (size_t k = 0; k < 8 && i + k < raw.size(); ++k) raw[i + k] = char(uint8_t(raw[i + k]) ^ uint8_t(r >> (8 * k)));
++    }
++    plain = raw.substr(8);
++    wipe(raw);
++    return true;
++}
++
++// ---- the vault ---------------------------------------------------------------------------------------
++struct Entry {
++    std::string id;       // 16 hex chars, random
++    std::string kind;     // "login" or "totp"
++    std::string origin;   // login: scheme://host[:port]; totp: issuer/account label shown in lists
++    long long created = 0, used = 0;
++    std::string a, b, c;  // login: user, password, -;  totp: account label, base32 secret, "SHA1,6,30"
++};
++
++class Vault {
++public:
++    explicit Vault(std::string dir) : dir_(std::move(dir)) { if (!dir_.empty() && dir_.back() != '/') dir_ += '/'; }
++    ~Vault() { lock(); }
++
++    // State, for the UI and for vault.capabilities.
++    bool exists() const { return exists_; }
++    bool pinMode() const { return pinMode_; }
++    bool unlocked() const { return haveKey_; }
++    bool openFailed() const { return openFailed_; }       // file present but can't be opened: never overwritten
++    bool recoveredFromBackup() const { return fromBackup_; }
++    size_t unreadable() const { return badRaw_.size(); }  // entries whose authentication failed (kept as they are)
++    const std::string& error() const { return error_; }
++    int iterations() const { return iterations_; }
++    std::vector<Entry> entries;                            // decrypted entries (empty while locked)
++
++    std::string path(const char* name) const { return dir_ + name; }
++
++    // Reads vault.v2 (or .bak). In file mode it also reads vault.key and decrypts. In PIN mode it stays locked.
++    bool load()
++    {
++        lock(); clearState();
++        std::string text;
++        for (const char* name : { "vault.v2", "vault.v2.bak" }) {
++            if (!readFile(path(name), text)) continue;
++            exists_ = true;
++            if (parse(text)) { fromBackup_ = std::strcmp(name, "vault.v2.bak") == 0; loadedText_ = text; break; }
++            clearParsed();
++        }
++        wipe(text);
++        if (!exists_) return true;                           // a new, empty vault
++        if (!parsedOk_) { openFailed_ = true; error_ = "The vault file is damaged and its backup can't be read"; return false; }
++        if (pinMode_) return true;                           // locked until unlock()
++        std::string keyHex, key;
++        if (!readFile(path("vault.key"), keyHex)) { openFailed_ = true; error_ = "The vault key file is missing"; return false; }
++        while (!keyHex.empty() && (keyHex.back() == '\n' || keyHex.back() == '\r')) keyHex.pop_back();
++        if (!unhex(keyHex, key) || key.size() != 32) { wipe(keyHex); openFailed_ = true; error_ = "The vault key file is damaged"; return false; }
++        memcpy(key_, key.data(), 32); wipe(key); wipe(keyHex);
++        if (!checkKey()) { wipe(key_, 32); openFailed_ = true; error_ = "The vault key doesn't match this vault"; return false; }
++        haveKey_ = true;
++        decryptAll();
++        return true;
++    }
++
++    // PIN mode: derive the key-encryption key and unwrap the data key. Wrong PIN -> false (GCM tag fails).
++    bool unlock(const std::string& pin)
++    {
++        if (!pinMode_ || haveKey_) return haveKey_;
++        if (!loadedText_.empty()) { std::string t = loadedText_; const bool ok = parse(t); wipe(t); if (!ok) { error_ = "The vault file is damaged"; return false; } }
++        uint8_t kek[32];
++        if (!deriveKey(pin, salt_, iterations_, kek)) { error_ = "Key derivation failed"; return false; }
++        std::string dk;
++        const bool ok = gcmOpen(kek, "omni-vault-v2 key", wrapNonce_, wrapCt_, wrapTag_, dk) && dk.size() == 32;
++        wipe(kek, 32);
++        if (!ok) { wipe(dk); error_ = "Wrong PIN"; return false; }
++        memcpy(key_, dk.data(), 32); wipe(dk);
++        if (!checkKey()) { wipe(key_, 32); error_ = "Wrong PIN"; return false; }
++        haveKey_ = true; error_.clear();
++        decryptAll();
++        return true;
++    }
++    void lock()
++    {
++        for (auto& e : entries) { wipe(e.a); wipe(e.b); wipe(e.c); }
++        entries.clear();
++        wipe(key_, 32);
++        haveKey_ = false;
++    }
++    bool canSave() const { return !openFailed_ && (haveKey_ || (!exists_ && !pinMode_)); }
++
++    // Re-encrypts every entry with fresh nonces and writes atomically (previous version kept as .bak).
++    bool save()
++    {
++        if (!canSave()) { if (error_.empty()) error_ = pinMode_ ? "The vault is locked" : "The vault can't be opened"; return false; }
++        if (!haveKey_) {   // first save of a new vault: create the data key and its file first
++            if (!randomBytes(key_, 32)) { error_ = "No random numbers available"; return false; }
++            std::string k(reinterpret_cast<const char*>(key_), 32);
++            const bool ok = writeAtomic(dir_, path("vault.key"), hex(k) + "\n", 0600);
++            wipe(k);
++            if (!ok) { wipe(key_, 32); error_ = "Couldn't write the vault key"; return false; }
++            haveKey_ = true; exists_ = true;
++        }
++        std::string text;
++        if (!build(text)) { error_ = "Encryption failed"; return false; }
++        if (!loadedText_.empty() && !writeAtomic(dir_, path("vault.v2.bak"), loadedText_, 0600)) { wipe(text); error_ = "Couldn't write the backup"; return false; }
++        if (!writeAtomic(dir_, path("vault.v2"), text, 0600)) { wipe(text); error_ = "Couldn't write the vault"; return false; }
++        wipe(loadedText_); loadedText_.swap(text);
++        exists_ = true; fromBackup_ = false; error_.clear();
++        return true;
++    }
++
++    // Turns PIN mode on (or changes the PIN). A NEW data key is made and everything is re-encrypted under it,
++    // the backup is rewritten under it too, and vault.key is removed, so the old key file opens nothing.
++    bool setPin(const std::string& pin, int iterations = kDefaultIterations)
++    {
++        if (pin.size() < 6) { error_ = "Use at least 6 characters"; return false; }
++        if (exists_ && !haveKey_) { error_ = "Unlock the vault first"; return false; }
++        if (openFailed_) { error_ = "The vault can't be opened"; return false; }
++        uint8_t newKey[32], kek[32];
++        std::string salt(16, '\0');
++        if (!randomBytes(newKey, 32) || !randomBytes(&salt[0], 16)) { error_ = "No random numbers available"; return false; }
++        if (!deriveKey(pin, salt, iterations, kek)) { wipe(newKey, 32); error_ = "Key derivation failed"; return false; }
++        std::string dk(reinterpret_cast<const char*>(newKey), 32), n, ct, tag;
++        const bool ok = gcmSeal(kek, "omni-vault-v2 key", dk, n, ct, tag);
++        wipe(dk); wipe(kek, 32);
++        if (!ok) { wipe(newKey, 32); error_ = "Encryption failed"; return false; }
++        const bool wasPin = pinMode_; const std::string oldSalt = salt_; const int oldIter = iterations_;
++        const std::string oN = wrapNonce_, oC = wrapCt_, oT = wrapTag_;
++        uint8_t oldKey[32]; memcpy(oldKey, key_, 32); const bool hadKey = haveKey_;
++        pinMode_ = true; salt_ = salt; iterations_ = iterations; wrapNonce_ = n; wrapCt_ = ct; wrapTag_ = tag;
++        memcpy(key_, newKey, 32); haveKey_ = true; wipe(newKey, 32);
++        std::string text;
++        bool good = build(text) && writeAtomic(dir_, path("vault.v2.bak"), text, 0600) && writeAtomic(dir_, path("vault.v2"), text, 0600);
++        if (!good) {   // put everything back as it was; the files on disk are unchanged or a consistent new version
++            pinMode_ = wasPin; salt_ = oldSalt; iterations_ = oldIter; wrapNonce_ = oN; wrapCt_ = oC; wrapTag_ = oT;
++            memcpy(key_, oldKey, 32); haveKey_ = hadKey; wipe(oldKey, 32); wipe(text);
++            error_ = "Couldn't write the vault"; return false;
++        }
++        wipe(oldKey, 32);
++        wipe(loadedText_); loadedText_.swap(text);
++        exists_ = true;
++        unlink(path("vault.key").c_str()); syncDir(dir_);   // the old key can no longer open anything current
++        error_.clear();
++        return true;
++    }
++    // Back to file mode (needs the vault unlocked). Writes vault.key with a new data key.
++    bool removePin()
++    {
++        if (!pinMode_) return true;
++        if (!haveKey_) { error_ = "Unlock the vault first"; return false; }
++        uint8_t newKey[32];
++        if (!randomBytes(newKey, 32)) { error_ = "No random numbers available"; return false; }
++        std::string k(reinterpret_cast<const char*>(newKey), 32);
++        if (!writeAtomic(dir_, path("vault.key.new"), hex(k) + "\n", 0600)) { wipe(k); wipe(newKey, 32); error_ = "Couldn't write the vault key"; return false; }
++        wipe(k);
++        uint8_t oldKey[32]; memcpy(oldKey, key_, 32);
++        pinMode_ = false; memcpy(key_, newKey, 32); wipe(newKey, 32);
++        std::string text;
++        if (!(build(text) && writeAtomic(dir_, path("vault.v2.bak"), text, 0600))) {
++            pinMode_ = true; memcpy(key_, oldKey, 32); wipe(oldKey, 32); wipe(text); unlink(path("vault.key.new").c_str());
++            error_ = "Couldn't write the vault"; return false;
++        }
++        // the key must exist under its real name before the vault that needs it
++        if (rename(path("vault.key.new").c_str(), path("vault.key").c_str()) != 0 || !writeAtomic(dir_, path("vault.v2"), text, 0600)) {
++            pinMode_ = true; memcpy(key_, oldKey, 32); wipe(oldKey, 32); wipe(text);
++            error_ = "Couldn't write the vault"; return false;
++        }
++        syncDir(dir_);
++        wipe(oldKey, 32);
++        wipe(loadedText_); loadedText_.swap(text);
++        error_.clear();
++        return true;
++    }
++
++    // One-time import of the OMNI_FEATURES_V2 store. Returns the number imported, or -1 on failure.
++    // passwords.txt/passwords.key are renamed to *.xor-migrated (a timestamp is added if that name exists).
++    int migrateLegacy(int* undecodable = nullptr)
++    {
++        if (undecodable) *undecodable = 0;
++        const std::string txt = path("passwords.txt"), keyFile = path("passwords.key");
++        if (!fileExists(txt)) return 0;
++        if (!canSave()) { error_ = "Unlock the vault first"; return -1; }
++        uint8_t key[32]; bool haveLegacyKey = false;
++        std::string s, raw;
++        if (readFile(keyFile, s)) {
++            while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
++            if (unhex(s, raw) && raw.size() == 32) { memcpy(key, raw.data(), 32); haveLegacyKey = true; }
++            wipe(raw); wipe(s);
++        }
++        std::string text;
++        if (!readFile(txt, text)) return 0;
++        int added = 0, bad = 0;
++        size_t from = 0;
++        while (from < text.size()) {
++            size_t nl = text.find('\n', from); if (nl == std::string::npos) nl = text.size();
++            std::string line = text.substr(from, nl - from); from = nl + 1;
++            while (!line.empty() && line.back() == '\r') line.pop_back();
++            auto part = splitTabs(line);
++            if (part.size() >= 6 && part[0] == "login") {
++                Entry e; e.kind = "login"; e.origin = oneLine(part[1], 300);
++                e.created = atoll(part[4].c_str()); e.used = atoll(part[5].c_str());
++                if (haveLegacyKey && legacyUnseal(key, part[2], e.a) && legacyUnseal(key, part[3], e.b)) {
++                    bool dup = false;
++                    for (auto& x : entries) if (x.kind == "login" && x.origin == e.origin && x.a == e.a && x.b == e.b) dup = true;
++                    if (!dup && entries.size() < kMaxEntries) { e.id = newId(); entries.push_back(std::move(e)); ++added; }
++                    else { wipe(e.a); wipe(e.b); }
++                } else ++bad;
++            }
++            wipe(line);
++        }
++        wipe(text); wipe(key, 32);
++        if (undecodable) *undecodable = bad;
++        if (!save()) return -1;   // the old files stay where they were if the new vault couldn't be written
++        auto retire = [&](const std::string& p) {
++            if (!fileExists(p)) return;
++            std::string to = p + ".xor-migrated";
++            if (fileExists(to)) to += "-" + std::to_string((long long)time(nullptr));
++            (void)rename(p.c_str(), to.c_str());
++        };
++        retire(txt); retire(keyFile); syncDir(dir_);
++        return added;
++    }
++    bool legacyLeftovers() const { return fileExists(path("passwords.txt.xor-migrated")) || fileExists(path("passwords.key.xor-migrated")); }
++
++    static std::string newId()
++    {
++        std::string b(8, '\0');
++        if (!randomBytes(&b[0], 8)) { for (auto& c : b) c = char(rand()); }
++        return hex(b);
++    }
++
++private:
++    struct Raw { std::string line, id, kind, origin, nonce, ct, tag; long long created = 0, used = 0; };
++    std::string dir_, error_, salt_, wrapNonce_, wrapCt_, wrapTag_, checkNonce_, checkCt_, checkTag_, loadedText_;
++    uint8_t key_[32] {};
++    bool exists_ = false, pinMode_ = false, haveKey_ = false, openFailed_ = false, fromBackup_ = false, parsedOk_ = false;
++    int iterations_ = kDefaultIterations;
++    std::vector<Raw> raw_;      // parsed, still encrypted
++    std::vector<Raw> parseBad_; // malformed entry lines from the file
++    std::vector<Raw> badRaw_;   // malformed + failed authentication: written back byte-for-byte
++
++    void clearParsed()
++    {
++        parsedOk_ = false; pinMode_ = false; salt_.clear(); wrapNonce_.clear(); wrapCt_.clear(); wrapTag_.clear();
++        checkNonce_.clear(); checkCt_.clear(); checkTag_.clear(); raw_.clear(); parseBad_.clear(); badRaw_.clear(); iterations_ = kDefaultIterations;
++    }
++    void clearState() { clearParsed(); exists_ = openFailed_ = fromBackup_ = false; error_.clear(); wipe(loadedText_); }
++
++    static std::string aadFor(const std::string& kind, const std::string& id, const std::string& origin, long long created, long long used)
++    {
++        return "omni-vault-v2\n" + kind + "\n" + id + "\n" + origin + "\n" + std::to_string(created) + "\n" + std::to_string(used);
++    }
++    bool parse(const std::string& text)
++    {
++        clearParsed();
++        size_t from = 0; int line = 0; bool header = false, haveCheck = false, haveKdf = false;
++        while (from < text.size()) {
++            size_t nl = text.find('\n', from); if (nl == std::string::npos) nl = text.size();
++            std::string l = text.substr(from, nl - from); from = nl + 1; ++line;
++            if (l.empty()) continue;
++            auto p = splitTabs(l);
++            std::string a, b, c;
++            if (line == 1) { if (p.size() != 2 || p[0] != "omni-vault" || p[1] != "2") return false; header = true; continue; }
++            if (p[0] == "kdf") {
++                if (p.size() == 2 && p[1] == "none") { pinMode_ = false; haveKdf = true; }
++                else if (p.size() == 4 && p[1] == "pbkdf2-sha256" && unhex(p[3], salt_) && salt_.size() == 16) {
++                    iterations_ = atoi(p[2].c_str()); if (iterations_ < 10000 || iterations_ > 50000000) return false;
++                    pinMode_ = true; haveKdf = true;
++                } else return false;
++            } else if (p[0] == "wrap" && p.size() == 4) {
++                if (!unhex(p[1], wrapNonce_) || !unhex(p[2], wrapCt_) || !unhex(p[3], wrapTag_)) return false;
++            } else if (p[0] == "check" && p.size() == 4) {
++                if (!unhex(p[1], checkNonce_) || !unhex(p[2], checkCt_) || !unhex(p[3], checkTag_)) return false;
++                haveCheck = true;
++            } else if (p[0] == "entry" && p.size() == 9) {
++                Raw r; r.line = l; r.id = p[1]; r.kind = p[2]; r.origin = p[3]; r.created = atoll(p[4].c_str()); r.used = atoll(p[5].c_str());
++                if (r.id.size() != 16 || (r.kind != "login" && r.kind != "totp") || !unhex(p[6], r.nonce) || !unhex(p[7], r.ct) || !unhex(p[8], r.tag) || r.ct.size() > 3 * kMaxField) {
++                    parseBad_.push_back(r); badRaw_.push_back(r);
++                } else if (raw_.size() < kMaxEntries) raw_.push_back(std::move(r));
++            } else if (p[0] == "end") {
++                // trailer present: the file was written completely
++                parsedOk_ = header && haveKdf && haveCheck && (!pinMode_ || !wrapCt_.empty());
++                return parsedOk_;
++            }
++            // unknown lines from a newer version are ignored
++        }
++        return false;   // no trailer: incomplete file
++    }
++    bool checkKey()
++    {
++        std::string plain;
++        const bool ok = gcmOpen(key_, "omni-vault-v2 check", checkNonce_, checkCt_, checkTag_, plain) && plain == "omni-vault-check";
++        wipe(plain);
++        return ok;
++    }
++    void decryptAll()
++    {
++        for (auto& e : entries) { wipe(e.a); wipe(e.b); wipe(e.c); }
++        entries.clear();
++        std::vector<Raw> stillBad = parseBad_;
++        for (auto& r : raw_) {
++            std::string plain;
++            if (!gcmOpen(key_, aadFor(r.kind, r.id, r.origin, r.created, r.used), r.nonce, r.ct, r.tag, plain)) { stillBad.push_back(r); continue; }
++            Entry e; e.id = r.id; e.kind = r.kind; e.origin = r.origin; e.created = r.created; e.used = r.used;
++            const size_t z1 = plain.find('\0'), z2 = z1 == std::string::npos ? std::string::npos : plain.find('\0', z1 + 1);
++            if (z1 == std::string::npos) { wipe(plain); stillBad.push_back(r); continue; }
++            e.a = plain.substr(0, z1);
++            e.b = plain.substr(z1 + 1, z2 == std::string::npos ? std::string::npos : z2 - z1 - 1);
++            if (z2 != std::string::npos) e.c = plain.substr(z2 + 1);
++            wipe(plain);
++            entries.push_back(std::move(e));
++        }
++        badRaw_.swap(stillBad);
++    }
++    bool build(std::string& text)
++    {
++        text = "omni-vault\t2\n";
++        if (pinMode_) {
++            text += "kdf\tpbkdf2-sha256\t" + std::to_string(iterations_) + "\t" + hex(salt_) + "\n";
++            text += "wrap\t" + hex(wrapNonce_) + "\t" + hex(wrapCt_) + "\t" + hex(wrapTag_) + "\n";
++        } else text += "kdf\tnone\n";
++        std::string n, ct, tag;
++        if (!gcmSeal(key_, "omni-vault-v2 check", "omni-vault-check", n, ct, tag)) return false;
++        text += "check\t" + hex(n) + "\t" + hex(ct) + "\t" + hex(tag) + "\n";
++        size_t count = 0;
++        for (auto& e : entries) {
++            if (count++ >= kMaxEntries) break;
++            if (e.id.size() != 16) return false;
++            const std::string origin = oneLine(e.origin, 300);
++            std::string plain = e.a.substr(0, kMaxField) + std::string(1, '\0') + e.b.substr(0, kMaxField);
++            if (e.kind == "totp") plain += std::string(1, '\0') + e.c.substr(0, 64);
++            const bool ok = gcmSeal(key_, aadFor(e.kind, e.id, origin, e.created, e.used), plain, n, ct, tag);
++            wipe(plain);
++            if (!ok) { wipe(text); return false; }
++            text += "entry\t" + e.id + "\t" + e.kind + "\t" + origin + "\t" + std::to_string(e.created) + "\t" + std::to_string(e.used) + "\t" + hex(n) + "\t" + hex(ct) + "\t" + hex(tag) + "\n";
++        }
++        for (auto& r : badRaw_) text += r.line + "\n";
++        text += "end\n";
++        return true;
++    }
++};
++
++} // namespace OmniVault

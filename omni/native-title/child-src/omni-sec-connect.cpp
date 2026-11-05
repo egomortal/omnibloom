@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // OMNI_SEC_LOCALHOST_V1 (sec-job1): the console-port block for the native title's child engine
 // (/data/omni/native/omni-engine-child.elf, which runs the WebProcess and NetworkProcess payloads).
 //
@@ -13,11 +14,25 @@
 //   8095  Master Control menu and its /api         (always)
 //   53    DNS                                      (always)
 //   8080  websrv: only while an Omni self-test flag exists (test pages under /fs/data/omni/)
+//   8099  s1c redirect test server (omni-redirect-test.elf): only while an Omni self-test flag exists
 // So a page can no longer reach the ELF loader (9021), websrv (8080, incl. /hbldr), Payload Manager
 // (8084), FTP (2121) or anything else listening on the console.
 // Not blocked here: other devices on the home network (a router's page the user types in still
 // works). Page-initiated requests to private LAN ranges need the initiator, which only the
 // NetworkProcess's request filter knows: see sec-job1/webkit-patch/ for JOB 2.
+//
+// OMNI_SEC_PNA_CONNECT_V1 (audit OS-001, s3.1): the private-network rule is also enforced HERE, on the address
+// the connection really goes to. WebKit's curl handles (CurlContext.cpp, opensocket callback) tag each socket they
+// open with the request's URL and its first-party (top-level) site via omniSecConnectContext(); connect() then uses
+// that tag once:
+//   * initiator's address space: an IP literal or localhost/.local name by its text, any other name by what this
+//     process last connected to for it (unknown = public);
+//   * a public initiator may not reach a private, link-local, CGNAT, unique-local, loopback or console address,
+//     except the top-level site's own host (the user's typed or followed navigation to a LAN name, e.g.
+//     http://nas.lan/), and even that is refused once that host was seen on a public address (DNS rebinding);
+//   * private initiators, sockets without a tag (not opened for a page), and public destinations are unchanged.
+// The request-time check (OmniUBlock.cpp, OMNI_SEC_PNA_V1) stays as the first line; this closes names that only
+// resolve to the home network.
 //
 // Switch: Browser settings "Block pages from reaching the console" (default On) writes
 // /data/omni/sec-local-block.off when turned off. Each block is counted in
@@ -36,8 +51,11 @@
 #include <unistd.h>
 #include <atomic>
 #include <mutex>
+#include <string>
+#include "OmniHubCards.h" // OMNI_HUB_CARDS_V1 (s2): the allowed ports come from the verified ID cards
 
 extern "C" int __real_connect(int, const struct sockaddr*, socklen_t);
+extern "C" void omniSecConnectContext(int fd, const char* targetURL, const char* initiatorURL);
 
 namespace {
 
@@ -149,7 +167,105 @@ void learn(int fd)   // under lock: our own address on an outbound connection
     }
 }
 
+// ---- OMNI_SEC_PNA_CONNECT_V1 ------------------------------------------------------------------------
+enum Space { SpacePublic, SpacePrivate, SpaceLocal, SpaceUnknown };
+
+// The host of a URL, lowercased, without brackets, port, userinfo or trailing dots ("" when there is no "://").
+// Same parsing as OmniUBlock.cpp's pnaHost(), so both layers agree on what the initiator is.
+std::string hostOf(const char* url)
+{
+    if (!url) return {};
+    std::string u(url); auto s = u.find("://"); if (s == std::string::npos) return {};
+    s += 3; auto e = u.find_first_of("/?#", s); std::string h = u.substr(s, e == std::string::npos ? std::string::npos : e - s);
+    if (auto at = h.rfind('@'); at != std::string::npos) h = h.substr(at + 1);
+    if (!h.empty() && h[0] == '[') { auto c = h.find(']'); return c == std::string::npos ? std::string() : h.substr(1, c - 1); }
+    if (auto c = h.rfind(':'); c != std::string::npos) h = h.substr(0, c);
+    for (auto& ch : h) if (ch >= 'A' && ch <= 'Z') ch = ch - 'A' + 'a';
+    while (!h.empty() && h.back() == '.') h.pop_back();
+    return h;
+}
+// One binary classifier for every address (IPv4, IPv6, IPv4-mapped IPv6).
+Space space4(uint32_t h)   // host byte order
+{
+    if ((h >> 24) == 127 || (h >> 24) == 0) return SpaceLocal;
+    if ((h >> 24) == 10 || (h >> 20) == 0xAC1 || (h >> 16) == 0xC0A8 || (h >> 16) == 0xA9FE || (h >> 22) == (100u << 2 | 1)) return SpacePrivate;
+    return SpacePublic;
+}
+Space space6(const uint8_t* b)
+{
+    static const uint8_t loop[16] = { 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1 }, zero[16] = {}, mapped[12] = { 0,0,0,0, 0,0,0,0, 0,0,0xff,0xff };
+    if (!memcmp(b, loop, 16) || !memcmp(b, zero, 16)) return SpaceLocal;
+    if (!memcmp(b, mapped, 12)) { uint32_t a; memcpy(&a, b + 12, 4); return space4(ntohl(a)); }
+    if ((b[0] & 0xfe) == 0xfc || (b[0] == 0xfe && (b[1] & 0xc0) == 0x80)) return SpacePrivate;   // fc00::/7, fe80::/10
+    return SpacePublic;
+}
+Space peerSpace(const sockaddr* sa)   // the console's own addresses are Local (localKind() already said so)
+{
+    if (sa->sa_family == AF_INET) return space4(ntohl(reinterpret_cast<const sockaddr_in*>(sa)->sin_addr.s_addr));
+    return space6(reinterpret_cast<const sockaddr_in6*>(sa)->sin6_addr.s6_addr);
+}
+Space literalSpace(const std::string& h)   // SpaceUnknown when h is an ordinary name
+{
+    if (h.empty()) return SpaceUnknown;
+    if (h == "localhost" || (h.size() > 10 && !h.compare(h.size() - 10, 10, ".localhost"))) return SpaceLocal;
+    if (h.size() > 6 && !h.compare(h.size() - 6, 6, ".local")) return SpacePrivate;
+    in_addr a4; if (inet_pton(AF_INET, h.c_str(), &a4) == 1) return space4(ntohl(a4.s_addr));
+    uint8_t a6[16]; if (inet_pton(AF_INET6, h.c_str(), a6) == 1) return space6(a6);
+    return SpaceUnknown;
+}
+
+// Tags from omniSecConnectContext, keyed by socket, used once by the next connect() on that socket.
+struct Tag { int fd = -1; std::string target, initiator; };
+Tag tags[64]; unsigned tagNext = 0;
+// Address space each name was last connected to in this process (bounded; oldest replaced).
+struct Seen { std::string host; Space space = SpaceUnknown; };
+Seen seen[256]; unsigned seenNext = 0;
+
+Space seenSpace(const std::string& h)   // under lock
+{
+    for (auto& s : seen) if (!s.host.empty() && s.host == h) return s.space;
+    return SpaceUnknown;
+}
+void remember(const std::string& h, Space sp)   // under lock; names only
+{
+    if (h.empty() || literalSpace(h) != SpaceUnknown) return;
+    for (auto& s : seen) if (s.host == h) { s.space = sp; return; }
+    seen[seenNext++ % 256] = Seen { h, sp };
+}
+bool takeTag(int fd, Tag& out)   // under lock
+{
+    for (auto& t : tags) if (t.fd == fd) { out = std::move(t); t = Tag(); return true; }
+    return false;
+}
+// 0 = allowed, else the reason it is refused. Under lock.
+const char* pnaVerdict(const Tag& tag, Space peer)
+{
+    const std::string target = hostOf(tag.target.c_str()), from = hostOf(tag.initiator.c_str());
+    if (peer == SpacePublic) { remember(target, SpacePublic); return nullptr; }
+    if (from.empty()) { remember(target, peer); return nullptr; }                 // not started by a page
+    Space fromSpace = literalSpace(from);
+    if (fromSpace == SpaceUnknown) fromSpace = seenSpace(from);
+    if (fromSpace == SpacePrivate || fromSpace == SpaceLocal) { remember(target, peer); return nullptr; }   // private page -> private: allowed
+    if (target == from) {                                                         // the top-level site's own host
+        if (seenSpace(target) == SpacePublic) return "a public site's name now points into the home network (DNS rebinding)";
+        remember(target, peer);
+        return nullptr;
+    }
+    return "a public page may not reach the home network or the console";
+}
+
 } // namespace
+
+// Called by WebKit's curl opensocket callback (CurlContext.cpp, OMNI_SEC_PNA_CONNECT_V1) for every socket it opens.
+extern "C" void omniSecConnectContext(int fd, const char* targetURL, const char* initiatorURL)
+{
+    if (fd < 0) return;
+    std::lock_guard<std::mutex> g(lock);
+    Tag* slot = nullptr;
+    for (auto& t : tags) if (t.fd == fd) { slot = &t; break; }
+    if (!slot) slot = &tags[tagNext++ % 64];
+    slot->fd = fd; slot->target = targetURL ? targetURL : ""; slot->initiator = initiatorURL ? initiatorURL : "";
+}
 
 extern "C" int __wrap_connect(int fd, const struct sockaddr* sa, socklen_t len)
 {
@@ -160,14 +276,28 @@ extern "C" int __wrap_connect(int fd, const struct sockaddr* sa, socklen_t len)
 
     int port = 0; char where[80] = "";
     bool local;
-    { std::lock_guard<std::mutex> g(lock); seed(); local = localKind(sa, len, &port, where, sizeof(where)) == 1; }
+    const char* pnaRefused = nullptr; std::string pnaFrom;
+    {
+        std::lock_guard<std::mutex> g(lock); seed(); local = localKind(sa, len, &port, where, sizeof(where)) == 1;
+        Tag tag;
+        if (takeTag(fd, tag) && !blockOff(time(nullptr))) {   // OMNI_SEC_PNA_CONNECT_V1: the page's rule on the real address
+            pnaRefused = pnaVerdict(tag, local ? SpaceLocal : peerSpace(sa));
+            if (pnaRefused) pnaFrom = hostOf(tag.initiator.c_str()) + " -> " + hostOf(tag.target.c_str());
+        }
+    }
+    if (pnaRefused) {
+        fprintf(stderr, "sec: blocked %s at %s: %s (OMNI_SEC_PNA_CONNECT_V1)\n", pnaFrom.c_str(), where, pnaRefused);
+        count(where);
+        errno = ECONNREFUSED;
+        return -1;
+    }
     if (local) {
         const time_t now = time(nullptr);
-        bool allowed = port == 8765 || port == 8095 || port == 53;
+        bool allowed = port == 53 || OmniHub::pagePortAllowed(port);   // s2: card apps with public pages (8765/8095 until they have cards)
         bool off = false;
         {
             std::lock_guard<std::mutex> g(lock);
-            if (!allowed && port == 8080 && selfTests(now)) allowed = true;
+            if (!allowed && (port == 8080 || port == 8099) && selfTests(now)) allowed = true;   // s1c: 8099 = redirect test server
             if (!allowed) off = blockOff(now);
         }
         if (!allowed && !off) {
@@ -200,3 +330,4 @@ extern "C" int __wrap_connect(int fd, const struct sockaddr* sa, socklen_t len)
 
 // Proof string for the build checks (grep in the engine).
 extern "C" const char omni_sec_localhost_v1_tag[] = "OMNI_SEC_LOCALHOST_V1 connect block (sec-job1)";
+extern "C" const char omni_sec_pna_connect_v1_tag[] = "OMNI_SEC_PNA_CONNECT_V1 connect-time private-network rule (s3.1)";

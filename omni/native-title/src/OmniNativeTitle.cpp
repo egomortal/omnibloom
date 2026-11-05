@@ -1,4 +1,4 @@
-// Omni as a native PS5 title, Stage 0 (omni-native-s0; s0c: close handling): boot log, import check, stop-after phases,
+// Omni as a native PS5 title, Stage 0 (omni-native-s0; s0c: close handling; s2-gpu: GPU video/present shutdown on exit and close): boot log, import check, stop-after phases,
 // memory and GPU probes, the exit route, and the dlopen/dlsym shim for the title.
 // Only this (UI) process is the title PPSA99732; WebProcess/NetworkProcess stay the existing
 // /data/omni/omni-engine.elf payload, started over 127.0.0.1:9021 (NativeLauncherState.cpp).
@@ -66,7 +66,7 @@ void bootOpen()
     mkdir("/data/omni/native", 0777);
     rename("/data/omni/native/boot.log.1", "/data/omni/native/boot.log.2");
     rename("/data/omni/native/boot.log", "/data/omni/native/boot.log.1");
-    g_boot = open("/data/omni/native/boot.log", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    g_boot = open("/data/omni/native/boot.log", O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0666);   // jit2: O_APPEND, so the children's crash lines (OMNI_CRASH_V2) are never written over
 }
 }
 
@@ -97,6 +97,7 @@ extern "C" void omni_native_log(const char* format, ...)
 // pid is gone (for a close the title never sees, e.g. SIGKILL). Async-signal-safe.
 static void markClosing()
 {
+    unlink("/data/hub/runtime/omni.json");   // s2 OMNI_HUB_CARDS_V1: Bloom Core sees Omni as not running (async-signal-safe)
     char path[64];
     snprintf(path, sizeof path, "/data/omni/native/closing-%d", int(getpid()));
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -128,13 +129,17 @@ volatile sig_atomic_t g_haveApp[64];
 volatile sig_atomic_t g_terminating = 0;
 }
 static bool isTermSignal(int s) { return s == SIGTERM || s == SIGHUP || s == SIGINT; }
+extern "C" void omni_gpu_signal_close() __attribute__((weak));   // OMNI_GPU_PRESENT_V1: async-signal-safe flag
+extern "C" int omni_gpu_signal_wait(int ms) __attribute__((weak));  // OMNI_GPU_PRESENT_V1: bounded wait for its teardown
 static void nativeOnTerm(int sig)
 {
     if (g_terminating) { struct sigaction d {}; d.sa_handler = SIG_DFL; sigemptyset(&d.sa_mask); __real_sigaction(sig, &d, nullptr); raise(sig); return; }
     g_terminating = 1;
     omni_native_log("close: signal %d received (PS button close or app replacement); marking closing", sig);
     markClosing();
+    if (omni_gpu_signal_close) omni_gpu_signal_close();   // OMNI_GPU_PRESENT_V1: its thread frees swapchain/display/device meanwhile
     usleep(150000);
+    if (omni_gpu_signal_wait) omni_native_log("close: GPU present teardown %s", omni_gpu_signal_wait(300) ? "done (or not on)" : "not finished in 300 ms (left to the system)");
     omni_native_log("close: children given 150 ms; %s", g_haveApp[sig] ? "chaining to Omni's handler (decoder + compute queue release, then the default action)" : "default action");
     struct sigaction d {};
     d.sa_handler = SIG_DFL;
@@ -221,10 +226,14 @@ static void statusWatchStart()
 // __wrap_sceSystemServiceLoadExec: stop the launcher's refill and let in-flight children finish
 // loading first. A child still loading when the title is gone found its parent dead, dropped its
 // spare ticket and started as a second UI process (s0 run c: 6 orphan payloads).
+extern "C" void omni_gpu_video_shutdown() __attribute__((weak));   // OMNI_GPU_VIDEO_V1 (OmniGpuVideo.cpp)
+extern "C" void omni_gpu_present_shutdown() __attribute__((weak));   // OMNI_GPU_PRESENT_V1 (OmniGpuPresent.cpp)
 extern "C" int __wrap_sceSystemServiceLoadExec(const char* path, const char** argv)
 {
     omni_native_children_stop(10000);
     markClosing(); // s0c: the native children leave (they also would on IPC close)
+    if (omni_gpu_present_shutdown) omni_gpu_present_shutdown();   // OMNI_GPU_PRESENT_V1: no-op unless the GPU present is on (SDL_Quit usually did it)
+    if (omni_gpu_video_shutdown) { omni_gpu_video_shutdown(); omni_native_log("exit: GPU video objects freed (if it was on)"); }   // OMNI_GPU_VIDEO_V1
     omni_native_log("exit: closing marked; Omni's LoadExec (decoder + audio release) next");
     return omni_impl_sceSystemServiceLoadExec(path, argv);
 }
@@ -430,6 +439,22 @@ extern "C" int __wrap_main(int argc, char** argv, char** envp)
         nativeLeave(5, "stop-after=children without prespawn", false);
     }
     statusWatchStart();
+    // s2 OMNI_HUB_CARDS_V1 (standard v1.1 items 4 and 14): Omni's live data for Bloom Core, rewritten on every start
+    // (pids are reused after a reboot) and removed on every exit or close route that runs (markClosing).
+    {
+        struct stat hs {};
+        if (!stat("/data/hub", &hs) && S_ISDIR(hs.st_mode)) {
+            mkdir("/data/hub/runtime", 0777);
+            char text[128];
+            const int n = snprintf(text, sizeof text, "{\"id\":\"omni\",\"pid\":%d,\"started_at\":%ld}\n", int(getpid()), (long)time(nullptr));
+            const int fd = open("/data/hub/runtime/omni.json.tmp", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+            if (fd >= 0) {
+                const bool ok = n > 0 && write(fd, text, size_t(n)) == n;
+                fsync(fd); close(fd);
+                if (ok && !rename("/data/hub/runtime/omni.json.tmp", "/data/hub/runtime/omni.json")) omni_native_log("hub: runtime/omni.json written (pid %d)", int(getpid()));
+            }
+        }
+    }
     omni_native_log("phase %s: entering Omni's main (UI process)", g_stopPhase == kChildren ? "children" : "page");
     g_mainStarted = true;
     return __real_main(argc, argv, envp);

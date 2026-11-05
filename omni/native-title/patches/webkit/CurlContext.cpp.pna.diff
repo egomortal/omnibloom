@@ -1,0 +1,57 @@
+--- a/WebCore/platform/network/curl/CurlContext.cpp
++++ b/WebCore/platform/network/curl/CurlContext.cpp
+@@ -291,12 +291,34 @@
+ 
+ // CurlHandle -------------------------------------------------
+ 
++// OMNI_SEC_PNA_CONNECT_V1 (s3.1, audit OS-001): tag every socket curl opens with its request and first-party site, so the
++// child's connect() wrap can apply the private-network rule to the address actually connected to (after DNS). Weak: only
++// the child engine links omni-sec-connect.cpp; elsewhere the callback just opens the socket.
++extern "C" void omniSecConnectContext(int fd, const char* targetURL, const char* initiatorURL) __attribute__((weak));
++static std::string omniText(const URL& url)
++{
++    auto utf8 = url.string().utf8();
++    const char* text = utf8.legacyCStringPointer();
++    return text ? std::string(text) : std::string();
++}
++curl_socket_t CurlHandle::omniOpenSocket(void* data, curlsocktype purpose, struct curl_sockaddr* address)
++{
++    curl_socket_t fd = ::socket(address->family, address->socktype, address->protocol);
++    if (fd != CURL_SOCKET_BAD && purpose == CURLSOCKTYPE_IPCXN && omniSecConnectContext) {
++        auto* handle = static_cast<CurlHandle*>(data);
++        omniSecConnectContext(fd, handle->m_omniTarget.c_str(), handle->m_omniInitiator.c_str());
++    }
++    return fd;
++}
++
+ CurlHandle::CurlHandle()
+ {
+     m_handle = curl_easy_init();
+     curl_easy_setopt(m_handle, CURLOPT_ERRORBUFFER, m_errorBuffer);
+     curl_easy_setopt(m_handle, CURLOPT_NOSIGNAL, 1L);
+     curl_easy_setopt(m_handle, CURLOPT_COOKIEFILE, nullptr);
++    curl_easy_setopt(m_handle, CURLOPT_OPENSOCKETFUNCTION, omniOpenSocket);   // OMNI_SEC_PNA_CONNECT_V1
++    curl_easy_setopt(m_handle, CURLOPT_OPENSOCKETDATA, this);
+ 
+     enableShareHandle();
+     enableAcceptEncoding();
+@@ -398,6 +420,7 @@
+ void CurlHandle::setURL(const URL& url, LocalhostAlias localhostAlias)
+ {
+     m_url = url.isolatedCopy();
++    m_omniTarget = omniText(url);   // OMNI_SEC_PNA_CONNECT_V1
+ 
+     URL curlUrl = url;
+ 
+@@ -730,6 +753,11 @@
+     curl_easy_setopt(m_handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+ }
+ 
++void CurlHandle::setOmniInitiator(const URL& firstParty)   // OMNI_SEC_PNA_CONNECT_V1
++{
++    m_omniInitiator = omniText(firstParty);
++}
++
+ std::optional<String> CurlHandle::getProxyUrl()
+ {
+     auto& proxy = CurlContext::singleton().proxySettings();

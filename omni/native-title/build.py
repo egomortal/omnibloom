@@ -32,7 +32,7 @@ LIBC_PRX = SMOKE / 'runtime/libc-a.prx'
 APP_CRT = SMOKE / 'obj/app_crt.o'
 AGC_STUBS = [SMOKE / 'stubs/libSceAgc.so', SMOKE / 'stubs/libSceAgcDriver.so']
 ENG = Path('/home/builder/s1/engine')   # s1: DL1 engine + dl2-candidate-57 + sec1-shell + sec-job2 engine-patches (in-tree build)
-S1LC = Path('/home/builder/s1/link-command.json')   # make_link_command.py: the in-tree OmniEngine link
+S1LC = HERE / 'link-command.json'   # s2: the s2 tree's link with the GPU objects   # make_link_command.py: the in-tree OmniEngine link
 DL1 = ROOT / 'baseline/DL1/build'
 HB = Path('/opt/ps5-payload-sdk/target/user/homebrew')
 B = HERE / 'build'
@@ -40,7 +40,7 @@ PKG = HERE / 'out/PPSA99732'
 LLVM = Path('/usr/lib/llvm-21/bin')
 CXX = str(SDK / 'bin/prospero-clang++'); CC = str(SDK / 'bin/prospero-clang'); LLD = str(SDK / 'bin/prospero-lld')
 NM = str(LLVM / 'llvm-nm'); READELF = str(LLVM / 'llvm-readelf'); OBJCOPY = str(LLVM / 'llvm-objcopy')
-OLD, NEW = '/path/to/downloads/', '/path/to/downloads/'
+OLD, NEW = '/home/builder/Downloads/jailbreak stuff/', '/home/builder/Downloads/ps5 stuff/'
 log = []
 def say(*a):
     line = ' '.join(str(x) for x in a); print(line, flush=True); log.append(line)
@@ -53,7 +53,7 @@ def run(cmd, out=None, check=True, **kw):
 def sha(p):
     h = hashlib.sha256()
     with open(p, 'rb') as f:
-        for b in iter(lambda: f.read(1 << 22), b''): h.update(b)
+        for b in iter(lambda: f.read(1 << 20), b''): h.update(b)
     return h.hexdigest()
 
 t0 = time.time()
@@ -135,7 +135,7 @@ say(f'OmniMain.o {sha(main_o)[:16]} -> OmniMain.native.o (LoadExec hook renamed)
 flags = ['-std=c++20', '-O2', '-Wall', '-Wextra', '-Wno-unused-parameter', '-fno-exceptions', '-fno-rtti', '-ffunction-sections', '-fdata-sections',
          '-D__PROSPERO__', f'-I{ENG}/ports/webkit-requirements/src', f'-I{ENG}/ports/webkit-requirements/include', f'-I{VKH}', f'-I{HB}/include']
 mine = []
-for src in ['OmniNativeTitle.cpp', 'NativeLauncherState.cpp', 'NativeLibc.cpp', 'NativeFilesBroker.cpp']:
+for src in ['OmniNativeTitle.cpp', 'NativeLauncherState.cpp', 'NativeLibc.cpp', 'NativeFilesBroker.cpp', 'OmniGpuPresent.cpp', 'NativeEmutls.cpp']:   # s2: GPU part 2; s3.1: jit2 OMNI_EMUTLS_ROUNDS_V1
     o = B / (Path(src).stem + '.o')
     run([CXX, *flags, '-I', HERE / 'src', '-c', HERE / 'src' / src, '-o', o], out=B / (Path(src).stem + '.compile.log'))
     mine.append(str(o))
@@ -162,7 +162,7 @@ bound = {f.split('=', 1)[1].split('=')[0] for f in rflags if f.startswith('--def
 enosys = [f'--defsym={n}=omni_enosys_{n}' for n in ('readlink', 'link', 'symlink', 'fchown') if n not in bound]
 say(f'radv recipe: {len(rflags)} flags; ENOSYS bindings: {enosys}')
 
-MY_WRAPS = ['main', 'exit', '_exit', '_Exit', 'sceSystemServiceLoadExec', 'sigaction', 'dup', 'close', 'shm_open', 'connect', '__cxa_throw',
+MY_WRAPS = ['SDL_Init', 'SDL_Quit', 'SDL_UpdateWindowSurface', 'SDL_UpdateWindowSurfaceRects', 'main', 'exit', '_exit', '_Exit', 'sceSystemServiceLoadExec', 'sigaction', 'dup', 'close', 'shm_open', 'connect', '__cxa_throw',
             'sceKeyboardInit', 'sceKeyboardOpen', 'sceKeyboardReadState', 'sceImeDialogInit', 'sceImeDialogGetResult', 'sceImeDialogTerm', 'sceImeDialogGetStatus',
             'isatty', 'mkstemp', 'fstatfs', 'fnmatch', 'gai_strerror', 'getnameinfo']
 sdk_so = sorted(str(p) for p in (SDK / 'target/lib').glob('*.so'))
@@ -184,7 +184,7 @@ def link(pass_name, extra_objects):
             '--start-group', *archives, '--end-group',
             *stubs, *rinputs, '--as-needed', *sdk_so]
     (B / f'link-{pass_name}.rsp').write_text('\n'.join(shlex.quote(str(a)) for a in args))
-    r = run([LLD, *script, f'@{B}/link-{pass_name}.rsp'], out=B / f'link-{pass_name}.log', check=False)
+    r = run([LLD, '--threads=8', *script, f'@{B}/link-{pass_name}.rsp'], out=B / f'link-{pass_name}.log', check=False)
     if r.returncode:
         text = r.stdout + r.stderr
         und = sorted(set(re.findall(r'undefined symbol: (.+)', text))); dup = sorted(set(re.findall(r'duplicate symbol: (.+)', text)))
@@ -277,8 +277,13 @@ assert param['titleId'] == 'PPSA99732'
 icon = ROOT / 'branding/icon0.png'
 if not icon.exists(): raise SystemExit(f'BLOCKED: missing {icon}')
 shutil.copyfile(icon, PKG / 'sce_sys/icon0.png')
+# s3 OMNI_PAGES_V1: the built-in pages at /app0/pages (ENGINE-CONTRACT 1: never dev/, tests, build scripts) + the add-ons page
+_skip = lambda n: n in ('dev', 'test-evidence', 'node_modules') or n.startswith(('test_bundle', 'build_bundle')) or n.endswith('.cjs')
+shutil.copytree(OUTS / 'omni-pages/bundle', PKG / 'pages', ignore=lambda d, names: [n for n in names if _skip(n)])
+shutil.copytree(OUTS / 'omni-addons/pages/addons', PKG / 'pages/addons', dirs_exist_ok=True)
+print('pages packaged:', sum(1 for _ in (PKG / 'pages').rglob('*') if _.is_file()), 'files', flush=True)
 files = {str(p.relative_to(PKG)): sha(p) for p in sorted(PKG.rglob('*')) if p.is_file()}
-manifest = {'label': 'omni-native-s1', 'jit': 'compiled in (baseline + regexp); off unless /data/omni/jsc-jit.flag', 'gamepad': 'OMNI_GAMEPAD_V1', 'wkreq_sha256': WKREQ_SHA, 'titleId': 'PPSA99732', 'status': 'packaged locally; NOT console validated',
+manifest = {'label': 'omni-native-s3.1c', 'pointer': 'OMNI_POINTER_CROSS_V1 (Cross at the pointer while the pointer leads; title only, the child is built before the patch)', 's31b': 'jit2 build 6: OMNI_NO_VIEW_TRANSITION_V1 + OMNI_SOAK_READ_V1 + OMNI_YT_TIMELINE_V1 (flag-only)', 's3': 'OMNI_NO_ACCEL_CANVAS_V1 + OMNI_ADDONS_V1 + OMNI_VAULT_V2 + OMNI_PAGES_V1 + OMNI_JSC_JIT_V3 (JIT default off)', 's31': 'audit OS-001 OMNI_SEC_PNA_CONNECT_V1 + OS-002 vault read errors + jit2 build 4 (OMNI_EMUTLS_ROUNDS_V1, OMNI_CRASH_V2)', 'gpu': 'OMNI_GPU_VIDEO_V1 + OMNI_GPU_PRESENT_V1, off unless their flags', 'hub': 'OMNI_HUB_CARDS_V1', 'hud': 'OMNI_HUD_ASTRA_V1', 'jit': 'compiled in (baseline + regexp); off unless /data/omni/jsc-jit.flag', 'gamepad': 'OMNI_GAMEPAD_V1', 'wkreq_sha256': WKREQ_SHA, 'titleId': 'PPSA99732', 'status': 'packaged locally; NOT console validated',
             'childEngine': '/data/omni/native/omni-engine-child.elf (child/omni-engine-child.elf, OMNI_NATIVE_CHILD_V1) when installed, else /data/omni/omni-engine.elf', 'base': 'in-tree s1 engine (WebKit 539e0189f + Omni local + CVE fixes + JIT/gamepad; 57 + sec1-shell + sec-job2 shell) + s1b/sec1 native sources', 'seclibs': {n: sha(SECLIBS / n) for n in SECNAMES if (SECLIBS / n).exists() and not (SECLIBS / n).is_symlink()}, 'broker': '/data/omni/native/omni-files.elf (outputs/omni-files-broker/dist/omni-files.elf)', 'files': files,
             **manifest_extra, 'llvm_pie_sha256': sha(B / 'llvm-pie.elf'), 'eboot_elf_sha256': sha(B / 'eboot.elf'), 'seconds': round(time.time() - t0)}
 (HERE / 'out/package-manifest.json').write_text(json.dumps(manifest, indent=1) + '\n')

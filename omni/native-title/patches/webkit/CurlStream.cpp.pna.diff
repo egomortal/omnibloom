@@ -1,0 +1,19 @@
+--- a/WebCore/platform/network/curl/CurlStream.cpp
++++ b/WebCore/platform/network/curl/CurlStream.cpp
+@@ -37,7 +37,7 @@
+ 
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(CurlStream);
+ 
+-CurlStream::CurlStream(CurlStreamScheduler& scheduler, CurlStreamID streamID, URL&& url, ServerTrustEvaluation serverTrustEvaluation, LocalhostAlias localhostAlias)
++CurlStream::CurlStream(CurlStreamScheduler& scheduler, CurlStreamID streamID, URL&& url, ServerTrustEvaluation serverTrustEvaluation, LocalhostAlias localhostAlias, URL&& omniInitiator)   // OMNI_SEC_PNA_CONNECT_V1
+     : m_scheduler(scheduler)
+     , m_streamID(streamID)
+ {
+@@ -47,6 +47,7 @@
+ 
+     url.setProtocol(url.protocolIs("wss"_s) ? "https"_s : "http"_s);
+     m_curlHandle->setURL(WTF::move(url), localhostAlias);
++    m_curlHandle->setOmniInitiator(omniInitiator);   // OMNI_SEC_PNA_CONNECT_V1: WebSockets get the same connect-time rule
+ 
+     if (serverTrustEvaluation == ServerTrustEvaluation::Disable)
+         m_curlHandle->disableServerTrustEvaluation();

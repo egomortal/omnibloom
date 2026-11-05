@@ -1,0 +1,18 @@
+--- a/WebCore/platform/network/curl/CurlStream.h
++++ b/WebCore/platform/network/curl/CurlStream.h
+@@ -56,12 +56,12 @@
+         virtual void didFail(CurlStreamID, CURLcode, CertificateInfo&&) = 0;
+     };
+ 
+-    static std::unique_ptr<CurlStream> create(CurlStreamScheduler& scheduler, CurlStreamID streamID, URL&& url, ServerTrustEvaluation serverTrustEvaluation, LocalhostAlias localhostAlias)
++    static std::unique_ptr<CurlStream> create(CurlStreamScheduler& scheduler, CurlStreamID streamID, URL&& url, ServerTrustEvaluation serverTrustEvaluation, LocalhostAlias localhostAlias, URL&& omniInitiator = { })   // OMNI_SEC_PNA_CONNECT_V1
+     {
+-        return makeUnique<CurlStream>(scheduler, streamID, WTF::move(url), serverTrustEvaluation, localhostAlias);
++        return makeUnique<CurlStream>(scheduler, streamID, WTF::move(url), serverTrustEvaluation, localhostAlias, WTF::move(omniInitiator));
+     }
+ 
+-    CurlStream(CurlStreamScheduler&, CurlStreamID, URL&&, ServerTrustEvaluation, LocalhostAlias);
++    CurlStream(CurlStreamScheduler&, CurlStreamID, URL&&, ServerTrustEvaluation, LocalhostAlias, URL&& omniInitiator);
+     virtual ~CurlStream();
+ 
+     void send(UniqueArray<uint8_t>&&, size_t);
