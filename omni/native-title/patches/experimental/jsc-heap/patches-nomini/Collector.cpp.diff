@@ -1,0 +1,88 @@
+--- a/JavaScriptCore/heap/Collector.cpp
++++ b/JavaScriptCore/heap/Collector.cpp
+@@ -249,7 +249,7 @@
+ 
+ CollectionScope Collector::decideCollectionScope()
+ {
+-    if (!Options::useGenerationalGC() || VM::isInMiniMode())
++    if (!Options::useGenerationalGC() || Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1 (was VM::isInMiniMode(): JIT off = mini)
+         return CollectionScope::Full;
+     if (m_currentRequest.scope)
+         return *m_currentRequest.scope;
+--- a/JavaScriptCore/heap/Collector.cpp
++++ b/JavaScriptCore/heap/Collector.cpp
+@@ -249,7 +249,7 @@
+ 
+ CollectionScope Collector::decideCollectionScope()
+ {
+-    if (!Options::useGenerationalGC() || VM::isInMiniMode())
++    if (!Options::useGenerationalGC() || Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1 (was VM::isInMiniMode(): JIT off = mini)
+         return CollectionScope::Full;
+     if (m_currentRequest.scope)
+         return *m_currentRequest.scope;
+--- a/JavaScriptCore/heap/Collector.cpp
++++ b/JavaScriptCore/heap/Collector.cpp
+@@ -249,7 +249,7 @@
+ 
+ CollectionScope Collector::decideCollectionScope()
+ {
+-    if (!Options::useGenerationalGC() || VM::isInMiniMode())
++    if (!Options::useGenerationalGC() || Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1 (was VM::isInMiniMode(): JIT off = mini)
+         return CollectionScope::Full;
+     if (m_currentRequest.scope)
+         return *m_currentRequest.scope;
+--- a/JavaScriptCore/heap/Collector.cpp
++++ b/JavaScriptCore/heap/Collector.cpp
+@@ -249,7 +249,7 @@
+ 
+ CollectionScope Collector::decideCollectionScope()
+ {
+-    if (!Options::useGenerationalGC() || VM::isInMiniMode())
++    if (!Options::useGenerationalGC() || Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1 (was VM::isInMiniMode(): JIT off = mini)
+         return CollectionScope::Full;
+     if (m_currentRequest.scope)
+         return *m_currentRequest.scope;
+--- a/JavaScriptCore/heap/Collector.cpp
++++ b/JavaScriptCore/heap/Collector.cpp
+@@ -249,7 +249,7 @@
+ 
+ CollectionScope Collector::decideCollectionScope()
+ {
+-    if (!Options::useGenerationalGC() || VM::isInMiniMode())
++    if (!Options::useGenerationalGC() || Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1 (was VM::isInMiniMode(): JIT off = mini)
+         return CollectionScope::Full;
+     if (m_currentRequest.scope)
+         return *m_currentRequest.scope;
+--- a/JavaScriptCore/heap/Collector.cpp
++++ b/JavaScriptCore/heap/Collector.cpp
+@@ -249,7 +249,7 @@
+ 
+ CollectionScope Collector::decideCollectionScope()
+ {
+-    if (!Options::useGenerationalGC() || VM::isInMiniMode())
++    if (!Options::useGenerationalGC() || Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1 (was VM::isInMiniMode(): JIT off = mini)
+         return CollectionScope::Full;
+     if (m_currentRequest.scope)
+         return *m_currentRequest.scope;
+--- a/JavaScriptCore/heap/Collector.cpp
++++ b/JavaScriptCore/heap/Collector.cpp
+@@ -249,7 +249,7 @@
+ 
+ CollectionScope Collector::decideCollectionScope()
+ {
+-    if (!Options::useGenerationalGC() || VM::isInMiniMode())
++    if (!Options::useGenerationalGC() || Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1 (was VM::isInMiniMode(): JIT off = mini)
+         return CollectionScope::Full;
+     if (m_currentRequest.scope)
+         return *m_currentRequest.scope;
+--- a/JavaScriptCore/heap/Collector.cpp
++++ b/JavaScriptCore/heap/Collector.cpp
+@@ -249,7 +249,7 @@
+ 
+ CollectionScope Collector::decideCollectionScope()
+ {
+-    if (!Options::useGenerationalGC() || VM::isInMiniMode())
++    if (!Options::useGenerationalGC() || Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1 (was VM::isInMiniMode(): JIT off = mini)
+         return CollectionScope::Full;
+     if (m_currentRequest.scope)
+         return *m_currentRequest.scope;

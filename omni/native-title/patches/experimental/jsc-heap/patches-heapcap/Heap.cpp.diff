@@ -1,0 +1,180 @@
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1873,6 +1873,16 @@
+     return m_gcRateLimitingValue * pow(0.5, timeSinceLastGC.milliseconds() / Options::gcRateLimitingHalfLifeInMS());
+ }
+ 
++// OMNI_HEAP_CAP_V1: memoryFootprint() reads 0 on this console, so the growth rule never leaves 2x; above 256 MB the
++// next-GC target grows like mini mode (1.2x the live heap) instead.
++static size_t omniCappedHeapTarget(size_t heapSize, size_t proposed)
++{
++    constexpr size_t omniHeapCap = 256 * MB;
++    if (proposed <= omniHeapCap || Options::forceMiniVMMode())
++        return proposed;
++    return std::max(omniHeapCap, static_cast<size_t>(Options::miniVMHeapGrowthFactor() * heapSize));
++}
++
+ void Heap::updateAllocationLimits()
+ {
+     constexpr bool verbose = false;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1924,7 +1924,7 @@
+         // the new allocation limit based on the current size of the heap, with a
+         // fixed minimum.
+         size_t lastMaxHeapSize = m_maxHeapSize;
+-        m_maxHeapSize = std::max(m_minBytesPerCycle, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize));
++        m_maxHeapSize = std::max(m_minBytesPerCycle, omniCappedHeapTarget(currentHeapSize, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize))); // OMNI_HEAP_CAP_V1
+         m_maxEdenSize = m_maxHeapSize - currentHeapSize;
+         if (m_isInOpportunisticTask && !isCritical) {
+             // After an Opportunistic Full GC, we allow eden to occupy all the space we recovered.
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1873,6 +1873,16 @@
+     return m_gcRateLimitingValue * pow(0.5, timeSinceLastGC.milliseconds() / Options::gcRateLimitingHalfLifeInMS());
+ }
+ 
++// OMNI_HEAP_CAP_V1: memoryFootprint() reads 0 on this console, so the growth rule never leaves 2x; above 256 MB the
++// next-GC target grows like mini mode (1.2x the live heap) instead.
++static size_t omniCappedHeapTarget(size_t heapSize, size_t proposed)
++{
++    constexpr size_t omniHeapCap = 256 * MB;
++    if (proposed <= omniHeapCap || Options::forceMiniVMMode())
++        return proposed;
++    return std::max(omniHeapCap, static_cast<size_t>(Options::miniVMHeapGrowthFactor() * heapSize));
++}
++
+ void Heap::updateAllocationLimits()
+ {
+     constexpr bool verbose = false;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1924,7 +1924,7 @@
+         // the new allocation limit based on the current size of the heap, with a
+         // fixed minimum.
+         size_t lastMaxHeapSize = m_maxHeapSize;
+-        m_maxHeapSize = std::max(m_minBytesPerCycle, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize));
++        m_maxHeapSize = std::max(m_minBytesPerCycle, omniCappedHeapTarget(currentHeapSize, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize))); // OMNI_HEAP_CAP_V1
+         m_maxEdenSize = m_maxHeapSize - currentHeapSize;
+         if (m_isInOpportunisticTask && !isCritical) {
+             // After an Opportunistic Full GC, we allow eden to occupy all the space we recovered.
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1873,6 +1873,16 @@
+     return m_gcRateLimitingValue * pow(0.5, timeSinceLastGC.milliseconds() / Options::gcRateLimitingHalfLifeInMS());
+ }
+ 
++// OMNI_HEAP_CAP_V1: memoryFootprint() reads 0 on this console, so the growth rule never leaves 2x; above 256 MB the
++// next-GC target grows like mini mode (1.2x the live heap) instead.
++static size_t omniCappedHeapTarget(size_t heapSize, size_t proposed)
++{
++    constexpr size_t omniHeapCap = 256 * MB;
++    if (proposed <= omniHeapCap || Options::forceMiniVMMode())
++        return proposed;
++    return std::max(omniHeapCap, static_cast<size_t>(Options::miniVMHeapGrowthFactor() * heapSize));
++}
++
+ void Heap::updateAllocationLimits()
+ {
+     constexpr bool verbose = false;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1924,7 +1924,7 @@
+         // the new allocation limit based on the current size of the heap, with a
+         // fixed minimum.
+         size_t lastMaxHeapSize = m_maxHeapSize;
+-        m_maxHeapSize = std::max(m_minBytesPerCycle, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize));
++        m_maxHeapSize = std::max(m_minBytesPerCycle, omniCappedHeapTarget(currentHeapSize, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize))); // OMNI_HEAP_CAP_V1
+         m_maxEdenSize = m_maxHeapSize - currentHeapSize;
+         if (m_isInOpportunisticTask && !isCritical) {
+             // After an Opportunistic Full GC, we allow eden to occupy all the space we recovered.
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1873,6 +1873,16 @@
+     return m_gcRateLimitingValue * pow(0.5, timeSinceLastGC.milliseconds() / Options::gcRateLimitingHalfLifeInMS());
+ }
+ 
++// OMNI_HEAP_CAP_V1: memoryFootprint() reads 0 on this console, so the growth rule never leaves 2x; above 256 MB the
++// next-GC target grows like mini mode (1.2x the live heap) instead.
++static size_t omniCappedHeapTarget(size_t heapSize, size_t proposed)
++{
++    constexpr size_t omniHeapCap = 256 * MB;
++    if (proposed <= omniHeapCap || Options::forceMiniVMMode())
++        return proposed;
++    return std::max(omniHeapCap, static_cast<size_t>(Options::miniVMHeapGrowthFactor() * heapSize));
++}
++
+ void Heap::updateAllocationLimits()
+ {
+     constexpr bool verbose = false;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1924,7 +1924,7 @@
+         // the new allocation limit based on the current size of the heap, with a
+         // fixed minimum.
+         size_t lastMaxHeapSize = m_maxHeapSize;
+-        m_maxHeapSize = std::max(m_minBytesPerCycle, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize));
++        m_maxHeapSize = std::max(m_minBytesPerCycle, omniCappedHeapTarget(currentHeapSize, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize))); // OMNI_HEAP_CAP_V1
+         m_maxEdenSize = m_maxHeapSize - currentHeapSize;
+         if (m_isInOpportunisticTask && !isCritical) {
+             // After an Opportunistic Full GC, we allow eden to occupy all the space we recovered.
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1873,6 +1873,16 @@
+     return m_gcRateLimitingValue * pow(0.5, timeSinceLastGC.milliseconds() / Options::gcRateLimitingHalfLifeInMS());
+ }
+ 
++// OMNI_HEAP_CAP_V1: memoryFootprint() reads 0 on this console, so the growth rule never leaves 2x; above 256 MB the
++// next-GC target grows like mini mode (1.2x the live heap) instead.
++static size_t omniCappedHeapTarget(size_t heapSize, size_t proposed)
++{
++    constexpr size_t omniHeapCap = 256 * MB;
++    if (proposed <= omniHeapCap || Options::forceMiniVMMode())
++        return proposed;
++    return std::max(omniHeapCap, static_cast<size_t>(Options::miniVMHeapGrowthFactor() * heapSize));
++}
++
+ void Heap::updateAllocationLimits()
+ {
+     constexpr bool verbose = false;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1924,7 +1924,7 @@
+         // the new allocation limit based on the current size of the heap, with a
+         // fixed minimum.
+         size_t lastMaxHeapSize = m_maxHeapSize;
+-        m_maxHeapSize = std::max(m_minBytesPerCycle, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize));
++        m_maxHeapSize = std::max(m_minBytesPerCycle, omniCappedHeapTarget(currentHeapSize, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize))); // OMNI_HEAP_CAP_V1
+         m_maxEdenSize = m_maxHeapSize - currentHeapSize;
+         if (m_isInOpportunisticTask && !isCritical) {
+             // After an Opportunistic Full GC, we allow eden to occupy all the space we recovered.
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1873,6 +1873,16 @@
+     return m_gcRateLimitingValue * pow(0.5, timeSinceLastGC.milliseconds() / Options::gcRateLimitingHalfLifeInMS());
+ }
+ 
++// OMNI_HEAP_CAP_V1: memoryFootprint() reads 0 on this console, so the growth rule never leaves 2x; above 256 MB the
++// next-GC target grows like mini mode (1.2x the live heap) instead.
++static size_t omniCappedHeapTarget(size_t heapSize, size_t proposed)
++{
++    constexpr size_t omniHeapCap = 256 * MB;
++    if (proposed <= omniHeapCap || Options::forceMiniVMMode())
++        return proposed;
++    return std::max(omniHeapCap, static_cast<size_t>(Options::miniVMHeapGrowthFactor() * heapSize));
++}
++
+ void Heap::updateAllocationLimits()
+ {
+     constexpr bool verbose = false;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -1924,7 +1924,7 @@
+         // the new allocation limit based on the current size of the heap, with a
+         // fixed minimum.
+         size_t lastMaxHeapSize = m_maxHeapSize;
+-        m_maxHeapSize = std::max(m_minBytesPerCycle, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize));
++        m_maxHeapSize = std::max(m_minBytesPerCycle, omniCappedHeapTarget(currentHeapSize, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize))); // OMNI_HEAP_CAP_V1
+         m_maxEdenSize = m_maxHeapSize - currentHeapSize;
+         if (m_isInOpportunisticTask && !isCritical) {
+             // After an Opportunistic Full GC, we allow eden to occupy all the space we recovered.

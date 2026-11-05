@@ -1,0 +1,88 @@
+--- a/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
++++ b/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
+@@ -48,7 +48,7 @@
+ static bool warmUpMarkedBlocksIsEnabled()
+ {
+     // Mini mode trades throughput for footprint, which is the opposite bargain.
+-    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !VM::isInMiniMode();
++    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ static void configureWarmUpSupply()
+--- a/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
++++ b/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
+@@ -48,7 +48,7 @@
+ static bool warmUpMarkedBlocksIsEnabled()
+ {
+     // Mini mode trades throughput for footprint, which is the opposite bargain.
+-    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !VM::isInMiniMode();
++    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ static void configureWarmUpSupply()
+--- a/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
++++ b/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
+@@ -48,7 +48,7 @@
+ static bool warmUpMarkedBlocksIsEnabled()
+ {
+     // Mini mode trades throughput for footprint, which is the opposite bargain.
+-    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !VM::isInMiniMode();
++    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ static void configureWarmUpSupply()
+--- a/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
++++ b/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
+@@ -48,7 +48,7 @@
+ static bool warmUpMarkedBlocksIsEnabled()
+ {
+     // Mini mode trades throughput for footprint, which is the opposite bargain.
+-    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !VM::isInMiniMode();
++    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ static void configureWarmUpSupply()
+--- a/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
++++ b/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
+@@ -48,7 +48,7 @@
+ static bool warmUpMarkedBlocksIsEnabled()
+ {
+     // Mini mode trades throughput for footprint, which is the opposite bargain.
+-    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !VM::isInMiniMode();
++    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ static void configureWarmUpSupply()
+--- a/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
++++ b/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
+@@ -48,7 +48,7 @@
+ static bool warmUpMarkedBlocksIsEnabled()
+ {
+     // Mini mode trades throughput for footprint, which is the opposite bargain.
+-    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !VM::isInMiniMode();
++    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ static void configureWarmUpSupply()
+--- a/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
++++ b/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
+@@ -48,7 +48,7 @@
+ static bool warmUpMarkedBlocksIsEnabled()
+ {
+     // Mini mode trades throughput for footprint, which is the opposite bargain.
+-    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !VM::isInMiniMode();
++    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ static void configureWarmUpSupply()
+--- a/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
++++ b/JavaScriptCore/heap/FastMallocAlignedMemoryAllocator.cpp
+@@ -48,7 +48,7 @@
+ static bool warmUpMarkedBlocksIsEnabled()
+ {
+     // Mini mode trades throughput for footprint, which is the opposite bargain.
+-    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !VM::isInMiniMode();
++    return Options::useWarmUpMarkedBlocks() && Options::warmUpMarkedBlockCount() && !Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ static void configureWarmUpSupply()

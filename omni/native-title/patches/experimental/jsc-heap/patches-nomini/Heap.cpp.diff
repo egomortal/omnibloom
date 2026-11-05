@@ -1,0 +1,176 @@
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -212,7 +212,7 @@
+ 
+ static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
+ {
+-    if (VM::isInMiniMode())
++    if (Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1
+         return Options::miniVMHeapGrowthFactor() * heapSize;
+ 
+     bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -2161,7 +2161,7 @@
+ bool Heap::shouldSweepSynchronously()
+ {
+     // updateAllocationLimits() updates info that overCriticalMemoryThreshold() needs.
+-    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || VM::isInMiniMode();
++    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ void Heap::addDetachedWeakBlock(WeakBlock* block)
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -170,7 +170,7 @@
+ 
+ static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
+ {
+-    if (VM::isInMiniMode())
++    if (Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1
+         return Options::miniVMHeapGrowthFactor() * heapSize;
+ 
+     bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -2109,7 +2109,7 @@
+ bool Heap::shouldSweepSynchronously()
+ {
+     // updateAllocationLimits() updates info that overCriticalMemoryThreshold() needs.
+-    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || VM::isInMiniMode();
++    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ void Heap::addDetachedWeakBlock(WeakBlock* block)
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -170,7 +170,7 @@
+ 
+ static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
+ {
+-    if (VM::isInMiniMode())
++    if (Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1
+         return Options::miniVMHeapGrowthFactor() * heapSize;
+ 
+     bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -2109,7 +2109,7 @@
+ bool Heap::shouldSweepSynchronously()
+ {
+     // updateAllocationLimits() updates info that overCriticalMemoryThreshold() needs.
+-    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || VM::isInMiniMode();
++    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ void Heap::addDetachedWeakBlock(WeakBlock* block)
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -170,7 +170,7 @@
+ 
+ static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
+ {
+-    if (VM::isInMiniMode())
++    if (Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1
+         return Options::miniVMHeapGrowthFactor() * heapSize;
+ 
+     bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -2109,7 +2109,7 @@
+ bool Heap::shouldSweepSynchronously()
+ {
+     // updateAllocationLimits() updates info that overCriticalMemoryThreshold() needs.
+-    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || VM::isInMiniMode();
++    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ void Heap::addDetachedWeakBlock(WeakBlock* block)
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -170,7 +170,7 @@
+ 
+ static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
+ {
+-    if (VM::isInMiniMode())
++    if (Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1
+         return Options::miniVMHeapGrowthFactor() * heapSize;
+ 
+     bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -2109,7 +2109,7 @@
+ bool Heap::shouldSweepSynchronously()
+ {
+     // updateAllocationLimits() updates info that overCriticalMemoryThreshold() needs.
+-    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || VM::isInMiniMode();
++    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ void Heap::addDetachedWeakBlock(WeakBlock* block)
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -170,7 +170,7 @@
+ 
+ static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
+ {
+-    if (VM::isInMiniMode())
++    if (Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1
+         return Options::miniVMHeapGrowthFactor() * heapSize;
+ 
+     bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -2109,7 +2109,7 @@
+ bool Heap::shouldSweepSynchronously()
+ {
+     // updateAllocationLimits() updates info that overCriticalMemoryThreshold() needs.
+-    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || VM::isInMiniMode();
++    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ void Heap::addDetachedWeakBlock(WeakBlock* block)
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -170,7 +170,7 @@
+ 
+ static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
+ {
+-    if (VM::isInMiniMode())
++    if (Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1
+         return Options::miniVMHeapGrowthFactor() * heapSize;
+ 
+     bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -2109,7 +2109,7 @@
+ bool Heap::shouldSweepSynchronously()
+ {
+     // updateAllocationLimits() updates info that overCriticalMemoryThreshold() needs.
+-    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || VM::isInMiniMode();
++    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ void Heap::addDetachedWeakBlock(WeakBlock* block)
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -170,7 +170,7 @@
+ 
+ static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
+ {
+-    if (VM::isInMiniMode())
++    if (Options::forceMiniVMMode()) // OMNI_NO_MINI_MODE_V1
+         return Options::miniVMHeapGrowthFactor() * heapSize;
+ 
+     bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
+--- a/JavaScriptCore/heap/Heap.cpp
++++ b/JavaScriptCore/heap/Heap.cpp
+@@ -2109,7 +2109,7 @@
+ bool Heap::shouldSweepSynchronously()
+ {
+     // updateAllocationLimits() updates info that overCriticalMemoryThreshold() needs.
+-    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || VM::isInMiniMode();
++    return overCriticalMemoryThreshold() || Options::sweepSynchronously() || Options::forceMiniVMMode(); // OMNI_NO_MINI_MODE_V1
+ }
+ 
+ void Heap::addDetachedWeakBlock(WeakBlock* block)
