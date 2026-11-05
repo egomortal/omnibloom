@@ -1,0 +1,72 @@
+diff -ru mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0/meson.build mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0-ogp/meson.build
+--- mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0/meson.build	2026-10-12 23:01:11.000000000 -0400
++++ mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0-ogp/meson.build	2026-11-05 02:57:10.433889260 -0500
+@@ -371,7 +371,8 @@
+ ].contains(true)
+ 
+ with_dri = false
+-if with_gallium and (system_has_kms_drm or (with_gallium_zink and (freedreno_kmds.contains('kgsl') or host_machine.system() == 'darwin')))
++# [omni-gpu-pages] Zink's DRI frontend without DRM on the PS5 too (as on macOS and KGSL): EGL surfaceless over RADV
++if with_gallium and (system_has_kms_drm or (with_gallium_zink and (freedreno_kmds.contains('kgsl') or host_machine.system() == 'darwin' or (get_option('radv-winsys') == 'ps5' and host_machine.system() != 'linux'))))
+   _glx = get_option('glx')
+   _egl = get_option('egl')
+   if _glx == 'dri' or _egl.enabled() or (_glx == 'disabled' and _egl.allowed())
+diff -ru mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0/src/egl/drivers/dri2/platform_surfaceless.c mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0-ogp/src/egl/drivers/dri2/platform_surfaceless.c
+--- mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0/src/egl/drivers/dri2/platform_surfaceless.c	2026-10-12 23:01:11.000000000 -0400
++++ mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0-ogp/src/egl/drivers/dri2/platform_surfaceless.c	2026-11-05 02:53:54.535413337 -0500
+@@ -393,6 +393,13 @@
+       _eglLog(_EGL_DEBUG, "Falling back to surfaceless swrast without DRM.");
+       driver_loaded = surfaceless_probe_device_sw(disp);
+    }
++#ifdef OGP_SURFACELESS_ZINK_NO_DRM
++   /* [omni-gpu-pages] no DRM nodes (PS5): Zink in hardware mode on the first Vulkan device */
++   if (!driver_loaded && disp->Options.Zink && !disp->Options.ForceSoftware) {
++      _eglLog(_EGL_DEBUG, "surfaceless: no DRM device, trying Zink on the first Vulkan device.");
++      driver_loaded = surfaceless_probe_device_sw(disp);
++   }
++#endif
+ 
+    if (!driver_loaded) {
+       err = "DRI2: failed to load driver";
+diff -ru mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0/src/gallium/drivers/zink/zink_screen.c mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0-ogp/src/gallium/drivers/zink/zink_screen.c
+--- mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0/src/gallium/drivers/zink/zink_screen.c	2026-10-12 23:01:11.000000000 -0400
++++ mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0-ogp/src/gallium/drivers/zink/zink_screen.c	2026-11-05 02:53:54.535001217 -0500
+@@ -158,6 +158,19 @@
+ static unsigned instance_refcount;
+ static VkInstance instance;
+ 
++#ifdef OGP_ZINK_STATIC_ICD
++/* [omni-gpu-pages] the Vulkan driver is linked into the process; there is no loader to open */
++extern VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL OGP_ZINK_STATIC_ICD(VkInstance inst, const char *name);
++static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
++ogp_static_GetDeviceProcAddr(VkDevice device, const char *name)
++{
++   static PFN_vkGetDeviceProcAddr real;
++   if (!real)
++      real = (PFN_vkGetDeviceProcAddr)OGP_ZINK_STATIC_ICD(instance, "vkGetDeviceProcAddr");
++   return real ? real(device, name) : NULL;
++}
++#endif
++
+ static const char *
+ zink_get_vendor(struct pipe_screen *pscreen)
+ {
+@@ -3422,6 +3435,10 @@
+ 
+    u_trace_state_init();
+ 
++#ifdef OGP_ZINK_STATIC_ICD
++   screen->vk_GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)OGP_ZINK_STATIC_ICD;
++   screen->vk_GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)ogp_static_GetDeviceProcAddr;
++#else
+    screen->loader_lib = util_dl_open(VK_LIBNAME);
+    if (!screen->loader_lib) {
+       if (!screen->driver_name_is_inferred)
+@@ -3437,6 +3454,7 @@
+          mesa_loge("ZINK: failed to get proc address");
+       goto fail;
+    }
++#endif /* OGP_ZINK_STATIC_ICD */
+ 
+    if (config) {
+       driParseConfigFiles(config->options, config->options_info,
