@@ -1,4 +1,37 @@
-# Omni native title: patch sets (s3.1c, s3.4c)
+# Omni native title: patch sets (s3.1c, s3.4c, s3.4d)
+
+Experimental, not-yet-console-tested work (HDR10 output, the JSC heap change, the software-video overflow fix, GPU page
+drawing) is kept apart in [`experimental/`](experimental/README.md). None of it is part of a release build.
+
+## s3.4d: Dark mode uses the site's own dark theme first (current build, 2026-11-05)
+
+**s3.4d** = s3.4c + `OMNI_DARK_APPEARANCE_EMU_V1` (title `eboot.bin` `ca22b2e4…f7d26a41`; child unchanged, `7b810ea5…fd717c64`).
+The dark-mode standard is now three title-side patches, applied in this order:
+
+| Marker | Script | What it does |
+|---|---|---|
+| `OMNI_DARK_VIDEO_PLANE_V1` | `s34/tools/apply_dark_video.py` | the dark-page invert filter steps aside while a playing video covers >= 20% of the viewport, so YouTube keeps its fast video plane (the 0.0145 s start stall) |
+| `OMNI_DARK_STANDARD_V1` | `s34/tools/apply_dark_standard.py` | the page's own dark theme first, the invert filter only as the last resort; Dark Reader add-on hook (`<html data-omni-dark-addon="on">`) |
+| `OMNI_DARK_APPEARANCE_EMU_V1` | `s34/tools/apply_dark_emu.py` | the shell's dark appearance does not reach pages in this engine, so a page-world document-start script answers `matchMedia('(prefers-color-scheme: dark)')` from Dark mode and fires change listeners. Sites that choose their theme in script go dark on their own; CSS-only `@media (prefers-color-scheme)` sites still get the filter |
+
+- Build: `build/build-omni-native-s34d.sh` (= the s3.4c order below, plus step 7b `apply_dark_emu.py` right after step 7).
+  `s34/build.py` and `s34/tools/prep_s34.py` are now the s3.4d copies (label and overlay marker `.s34d-marker`); the
+  s3.4c copies are in this repository's history at `45790c6`.
+- Host tests: dark video-plane 12/12, standard 11/11, emu 6/6 (`s34/hosttest/dark_emu_test.js`, node); the rest as s3.4c.
+- Console (2026-11-05, s3.4d): feature PASS, media PASS twice (0 hitches), YouTube watch with youtube.com dark ON 68.3 s in
+  90 s, `matchMedia(dark)` = true on YouTube, example.com untouched. Signed-out YouTube still picks its theme server-side,
+  so it gets the filter unless YouTube's own Appearance is set to Dark once.
+- Checks: `s34/checks-s34d.txt`. Summary of the whole s3.4 to s3.4d pass: `s34/REPORT.md`.
+
+| # | s3.4d order (as `build/build-omni-native-s34d.sh` applies it) | Marker |
+|---|---|---|
+| 0-5 | as s3.4c below (host tests, s3.1c steps, child `7b810ea5`, pointer-cross, CLEAN4 entry) | |
+| 6 | `s34/tools/apply_dark_video.py <tree>` | `OMNI_DARK_VIDEO_PLANE_V1` |
+| 7 | `s34/tools/apply_dark_standard.py <tree>` | `OMNI_DARK_STANDARD_V1` |
+| 7b | `s34/tools/apply_dark_emu.py <tree>` (checks `OmniDarkPages.h` is the `OMNI_DARK_STANDARD_V1` result first) | `OMNI_DARK_APPEARANCE_EMU_V1` |
+| 8-9 | as s3.4c below (stats diff, pointer-cross on the s3.4 files, ninja, `prep_s34.py`, `build.py`) | |
+
+---
 
 ## s3.4c: 4K60 SDR on the GPU video path (console-proven 2026-11-05)
 
@@ -17,7 +50,7 @@ stops unless it is byte-identical to `7b810ea5`.
 | `s34/hosttest/` | GPU host tests (`gpuvideo_test.cpp`, `present_test.cpp`, `pair_test.cpp`, lavapipe), the dark-page tests (node), `pointer_cross_test_s34.cpp`, `eligibility_test.cjs` |
 | `s34/SHA256SUMS.txt`, `s34/checks.txt` | the s3.4c build's own hashes and string/symbol checks (paths scrubbed) |
 | `video-4k60/` | the omni-video-4k60 patch set: 00 (GPU V2 base, skipped where `OMNI_GPU_VIDEO_V2` is present), 01, 02, 03, 05, `apply_video4k60.py`, `REPORT.md` (the cause: the dark-page filter kept YouTube off the hole-punch plane), `TEST-PLAN.md`. Its 04 (dark) is not used: s3.4's `OMNI_DARK_VIDEO_PLANE_V1` + `OMNI_DARK_STANDARD_V1` cover it, so it is not in this folder. |
-| `build/build-omni-native-s34*.sh` | s3.4, s3.4b and s3.4c |
+| `build/build-omni-native-s34*.sh` | s3.4, s3.4b, s3.4c and s3.4d |
 
 ### Order (as `build/build-omni-native-s34c.sh` applies it)
 
@@ -37,7 +70,7 @@ pointer-cross 41/41 twice; ninja ok; layout check PASSED. Runtime flags (from `v
 `/data/omni/gpu-present.flag` (`out=2160`), `/data/omni/gpu-video.flag`, optional `video-fps.flag`; kill switch for the shared
 device `/data/omni/gpu-share-disabled.flag`. HDR10 passthrough is not part of s3.4c (SDR only).
 
-Not here: **s3.4d** (prefers-color-scheme emulation, `apply_dark_emu.py`) is built but not yet proven on the console.
+s3.4d (above) adds the third dark-mode patch on top of this order.
 
 ---
 

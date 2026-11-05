@@ -13,11 +13,11 @@ import json, shlex, shutil, subprocess, sys
 from pathlib import Path
 N = Path(__file__).resolve().parent.parent
 S1C, GPU = N.parent / 'omni-native-s1c', N.parent / 'omni-native-s2-gpu'
-W = Path('/home/builder/s34cobjs'); (W / 'media').mkdir(parents=True, exist_ok=True)   # s3.2: its own objects folder
+W = Path('/home/builder/s34dobjs'); (W / 'media').mkdir(parents=True, exist_ok=True)   # s3.2: its own objects folder
 VKH = N.parent.parent / 'nxe-ps5/bigapp/private/av2/upstream/PS5_Mesa/include'
 ENGMEDIA = '/home/builder/s1/engine/media'
 def say(*a): print(*a, flush=True)
-if not Path('/home/builder/s1/.s34c-marker').exists(): sys.exit('BLOCKED: /home/builder/s1 is not the s3.4 overlay (no .s34c-marker)')
+if not Path('/home/builder/s1/.s34d-marker').exists(): sys.exit('BLOCKED: /home/builder/s1 is not the s3.4 overlay (no .s34d-marker)')
 line = (GPU / 'fetch/hwservice-compile.txt').read_text().splitlines()[0]   # the tree's own compile line (s2-gpu fetched it)
 cwd, cmd = '/home/builder/s1/build', None
 for part in (p.strip() for p in line.split(' && ')):
@@ -62,7 +62,7 @@ c[sdl[0]] = str(gp_sdl)
 say('link command: GPU objects swapped in, SDL copy with', len(moved), 'VideoOut stand-ins')
 b = (S1C / 'build.py').read_text()
 subs = [("S1LC = Path('/home/builder/s1/link-command.json')", "S1LC = HERE / 'link-command.json'   # s2: the s2 tree's link with the GPU objects"),
-        ("'label': 'omni-native-s1c'", "'label': 'omni-native-s3.4c', 's34c': 'omni-video-4k60 01-03+05: OMNI_GPU_VIDEO_V3 + OMNI_GPU_PRESENT_V3 (shared device, in place, FPS_V2) + hole-eligibility probe', 's34b': 'OMNI_DARK_STANDARD_V1 (own dark theme first, invert filter last, Dark Reader add-on hook)', 's34': 'CLEAN4 integration (native quick bar/Options/Apps, media stats + HDR preference bridge, downloads readiness C-1, card ports C-2) + OMNI_DARK_VIDEO_PLANE_V1 (YouTube start stall) + OMNI_GPU_SURFACE_PAIR_V1 + OMNI_GPU_REGION_REUSE_V1 + YTTL fps probe; title only, the child is built before every patch', 'pointer': 'OMNI_POINTER_CROSS_V1 (Cross at the pointer while the pointer leads; title only, the child is built before the patch)', 's32': 'OMNI_GPU_VIDEO_V2 + OMNI_GPU_PRESENT_V2 + OMNI_VIDEO_FPS_V1 (4K60 video path; HDR phase 2 behind the hdr flag word), off unless their flags', 's31b': 'jit2 build 6: OMNI_NO_VIEW_TRANSITION_V1 + OMNI_SOAK_READ_V1 + OMNI_YT_TIMELINE_V1 (flag-only)', 's3': 'OMNI_NO_ACCEL_CANVAS_V1 + OMNI_ADDONS_V1 + OMNI_VAULT_V2 + OMNI_PAGES_V1 + OMNI_JSC_JIT_V3 (JIT default off)', 's31': 'audit OS-001 OMNI_SEC_PNA_CONNECT_V1 + OS-002 vault read errors + jit2 build 4 (OMNI_EMUTLS_ROUNDS_V1, OMNI_CRASH_V2)', 'gpu': 'OMNI_GPU_VIDEO_V2 + OMNI_GPU_PRESENT_V2, off unless their flags', 'hub': 'OMNI_HUB_CARDS_V1', 'hud': 'OMNI_HUD_ASTRA_V1'"),
+        ("'label': 'omni-native-s1c'", "'label': 'omni-native-s3.4d', 's34d': 'OMNI_DARK_APPEARANCE_EMU_V1 (matchMedia prefers-color-scheme follows Dark mode)', 's34c': 'omni-video-4k60 01-03+05: OMNI_GPU_VIDEO_V3 + OMNI_GPU_PRESENT_V3 (shared device, in place, FPS_V2) + hole-eligibility probe', 's34b': 'OMNI_DARK_STANDARD_V1 (own dark theme first, invert filter last, Dark Reader add-on hook)', 's34': 'CLEAN4 integration (native quick bar/Options/Apps, media stats + HDR preference bridge, downloads readiness C-1, card ports C-2) + OMNI_DARK_VIDEO_PLANE_V1 (YouTube start stall) + OMNI_GPU_SURFACE_PAIR_V1 + OMNI_GPU_REGION_REUSE_V1 + YTTL fps probe; title only, the child is built before every patch', 'pointer': 'OMNI_POINTER_CROSS_V1 (Cross at the pointer while the pointer leads; title only, the child is built before the patch)', 's32': 'OMNI_GPU_VIDEO_V2 + OMNI_GPU_PRESENT_V2 + OMNI_VIDEO_FPS_V1 (4K60 video path; HDR phase 2 behind the hdr flag word), off unless their flags', 's31b': 'jit2 build 6: OMNI_NO_VIEW_TRANSITION_V1 + OMNI_SOAK_READ_V1 + OMNI_YT_TIMELINE_V1 (flag-only)', 's3': 'OMNI_NO_ACCEL_CANVAS_V1 + OMNI_ADDONS_V1 + OMNI_VAULT_V2 + OMNI_PAGES_V1 + OMNI_JSC_JIT_V3 (JIT default off)', 's31': 'audit OS-001 OMNI_SEC_PNA_CONNECT_V1 + OS-002 vault read errors + jit2 build 4 (OMNI_EMUTLS_ROUNDS_V1, OMNI_CRASH_V2)', 'gpu': 'OMNI_GPU_VIDEO_V2 + OMNI_GPU_PRESENT_V2, off unless their flags', 'hub': 'OMNI_HUB_CARDS_V1', 'hud': 'OMNI_HUD_ASTRA_V1'"),
         ("shutil.copyfile(icon, PKG / 'sce_sys/icon0.png')",
          "shutil.copyfile(icon, PKG / 'sce_sys/icon0.png')\n"
          "# s3 OMNI_PAGES_V1: the built-in pages at /app0/pages (ENGINE-CONTRACT 1: never dev/, tests, build scripts) + the add-ons page\n"
