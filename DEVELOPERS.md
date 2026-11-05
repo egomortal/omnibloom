@@ -6,7 +6,7 @@ The native title/startup process launches browser child processes. The browser s
 
 | Included source | Purpose | Limit |
 | --- | --- | --- |
-| omni/pages/bundle-clean4/ | Final CLEAN4 built-in pages (50 routes, 15 Universes, HDR and video stats), the pages of native build s3.4c | Only the 4K60 SDR playback path is console-confirmed; all-route native acceptance remains open. |
+| omni/pages/bundle-clean4/ | Final CLEAN4 built-in pages (50 routes, 15 Universes, HDR and video stats), the pages of native builds s3.4c and s3.4d | Only the 4K60 SDR playback path is console-confirmed; all-route native acceptance remains open. |
 | omni/pages/bundle-r46/ | Previous integrated built-in pages (r46) | Native acceptance and later proposals remain separate. |
 | addons/bundled/ | Actual bundled payload source | Eleven manifests, not every proposed add-on installed. |
 | setup/ | Desktop source/spec | No executable committed; packaging is not installation validation. |

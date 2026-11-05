@@ -4,7 +4,7 @@
 
 # What Omnibloom Can Do
 
-*Last updated: November 5, 2026 (native build s3.4c)*
+*Last updated: November 5, 2026 (native build s3.4d)*
 
 Omnibloom's browser, **Omni** (that's the name on the console), is a web browser for the PS5
 built on WebKit, the same engine that powers Safari. It runs as its own app and you control
@@ -33,6 +33,7 @@ Developers: see [DEVELOPERS.md](DEVELOPERS.md).
 | Tabs | ✅ | Up to 8 tabs open, with 6 kept loaded in memory. |
 | Bookmarks and shortcuts | ✅ | Press **L3** to save the current site to your shortcuts grid. |
 | Translate pages | ✅ | Press the **touchpad** to translate the page. |
+| Dark mode | 🧪 | **Uses the site's own dark theme first.** Omni tells pages you prefer dark (`prefers-color-scheme: dark`), so sites that have a dark theme switch to it. Only if a page stays light does Omni darken it with a colour filter, and the filter steps aside while a large video plays so video stays smooth. Works with the Dark Reader add-on. Tip: on YouTube, choose YouTube's own **Appearance > Dark theme** once. |
 | Quick bar and Options menu | 🧪 | Redesigned: a quick bar of the things you use most, a grouped **Options** menu, and an **Apps** row with tiles and status for the suite's apps. |
 | Stay logged in | ✅ | Your logins are remembered after you close Omni. |
 | Secure connections (HTTPS) | ✅ | Websites are security-checked the same way any normal browser does. |
@@ -52,7 +53,7 @@ Developers: see [DEVELOPERS.md](DEVELOPERS.md).
 | YouTube in 4K at 60 fps (SDR) | ✅ | A 2160p60 YouTube video plays at full 3840x2160: median 59.94 fps, with only 0.17% of frames dropped over a 300-second test on the console. |
 | Video on the PS5's graphics chip | ✅ | The PS5's graphics chip converts and shows each video frame (it reads the decoded picture in place, with no extra copy). This is the path behind the 4K60 YouTube result. If the graphics chip can't be used, Omni falls back to the processor on its own. |
 | Video statistics | 🧪 | **Stats for nerds** in the video menu: resolution, frame rate, dropped frames and the video path in use. |
-| HDR | 🚧 | **Coming.** The 4K60 result above is SDR. HDR video passthrough to your TV is being worked on; the HDR setting page is there, but HDR video is shown as SDR for now. |
+| HDR | 🚧 | **Built, testing.** HDR10 output to HDR TVs is built and passes its PC tests; it is waiting for its first test on the console and a look at the TV. Until then HDR video is shown as SDR (the 4K60 result above is SDR). |
 | Hardware video decoding | ✅ | Uses the PS5's built-in video chip. Supports H.264, HEVC and VP9, including 10-bit. |
 | Background tabs free up memory | ✅ | A video in a hidden tab pauses and frees its memory after 1.5 seconds, then picks up again when you come back. |
 | Fullscreen controls | ✅ | See [Controls](#-controls) below. |
@@ -168,11 +169,13 @@ navigation. If you leave the controller alone, the pointer also gets out of the 
 - **Some JavaScript-heavy sites run slower** than on a PC or phone. The optional JIT setting helps, but it's off by default.
 - **Saved passwords are only scrambled, not encrypted,** because the console has no secure storage Omni can use.
 - **No location, camera, microphone, notifications or video calls.**
-- **No HDR video yet.** HDR videos play, but as SDR.
+- **No HDR video yet.** HDR videos play, but as SDR (HDR output is built and being tested).
+- **Known issue: pages with many small videos can crash.** On Reddit-style feeds where lots of small videos autoplay at once, the page's process can crash; Omni recovers and you can reload the page. The cause is found and a fix is pending (it still needs a console test).
 
 ## 🔜 What's next
 
-- **HDR video** passed through to HDR TVs.
+- **HDR video** on HDR TVs (built, being tested).
+- **The fix for the Reddit-style page crash** (pending a console test).
 - **JDownloader** for file-host downloads.
 
 ---
