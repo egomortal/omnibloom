@@ -4,7 +4,7 @@
 
 # What Omnibloom Can Do
 
-*Last updated: November 2, 2026 (native build s1)*
+*Last updated: November 5, 2026 (native build s3.4c)*
 
 Omnibloom's browser, **Omni** (that's the name on the console), is a web browser for the PS5
 built on WebKit, the same engine that powers Safari. It runs as its own app and you control
@@ -33,6 +33,7 @@ Developers: see [DEVELOPERS.md](DEVELOPERS.md).
 | Tabs | ✅ | Up to 8 tabs open, with 6 kept loaded in memory. |
 | Bookmarks and shortcuts | ✅ | Press **L3** to save the current site to your shortcuts grid. |
 | Translate pages | ✅ | Press the **touchpad** to translate the page. |
+| Quick bar and Options menu | 🧪 | Redesigned: a quick bar of the things you use most, a grouped **Options** menu, and an **Apps** row with tiles and status for the suite's apps. |
 | Stay logged in | ✅ | Your logins are remembered after you close Omni. |
 | Secure connections (HTTPS) | ✅ | Websites are security-checked the same way any normal browser does. |
 | Saved passwords | 🧪 | **Present, but manual.** You add logins yourself on the Passwords page, and Omni fills one in only when you ask. Omni never watches login forms and never offers to "save this password". Saved passwords are scrambled on the console, not truly encrypted: anyone who can read the console's files can read them. |
@@ -48,13 +49,16 @@ Developers: see [DEVELOPERS.md](DEVELOPERS.md).
 | Feature | Status | Details |
 | --- | :---: | --- |
 | 4K at 60 fps | ✅ | Smooth. In a 10-minute test, only 50 of nearly 36,000 frames were skipped. |
-| HDR | ✅ | Turns on automatically for HDR videos when your TV supports it. |
+| YouTube in 4K at 60 fps (SDR) | ✅ | A 2160p60 YouTube video plays at full 3840x2160: median 59.94 fps, with only 0.17% of frames dropped over a 300-second test on the console. |
+| Video on the PS5's graphics chip | ✅ | The PS5's graphics chip converts and shows each video frame (it reads the decoded picture in place, with no extra copy). This is the path behind the 4K60 YouTube result. If the graphics chip can't be used, Omni falls back to the processor on its own. |
+| Video statistics | 🧪 | **Stats for nerds** in the video menu: resolution, frame rate, dropped frames and the video path in use. |
+| HDR | 🚧 | **Coming.** The 4K60 result above is SDR. HDR video passthrough to your TV is being worked on; the HDR setting page is there, but HDR video is shown as SDR for now. |
 | Hardware video decoding | ✅ | Uses the PS5's built-in video chip. Supports H.264, HEVC and VP9, including 10-bit. |
 | Background tabs free up memory | ✅ | A video in a hidden tab pauses and frees its memory after 1.5 seconds, then picks up again when you come back. |
 | Fullscreen controls | ✅ | See [Controls](#-controls) below. |
 | Higher than 4K (e.g. 8K) | ❌ | The PS5's video hardware is the limit, not Omni. |
 | Netflix, Disney+ and other protected services | ❌ | These need copy-protection software that isn't available to homebrew apps. |
-| The full YouTube website | 🚧 | Has been unreliable in the past. YouTube videos embedded on other sites play fine. |
+| The full YouTube website | 🧪 | Videos on YouTube's own watch pages now start and play in 4K60 (above), including with dark mode on for YouTube. The rest of the site is still being tested. YouTube videos embedded on other sites play fine. |
 
 ## 🛡️ Ad blocking
 
@@ -76,6 +80,7 @@ rules as **uBlock Origin**. You don't need to install anything.
 
 | Feature | Status | Details |
 | --- | :---: | --- |
+| Send to Downloads | ✅ | Send a link from Omni to the downloads worker, which starts on its own assigned port and tells Omni when it's ready. |
 | Link grabber | ✅ | Finds video and media links on the page, including ones hidden inside embedded players. Found links show up in the Downloads dialog and on the Launch page. |
 | Know what you're getting | 🧪 | Each link is checked before you download it: real file type, resolution, bitrate and size where the site gives them, best first. Links that won't work say why: copy-protected (never bypassed), live stream, dead link, sign-in needed. |
 | Quality picker | 🧪 | Choose the quality you want when a link offers more than one. |
@@ -163,11 +168,11 @@ navigation. If you leave the controller alone, the pointer also gets out of the 
 - **Some JavaScript-heavy sites run slower** than on a PC or phone. The optional JIT setting helps, but it's off by default.
 - **Saved passwords are only scrambled, not encrypted,** because the console has no secure storage Omni can use.
 - **No location, camera, microphone, notifications or video calls.**
-- **The PS5's graphics chip isn't used for video yet.** Video runs on the processor plus the PS5's video chip. This is being worked on.
+- **No HDR video yet.** HDR videos play, but as SDR.
 
 ## 🔜 What's next
 
-- **Using the PS5's graphics chip for video.** If it works, video gets faster and more efficient.
+- **HDR video** passed through to HDR TVs.
 - **JDownloader** for file-host downloads.
 
 ---
