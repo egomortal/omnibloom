@@ -1,0 +1,532 @@
+--- "s3.4d/src-title/OmniGpuPresent.cpp"	2026-11-05 02:10:31.500556271 -0500
++++ s3.5-hdr/src-title/OmniGpuPresent.cpp	2026-11-05 02:55:59.071812368 -0500
+@@ -47,8 +47,25 @@
+ //    queued one and break that accounting; it remains a flag word for experiments);
+ //  - OMNI_VIDEO_FPS_V2: the per-second line adds the GPU video's in-place / ring-copy counts, the shared-device state,
+ //    the present mode and the number of present intervals over 25 ms (a missed vblank at 60 Hz).
++//
++// OMNI_GPU_PRESENT_V4 (omni-native-s3.5-hdr), real HDR10 output:
++//  - Omni's HDR setting (Off default / Auto / On, video-hdr-preference.txt) decides (OmniHdrPolicy::resolveMode); the
++//    flag word `hdr` (+ hdr-auto.flag) still means On when no setting is saved, `hdrauto` means Auto;
++//  - the HDR10 swapchain: A2B10G10R10 + VK_COLOR_SPACE_HDR10_ST2084_EXT, offered by the title's private RADV VideoOut
++//    WSI member (Ex-Box PPSA99736's, console-shown SDR -> PQ -> SDR); every format the surface offers is logged and the
++//    choice is deliberate; a refused HDR swapchain (or a failed first HDR frame) falls back to SDR at once, with the reason
++//    in gpu-present.log; flag word `hdrfail` refuses it on purpose (the fallback test);
++//  - page and UI: the SDR canvas -> BT.2020 PQ with SDR white at 203 nits (V2's checked pass), so menus are not blinding;
++//  - HDR10 video: the hole-punch stages the picture's PQ layer (written by OmniGpuVideo V4 in the same GPU pass); after the
++//    PQ pass its opaque video runs are copied over the canvas's, so PQ samples pass straight through (no tone mapping);
++//    translucent (mix) pixels over the video keep the SDR mapping. HLG sources arrive already converted to PQ;
++//  - Auto: HDR10 output only while an HDR video with a PQ layer fills the screen (0.5 s on, 1.5 s off), else SDR;
++//  - omni_gpu_present_hdr_state() (0 SDR / 1 armed / 2 HDR now) for the hole-punch and the shell (what sites are told);
++//  - OMNI_VIDEO_FPS_V3: the fps line adds out_mode, src_tf, src_bits, hdr_setting, hdr_switches, pq_frames;
++//  - after a switch the VideoOut output range is logged (exbox_presenter_probe, from the WSI member; 1 SDR, 2 HDR).
+ #include <vulkan/vulkan.h>
+ #include "../engine/media/OmniHdrPreference.h"
++#include "OmniHdrPolicy.h"
+ #include "../engine/media/OmniVideoStats.h"
+ #include "OmniPqOutShader.h"   // V2 HDR: SPIR-V of omni_pq_out.comp
+ 
+@@ -147,7 +164,10 @@
+     const uint8_t* px = nullptr; size_t bytes = 0; int stride = 0, lx = 0, ly = 0, w = 0, h = 0;
+     std::vector<uint32_t> runs;   // y, x, n triplets, canvas coordinates
+     void (*release)(void*) = nullptr; void* cookie = nullptr;
++    const uint8_t* pq = nullptr; size_t pqBytes = 0; uint32_t info = 0;   // V4: the picture's PQ layer (same stride), source info
+ };
++static_assert(OmniHdrPolicy::kA2B10G10R10 == VK_FORMAT_A2B10G10R10_UNORM_PACK32 && OmniHdrPolicy::kA2R10G10B10 == VK_FORMAT_A2R10G10B10_UNORM_PACK32
++              && OmniHdrPolicy::kHdr10St2084 == VK_COLOR_SPACE_HDR10_ST2084_EXT, "OmniHdrPolicy's Vulkan values");
+ 
+ enum State { kOff = 0, kActive = 1, kFailed = 2, kStopped = 3 };
+ 
+@@ -208,6 +228,14 @@
+     VkShaderModule pqShader = VK_NULL_HANDLE; VkDescriptorSetLayout pqSetLayout = VK_NULL_HANDLE; VkPipelineLayout pqLayout = VK_NULL_HANDLE;
+     VkPipeline pqPipe = VK_NULL_HANDLE; VkDescriptorPool pqPool = VK_NULL_HANDLE; VkDescriptorSet pqSet = VK_NULL_HANDLE;
+     Buf pqBuf;   // the packed PQ pixels (device memory), copied into `pq` for the blit
++    // V4: `hdr` = HDR10 output now; pqArmed = the PQ pass is ready (canvas with a storage view, PQ image)
++    bool pqArmed = false, hdrRefused = false, optHdrAuto = false, optHdrFail = false;
++    OmniHdrPolicy::Mode hdrMode = OmniHdrPolicy::kOff; OmniHdrPolicy::AutoSwitch autoSw;
++    std::atomic<int> hdrState { 0 };   // 0 SDR only, 1 armed (Auto, SDR now), 2 HDR10 output now
++    std::atomic<uint32_t> srcInfo { 0 }; std::atomic<int64_t> srcInfoUs { 0 };
++    unsigned hdrSwitches = 0; uint64_t pqFrames = 0; int rangeCheckIn = 0;
++    VkFormat sdrFormat = VK_FORMAT_UNDEFINED, hdrFormat = VK_FORMAT_UNDEFINED; VkSurfaceCapabilitiesKHR caps {}; uint32_t imageCount = 2;
++    std::vector<VkBufferImageCopy> pqRegions;   // retained scratch (as videoRegions)
+     bool hung = false;
+     double lastCpuMs = 0, lastGpuMs = -1;   // V2: for the fps line
+     std::thread reaper;
+@@ -215,6 +243,10 @@
+     std::atomic<bool> shared { false };   // V3: the device was handed to OmniGpuVideo (shut it down before ours goes)
+ };
+ Gp g;
++void publishHdr()
++{
++    g.hdrState.store(g.hdr ? 2 : (g.pqArmed && g.hdrMode == OmniHdrPolicy::kAuto && !g.hdrRefused) ? 1 : 0, std::memory_order_release);
++}
+ 
+ template <class T> bool loadI(VkInstance i, T& fn, const char* name) { fn = reinterpret_cast<T>(OMNI_GP_PROC(i, name)); return fn != nullptr; }
+ template <class T> bool loadD(T& fn, const char* name) { fn = reinterpret_cast<T>(g.vk.vkGetDeviceProcAddr(g.device, name)); if (!fn) plog(false, "device entry point %s missing", name); return fn != nullptr; }
+@@ -325,7 +357,7 @@
+     VkImageCreateInfo ii { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+     ii.imageType = VK_IMAGE_TYPE_2D; ii.format = g.canvasFormat; ii.extent = { w, h, 1 }; ii.mipLevels = 1; ii.arrayLayers = 1;
+     ii.samples = VK_SAMPLE_COUNT_1_BIT; ii.tiling = VK_IMAGE_TILING_OPTIMAL;
+-    ii.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | (g.hdr ? VK_IMAGE_USAGE_STORAGE_BIT : 0u);   // V2: the PQ pass reads it
++    ii.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | (g.pqArmed ? VK_IMAGE_USAGE_STORAGE_BIT : 0u);   // V2: the PQ pass reads it (V4: armed)
+     ii.sharingMode = VK_SHARING_MODE_EXCLUSIVE; ii.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+     if (g.vk.vkCreateImage(g.device, &ii, nullptr, &g.canvas.image) != VK_SUCCESS) return false;
+     g.liveImages++;
+@@ -338,7 +370,7 @@
+     if (g.vk.vkBindImageMemory(g.device, g.canvas.image, g.canvas.memory, 0) != VK_SUCCESS) { freeImg(g.canvas); return false; }
+     g.canvas.w = w; g.canvas.h = h; g.canvas.format = g.canvasFormat; g.canvas.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+     plog(false, "canvas image %ux%u format %d (%.1f MiB, memory type %d)", w, h, int(g.canvasFormat), req.size / 1048576.0, type);
+-    return !g.hdr || hdrEnsure(w, h);
++    return !g.pqArmed || hdrEnsure(w, h);
+ }
+ 
+ // V2: the frame's source buffer: the SDL surface imported once (the same surface every frame), else the persistent
+@@ -435,7 +467,7 @@
+ // Records: source frame -> canvas image, staged video runs -> canvas image, [canvas -> read-back],
+ // canvas -> target (scaled, letterboxed to the canvas aspect). Target layout ends in `finalLayout`.
+ struct Recorded { Cached* layer = nullptr; bool video = false; bool readback = false; };
+-void recordPq(VkImage target, VkExtent2D tExt, VkImageLayout& tLayout, VkImageLayout finalLayout, int w, int h);
++void recordPq(VkImage target, VkExtent2D tExt, VkImageLayout& tLayout, VkImageLayout finalLayout, int w, int h, bool video);
+ bool recordCompose(const uint8_t* pixels, int pitch, int w, int h, VkImage target, VkExtent2D tExt, VkImageLayout& tLayout, VkImageLayout finalLayout,
+                    bool wantReadback, Recorded& rec)
+ {
+@@ -493,7 +525,7 @@
+         }
+     }
+     if (g.hdr) {   // V2 phase 2: canvas -> PQ image (compute) -> target
+-        recordPq(target, tExt, tLayout, finalLayout, w, h);
++        recordPq(target, tExt, tLayout, finalLayout, w, h, rec.video);
+         if (g.timers) g.vk.vkCmdWriteTimestamp(g.cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g.queries, uint32_t(g.queryPair * 2 + 1));
+         return true;
+     }
+@@ -582,7 +614,7 @@
+ {
+     VideoStage& v = g.video;
+     if (v.release) v.release(v.cookie);
+-    v.valid = false; v.release = nullptr; v.cookie = nullptr; v.px = nullptr; v.runs.clear();
++    v.valid = false; v.release = nullptr; v.cookie = nullptr; v.px = nullptr; v.runs.clear(); v.pq = nullptr; v.pqBytes = 0; v.info = 0;
+ }
+ 
+ 
+@@ -624,7 +656,8 @@
+     if (g.pqPool) g.vk.vkDestroyDescriptorPool(g.device, g.pqPool, nullptr);
+     if (g.pqShader) g.vk.vkDestroyShaderModule(g.device, g.pqShader, nullptr);
+     g.canvasView = VK_NULL_HANDLE; g.pqPipe = VK_NULL_HANDLE; g.pqLayout = VK_NULL_HANDLE; g.pqSetLayout = VK_NULL_HANDLE;
+-    g.pqPool = VK_NULL_HANDLE; g.pqSet = VK_NULL_HANDLE; g.pqShader = VK_NULL_HANDLE; g.hdr = false;
++    g.pqPool = VK_NULL_HANDLE; g.pqSet = VK_NULL_HANDLE; g.pqShader = VK_NULL_HANDLE; g.hdr = false; g.pqArmed = false;
++    publishHdr();
+ }
+ // The pipeline (once). The images/buffer follow the canvas size (hdrEnsure).
+ bool hdrSetUp()
+@@ -711,10 +744,42 @@
+     barrier(g.canvas.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+ }
++// V4: HDR10 passthrough. The staged picture's PQ layer (written by OmniGpuVideo V4: PQ samples kept, HLG converted) is
++// copied over the PQ image at the opaque video runs, after the SDR -> PQ pass; the translucent (mix) pixels and the page
++// keep the 203-nit SDR mapping. A refused import leaves this frame's video SDR-mapped (counted).
++void recordSourcePq(int w, int h)
++{
++    const VideoStage& v = g.video;
++    if (!v.pq || !v.pqBytes) return;
++    Cached* imported = cachedLayer(v.pq, v.pqBytes);   // a list entry: stays put; in use until layersDone()
++    if (!imported) { static unsigned notes = 0; if (notes++ < 6) plog(true, "HDR: the PQ layer import failed: this frame's video stays SDR-mapped"); return; }
++    const VkBuffer buffer = imported->b.buffer; const VkDeviceSize off = imported->offset;
++    auto& regions = g.pqRegions; regions.clear(); regions.reserve(v.runs.size() / 3);
++    for (size_t k = 0; k + 2 < v.runs.size(); k += 3) {
++        const int y = int(v.runs[k]), x0 = int(v.runs[k + 1]); int n = int(v.runs[k + 2]);
++        if (y < 0 || y >= h || x0 < 0 || x0 >= w || y - v.ly < 0 || y - v.ly >= v.h || x0 - v.lx < 0) continue;
++        n = std::min({ n, w - x0, v.w - (x0 - v.lx) }); if (n <= 0) continue;
++        VkBufferImageCopy c {};
++        c.bufferOffset = off + VkDeviceSize(y - v.ly) * VkDeviceSize(v.stride) + VkDeviceSize(x0 - v.lx) * 4;
++        c.bufferRowLength = uint32_t(v.stride / 4); c.bufferImageHeight = 1;
++        c.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }; c.imageOffset = { x0, y, 0 }; c.imageExtent = { uint32_t(n), 1, 1 };
++        regions.push_back(c);
++    }
++    if (regions.empty()) return;
++    VkMemoryBarrier host { VK_STRUCTURE_TYPE_MEMORY_BARRIER }; host.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT; host.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
++    g.vk.vkCmdPipelineBarrier(g.cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &host, 0, nullptr, 0, nullptr);
++    barrier(g.pq.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT,
++            VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
++    g.vk.vkCmdCopyBufferToImage(g.cmd, buffer, g.pq.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, uint32_t(regions.size()), regions.data());
++    barrier(g.pq.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
++            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
++    g.pqFrames++;
++}
+ // The PQ pass, then the PQ image scaled to the target (letterboxed), as the SDR blit.
+-void recordPq(VkImage target, VkExtent2D tExt, VkImageLayout& tLayout, VkImageLayout finalLayout, int w, int h)
++void recordPq(VkImage target, VkExtent2D tExt, VkImageLayout& tLayout, VkImageLayout finalLayout, int w, int h, bool video)
+ {
+     recordPqPass(w, h);
++    if (video) recordSourcePq(w, h);   // V4
+     barrier(target, tLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR ? VK_IMAGE_LAYOUT_UNDEFINED : tLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
+             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+     const double sx = double(tExt.width) / w, sy = double(tExt.height) / h, sc = std::min(sx, sy);
+@@ -841,6 +906,8 @@
+         else if (!strncmp(word, "out=", 4)) g.optOutHeight = !strcmp(word + 4, "match") ? 0 : atoi(word + 4);
+         else if (!strcmp(word, "hdr")) g.optHdr = true;   // V2 phase 2
+         else if (!strcmp(word, "failsetup")) g.optFailSetUp = true;
++        else if (!strcmp(word, "hdrauto")) g.optHdrAuto = true;   // V4: Auto when no HDR setting is saved
++        else if (!strcmp(word, "hdrfail")) g.optHdrFail = true;   // V4: refuse the HDR10 swapchain on purpose (fallback test)
+         else if (!strncmp(word, "hdrwhite=", 9)) g.hdrWhite = std::min(1000, std::max(80, atoi(word + 9)));
+         else plog(false, "flag file: unknown word '%s'", word);
+     }
+@@ -897,6 +964,76 @@
+     return g.vk.vkBeginCommandBuffer(g.cmd, &bi) == VK_SUCCESS;
+ }
+ 
++// V4: a swapchain for SDR (g.sdrFormat, sRGB non-linear) or HDR10 (g.hdrFormat, HDR10_ST2084), replacing the current one
++// (oldSwapchain, then destroyed: Ex-Box PPSA99736's proven order). *retired: the old one is gone (Vulkan retires it even
++// when the creation fails; it is then destroyed here so the next attempt starts clean). Caller holds g.lock.
++extern "C" int exbox_presenter_probe(uint32_t* range, int64_t* shown) __attribute__((weak));   // the private WSI member
++bool makeSwapchain(bool hdr, bool* retired)
++{
++    *retired = false;
++    if (hdr && g.optHdrFail) { plog(true, "HDR: the HDR10 swapchain is refused on purpose (flag word hdrfail: the fallback test)"); return false; }
++    Api& vk = g.vk;
++    if (g.swapchain) { queueLock(); vk.vkDeviceWaitIdle(g.device); queueUnlock(); }   // nothing of ours in flight on the old images
++    VkSwapchainCreateInfoKHR sw { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
++    sw.surface = g.surface; sw.minImageCount = g.caps.maxImageCount ? std::min(g.imageCount, g.caps.maxImageCount) : g.imageCount;
++    sw.imageFormat = hdr ? g.hdrFormat : g.sdrFormat; sw.imageColorSpace = hdr ? VK_COLOR_SPACE_HDR10_ST2084_EXT : VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
++    sw.imageExtent = g.extent; sw.imageArrayLayers = 1; sw.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT; sw.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
++    sw.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR; sw.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
++    if (!(g.caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)) sw.compositeAlpha = VkCompositeAlphaFlagBitsKHR(g.caps.supportedCompositeAlpha & -g.caps.supportedCompositeAlpha);
++    sw.presentMode = g.presentMode; sw.clipped = VK_TRUE; sw.oldSwapchain = g.swapchain;
++    VkSwapchainKHR next = VK_NULL_HANDLE;
++    const VkResult r = vk.vkCreateSwapchainKHR(g.device, &sw, nullptr, &next);
++    if (g.swapchain) {   // retired either way
++        *retired = true; vk.vkDestroySwapchainKHR(g.device, g.swapchain, nullptr); g.swapchain = VK_NULL_HANDLE;
++        g.images.clear(); g.imageLayouts.clear(); g.acquired = UINT32_MAX;
++    }
++    if (r != VK_SUCCESS) { plog(true, "vkCreateSwapchainKHR(%s, format %d) = %d", hdr ? "HDR10 PQ" : "SDR", int(sw.imageFormat), int(r)); return false; }
++    g.swapchain = next;
++    uint32_t n = 0; vk.vkGetSwapchainImagesKHR(g.device, g.swapchain, &n, nullptr);
++    g.images.resize(n); vk.vkGetSwapchainImagesKHR(g.device, g.swapchain, &n, g.images.data()); g.imageLayouts.assign(n, VK_IMAGE_LAYOUT_UNDEFINED);
++    g.acquired = UINT32_MAX;
++    g.hdr = hdr; publishHdr();
++    g.rangeCheckIn = exbox_presenter_probe ? 30 : 0;   // the output range, 30 presents later
++    plog(true, "swapchain: %s output, format %d, colour space %s, %u images %ux%u", hdr ? "HDR10 (BT.2020 PQ)" : "SDR", int(sw.imageFormat),
++         hdr ? "HDR10_ST2084" : "SRGB_NONLINEAR", n, g.extent.width, g.extent.height);
++    return true;
++}
++// V4: the output the setting wants, with the SDR fallback (OmniHdrPolicy::switchOutput). false: no swapchain at all.
++bool setOutput(bool wantHdr, const char* why)
++{
++    bool refused = false, outHdr = false;
++    const int rc = OmniHdrPolicy::switchOutput(wantHdr, g.swapchain != VK_NULL_HANDLE,
++        [](bool hdr, bool* retired) { return makeSwapchain(hdr, retired); }, refused, outHdr);
++    if (refused) {
++        g.hdrRefused = true; g.hdr = outHdr; publishHdr();
++        plog(true, "HDR: the HDR10 output was refused (%s): SDR output%s", why, rc == 0 ? "; HDR stays off for this run" : "");
++    }
++    if (rc < 0) { plog(true, "no swapchain could be made (%s)", why); return false; }
++    return true;
++}
++// V4 Auto: once per present, before composing (caller holds g.lock). false: the output could not be restored.
++bool autoTick(int canvasW, int canvasH)
++{
++    if (g.hdrMode != OmniHdrPolicy::kAuto || !g.pqArmed || g.hdrRefused) return true;
++    const VideoStage& v = g.video;
++    const bool eligible = v.valid && g.optVideo && v.pq && OmniHdrPolicy::fullscreen(v.lx, v.ly, v.w, v.h, canvasW, canvasH);
++    const int d = g.autoSw.step(nowMs(), eligible, g.hdr);
++    if (!d) return true;
++    plog(true, "HDR Auto: %s (%s)", d > 0 ? "HDR10 output on" : "back to SDR output",
++         d > 0 ? "an HDR video with a PQ layer has filled the screen for 0.5 s" : "no full-screen HDR video for 1.5 s");
++    const bool ok = setOutput(d > 0, "Auto switch");
++    if (ok) g.hdrSwitches++;
++    return ok;
++}
++void rangeCheck()
++{
++    if (!g.rangeCheckIn || --g.rangeCheckIn || !exbox_presenter_probe) return;
++    uint32_t range = 0; int64_t shown = 0;
++    const int rc = exbox_presenter_probe(&range, &shown);
++    plog(true, "VideoOut output range %u (1 SDR, 2 HDR; the console may report 2 for SDR when its HDR setting is Always On), query rc %d, flips shown %lld, %s output",
++         range, rc, (long long)shown, g.hdr ? "HDR10" : "SDR");
++}
++
+ // One frame: compose + present + wait for its flip. Caller holds g.lock.
+ int presentLockedImpl(const uint8_t* pixels, int pitch, int w, int h);
+ int presentLocked(const uint8_t* pixels, int pitch, int w, int h)
+@@ -909,6 +1046,7 @@
+ int presentLockedImpl(const uint8_t* pixels, int pitch, int w, int h)
+ {
+     const double t0 = nowMs();
++    if (!autoTick(w, h)) return -1;   // V4
+     if (!ensureCanvas(uint32_t(w), uint32_t(h))) { plog(true, "canvas image %dx%d failed", w, h); return -1; }
+     if (g.acquired == UINT32_MAX) { double waited = 0; if (!acquireWait(waited)) return -1; }
+     const bool videoNow = g.video.valid && g.optVideo && !g.video.runs.empty();
+@@ -944,6 +1082,7 @@
+         double w2 = 0; if (!acquireWait(w2)) return -1; waited += w2;
+     } else if (!acquireWait(waited)) return -1;
+     g.presents++; g.windowN++; g.lastCpuMs = tCpu;
++    rangeCheck();   // V4
+     g.sumCpu += tCpu; g.maxCpu = std::max(g.maxCpu, tCpu); g.sumWait += waited; g.maxWait = std::max(g.maxWait, waited); g.sumGpu += std::max(0.0, gpuMs);
+     logWindow(false);
+     return 0;
+@@ -957,7 +1096,7 @@
+     const char* hEnv = getenv("OMNI_SDL_HEIGHT");
+     if (hEnv && !strcmp(hEnv, "1440")) { g.canvasHintW = 2560; g.canvasHintH = 1440; }
+     else if (hEnv && !strcmp(hEnv, "2160")) { g.canvasHintW = 3840; g.canvasHintH = 2160; }
+-    plog(true, "start (OMNI_GPU_PRESENT_V2): canvas %dx%d (OMNI_SDL_HEIGHT=%s); options %s%s%s%s out=%d hdr=%s (white %d nits)", g.canvasHintW, g.canvasHintH, hEnv ? hEnv : "unset",
++    plog(true, "start (OMNI_GPU_PRESENT_V4, omni-native-s3.5-hdr): canvas %dx%d (OMNI_SDL_HEIGHT=%s); options %s%s%s%s out=%d hdr=%s (white %d nits)", g.canvasHintW, g.canvasHintH, hEnv ? hEnv : "unset",
+         g.optMailbox ? "mailbox " : "fifo ", g.optVideo ? "video " : "novideo ", g.optVerify ? "verify " : "noverify ",
+         g.optForceStaging ? "staging" : g.optForceImport ? "import" : "import-or-staging", g.optOutHeight, g.optHdr ? "requested" : "off", g.hdrWhite);
+     Api& vk = g.vk;
+@@ -971,20 +1110,19 @@
+         hasColourSpace |= !strcmp(e.extensionName, VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME); }
+     if (!hasDisplay || !hasSurface) { plog(true, "VK_KHR_display/VK_KHR_surface missing"); return false; }
+     VkApplicationInfo app { VK_STRUCTURE_TYPE_APPLICATION_INFO }; app.pApplicationName = "Omni present"; app.pEngineName = "OmniGpuPresent"; app.apiVersion = VK_API_VERSION_1_3;
+-    // V2 phase 2: HDR needs the requested flag word, Omni's HDR setting and the colour-space extension
+-    bool hdrSetting = access("/data/omni/hdr-auto.flag", F_OK) == 0 || access("/data/omni/hdr-presenter-test.flag", F_OK) == 0;
+-    const bool hdrWanted = g.optHdr && hdrSetting && hasColourSpace;
+-    // OMNI_HDR_PREFERENCE_V1: explicit UI preference overrides legacy flags only when saved.
+-    OmniHdrPreference::Value preference;
+-    if (!OmniHdrPreference::read("/data/omni/video-hdr-preference.txt",preference)) {
+-        g.optHdr=false; hdrSetting=false; plog(true,"HDR preference unreadable: SDR fallback");
+-    } else if (preference.exists) {
+-        // Auto remains SDR until source transfer/mastering metadata and passthrough exist.
+-        g.optHdr=preference.mode=="on"; hdrSetting=g.optHdr;
+-        if(preference.mode=="auto") plog(true,"HDR Auto pending source passthrough: SDR fallback");
++    // V4: Omni's HDR setting decides (OMNI_HDR_PREFERENCE_V1's file); legacy flag words only when none is saved.
++    // (s3.4's code read the preference after computing hdrWanted, so a saved On never reached the swapchain: fixed.)
++    {
++        OmniHdrPreference::Value preference; OmniHdrPolicy::Inputs in;
++        in.prefReadable = OmniHdrPreference::read("/data/omni/video-hdr-preference.txt", preference);
++        in.prefExists = in.prefReadable && preference.exists; in.prefMode = preference.mode;
++        in.flagHdr = g.optHdr; in.flagHdrAuto = g.optHdrAuto;
++        in.legacySetting = access("/data/omni/hdr-auto.flag", F_OK) == 0 || access("/data/omni/hdr-presenter-test.flag", F_OK) == 0;
++        const char* why = "";
++        g.hdrMode = OmniHdrPolicy::resolveMode(in, &why);
++        plog(true, "HDR setting: %s (%s); %s %s", OmniHdrPolicy::modeName(g.hdrMode), why, VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME, hasColourSpace ? "present" : "MISSING");
+     }
+-    if (g.optHdr) plog(true, "HDR requested: Omni's HDR setting %s, %s %s", hdrSetting ? "on" : "OFF (hdr-auto.flag / hdr-presenter-test.flag absent)",
+-        VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME, hasColourSpace ? "present" : "MISSING");
++    const bool hdrWanted = g.hdrMode != OmniHdrPolicy::kOff && hasColourSpace;
+     const char* ie[3] = { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_DISPLAY_EXTENSION_NAME, VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME };
+     VkInstanceCreateInfo ici { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO }; ici.pApplicationInfo = &app; ici.enabledExtensionCount = hdrWanted ? 3 : 2; ici.ppEnabledExtensionNames = ie;
+     VkResult r = vk.vkCreateInstance(&ici, nullptr, &g.instance);
+@@ -1141,12 +1279,13 @@
+     if (pick < 0) { plog(true, "no 8-bit sRGB-non-linear surface format"); return false; }
+     g.swapFormat = sf[pick].format;
+     g.canvasFormat = isSrgb(g.swapFormat) ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+-    VkColorSpaceKHR swapColourSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+-    if (hdrWanted) {   // V2 phase 2: a 10-bit ST 2084 surface format, the PQ pass and its set-up check, else SDR as before
+-        int hdrPick = -1;
+-        for (uint32_t i = 0; i < n; ++i)
+-            if (sf[i].colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT && (sf[i].format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 || sf[i].format == VK_FORMAT_A2R10G10B10_UNORM_PACK32)
+-                && (hdrPick < 0 || sf[i].format == VK_FORMAT_A2B10G10R10_UNORM_PACK32)) hdrPick = int(i);
++    g.sdrFormat = g.swapFormat;
++    // V4: every surface format was logged above; HDR10 = a 10-bit ST 2084 format (A2B10G10R10 first), the PQ pass and its
++    // set-up check. "Armed" = ready to show HDR10 (On: from the first frame; Auto: while an HDR video fills the screen).
++    if (hdrWanted) {
++        std::vector<uint32_t> fmts(n), spaces(n);
++        for (uint32_t i = 0; i < n; ++i) { fmts[i] = uint32_t(sf[i].format); spaces[i] = uint32_t(sf[i].colorSpace); }
++        const int hdrPick = OmniHdrPolicy::pickHdrFormat(fmts.data(), spaces.data(), n);
+         VkFormatProperties pqF {}, swF {};
+         vk.vkGetPhysicalDeviceFormatProperties(g.physical, VK_FORMAT_A2B10G10R10_UNORM_PACK32, &pqF);
+         if (hdrPick >= 0) vk.vkGetPhysicalDeviceFormatProperties(g.physical, sf[hdrPick].format, &swF);
+@@ -1154,22 +1293,25 @@
+             && (swF.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT);
+         VkFormatProperties cvF {}; vk.vkGetPhysicalDeviceFormatProperties(g.physical, VK_FORMAT_R8G8B8A8_UNORM, &cvF);
+         const bool storage = cvF.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+-        if (hdrPick < 0) plog(true, "HDR: the display offers no 10-bit HDR10 (ST 2084) format: SDR output");
++        if (hdrPick < 0) plog(true, "HDR: the display surface offers no 10-bit HDR10 (ST 2084) format (stock VideoOut WSI?): SDR output");
+         else if (!pqBlit || !storage) plog(true, "HDR: blit %d / storage %d support missing: SDR output", int(pqBlit), int(storage));
++        else if (isSrgb(g.sdrFormat)) plog(true, "HDR: the SDR format %d is sRGB-typed; the shared UNORM canvas needs a UNORM SDR format: SDR output", int(g.sdrFormat));
+         else {
+-            g.canvasFormat = VK_FORMAT_R8G8B8A8_UNORM; g.hdr = true;
++            g.canvasFormat = VK_FORMAT_R8G8B8A8_UNORM; g.pqArmed = true;
+             int worst = 0; long off = 0;
+             if (hdrSetUp() && hdrSelfTest(256, 64, &worst, &off)) {
+-                g.swapFormat = sf[hdrPick].format; swapColourSpace = VK_COLOR_SPACE_HDR10_ST2084_EXT;
+-                plog(true, "HDR: PQ output on: swapchain format %d, colour space HDR10_ST2084, BT.2020, SDR white %d nits (page and SDR video)", int(g.swapFormat), g.hdrWhite);
++                g.hdrFormat = sf[hdrPick].format;
++                plog(true, "HDR: armed (%s): HDR10 format %d (surface format %d), colour space HDR10_ST2084, BT.2020 PQ, page and UI at SDR white %d nits, HDR10 video passed through",
++                     OmniHdrPolicy::modeName(g.hdrMode), int(g.hdrFormat), hdrPick, g.hdrWhite);
+             } else {
+                 plog(true, "HDR: the PQ pass failed its set-up check: SDR output");
+                 hdrDestroy(); freeImg(g.canvas); g.canvasFormat = isSrgb(g.swapFormat) ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+             }
+         }
+     }
++    publishHdr();
+     VkFormatProperties fpS {}, fpD {};
+-    vk.vkGetPhysicalDeviceFormatProperties(g.physical, g.hdr ? VK_FORMAT_A2B10G10R10_UNORM_PACK32 : g.canvasFormat, &fpS); vk.vkGetPhysicalDeviceFormatProperties(g.physical, g.swapFormat, &fpD);
++    vk.vkGetPhysicalDeviceFormatProperties(g.physical, g.canvasFormat, &fpS); vk.vkGetPhysicalDeviceFormatProperties(g.physical, g.swapFormat, &fpD);   // V4: the SDR blit (the HDR one was checked when armed)
+     const bool blitOk = (fpS.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) && (fpS.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)
+         && (fpD.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT);
+     plog(true, "swapchain format %d, canvas image format %d (%s); blit src/linear/dst support %s", int(g.swapFormat), int(g.canvasFormat),
+@@ -1185,21 +1327,20 @@
+         g.presentMode == VK_PRESENT_MODE_FIFO_KHR ? "a flip per vblank, as SDL's SubmitFlip + flip event" : "requested by the flag", caps.minImageCount, caps.maxImageCount,
+         imageCount, g.presentWait ? "VK_KHR_present_wait" : imageCount == 2 ? "acquiring the next of 2 images" : "the swapchain queue only (no exact flip wait)");
+     if (!hasFifo) { plog(true, "FIFO missing (required by Vulkan)"); return false; }
+-    VkSwapchainCreateInfoKHR sw { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+-    sw.surface = g.surface; sw.minImageCount = caps.maxImageCount ? std::min(imageCount, caps.maxImageCount) : imageCount;
+-    sw.imageFormat = g.swapFormat; sw.imageColorSpace = swapColourSpace; sw.imageExtent = g.extent; sw.imageArrayLayers = 1;
+-    sw.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT; sw.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+-    sw.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR; sw.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+-    if (!(caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)) sw.compositeAlpha = VkCompositeAlphaFlagBitsKHR(caps.supportedCompositeAlpha & -caps.supportedCompositeAlpha);
+-    sw.presentMode = g.presentMode; sw.clipped = VK_TRUE;
+-    r = vk.vkCreateSwapchainKHR(g.device, &sw, nullptr, &g.swapchain);
+-    if (r != VK_SUCCESS) { plog(true, "vkCreateSwapchainKHR=%d", int(r)); return false; }
+-    n = 0; vk.vkGetSwapchainImagesKHR(g.device, g.swapchain, &n, nullptr);
+-    g.images.resize(n); vk.vkGetSwapchainImagesKHR(g.device, g.swapchain, &n, g.images.data()); g.imageLayouts.assign(n, VK_IMAGE_LAYOUT_UNDEFINED);
++    // V4: the swapchain through makeSwapchain (also used by Auto's switches): HDR10 from the start only with On
++    g.caps = caps; g.imageCount = imageCount;
++    if (!setOutput(g.pqArmed && g.hdrMode == OmniHdrPolicy::kOn, "start-up")) return false;
+     // first frame: black at the canvas size, through the whole path (compose, blit, present, flip wait)
+     std::vector<uint8_t> black(size_t(g.canvasHintW) * g.canvasHintH * 4, 0);
+     for (size_t i = 3; i < black.size(); i += 4) black[i] = 255;
+-    if (presentLocked(black.data(), g.canvasHintW * 4, g.canvasHintW, g.canvasHintH)) { plog(true, "first frame failed"); return false; }
++    if (presentLocked(black.data(), g.canvasHintW * 4, g.canvasHintW, g.canvasHintH)) {
++        if (!g.hdr || g.hung) { plog(true, "first frame failed"); return false; }
++        // V4: the first HDR10 frame failed (VideoOut refused the PQ buffers late?): SDR, and the black frame again
++        plog(true, "HDR: the first HDR10 frame failed: SDR output");
++        g.hdrRefused = true;
++        if (!setOutput(false, "first HDR frame failed") || presentLocked(black.data(), g.canvasHintW * 4, g.canvasHintW, g.canvasHintH)) { plog(true, "first frame failed"); return false; }
++        publishHdr();
++    }
+     plog(true, "READY in %.0f ms: %u swapchain images %ux%u, %s, %s output, frame source %s; layers imported once", nowMs() - t0, unsigned(g.images.size()), g.extent.width, g.extent.height,
+         modeName(g.presentMode), g.hdr ? "HDR10 PQ" : "SDR", g.optForceStaging || !g.hostImport ? "staging mirror (damaged rows)" : "the SDL surface imported once (staging mirror if refused)");
+     return true;
+@@ -1210,6 +1351,7 @@
+     if (g.torndown.exchange(true)) return;
+     if (g.hung) { plog(true, "teardown (%s): GPU hung: objects left for the system", why); return; }
+     std::vector<VkBufferImageCopy>().swap(g.videoRegions); // release CPU scratch at normal teardown
++    std::vector<VkBufferImageCopy>().swap(g.pqRegions);   // V4
+     // V3: the video module uses this device: it frees its objects first (waits for its own conversion, bounded).
+     if (g.shared.exchange(false) && omni_gpu_video_shutdown) omni_gpu_video_shutdown();
+     if (g.device) {
+@@ -1335,6 +1477,7 @@
+ extern "C" int omni_hw_video_counters(uint64_t*, uint64_t*, uint64_t*, uint64_t*) __attribute__((weak));
+ extern "C" void omni_gpu_video_stats(uint64_t*, uint64_t*, uint64_t*) __attribute__((weak));
+ extern "C" void omni_gpu_video_stats2(uint64_t*, uint64_t*, int*) __attribute__((weak));   // OMNI_VIDEO_FPS_V2
++extern "C" void omni_gpu_video_stats3(uint64_t*) __attribute__((weak));   // OMNI_VIDEO_FPS_V3 (OmniGpuVideo V4)
+ extern "C" int omni_gpu_video_preinit() __attribute__((weak));
+ static const char* const kFpsPath = "/data/omni/native/video-fps.log";
+ struct FpsWindow {
+@@ -1343,6 +1486,7 @@
+     double start = 0, last = 0, sumInterval = 0, maxInterval = 0, sumCpu = 0, sumGpu = 0; unsigned n = 0, gpuN = 0, intervals = 0;
+     uint64_t hw[4] {}, vid[3] {}; bool haveHw = false;
+     unsigned late25 = 0; uint64_t vid2[2] {};   // OMNI_VIDEO_FPS_V2: intervals over 25 ms; in-place / ring-copy totals
++    uint64_t pq = 0, vid3 = 0;   // OMNI_VIDEO_FPS_V3: PQ passthrough frames / PQ layers written, at the last line
+ };
+ static FpsWindow g_fps;
+ // OMNI_VIDEO_STATS_BRIDGE_V1. Bounded read; never waits on a present.
+@@ -1360,7 +1504,7 @@
+     g_fps.on = access(kFlagPath, F_OK) == 0 || access("/data/omni/gpu-video.flag", F_OK) == 0 || access("/data/omni/video-fps.flag", F_OK) == 0;
+     if (!g_fps.on) return;
+     if (FILE* f = fopen(kFpsPath, "a")) {
+-        fprintf(f, "FPS-START t=%.3f build=omni-video-4k60 OMNI_VIDEO_FPS_V2 fields: path presents fps decoded shown dropped late interval_avg_ms interval_max_ms intervals_over_25ms present_cpu_ms present_gpu_ms video_gpu_pictures video_wall_ms video_gpu_ms video_in_place video_ring_copies shared_device mode\n", nowMs() / 1000.0);
++        fprintf(f, "FPS-START t=%.3f build=omni-native-s3.5-hdr OMNI_VIDEO_FPS_V3 fields: path presents fps decoded shown dropped late interval_avg_ms interval_max_ms intervals_over_25ms present_cpu_ms present_gpu_ms video_gpu_pictures video_wall_ms video_gpu_ms video_in_place video_ring_copies shared_device mode out_mode src_tf src_bits hdr_setting hdr_switches pq_frames video_pq_layers\n", nowMs() / 1000.0);
+         fclose(f);
+     }
+ }
+@@ -1381,6 +1525,12 @@
+     if (omni_gpu_video_stats) omni_gpu_video_stats(&vid[0], &vid[1], &vid[2]);
+     uint64_t vid2[2] = {}; int sharedDev = 0;
+     if (omni_gpu_video_stats2) omni_gpu_video_stats2(&vid2[0], &vid2[1], &sharedDev);
++    uint64_t vid3 = 0; if (omni_gpu_video_stats3) omni_gpu_video_stats3(&vid3);   // OMNI_VIDEO_FPS_V3
++    // V3: the source of the video staged in the last 1.5 s (bits | transfer << 8): PQ / HLG / SDR, 8 / 10 bits; "-" = none
++    const uint32_t si = g.srcInfo.load(std::memory_order_relaxed); const bool siFresh = si && int64_t(now * 1000) - g.srcInfoUs.load(std::memory_order_relaxed) < 1500000;
++    const int tf = int((si >> 8) & 255);
++    const char* srcTf = !siFresh ? "-" : tf == 16 ? "PQ" : tf == 18 ? "HLG" : "SDR";
++    char srcBits[8]; if (siFresh) snprintf(srcBits, sizeof srcBits, "%u", si & 255u); else snprintf(srcBits, sizeof srcBits, "-");
+     auto d = [](uint64_t now, uint64_t before) { return now >= before ? now - before : 0; };   // a new stream restarts its counts
+     const double secs = (now - f.start) / 1000.0;
+     const bool countsValid=haveHw && f.previousTelemetryCounters && hw[1]>=f.hw[1] && hw[2]>=f.hw[2];
+@@ -1391,7 +1541,7 @@
+     char gpuText[32]; if (f.gpuN) snprintf(gpuText, sizeof gpuText, "%.3f", f.sumGpu / f.gpuN); else snprintf(gpuText, sizeof gpuText, "-");
+     if (f.on && f.lines++ < 20000)
+         if (FILE* out = fopen(kFpsPath, "a")) {
+-            fprintf(out, "FPS t=%.3f path=%s out=%ux%u hdr=%d presents=%u fps=%.2f decoded=%llu shown=%llu dropped=%llu late=%llu interval_avg_ms=%.2f interval_max_ms=%.2f intervals_over_25ms=%u present_cpu_ms=%.3f present_gpu_ms=%s video_gpu_pictures=%llu video_wall_ms=%.3f video_gpu_ms=%.3f video_in_place=%llu video_ring_copies=%llu shared_device=%d mode=%s%s\n",
++            fprintf(out, "FPS t=%.3f path=%s out=%ux%u hdr=%d presents=%u fps=%.2f decoded=%llu shown=%llu dropped=%llu late=%llu interval_avg_ms=%.2f interval_max_ms=%.2f intervals_over_25ms=%u present_cpu_ms=%.3f present_gpu_ms=%s video_gpu_pictures=%llu video_wall_ms=%.3f video_gpu_ms=%.3f video_in_place=%llu video_ring_copies=%llu shared_device=%d mode=%s out_mode=%s src_tf=%s src_bits=%s hdr_setting=%s hdr_switches=%u pq_frames=%llu video_pq_layers=%llu%s\n",
+                 now / 1000.0, path, g.extent.width, g.extent.height, int(g.hdr), f.n, f.n / secs,
+                 (unsigned long long)(haveHw && f.haveHw ? d(hw[0], f.hw[0]) : 0), (unsigned long long)(haveHw && f.haveHw ? d(hw[1], f.hw[1]) : 0),
+                 (unsigned long long)(haveHw && f.haveHw ? d(hw[2], f.hw[2]) : 0), (unsigned long long)(haveHw && f.haveHw ? d(hw[3], f.hw[3]) : 0),
+@@ -1399,11 +1549,13 @@
+                 vp ? d(vid[1], f.vid[1]) / 1000.0 / double(vp) : 0.0, vp ? d(vid[2], f.vid[2]) / 1000.0 / double(vp) : 0.0,
+                 (unsigned long long)d(vid2[0], f.vid2[0]), (unsigned long long)d(vid2[1], f.vid2[1]), sharedDev,
+                 !strcmp(path, "gpu") ? modeName(g.presentMode) : "sdl-vblank",
++                !strcmp(path, "gpu") && g.hdr ? "HDR" : "SDR", srcTf, srcBits, OmniHdrPolicy::modeName(g.hdrMode), g.hdrSwitches,
++                (unsigned long long)(g.pqFrames - f.pq), (unsigned long long)(vid3 - std::min(vid3, f.vid3)),
+                 haveHw && f.haveHw ? "" : " (hole-punch counters busy or absent)");
+             fclose(out);
+         }
+     if (haveHw) { memcpy(f.hw, hw, sizeof hw); f.haveHw = true; }
+-    memcpy(f.vid, vid, sizeof vid); memcpy(f.vid2, vid2, sizeof vid2);
++    memcpy(f.vid, vid, sizeof vid); memcpy(f.vid2, vid2, sizeof vid2); f.pq = g.pqFrames; f.vid3 = vid3;
+     f.start = now; f.late25 = 0; f.n = f.gpuN = f.intervals = 0; f.sumInterval = f.maxInterval = f.sumCpu = f.sumGpu = 0;
+ }
+ 
+@@ -1485,8 +1637,11 @@
+ 
+ // ---- for the hole-punch (OmniHwService.cpp, weak there) and the title -----------------------------------
+ extern "C" int omni_gpu_present_active() { return g.state.load(std::memory_order_acquire) == kActive ? 1 : 0; }
+-extern "C" int omni_gpu_present_stage_video(const void* px, size_t bytes, int stride, int lx, int ly, int w, int h,
+-                                            const uint32_t* runs, size_t runWords, void (*release)(void*), void* cookie)
++// V4: with the picture's PQ layer (pq: same stride and size as px; used only while info bit 31 says it was written) and
++// the source info word (bits | transfer << 8 | primaries << 16 | PQ layer valid << 31) for the fps line and Auto.
++extern "C" int omni_gpu_present_stage_video_hdr(const void* px, size_t bytes, int stride, int lx, int ly, int w, int h,
++                                                const uint32_t* runs, size_t runWords, const void* pq, size_t pqBytes, uint32_t info,
++                                                void (*release)(void*), void* cookie)
+ {
+     if (g.state.load(std::memory_order_acquire) != kActive || !g.optVideo || !g.hostImport || !px || !runWords || stride <= 0 || (stride & 3)) return 0;
+     std::lock_guard<std::mutex> l(g.lock);
+@@ -1495,8 +1650,21 @@
+     VideoStage& v = g.video;
+     v.px = static_cast<const uint8_t*>(px); v.bytes = bytes; v.stride = stride; v.lx = lx; v.ly = ly; v.w = w; v.h = h;
+     v.runs.assign(runs, runs + runWords); v.release = release; v.cookie = cookie; v.valid = true;
++    const bool pqOk = (info & 0x80000000u) && pq && h > 0 && pqBytes >= size_t(stride) * size_t(h);
++    v.pq = pqOk ? static_cast<const uint8_t*>(pq) : nullptr; v.pqBytes = pqOk ? pqBytes : 0; v.info = info;
++    if (info) { g.srcInfo.store(info, std::memory_order_relaxed); g.srcInfoUs.store(int64_t(nowMs() * 1000), std::memory_order_relaxed); }
+     return 1;
+ }
++extern "C" int omni_gpu_present_stage_video(const void* px, size_t bytes, int stride, int lx, int ly, int w, int h,
++                                            const uint32_t* runs, size_t runWords, void (*release)(void*), void* cookie)
++{
++    return omni_gpu_present_stage_video_hdr(px, bytes, stride, lx, ly, w, h, runs, runWords, nullptr, 0, 0, release, cookie);
++}
++// V4: 0 SDR only, 1 armed (HDR Auto on an HDR10 display, SDR now), 2 HDR10 output now. The hole-punch makes PQ layers from 1.
++extern "C" int omni_gpu_present_hdr_state()
++{
++    return g.state.load(std::memory_order_acquire) == kActive ? g.hdrState.load(std::memory_order_acquire) : 0;
++}
+ // SIGTERM path (OmniNativeTitle.cpp's handler): async-signal-safe; then waits (bounded) for the reaper.
+ extern "C" void omni_gpu_signal_close()
+ {
+@@ -1574,10 +1742,14 @@
+ {
+     if (!g.device && !hostUp()) return -1;
+     if (!g.pqPipe && !hdrSetUp()) return -1;
+-    g.hdr = true; g.hdrWhite = white;
++    g.hdr = true; g.pqArmed = true; g.hdrWhite = white;
+     return hdrSelfTest(256, 64, worst, off) ? 0 : 1;
+ }
+-extern "C" void omni_gpu_present_test_hdr(int on, int white) { g.hdr = on != 0 && (g.pqPipe || hdrSetUp()); g.hdrWhite = white; if (g.canvas.image && !g.canvasView && g.hdr) { freeImg(g.canvas); } }
++extern "C" void omni_gpu_present_test_hdr(int on, int white) { g.hdr = on != 0 && (g.pqPipe || hdrSetUp()); g.pqArmed = g.hdr; g.hdrWhite = white; if (g.canvas.image && !g.canvasView && g.hdr) { freeImg(g.canvas); } }
++// V4: the PQ layer staged with the next omni_gpu_present_test() video (nullptr: none).
++static const uint8_t* s_testPq = nullptr; static size_t s_testPqBytes = 0; static uint32_t s_testPqInfo = 0;
++extern "C" void omni_gpu_present_test_source_pq(const void* pq, size_t bytes, uint32_t info) { s_testPq = static_cast<const uint8_t*>(pq); s_testPqBytes = bytes; s_testPqInfo = info; }
++extern "C" void omni_gpu_present_test_pq_stats(uint64_t* pqFrames, size_t* pqRegionsCap) { *pqFrames = g.pqFrames; *pqRegionsCap = g.pqRegions.capacity(); }
+ extern "C" long omni_gpu_present_test_pq_reference(uint8_t r, uint8_t gg, uint8_t b, int white) { return long(pqReference(r, gg, b, white)); }
+ extern "C" long omni_gpu_present_test(const uint8_t* frame, int pitch, int w, int h, const uint8_t* layer, size_t layerBytes, int stride,
+     int lx, int ly, int lw, int lh, const uint32_t* runs, size_t runWords, int outW, int outH, uint8_t* out, int forceStaging, int* released)
+@@ -1597,6 +1769,8 @@
+     if (layer && runWords && released) {
+         VideoStage& v = g.video; v.px = layer; v.bytes = layerBytes; v.stride = stride; v.lx = lx; v.ly = ly; v.w = lw; v.h = lh;
+         v.runs.assign(runs, runs + runWords); v.release = hostRelease; v.cookie = released; v.valid = true;
++        const bool pqOk = s_testPq && (s_testPqInfo & 0x80000000u) && s_testPqBytes >= size_t(stride) * size_t(lh);   // V4 (as the console stage)
++        v.pq = pqOk ? s_testPq : nullptr; v.pqBytes = pqOk ? s_testPqBytes : 0; v.info = s_testPqInfo;
+     }
+     Buf outBuf; makeHostBuffer(outBuf, VkDeviceSize(outW) * outH * 4, true, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+     VkCommandBufferBeginInfo bi { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+@@ -1636,6 +1810,7 @@
+ {
+     std::lock_guard<std::mutex> l(g.lock);
+     std::vector<VkBufferImageCopy>().swap(g.videoRegions); // host teardown mirrors normal scratch release
++    std::vector<VkBufferImageCopy>().swap(g.pqRegions);   // V4
+     if (!g.device) return;
+     if (g.shared.exchange(false) && omni_gpu_video_shutdown) omni_gpu_video_shutdown();   // V3: as the console teardown
+     { std::lock_guard<std::mutex> q(g_queueLock); g.vk.vkDeviceWaitIdle(g.device); }

@@ -1,0 +1,107 @@
+--- "s3.4d/engine/media/OmniHwService.cpp"	2026-11-05 02:10:32.248556254 -0500
++++ s3.5-hdr/engine/media/OmniHwService.cpp	2026-11-05 02:57:38.799436577 -0500
+@@ -11,6 +11,13 @@
+ extern "C" int omni_gpu_present_active() __attribute__((weak));
+ extern "C" int omni_gpu_present_stage_video(const void*, size_t, int, int, int, int, int, const uint32_t*, size_t, void (*)(void*), void*) __attribute__((weak));
+ static bool gpuPresentOn() { return omni_gpu_present_active && omni_gpu_present_active(); }
++// OMNI_GPU_HDR_V1 (omni-native-s3.5-hdr): the GPU present's HDR state (0: SDR only; 1: armed = HDR Auto on an HDR10
++// display, SDR right now; 2: HDR10 output now) and the staging call that adds the picture's PQ layer and source info
++// (bits | transfer << 8 | primaries << 16 | PQ layer valid << 31). Weak: absent in the big-app and the child.
++extern "C" int omni_gpu_present_hdr_state() __attribute__((weak));
++extern "C" int omni_gpu_present_stage_video_hdr(const void*, size_t, int, int, int, int, int, const uint32_t*, size_t,
++                                                const void*, size_t, uint32_t, void (*)(void*), void*) __attribute__((weak));
++static int gpuHdrState() { return omni_gpu_present_hdr_state ? omni_gpu_present_hdr_state() : 0; }
+ // OMNI_GPU_VIDEO_V2 (omni-native-s3.2-video): the GPU modules keep one import per layer; a layer's pixels are about to
+ // be unmapped (the layer grows or goes), so both drop theirs first. Weak: absent outside the native title.
+ extern "C" void omni_gpu_present_forget(const void*) __attribute__((weak));
+@@ -443,10 +450,12 @@
+     size_t pxCap = 0;   // OMNI_GPU_VIDEO_V2: px's capacity (px.ensure() maps anew above it: the GPU imports go first)
+     HoleLayer() = default;
+     HoleLayer(const HoleLayer&) = delete;
+-    ~HoleLayer() { gpuForget(px.data()); }   // OMNI_GPU_VIDEO_V2
++    ~HoleLayer() { gpuForget(px.data()); gpuForget(hdrPx.data()); }   // OMNI_GPU_VIDEO_V2 (+ OMNI_GPU_HDR_V1: the PQ layer's import)
+     // OMNI_HDR_PORT_V1: PQ pixels (packed 10:10:10:2) beside the RGBA8 image, which stays the
+     // compose/fallback contract. Only filled while the display runs in PQ.
+     CpuPixelBuffer hdrPx; bool hdrValid = false;
++    size_t hdrCap = 0;   // OMNI_GPU_HDR_V1: hdrPx's capacity (its GPU imports go before ensure() maps anew)
++    bool gpuHdrValid = false; uint32_t gpuHdrInfo = 0;   // OMNI_GPU_HDR_V1: hdrPx written by the GPU; source info word
+     uint64_t v8Seq = 0;   // OMNI_HOLEPUNCH_V8_CADENCE (under plane.lock): stamped when holePaceSelect makes it current
+     bool v8First = false;   // OMNI_HOLEPUNCH_V8_CADENCE: the first picture of its generation (a seek's target): flipped as it is
+     // OMNI_HOLEPUNCH_V4: a paced picture's media time and its planar source (snapshots and
+@@ -1401,11 +1410,13 @@
+     // /data/omni/hdr-keep-sdr-copy.flag restores the double conversion.
+     const double tPre = nowMs();   // OMNI_CONVERT_TIMING_V1 (diagnostic)
+     layer->hdrValid = false;
++    layer->gpuHdrValid = false; layer->gpuHdrInfo = 0;   // OMNI_GPU_HDR_V1
+     if ((omniHDRFormatPQ() || omniHDRPQAvailable()) && bps == 2 && srcW == w && srcH == h   // OMNI_HDR_AUTO_V1: also for the PQ set
+         && colourPrimaries(colour) == 9 && colourTransfer(colour) == 16 && colourMatrix(colour, srcH) == 9) {
+         const uint16_t* y16 = reinterpret_cast<const uint16_t*>(paced ? paced->planes.data() : plane.planes.data());
+         const size_t yn = size_t(srcW) * srcH, cn = size_t(cw) * ch;
+-        if (layer->hdrPx.ensure(size_t(layer->stride) * h))
++        if (size_t(layer->stride) * h > layer->hdrCap) gpuForget(layer->hdrPx.data());   // OMNI_GPU_HDR_V1
++        if (layer->hdrPx.ensure(size_t(layer->stride) * h) && ((layer->hdrCap = std::max(layer->hdrCap, size_t(layer->stride) * h)), true))
+             layer->hdrValid = omniHDRConvert10(y16, yn, srcW, y16 + yn, cn, cw, y16 + yn + cn, cn, cw, w, h,
+                 reinterpret_cast<uint32_t*>(layer->hdrPx.data()), size_t(layer->stride) * h / 4, layer->stride / 4, colour);
+     }
+@@ -1439,6 +1450,27 @@
+         gjob.dst = dst[0]; gjob.dstBytes = size_t(layer->stride) * h; gjob.dstW = w; gjob.dstH = h; gjob.dstStride = layer->stride;
+         gjob.swapRB = swapRB; gjob.matrix = colourMatrix(colour, srcH); gjob.fullRange = colourFullRange(colour);
+         gjob.planesPersistent = paced && paceIsDirect(yp);   // OMNI_GPU_VIDEO_V3: read in place (no ring copy)
++        // OMNI_GPU_HDR_V1: a 10-bit BT.2020 NCL source with PQ (16) or HLG (18) transfer, while the GPU present can show HDR
++        // (state 1 armed or 2 on): the same GPU pass also writes the picture's PQ layer (hdrPx). PQ stays PQ (no tone
++        // mapping); HLG becomes PQ. Without the GPU (verify not done, mismatch, flag off) the picture has no PQ layer.
++        int srcTf = colourTransfer(colour), srcPrim = colourPrimaries(colour);
++        // VP9 carries only its colour space in the bitstream (BT.2020 -> matrix 9), not the transfer: the child's
++        // vp9KeyFrameColour leaves it unknown. A 10-bit BT.2020 VP9 picture with no transfer is the web's VP9.2 HDR10
++        // (YouTube's vp09.02.*.10.01.09.16.09): treated as PQ. Kill switch: /data/omni/hdr-vp9-infer-disabled.flag.
++        static const bool inferVp9 = access("/data/omni/hdr-vp9-infer-disabled.flag", F_OK) != 0;
++        bool inferred = false;
++        if (inferVp9 && bps == 2 && colourMatrix(colour, srcH) == 9 && (srcTf <= 0 || srcTf == 2) && (srcPrim <= 0 || srcPrim == 2 || srcPrim == 9)) { srcTf = 16; srcPrim = 9; inferred = true; }
++        const bool srcHdr = bps == 2 && srcPrim == 9 && colourMatrix(colour, srcH) == 9 && (srcTf == 16 || srcTf == 18);
++        const int hdrState = srcHdr ? gpuHdrState() : 0;
++        bool gpuHdrDone = false;
++        if (srcHdr && hdrState >= 1) {
++            const size_t hdrBytes = size_t(layer->stride) * h;
++            if (hdrBytes > layer->hdrCap) gpuForget(layer->hdrPx.data());   // before ensure() maps anew
++            if (layer->hdrPx.ensure(hdrBytes)) {
++                layer->hdrCap = std::max(layer->hdrCap, hdrBytes);
++                gjob.hdrDst = layer->hdrPx.data(); gjob.hdrDstBytes = hdrBytes; gjob.hdrMode = srcTf == 16 ? 1 : 2; gjob.hdrDone = &gpuHdrDone;
++            }
++        }
+         const OmniGpuVideo::Plan gplan = OmniGpuVideo::plan(gjob);
+         // Guarded d0648ba SDR conversion; all rejected cases retain the existing scaler.
+         bool fast = gplan == OmniGpuVideo::kGpu && OmniGpuVideo::convert(gjob);
+@@ -1454,6 +1486,16 @@
+         ok = fast || upscaled || omniSwsBands(srcW, srcH, srcFormat, w, h, dstFormat, colour, src, srcStride, dst[0], dstStride[0])   // OMNI_SWS_BANDS_V1
+             || sws_scale(plane.sws, src, srcStride, 0, srcH, dst, dstStride) == h;
+         if (ok && gplan == OmniGpuVideo::kVerify) OmniGpuVideo::verify(gjob);   // OMNI_GPU_VIDEO_V1: GPU vs this CPU result
++        // OMNI_GPU_HDR_V1: the verify pass writes the PQ layer too, so the first pictures have it as well
++        layer->gpuHdrValid = gpuHdrDone;
++        layer->gpuHdrInfo = uint32_t(bps == 2 ? 10 : 8) | (uint32_t(srcTf & 255) << 8) | (uint32_t(srcPrim & 255) << 16) | (gpuHdrDone ? 0x80000000u : 0u);
++        if (bps == 2) {   // once per distinct decision
++            static uint32_t lastKey = ~0u; static unsigned notes = 0;
++            const uint32_t key = layer->gpuHdrInfo ^ (uint32_t(hdrState) << 24) ^ (uint32_t(gplan) << 28);
++            if (key != lastKey && notes < 16) { lastKey = key; ++notes;
++                holeNote("GPU HDR decision: 10-bit src %dx%d -> %dx%d primaries %d transfer %d%s matrix %d (word %08x), present HDR state %d, GPU plan %d -> PQ layer %s",
++                    srcW, srcH, w, h, srcPrim, srcTf, inferred ? " (inferred: VP9 BT.2020 10-bit)" : "", colourMatrix(colour, srcH), colour, hdrState, int(gplan), gpuHdrDone ? "made (GPU)" : srcHdr ? "NOT made (SDR mapping)" : "not an HDR source"); }
++        }
+         diagnosticTrace(164,paced?paced->mediaUs:INT64_MIN,fast,srcFormat,dstFormat);
+ 
+     }
+@@ -3596,8 +3638,14 @@
+     if (!gpuStageHere || !gpuPresentOn() || !omni_gpu_present_stage_video || live.runs.empty() || !now) return false;
+     const uint8_t* px = holeLayerPx(now);
+     { std::lock_guard<std::mutex> l(plane.lock); if (plane.gpuPin != now) { gpuPinReleaseLocked(); plane.gpuPin = now; } }
+-    if (omni_gpu_present_stage_video(px, size_t(now->stride) * size_t(now->h), now->stride, live.lx, live.ly, now->w, now->h,
+-                                     live.runs.data(), live.runs.size(), gpuUnpin, const_cast<HoleLayer*>(now)))
++    // OMNI_GPU_HDR_V1: with the PQ layer (same stride) and the source info when the present has the HDR entry point
++    const size_t bytes = size_t(now->stride) * size_t(now->h);
++    const bool pq = now->gpuHdrValid;
++    if (omni_gpu_present_stage_video_hdr
++            ? omni_gpu_present_stage_video_hdr(px, bytes, now->stride, live.lx, live.ly, now->w, now->h, live.runs.data(), live.runs.size(),
++                                               pq ? now->hdrPx.data() : nullptr, pq ? bytes : 0, now->gpuHdrInfo, gpuUnpin, const_cast<HoleLayer*>(now))
++            : omni_gpu_present_stage_video(px, bytes, now->stride, live.lx, live.ly, now->w, now->h,
++                                           live.runs.data(), live.runs.size(), gpuUnpin, const_cast<HoleLayer*>(now)))
+         return true;
+     gpuUnpin(const_cast<HoleLayer*>(now));
+     return false;

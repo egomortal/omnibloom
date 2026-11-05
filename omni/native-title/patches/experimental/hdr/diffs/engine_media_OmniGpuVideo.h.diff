@@ -1,0 +1,40 @@
+--- "s3.4d/engine/media/OmniGpuVideo.h"	2026-11-05 02:10:31.576556270 -0500
++++ s3.5-hdr/engine/media/OmniGpuVideo.h	2026-11-05 02:52:23.792652157 -0500
+@@ -12,6 +12,9 @@
+ //   failsetup   (V2) fail the set-up on purpose: the console's fallback check (every picture stays on the CPU)
+ // Log: /data/omni/native/gpu-video.log (and the hole-punch log through the note callback).
+ //
++// OMNI_GPU_VIDEO_V4 (omni-native-s3.5-hdr): Job::hdrDst asks for the picture's PQ layer too (HDR10 sources kept in PQ,
++// HLG converted to PQ), written by the same dispatch into a second imported buffer; stats3() counts those pictures.
++//
+ // OMNI_GPU_VIDEO_V3 (omni-video-4k60): zero extra copies and one RADV device.
+ //  - a picture whose planes live in memory that stays mapped until forget() (Job::planesPersistent: the hole-punch's
+ //    pace queue buffers, direct memory) is imported once and read in place by the shader: no ring copy. Anything else
+@@ -40,6 +43,10 @@
+     int matrix = 1;                                            // H.273 matrix code (1 = BT.709, 5/6 = BT.601, 9 = BT.2020)
+     bool fullRange = false;
+     bool planesPersistent = false;                             // V3: planes stay mapped until forget(): import in place
++    // V4 (omni-native-s3.5-hdr): the picture's PQ layer, written in the same pass (packed A2B10G10R10, R low, same stride
++    // as dst). hdrMode 1: a BT.2020 NCL + ST 2084 source (R'G'B' kept as they are); 2: BT.2020 NCL + HLG (converted to PQ).
++    uint8_t* hdrDst = nullptr; size_t hdrDstBytes = 0; int hdrMode = 0;
++    bool* hdrDone = nullptr;                                   // set true when the PQ layer was written
+ };
+ 
+ enum Plan { kCpu = 0, kVerify = 1, kGpu = 2 };
+@@ -62,6 +69,8 @@
+ void stats(uint64_t& pictures, uint64_t& wallUs, uint64_t& gpuUs);
+ // V3: pictures read in place (imported planes), pictures copied through the ring, and whether the device is shared.
+ void stats2(uint64_t& inPlace, uint64_t& ringCopies, int& sharedDevice);
++// V4: pictures whose PQ layer was written on the GPU.
++void stats3(uint64_t& hdrPictures);
+ 
+ }
+ 
+@@ -72,6 +81,7 @@
+ extern "C" void omni_gpu_video_forget(const void* p);
+ extern "C" void omni_gpu_video_stats(uint64_t* pictures, uint64_t* wallUs, uint64_t* gpuUs);
+ extern "C" void omni_gpu_video_stats2(uint64_t* inPlace, uint64_t* ringCopies, int* sharedDevice);   // V3
++extern "C" void omni_gpu_video_stats3(uint64_t* hdrPictures);   // V4
+ 
+ // V3: the device the title's GPU present shares with the video conversion (OmniGpuPresent.cpp fills it). Handles are
+ // Vulkan handles cast to void*; lock/unlock serialise vkQueueSubmit / vkQueuePresentKHR on the shared queue.

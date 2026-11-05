@@ -1,0 +1,78 @@
+child  OMNI_POINTER_CROSS_V1                        0
+child  accelerated compositing is off               1
+child  OMNI_SEC_PNA_CONNECT_V1                      1
+child  OMNI_CRASH_V2                                1
+child  FATAL end of report                          1
+child  OMNI_JSC_JIT_V3                              1
+child  jit: off (interpreter)                       1
+child  OMNI_SEC_REDIRECT_V1                         2
+child  OMNI_SEC_PNA_V1                              1
+child  OMNI_SEC_LOCALHOST_V1                        1
+child  close-events.log                             1
+child  OpenSSL 3.5.9                                1
+child  8.23.0                                       5
+title  OMNI_GPU_PRESENT_V4                          1
+title  OMNI_GPU_VIDEO_V4                            2
+title  OMNI_HDR_CAPS_V1                             1
+title  GPU HDR decision                             1
+title  HDR Auto: %s                                 1
+title  hdrfail                                      2
+title  HDR: armed                                   1
+title  VideoOut output range                        1
+title  OMNI_VIDEO_FPS_V3                            1
+title  out_mode=%s                                  1
+title  hdr-vp9-infer-disabled.flag                  1
+title  vkCreateSwapchainKHR(%s                      1
+title  wsi/videoout                                 9
+title  mediaSoon                                    3
+title  OMNI_MQ_NATIVE_V1                            0
+title  video-hdr-preference.txt                     3
+title  OMNI_VIDEO_STATS_BRIDGE_V1                   0
+title  HDR Auto pending source passthrough          0
+title  /data/hub/apps/                              1
+title  OMNI_POINTER_CROSS_V1                        1
+title  OMNI_GPU_VIDEO_V2                            0
+title  OMNI_GPU_PRESENT_V2                          0
+title  OMNI_VIDEO_FPS_V1                            0
+title  /data/omni/native/video-fps.log              1
+title  preinit: RADV set-up now                     1
+title  HDR self-test                                1
+title  HDR10_ST2084                                 2
+title  the SDL window surface is freed              1
+title  verify %d-bit %dx%d -> %dx%d (%s)            1
+title  layers imported once                         2
+title  failsetup                                    2
+title  YTTL DONE                                    2
+title  OMNI_CRASH_V2                                1
+title  FATAL end of report                          1
+title  OMNI_PAGES_V1                                2
+title  omni://pages                                 3
+title  OMNI_ADDONS_V1 ready                         1
+title  OMNI_VAULT_V2                                2
+title  OMNI_HUB_CARDS_V1                            2
+title  Bloom Core is not running                    1
+title  PADCTL TEST PASS                             1
+title  Ad block                                     1
+0000000000013640 T __emutls_get_address
+0000000000008dd0 T __wrap_SDL_FreeSurface
+0000000000004fb0 T __wrap_SDL_Init
+0000000005e85fa0 t exbox_presenter_probe
+00000000000048b0 T omni_gpu_present_forget
+000000000000a050 T omni_gpu_present_hdr_state
+0000000000009dd0 T omni_gpu_present_stage_video_hdr
+0000000000b6ad90 T omni_gpu_video_preinit
+0000000000b6ae00 T omni_gpu_video_stats
+0000000000b6ae40 T omni_gpu_video_stats3
+0000000000b513d0 T omni_hw_video_counters
+param.json attribute 0x62000000: HDR bit 0x20000000 set (the title's own file)
+package param.json attribute 0x62000000 HDR bit SET
+0000000005a59b80 T __wrap_connect
+0000000005a59aa0 T omniSecConnectContext
+layout (llvm-pie.elf): no overlapping LOADs; 2 executable sections, all inside the text LOAD: ['.text', '.init']
+layout check (eboot.elf, policy omni): PASSED; LOAD sizes MiB: 97.6, 66.3, 4.3, 49.5, 7.6
+child vs s3.1c: 7b810ea5b5cdcbc899828635b329da42595b540ff51998513b7e8b21fd717c64 / 7b810ea5b5cdcbc899828635b329da42595b540ff51998513b7e8b21fd717c64 IDENTICAL
+59433d64e9fc7625ce86a61dc9e6ccce7f61190c22cdfddf0780efa88b4dbe0d  /path/to/workspace/outputs/omni-native-s3.5-hdr/out/PPSA99732/eboot.bin
+565f628b40ea4efc00351449b5e9e411150110d9cd138d3e5432cd8bd73cbffc  /path/to/workspace/outputs/omni-native-s3.5-hdr/build/eboot.elf
+7b810ea5b5cdcbc899828635b329da42595b540ff51998513b7e8b21fd717c64  /path/to/workspace/outputs/omni-native-s3.5-hdr/child/omni-engine-child.elf
+354f191dbf91cbd2823d39c2d22512c1f2e2b2a1f4ebfb723f963f757af95a74  /path/to/workspace/outputs/omni-native-s3.5-hdr/out/PPSA99732/sce_sys/param.json
+e6ff45d16adf687855cc3b33b0c8a4132b6504360b221e0a34c7e99fb3ba0036  /path/to/workspace/outputs/omni-native-s3.5-hdr/out/PPSA99732/sce_module/libc.prx
