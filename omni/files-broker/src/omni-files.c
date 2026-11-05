@@ -53,8 +53,13 @@ static void ofb_log(const char* fmt, ...)
 {
     char path[1200];
     snprintf(path, sizeof path, "%s/omni-files.log", ofb_dir);
-    FILE* f = fopen(path, "a");
-    if (!f) return;
+    /* FB-01: never follow a link planted at the log's name, and only append to a regular file. */
+    int lfd = open(path, O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0600);
+    if (lfd < 0) return;
+    struct stat lst;
+    if (fstat(lfd, &lst) || !S_ISREG(lst.st_mode)) { close(lfd); return; }
+    FILE* f = fdopen(lfd, "a");
+    if (!f) { close(lfd); return; }
     time_t now = time(NULL);
     struct tm tm;
     localtime_r(&now, &tm);
@@ -298,26 +303,50 @@ static void* ofb_client(void* arg)
 }
 
 /* ---------------------------------------------------------------- start-up */
+/* FB-01: the token is published without trusting anything already in the runtime folder.
+ * The folder is pinned (O_DIRECTORY|O_NOFOLLOW), the temp file has an unpredictable name and is created
+ * exclusively (O_EXCL|O_NOFOLLOW) inside that pinned folder, the descriptor is checked to be a fresh regular
+ * file, permission/owner changes are checked, and renameat() publishes it in the same folder.
+ * Any failure removes the temp file and refuses to start. */
 static int ofb_make_token(int uid)
 {
-    unsigned char raw[16];
-    int r = open("/dev/urandom", O_RDONLY);
-    if (r < 0 || read(r, raw, sizeof raw) != (ssize_t)sizeof raw) { if (r >= 0) close(r); return -1; }
+    unsigned char raw[24];
+    int r = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
+    if (r < 0) return -1;
+    size_t got = 0;
+    while (got < sizeof raw) {
+        ssize_t k = read(r, raw + got, sizeof raw - got);
+        if (k < 0 && errno == EINTR) continue;
+        if (k <= 0) { close(r); return -1; }
+        got += (size_t)k;
+    }
     close(r);
     static const char d[] = "0123456789abcdef";
     for (int i = 0; i < 16; i++) { ofb_token[2 * i] = d[raw[i] >> 4]; ofb_token[2 * i + 1] = d[raw[i] & 15]; }
     ofb_token[32] = 0;
-    char tmp[1200], fin[1200];
-    snprintf(tmp, sizeof tmp, "%s/broker.token.tmp", ofb_dir);
-    snprintf(fin, sizeof fin, "%s/broker.token", ofb_dir);
-    int f = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-    if (f < 0) return -1;
-    if (write(f, ofb_token, 32) != 32) { close(f); return -1; }
-    if (uid > 0 && fchown(f, (uid_t)uid, (gid_t)-1)) ofb_log("token chown failed errno=%d", errno);           /* the title runs as uid 1 */
-    (void)fchmod(f, 0600);
-    fsync(f);
-    close(f);
-    return rename(tmp, fin);
+    char tmp[64];
+    int n = snprintf(tmp, sizeof tmp, "broker.token.");
+    for (int i = 16; i < 24; i++) { tmp[n++] = d[raw[i] >> 4]; tmp[n++] = d[raw[i] & 15]; }
+    memcpy(tmp + n, ".tmp", 5);
+
+    int dfd = open(ofb_dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    if (dfd < 0) return -1;
+    struct stat ds;
+    if (fstat(dfd, &ds) || !S_ISDIR(ds.st_mode)) { close(dfd); errno = ENOTDIR; return -1; }
+    int f = openat(dfd, tmp, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (f < 0) { int e = errno; close(dfd); errno = e; return -1; }
+    struct stat fs;
+    int ok = !fstat(f, &fs) && S_ISREG(fs.st_mode) && fs.st_nlink == 1 && fs.st_size == 0;
+    ok = ok && write(f, ofb_token, 32) == 32;
+    if (ok && uid > 0 && fchown(f, (uid_t)uid, (gid_t)-1)) { ofb_log("token chown failed errno=%d", errno); ok = 0; }   /* the title runs as uid 1 */
+    ok = ok && fchmod(f, 0600) == 0 && fsync(f) == 0;
+    int e = errno;
+    if (close(f)) { if (ok) e = errno; ok = 0; }
+    if (ok && renameat(dfd, tmp, dfd, "broker.token")) { e = errno; ok = 0; }
+    if (!ok) { (void)unlinkat(dfd, tmp, 0); close(dfd); memset(ofb_token, 0, sizeof ofb_token); errno = e; return -1; }
+    (void)fsync(dfd);
+    close(dfd);
+    return 0;
 }
 static int ofb_parent_gone(void)
 {

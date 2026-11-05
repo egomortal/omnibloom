@@ -71,6 +71,12 @@ int main(void)
     fd = ofb_open_write("/mnt/usb0/a.txt", 1); CHECK(fd < 0 && errno == EEXIST, "create-new never overwrites"); if (fd >= 0) close(fd);
     CHECK(ofb_mkdir("/mnt/usb0/escape/new") < 0, "mkdir through symlink refused");
 
+    /* FB-01: entries planted in the runtime folder before the broker starts must not redirect its writes */
+    snprintf(cmd, sizeof cmd, "printf keep > %s/outside/victim && printf keep > %s/outside/victim-log"
+             " && ln -s %s/outside/victim %s/data/broker.token.tmp && ln -s %s/outside/victim-log %s/data/omni-files.log",
+             base, base, base, base, base, base);
+    assert(!system(cmd));
+
     /* round trip */
     FILE* pf = fopen(strcat(strcpy(cmd, base), "/data/broker.parent"), "w");
     fprintf(pf, "%d %d\n", (int)getpid(), (int)getuid()); fclose(pf);
@@ -80,6 +86,17 @@ int main(void)
     FILE* tf = fopen(strcat(strcpy(cmd, base), "/data/broker.token"), "r");
     CHECK(tf && fread(tok, 1, 32, tf) == 32, "token file written"); if (tf) fclose(tf);
     struct stat ts; CHECK(!stat(cmd, &ts) && (ts.st_mode & 0777) == 0600, "token file is 0600");
+    {
+        char vp[700], got[16] = ""; struct stat ls;
+        snprintf(vp, sizeof vp, "%s/outside/victim", base);
+        FILE* v = fopen(vp, "r"); size_t vn = v ? fread(got, 1, sizeof got - 1, v) : 0; if (v) fclose(v); got[vn] = 0;
+        CHECK(!strcmp(got, "keep"), "FB-01: planted broker.token.tmp link: target outside is untouched");
+        snprintf(vp, sizeof vp, "%s/outside/victim-log", base);
+        v = fopen(vp, "r"); vn = v ? fread(got, 1, sizeof got - 1, v) : 0; if (v) fclose(v); got[vn] = 0;
+        CHECK(!strcmp(got, "keep"), "FB-01: planted omni-files.log link: target outside is untouched");
+        snprintf(vp, sizeof vp, "%s/data/broker.token", base);
+        CHECK(!lstat(vp, &ls) && S_ISREG(ls.st_mode) && ls.st_nlink == 1, "FB-01: published token is a regular file of its own");
+    }
     char rep[70000]; long st = -1;
     request("00000000000000000000000000000000", "hello", NULL, NULL, NULL, 0, rep, sizeof rep, &st); CHECK(st == EACCES, "bad token refused");
     request(tok, "hello", NULL, NULL, NULL, 0, rep, sizeof rep, &st); CHECK(st == 0, "hello with token");
