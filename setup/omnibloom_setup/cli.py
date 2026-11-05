@@ -99,6 +99,9 @@ def main(argv=None):
             installer.repair_app(c, cat, a.app or p.error("--app is required"), log=log)
             return 0
         if a.command in ("jd-setup", "jd-copy"):
+            if not config.jd_enabled():      # audit JD-03: held back before anything is downloaded or touched
+                log(config.JD_HELD_REASON)
+                return 3
             folder = a.jd_folder or next(iter(jd.detect()), None)
             if not folder:
                 p.error("JDownloader 2 wasn't found on this computer; pass --jd-folder")

@@ -5,6 +5,11 @@ For each app Setup writes:
   anything already there is parked as a backup; nothing is ever deleted);
 - its ID card, `/data/hub/apps/<id>.json`, with the port Setup picked;
 - its receipt, `/data/hub/receipts/<id>.json`: files, backups, card hash, port, autoload change.
+An install journal (`/data/hub/receipts/details/<id>.install-journal-<0|1>`) is written before anything
+on the PS5 changes and records every backup of a file Setup didn't put there, before that file is moved.
+If the install stops half way (FTP drop, power, crash), the next install of that app finishes it with the
+same backups, and Uninstall can roll an interrupted first install back. Startup happens only after the
+receipt is saved (audit ST-01).
 Bloom Core (`hub`) goes in first. Other apps don't need it to start, so they still install without it.
 The user's own data (profiles, downloads, pairings, shared settings) is never touched.
 """
@@ -58,15 +63,20 @@ def _jd_tree(path):
     return path.startswith(config.JD_CONSOLE_ROOT) and not path.startswith(config.JD_BACKUP_DIR)
 
 
-def _park(console, path, suffix, stamp=None):
-    """Move `path` aside (never delete) and return where it went."""
+def _park_target(console, path, suffix, stamp=None):
+    """Where `_park` would move `path` (its folder is created)."""
     if _jd_tree(path):
         target = config.JD_BACKUP_DIR + (stamp or _stamp()) + "/" + path[len(config.JD_CONSOLE_ROOT):]
         console.makedirs(posixpath.dirname(target))
         if console.exists(target):
             target = _free_name(console, target, suffix)
-    else:
-        target = _free_name(console, path, suffix)
+        return target
+    return _free_name(console, path, suffix)
+
+
+def _park(console, path, suffix, stamp=None):
+    """Move `path` aside (never delete) and return where it went."""
+    target = _park_target(console, path, suffix, stamp)
     console.rename(path, target)
     return target
 
@@ -143,6 +153,69 @@ def _save_receipt(console, receipt, log):
             f.write(_json_bytes(dict(small, files=receipt["files"], card=receipt["card"])))
     except OSError:
         pass
+
+
+# -- install journal (audit ST-01) ----------------------------------------
+JOURNAL_SCHEMA = "omnibloom-install-journal/v1"
+JOURNAL_MARK = ".install-journal-"
+
+
+def _journal_slots(app_id):
+    return [config.DETAILS_DIR + app_id + JOURNAL_MARK + str(n) for n in (0, 1)]
+
+
+def read_journal(console, app_id):
+    """The newest intact journal for `app_id`, or None. Two slots are written in turn, so a torn write
+    leaves the previous state readable in the other one."""
+    best = None
+    for path in _journal_slots(app_id):
+        try:
+            value = json.loads(console.read_text(path, default="") or "null")
+        except ValueError:
+            continue
+        if isinstance(value, dict) and value.get("schema") == JOURNAL_SCHEMA and value.get("id") == app_id \
+                and type(value.get("seq")) is int and isinstance(value.get("backups"), dict) \
+                and isinstance(value.get("files"), dict) and (best is None or value["seq"] > best["seq"]):
+            best = value
+    return best
+
+
+def _write_journal(console, journal):
+    journal["seq"] += 1
+    path = _journal_slots(journal["id"])[journal["seq"] % 2]
+    data = _json_bytes(journal)
+    console.makedirs(config.DETAILS_DIR)
+    console.store(path, data)
+    if console.read(path) != data:
+        raise IOError("The install journal didn't save correctly; nothing more was changed.")
+
+
+def _open_journal(console, app_id, version, files):
+    """Resume an interrupted install's journal (keeping its backups) or start a new one."""
+    last = read_journal(console, app_id)
+    resumed = last if last and last.get("state") == "open" else None
+    journal = {"schema": JOURNAL_SCHEMA, "id": app_id, "version": version, "state": "open", "started_at": _now(),
+               "seq": last["seq"] if last else 0, "backups": dict((resumed or {}).get("backups", {})),
+               "files": dict((resumed or {}).get("files", {}), **files)}
+    _write_journal(console, journal)
+    return journal, resumed is not None
+
+
+def _close_journal(console, journal, state):
+    journal["state"] = state
+    _write_journal(console, journal)
+
+
+def pending_installs(console):
+    """{app_id: journal} for installs that stopped before their receipt was saved."""
+    found = {}
+    for name, entry in console.listing(config.DETAILS_DIR).items():
+        if not entry["dir"] and JOURNAL_MARK in name:
+            app_id = name.split(JOURNAL_MARK, 1)[0]
+            journal = read_journal(console, app_id)
+            if journal and journal.get("state") == "open":
+                found[app_id] = journal
+    return found
 
 
 # -- autoload -------------------------------------------------------------
@@ -240,19 +313,35 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
     rows = catalog.files_for(app_id)
     log("%s %s: checking %d file%s…" % (app["name"], app["version"], len(rows), "" if len(rows) == 1 else "s"))
     blobs = {r["dest"]: catalog.data(app_id, r) for r in rows}
-    ensure_shared(console, app_id, log)
-
     previous = read_receipt(console, app_id)
     prev_files = {f["dest"]: f for f in (previous or {}).get("files", [])}
     version = app["version"]
     stamp = _stamp()
+
+    # Preflight (ST-01): port and ID card are worked out and size-checked before anything changes.
+    old_card = (previous or {}).get("card") or {}
+    port, note = picker.pick(app_id, app["port"], current=old_card.get("port"))
+    if note:
+        log(note)
+    icon = next((r["dest"] for r in rows if r["dest"].startswith(config.ICONS_DIR)), None) or next(
+        (r["dest"] for r in rows if r["dest"].startswith(config.PLDMGR_DIR + "payloads/")       # item 7: next to the ELF
+         and posixpath.basename(r["dest"]).startswith("icon") and r["dest"].endswith(".png")), None)
+    card = make_card(app_id, app, port, icon)
+    card_bytes = _json_bytes(card)
+    if len(card_bytes) > config.CARD_MAX:
+        raise IOError("%s's ID card is larger than Bloom Core allows." % app["name"])
+
+    ensure_shared(console, app_id, log)
+    journal, resumed = _open_journal(console, app_id, version, {r["dest"]: r["sha256"] for r in rows})
+    if resumed:
+        log("Finishing the interrupted install of %s." % app["name"])
     entries = []
     for i, row in enumerate(rows, 1):
         dest, data = row["dest"], blobs[row["dest"]]
         decoded = _decoded_on_readback(dest)
         console.makedirs(posixpath.dirname(dest))
         old = prev_files.get(dest)
-        backup = old.get("backup") if old else None
+        backup = old.get("backup") if old else journal["backups"].get(dest)
         if console.exists(dest):
             if old and old.get("sha256") == row["sha256"]:
                 same = decoded or _sha(console.read(dest)) == row["sha256"]
@@ -265,10 +354,13 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
                 continue
         temp = console.put_verified(dest, data, readback=not decoded)
         if console.exists(dest):
-            if old:  # our own older version: keep it for rollback; the original backup stays the restore point
-                parked = _park(console, dest, ".omnibloom-old-" + str(previous.get("version", "prev")), stamp)
-            else:
-                parked = _park(console, dest, ".before-omnibloom-" + version, stamp)
+            if old or backup:  # ours (older version or an interrupted try): the original backup stays the restore point
+                parked = _park(console, dest, ".omnibloom-old-" + str((previous or {}).get("version", "prev")), stamp)
+            else:  # not ours: journal the backup before the file moves
+                parked = _park_target(console, dest, ".before-omnibloom-" + version, stamp)
+                journal["backups"][dest] = parked
+                _write_journal(console, journal)
+                console.rename(dest, parked)
                 backup = parked
             log("Kept the previous file as %s" % parked)
         console.rename(temp, dest)
@@ -294,21 +386,12 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
     if elf and elf.startswith(config.PLDMGR_DIR + "payloads/") and elf in blobs:
         meta = _json_bytes({"name": app["name"], "filename": posixpath.basename(elf), "install_source": "web_upload",
                             "checksum": _sha(blobs[elf]), "version": version})
+        journal["files"][elf + ".json"] = _sha(meta)
+        _write_journal(console, journal)
         _replace(console, elf + ".json", meta, ".prev-" + _stamp())
         entries.append({"dest": elf + ".json", "sha256": _sha(meta), "bytes": len(meta), "backup": None})
 
-    # Port and ID card.
-    old_card = (previous or {}).get("card") or {}
-    port, note = picker.pick(app_id, app["port"], current=old_card.get("port"))
-    if note:
-        log(note)
-    icon = next((r["dest"] for r in rows if r["dest"].startswith(config.ICONS_DIR)), None) or next(
-        (r["dest"] for r in rows if r["dest"].startswith(config.PLDMGR_DIR + "payloads/")       # item 7: next to the ELF
-         and posixpath.basename(r["dest"]).startswith("icon") and r["dest"].endswith(".png")), None)
-    card = make_card(app_id, app, port, icon)
-    card_bytes = _json_bytes(card)
-    if len(card_bytes) > config.CARD_MAX:
-        raise IOError("%s's ID card is larger than Bloom Core allows." % app["name"])
+    # ID card (worked out in the preflight).
     has_card = writes_card(app_id, card)
     if has_card:
         _replace(console, card_path(app_id), card_bytes, ".prev-" + _stamp())
@@ -320,10 +403,9 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
         change = set_autoload(console, posixpath.basename(elf), True, log, replace=replace)
         if change["changed"] or not al:
             al = change
-    if start and elf and elf in blobs:
-        console.send_payload(blobs[elf])
-        log("Started %s." % app["name"])
-
+        if change["changed"]:
+            journal["autoload"] = change
+            _write_journal(console, journal)
     receipt = {
         "schema": RECEIPT_SCHEMA, "id": app_id, "name": app["name"], "version": version,
         "setup_version": config.SETUP_VERSION, "installed_at": _now(), "package": catalog.source[app_id].name,
@@ -332,7 +414,11 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
         "history": ((previous or {}).get("history", []) + [{"version": previous["version"], "installed_at": previous["installed_at"]}]) if previous else [],
     }
     _save_receipt(console, receipt, log)
+    _close_journal(console, journal, "committed")
     log("%s %s is installed%s." % (app["name"], version, (" (port %d)" % port) if port else ""))
+    if start and elf and elf in blobs:   # only once the install is durably recorded
+        console.send_payload(blobs[elf])
+        log("Started %s." % app["name"])
     return receipt
 
 
@@ -349,6 +435,10 @@ def install(console, catalog, app_ids, autoload=(), start=(), log=print, progres
     else:
         log("%s isn't in this release yet. Apps are installed without it (they don't need it to start)." % config.HUB_NAME)
     order += wanted
+    for app_id in sorted(pending_installs(console)):   # ST-01: finish interrupted installs too
+        if app_id not in order and catalog.has(app_id):
+            log("%s's last install was interrupted; finishing it." % catalog.apps[app_id]["name"])
+            order.append(app_id)
     picker = PortPicker(console)
     receipts = {}
     for app_id in order:
@@ -399,6 +489,10 @@ def uninstall_app(console, app_id, log=print):
     Other apps, their cards and receipts, and the user's own data are left alone."""
     apps = installed_apps(console)
     receipt = apps.get(app_id)
+    journal = read_journal(console, app_id)
+    journal = journal if journal and journal.get("state") == "open" else None
+    if not receipt and journal:   # ST-01: an interrupted first install is rolled back
+        receipt = {"id": app_id, "name": app_id, "files": [], "autoload": None, "rollback_only": True}
     if not receipt:
         raise IOError("%s isn't installed on this PS5." % app_id)
     if app_id == config.HUB_ID and len(apps) > 1:
@@ -410,20 +504,32 @@ def uninstall_app(console, app_id, log=print):
             console.makedirs(config.JD_BACKUP_DIR + stamp)
             console.rename(approval, config.JD_BACKUP_DIR + stamp + "/native-install.json")
             log("JDownloader 2 is switched off on the PS5.")
-    for f in receipt["files"]:
+    files = list(receipt["files"])
+    if journal:   # files and backups of an interrupted install that never reached the receipt
+        known = {f["dest"] for f in files}
+        files += [{"dest": d, "sha256": s, "backup": journal["backups"].get(d), "journal_only": True}
+                  for d, s in sorted(journal["files"].items()) if d not in known]
+    for f in files:
         dest = f["dest"]
         if console.exists(dest):
+            if f.get("journal_only") and _sha(console.read(dest)) != f["sha256"]:
+                continue   # not the file Setup was putting there: leave it exactly as it is
             _park(console, dest, ".omnibloom-removed-" + stamp, stamp)
         if f.get("backup") and console.exists(f["backup"]):
             console.rename(f["backup"], dest)
             log("Restored your previous %s" % dest)
-    al = receipt.get("autoload") or {}
+    al = receipt.get("autoload") or (journal or {}).get("autoload") or {}
     if al.get("changed"):
         set_autoload(console, al["elf"], False, log)
         if al.get("removed"):
             _restore_autoload_entries(console, al["removed"], log)
     if console.exists(card_path(app_id)):
         console.rename(card_path(app_id), _free_name(console, card_path(app_id), ".removed-" + stamp))
+    if journal:
+        _close_journal(console, journal, "rolled-back")
+    if receipt.get("rollback_only"):
+        log("The interrupted install of %s was rolled back. Your own data was left as it was." % app_id)
+        return
     if console.exists(details_path(app_id)):
         console.rename(details_path(app_id), _free_name(console, details_path(app_id), ".uninstalled-" + stamp))
     console.rename(receipt_path(app_id), _free_name(console, receipt_path(app_id), ".uninstalled-" + stamp))

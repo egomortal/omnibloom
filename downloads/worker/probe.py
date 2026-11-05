@@ -8,7 +8,9 @@ and never tries to get around DRM: protected streams are reported as such.
 Safety: only public http(s) hosts. Every hostname is resolved first and the
 connection is pinned to the checked address (no DNS rebinding); loopback,
 private, link-local, shared, multicast and reserved addresses are refused,
-on every redirect hop too. Reads are capped and time-limited.
+on every redirect hop too. Reads are capped and time-limited. The deep (site
+extractor) check runs yt-dlp through egress_guard, which applies the same
+policy to every connection yt-dlp makes (audit DW-01).
 """
 import http.client
 import ipaddress
@@ -22,6 +24,8 @@ import threading
 import time
 import urllib.parse
 import xml.etree.ElementTree as ElementTree
+
+from egress_guard import resolve_within, shared_guard  # OMNI_EGRESS_GUARD_V1 (audit DW-01/DW-02)
 
 USER_AGENT = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 '
               '(KHTML, like Gecko) Version/17.0 Safari/605.1.15')
@@ -137,7 +141,10 @@ class Fetcher:
         """Return (final_url, status, headers, body, total_size)."""
         for _ in range(MAX_REDIRECTS + 1):
             parts, port = check_url(url)
-            address = self.resolver(parts.hostname, port)
+            try:  # DW-02: the lookup counts against the probe deadline
+                address = resolve_within(self.resolver, parts.hostname, port, min(SOCKET_TIMEOUT, self.left()))
+            except TimeoutError as error:
+                raise Problem('slow', 'The site took too long to answer.') from error
             timeout = min(SOCKET_TIMEOUT, self.left())
             if parts.scheme == 'https':
                 connection = _PinnedTLS(parts.hostname, address, port, timeout, tls_context())
@@ -746,6 +753,16 @@ def site_probe(url, adapter_options=None):
     options = dict(quiet=True, no_warnings=True, noplaylist=True, skip_download=True, socket_timeout=8,
                    cachedir=False, js_runtimes={}, extract_flat=False)
     options.update(adapter_options or {})
+    # DW-01: every connection yt-dlp opens (redirects, extractor subrequests,
+    # manifests) goes through the loopback egress guard, which applies the same
+    # public-address-only policy and pins each socket to the checked address.
+    # Set last, so caller options can never remove it.
+    options['proxy'] = shared_guard(public_address).url
+    # yt-dlp lets a per-request proxy override the global one (geo verification
+    # proxy / Ytdl-Request-Proxy header); neither may route around the guard.
+    options['geo_verification_proxy'] = None
+    options['http_headers'] = {k: v for k, v in (options.get('http_headers') or {}).items()
+                               if k.lower() != 'ytdl-request-proxy'}
     with yt_dlp.YoutubeDL(options) as ydl:
         info = ydl.extract_info(url, download=False)
     if not isinstance(info, dict):
@@ -845,7 +862,9 @@ class Prober:
     def _site(self, key, url):
         try:
             parts, port = check_url(url)
-            self.resolver(parts.hostname, port)
+            resolve_within(self.resolver, parts.hostname, port, SOCKET_TIMEOUT)
+        except TimeoutError:
+            return result('slow', 'The site took too long to answer.', kind='page')
         except Refused:
             return result('refused', 'Local or private address. Not checked.', kind='page')
         except Problem as problem:

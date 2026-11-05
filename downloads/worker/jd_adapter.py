@@ -12,9 +12,49 @@ import threading
 import time
 
 MAX_FRAME = 65536
+# Audit JD-03: JDownloader opens its own connections (file-host plugins, their
+# redirects and subrequests). The bridge must say it confines all of them to the
+# same public-address-only policy as the yt-dlp guard before Omni hands it a
+# link; until a bridge reports this exact policy, the engine stays switched off.
+EGRESS_POLICY = 'omni-public-only-v1'
+HELD_STATUS = ("JDownloader is held back: its own connections aren't covered by "
+               "Omni's private-address check yet. yt-dlp keeps working.")
+
+
+def check_submitted_url(url, resolver=None):
+    """The submitted link itself must point at a public address (JD-03)."""
+    import probe
+    try:
+        parts, port = probe.check_url(url)
+        probe.resolve_within(resolver or probe.public_address, parts.hostname, port, probe.SOCKET_TIMEOUT)
+    except probe.Refused as error:
+        raise ValueError('JDownloader was not given this link: local or private address.') from error
+    except (TimeoutError, probe.Problem) as error:
+        raise ValueError("JDownloader was not given this link: its address couldn't be checked.") from error
+
+
+def owned_output(destination, value):
+    """Accept a finished file only if it is a regular file inside this job's
+    folder, reached without any symbolic link (JD-03). Returns its path."""
+    if not isinstance(value, str) or not value or '\0' in value:
+        raise ValueError('Java worker returned a missing or unowned output path.')
+    root = Path(os.path.abspath(destination))
+    path = Path(os.path.abspath(os.path.join(root, value)))
+    if path == root or not path.is_relative_to(root) or root.is_symlink():
+        raise ValueError('Java worker returned a missing or unowned output path.')
+    current = root
+    for part in path.relative_to(root).parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError('Java worker returned an output reached through a symbolic link.')
+    if not path.is_file() or Path(os.path.realpath(path)) != Path(os.path.realpath(root)) / path.relative_to(root):
+        raise ValueError('Java worker returned a missing or unowned output path.')
+    return path
 
 
 class JDownloaderAdapter:
+    resolver = None  # None: probe.public_address (tests inject a fake resolver)
+
     def __init__(self, config=None, timeout=2, job_timeout=180):
         self.config = config
         self.timeout = timeout
@@ -92,8 +132,10 @@ class JDownloaderAdapter:
             if time.monotonic()-self._health_at >= 3 or self._health is None:
                 try:
                     value = self.call('health')
-                    self._health = dict(jdownloader=value.get('ready') is True,
-                                        jdownloader_status=str(value.get('status', 'Local Java worker'))[:300], target_tested=False)
+                    guarded = value.get('egress_policy') == EGRESS_POLICY
+                    self._health = dict(jdownloader=value.get('ready') is True and guarded,
+                                        jdownloader_status=(str(value.get('status', 'Local Java worker'))[:300] if guarded else HELD_STATUS),
+                                        target_tested=False)
                 except (OSError, ValueError, RuntimeError) as error:
                     self._health = dict(jdownloader=False, jdownloader_status='Local Java worker unavailable: ' + str(error)[:200], target_tested=False)
                 self._health_at = time.monotonic()
@@ -102,7 +144,13 @@ class JDownloaderAdapter:
     def download(self, key, url, destination, update, cancelled):
         if self.poisoned:
             raise RuntimeError('Java cleanup was not confirmed; restart its isolated worker.')
-        destination = Path(destination).resolve()
+        if self.capabilities().get('jdownloader') is not True:
+            raise RuntimeError(self.capabilities().get('jdownloader_status') or HELD_STATUS)
+        check_submitted_url(url, self.resolver)
+        destination = Path(destination)
+        if destination.is_symlink():
+            raise ValueError('The job folder must not be a symbolic link.')
+        destination = destination.resolve()
         submitted = False
         terminal = False
         try:
@@ -129,10 +177,7 @@ class JDownloaderAdapter:
                     terminal = True
                     if state != 'completed':
                         raise RuntimeError(str(value.get('error') or 'JDownloader did not complete the download.')[:300])
-                    filepath = Path(value.get('filepath', '')).resolve()
-                    if not filepath.is_relative_to(destination) or not filepath.is_file():
-                        raise ValueError('Java worker returned a missing or unowned output path.')
-                    return dict(filepath=str(filepath))
+                    return dict(filepath=str(owned_output(destination, value.get('filepath'))))
                 time.sleep(.25)
             raise TimeoutError('JDownloader exceeded this prototype job deadline.')
         finally:

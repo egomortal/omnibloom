@@ -8,6 +8,12 @@ The manifest lists apps (with their ID-card template, roots, port rule and autol
 Every file is pinned by size and SHA-256, belongs to exactly one app, and must sit inside that app's
 declared roots, which must sit inside Omnibloom's install folders. Setup combines the packages it
 finds into one catalog (newest version of each app wins).
+
+Provenance (audit RL-01): a release also carries `RELEASE-MANIFEST.json` (written by
+tools/build_release.py: tag, source manifest hash, and the name, size and SHA-256 of every asset).
+Setup installs a downloaded package only when the manifest, the `.sha256` file and the download all
+agree, and a package next to Setup only when its `.sha256` file is beside it and matches. These are
+same-channel checks: they catch damaged, swapped or partly uploaded assets, not a stolen account.
 """
 import hashlib
 import json
@@ -26,6 +32,9 @@ APP_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,31}\Z")
 KINDS = ("title", "payload", "service")
 AUTOLOAD = ("never", "optional", "required")
 CARD_KEYS = {"name", "kind", "launch", "health", "pages", "provides", "consumes", "public_pages"}
+RELEASE_MANIFEST_ASSET = "RELEASE-MANIFEST.json"
+RELEASE_MANIFEST_SCHEMA = "omnibloom-release-manifest/v1"
+METADATA_LIMIT = 1 << 20     # checksum and manifest files are small; never read more than this
 
 
 class ReleaseError(Exception):
@@ -59,6 +68,36 @@ def file_sha256(path):
     return h.hexdigest()
 
 
+def _checksum_line(text, name):
+    """The SHA-256 from a `<hash>  <name>` line, checked to name this file."""
+    parts = text.split()
+    if len(parts) != 2 or not HEX64.fullmatch(parts[0].lower()) or parts[1].lstrip("*") != name:
+        raise ReleaseError("The release checksum file is not valid.")
+    return parts[0].lower()
+
+
+def offline_package(zip_path):
+    """A package next to Setup, opened only if its `.sha256` file is beside it and matches (RL-01)."""
+    try:
+        with open(zip_path + ".sha256", "rb") as f:
+            text = f.read(METADATA_LIMIT).decode("ascii", "replace")
+    except OSError:
+        raise ReleaseError("%s has no checksum file next to it (.sha256), so it can't be trusted."
+                           % os.path.basename(zip_path))
+    return Package(zip_path, sha_expected=_checksum_line(text, os.path.basename(zip_path)))
+
+
+def manifest_asset(manifest, info):
+    """The release manifest's row for this package, checked against the release it came from (RL-01)."""
+    if not isinstance(manifest, dict) or manifest.get("schema") != RELEASE_MANIFEST_SCHEMA \
+            or manifest.get("tag") != info["tag"] or not isinstance(manifest.get("assets"), list):
+        raise ReleaseError("The release manifest doesn't belong to this release.")
+    rows = [a for a in manifest["assets"] if isinstance(a, dict) and a.get("name") == info["zip_name"]]
+    if len(rows) != 1 or not HEX64.fullmatch(str(rows[0].get("sha256"))) or type(rows[0].get("bytes")) is not int:
+        raise ReleaseError("The release manifest doesn't list %s." % info["zip_name"])
+    return rows[0]
+
+
 # -- finding packages -------------------------------------------------------
 def find_offline_zips(folder=None, sources=None):
     """Packages next to the setup file: the newest one per source."""
@@ -90,10 +129,11 @@ def latest_release_info(source, api_base=None):
         raise ReleaseError("%s has no console package in its newest release yet." % source["repo"])
     name = sorted(zips, key=version_key)[-1]
     sha = assets.get(name + ".sha256")
-    if not sha:
+    manifest = assets.get(RELEASE_MANIFEST_ASSET)
+    if not sha or not manifest:
         raise ReleaseError("%s's release is missing its checksum file, so it can't be trusted." % source["repo"])
     return {"tag": data.get("tag_name", ""), "zip_name": name, "zip_url": assets[name]["browser_download_url"],
-            "sha_url": sha["browser_download_url"], "size": assets[name].get("size", 0), "repo": source["repo"]}
+            "sha_url": sha["browser_download_url"], "manifest_url": manifest["browser_download_url"], "size": assets[name].get("size", 0), "repo": source["repo"]}
 
 
 def download_release(info, dest_dir=None, progress=None):
@@ -101,9 +141,14 @@ def download_release(info, dest_dir=None, progress=None):
     target = os.path.join(dest_dir, info["zip_name"])
     ua = {"User-Agent": config.APP_NAME + "/" + config.SETUP_VERSION}
     with urllib.request.urlopen(urllib.request.Request(info["sha_url"], headers=ua), timeout=20) as r:
-        expected = r.read().decode("ascii", "replace").split()[0].lower()
-    if not HEX64.fullmatch(expected):
-        raise ReleaseError("The release checksum file is not valid.")
+        expected = _checksum_line(r.read(METADATA_LIMIT).decode("ascii", "replace"), info["zip_name"])
+    with urllib.request.urlopen(urllib.request.Request(info["manifest_url"], headers=ua), timeout=20) as r:
+        try:
+            row = manifest_asset(json.loads(r.read(METADATA_LIMIT)), info)
+        except ValueError:
+            raise ReleaseError("The release manifest doesn't belong to this release.")
+    if row["sha256"] != expected:
+        raise ReleaseError("The release manifest and checksum file disagree, so the package can't be trusted.")
     if os.path.exists(target) and file_sha256(target) == expected:
         return target
     tmp = target + ".part"
@@ -118,7 +163,7 @@ def download_release(info, dest_dir=None, progress=None):
             got += len(chunk)
             if progress:
                 progress(got, total)
-    if file_sha256(tmp) != expected:
+    if file_sha256(tmp) != expected or os.path.getsize(tmp) != row["bytes"]:
         os.remove(tmp)
         raise ReleaseError("The download didn't match its checksum. Please try again.")
     os.replace(tmp, target)
@@ -287,7 +332,7 @@ def load_catalog(folder=None, online=True, api_base=None, log=lambda m: None, in
     offline_prefixes = {s["prefix"] for s in config.SOURCES for z in offline if os.path.basename(z).startswith(s["prefix"])}
     for z in offline:
         log("Using the package next to Setup: %s" % os.path.basename(z))
-        packages.append(Package(z))
+        packages.append(offline_package(z))
     if online:
         for src in config.SOURCES:
             if src.get("optional") and not include_optional:
@@ -321,7 +366,7 @@ def load_engine(catalog, folder=None, online=True, api_base=None, log=lambda m: 
     zips = find_offline_zips(folder, sources=[src])
     if zips:
         log("Using the JDownloader 2 engine next to Setup: %s" % os.path.basename(zips[0]))
-        catalog.add(Package(zips[0]))
+        catalog.add(offline_package(zips[0]))
     elif online:
         info = latest_release_info(src, api_base=api_base)
         log("Downloading the JDownloader 2 engine (%s %s)…" % (src["repo"], info["tag"]))

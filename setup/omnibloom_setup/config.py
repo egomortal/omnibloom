@@ -115,6 +115,18 @@ JD_CONSOLE_ROOT = "/data/omni-downloader/jdownloader/"
 JD_OFFICIAL_URL = "https://jdownloader.org/jdownloader2"
 JD_APP_ID = "jdownloader"                    # the engine app (our java-worker + bundled Java runtime)
 JD_TESTED_REVISION = 50639                   # JDownloaderRevision in build.json the bridge was built and tested with
+
+# Audit JD-03: JDownloader 2 opens its own connections (plugins, redirects, update checks) with no reviewed
+# destination policy yet, so Setup keeps the step held back. Developers can still test it with OMNIBLOOM_ENABLE_JD=1.
+JD_HELD_REASON = ("JDownloader 2 is held back in this release: its own connections (file-host plugins and their "
+                  "redirects) don't yet go through Omnibloom's private-address check. yt-dlp downloads are not affected.")
+
+
+def jd_enabled():
+    import os
+    return os.environ.get("OMNIBLOOM_ENABLE_JD") == "1"
+
+
 JD_CHECKS_DIR = JD_CONSOLE_ROOT + "setup-checks/"
 JD_BACKUP_DIR = JD_CONSOLE_ROOT + "setup-backup/"   # outside runtime/, so old files never break the engine's exact file list
 # Folders under runtime/ that JDownloader itself writes; never touched, never part of the pinned file list.

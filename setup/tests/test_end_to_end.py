@@ -27,7 +27,9 @@ from omnibloom_setup import checks, config, installer, jd, ports, ps5, release  
 sha = lambda b: hashlib.sha256(b).hexdigest()
 P = config.PLDMGR_DIR + "payloads/"
 HUB_ELF = P + "BloomCore/hub.elf"
-MC_ELF = P + "MasterControl/master-control.elf"
+MC_ELF = P + "master-control/master-control.elf"      # standard v1.1 item 7: /data/pldmgr/payloads/<id>/
+MC_ICON = P + "master-control/icon-256.png"
+OLD_MC_ELF = P + "MasterControl/master-control.elf"   # where Setup put it before item 7
 EBOOT = config.TITLE_DIR + "eboot.bin"
 WORKER = "/data/omni-downloader/worker/worker.py"
 BROKER = "/data/omni/native/omni-files.elf"
@@ -61,7 +63,7 @@ def make_packages(tmp, version="0.5.0", mc_version="0.4.3", changed=b"", seed=0)
         "/data/omni-downloader/python-worker.elf": rnd(5)[:90000],
         "/data/omni-downloader/.deps/yt_dlp/__init__.py": b"# yt-dlp",
     }
-    mc = {MC_ELF: rnd(6)[:120000] + mc_version.encode(), config.ICONS_DIR + "master-control/icon-256.png": b"\x89PNG mc"}
+    mc = {MC_ELF: rnd(6)[:120000] + mc_version.encode(), MC_ICON: b"\x89PNG mc"}
     out = os.path.join(tmp, "dist")
     zips = []
     for name, files, ver in (("omnibloom", omni, version), ("master-control", mc, mc_version)):
@@ -205,7 +207,8 @@ class Suite(unittest.TestCase):
         self.assertEqual(self.receipt("hub")["port"], 8760)
         self.assertEqual(self.card("omni")["title_id"], config.TITLE_ID)
         self.assertNotIn("port", self.card("omni"))
-        self.assertEqual(self.card("master-control")["icon"], config.ICONS_DIR + "master-control/icon-256.png")
+        self.assertEqual(self.card("master-control")["icon"], MC_ICON)
+        self.assertEqual(self.card("master-control")["launch"]["elf"], MC_ELF)
         al = fc.read(config.AUTOLOAD_PATH).decode()
         self.assertEqual(al, "shadowmountplus.elf\r\nkstuff-lite.elf\r\nftpsrv.elf\r\nhub.elf\r\nmaster-control.elf\r\n")
         self.assertEqual(json.loads(fc.read(MC_ELF + ".json"))["checksum"], sha(self.files[MC_ELF]))
@@ -228,7 +231,7 @@ class Suite(unittest.TestCase):
         self.clean()
 
     def test_t03_reinstall_is_no_op(self):
-        dirs = (config.TITLE_DIR, P + "MasterControl", "/data/omni-downloader/worker")
+        dirs = (config.TITLE_DIR, P + "master-control", "/data/omni-downloader/worker")
         before = {d: sorted(self.fc.listdir(d)) for d in dirs}
         with connect(self.fc) as c:
             installer.install(c, catalog_of(self.zips), SUITE, autoload=["master-control"], log=self.log.append)
@@ -336,6 +339,55 @@ class SingleApp(unittest.TestCase):
                 rec = installer.install(c, catalog_of([zips[1]]), ["master-control"], log=log.append)
             self.assertEqual(sorted(rec), ["master-control"])
             self.assertTrue(any("isn't in this release yet" in l for l in log))
+        finally:
+            fc.stop()
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class PayloadFolderMove(unittest.TestCase):
+    def test_master_control_moves_to_its_id_folder(self):
+        """Item 7: an install from the old /MasterControl/ layout parks the old ELF and Payload Manager entry
+        (autoload lists bare names, so two copies must not both be visible), keeps one autoload line, and
+        uninstall still works."""
+        tmp = tempfile.mkdtemp(prefix="omnibloom-move-")
+        fc = new_console(os.path.join(tmp, "console"),
+                         autoload="shadowmountplus.elf\r\nkstuff-lite.elf\r\nftpsrv.elf\r\nmaster-control.elf\r\n")
+        try:
+            old_elf, old_meta = b"\x7fELF mc 0.4.2", b'{"filename": "master-control.elf"}'
+            fc.write(OLD_MC_ELF, old_elf)
+            fc.write(OLD_MC_ELF + ".json", old_meta)
+            details = {"schema": installer.RECEIPT_SCHEMA + "-details", "id": "master-control",
+                       "files": [{"dest": OLD_MC_ELF, "sha256": sha(old_elf), "bytes": len(old_elf), "backup": None},
+                                 {"dest": OLD_MC_ELF + ".json", "sha256": sha(old_meta), "bytes": len(old_meta), "backup": None}],
+                       "card": {"hub_api": 1, "id": "master-control", "version": "0.4.2", "port": 8766}}
+            receipt = {"schema": installer.RECEIPT_SCHEMA, "id": "master-control", "name": "Master Control", "version": "0.4.2",
+                       "installed_at": "2026-11-01T00:00:00Z", "port": 8766, "history": [],
+                       "autoload": {"elf": "master-control.elf", "changed": True, "removed": [], "backup": None},
+                       "details": config.DETAILS_DIR + "master-control.json"}
+            fc.write(config.DETAILS_DIR + "master-control.json", json.dumps(details))
+            fc.write(config.RECEIPTS_DIR + "master-control.json", json.dumps(receipt))
+            zips, files = make_packages(tmp)
+            log = []
+            with connect(fc) as c:
+                installer.install(c, catalog_of(zips), ["master-control"], autoload=["master-control"], log=log.append)
+            self.assertEqual(fc.read(MC_ELF), files[MC_ELF])
+            self.assertEqual(fc.read(MC_ICON), files[MC_ICON])
+            self.assertFalse(fc.exists(OLD_MC_ELF), "old copy parked")
+            self.assertFalse(fc.exists(OLD_MC_ELF + ".json"), "old Payload Manager entry parked")
+            parked = fc.listdir(P + "MasterControl")
+            self.assertIn("master-control.elf.omnibloom-moved-0.4.3", parked)
+            self.assertIn("master-control.elf.json.omnibloom-moved-0.4.3", parked)
+            self.assertTrue(fc.exists(MC_ELF + ".json"))
+            al = fc.read(config.AUTOLOAD_PATH).decode()
+            self.assertEqual(al.count("master-control.elf"), 1, al)
+            card = json.loads(fc.read(config.CARDS_DIR + "master-control.json"))
+            self.assertEqual((card["launch"]["elf"], card["icon"]), (MC_ELF, MC_ICON))
+            self.assertTrue(hub_apps(fc)["master-control"]["verified"])
+            with connect(fc) as c:
+                installer.uninstall_app(c, "master-control", log=log.append)
+            self.assertFalse(fc.exists(MC_ELF))
+            self.assertNotIn("master-control.elf", fc.read(config.AUTOLOAD_PATH).decode())
+            self.assertEqual(fc.state["deletes"], [])
         finally:
             fc.stop()
             shutil.rmtree(tmp, ignore_errors=True)
@@ -454,7 +506,12 @@ class GitHubDownload(unittest.TestCase):
                                 return
                             body = json.dumps({"tag_name": "v" + name.split("-")[-1][:-4], "assets": [
                                 {"name": name, "browser_download_url": base + "/dl/" + name, "size": os.path.getsize(z)},
-                                {"name": name + ".sha256", "browser_download_url": base + "/dl/" + name + ".sha256"}]}).encode()
+                                {"name": name + ".sha256", "browser_download_url": base + "/dl/" + name + ".sha256"},
+                                {"name": "RELEASE-MANIFEST.json", "browser_download_url": base + "/manifest/" + name}]}).encode()
+                        if self.path == "/manifest/" + name:   # audit RL-01: the release manifest asset
+                            raw = open(z, "rb").read()
+                            body = json.dumps({"schema": "omnibloom-release-manifest/v1", "tag": "v" + name.split("-")[-1][:-4],
+                                               "assets": [{"name": name, "bytes": len(raw), "sha256": sha(raw)}]}).encode()
                     if body is None and self.path.startswith("/dl/"):
                         body = open(os.path.join(dist, self.path[4:]), "rb").read()
                         if state["tamper"] and self.path.endswith(".zip"):
@@ -542,6 +599,17 @@ class BloomCoreStub(unittest.TestCase):
         self.card("bbb", port=8780)                     # same port, later id
         self.card("noreceipt", port=8781, receipt=False)
         self.card("changed", port=8782)
+        # item 15: started_by apps may leave the port out; their live port comes from runtime/<id>.json
+        self.card("eng", port=..., health=None, launch={"started_by": "downloads", "autoload": "never"})
+        self.card("eng2", port=..., launch={"started_by": "downloads"})
+        self.card("eng3", port=..., launch={"started_by": "downloads"})
+        self.card("eng4", port=..., launch={"started_by": "downloads"})
+        self.card("eng5", port=..., launch={"started_by": "downloads"})
+        self.card("svc-nostarter", port=..., launch={"autoload": "never"})
+        self.fc.write("/data/hub/runtime/eng.json", json.dumps({"id": "eng", "pid": os.getpid(), "port": 18950}))
+        self.fc.write("/data/hub/runtime/eng2.json", json.dumps({"id": "eng2", "pid": os.getpid(), "port": 9021}))
+        self.fc.write("/data/hub/runtime/eng3.json", json.dumps({"id": "eng3", "pid": 2 ** 22 + 12345, "port": 18951}))
+        self.fc.write("/data/hub/runtime/eng4.json", json.dumps({"id": "eng4", "pid": os.getpid(), "port": 18952, "host": "192.168.1.5"}))
         self.fc.write(config.CARDS_DIR + "changed.json", json.dumps({"hub_api": 1, "id": "changed", "name": "Changed",
                                                                       "version": "1.0", "kind": "service", "port": 8782, "health": "/x"}))
         self.fc.write("/data/hub/runtime/aaa.json", json.dumps({"id": "aaa", "pid": 77, "port": 8780, "started_at": 1700000000}))
@@ -564,6 +632,17 @@ class BloomCoreStub(unittest.TestCase):
         self.assertEqual(apps["noreceipt"]["why"], "no receipt from Setup")
         self.assertEqual(apps["changed"]["why"], "card changed since install")
         self.assertEqual(apps["aaa"]["runtime"], {"pid": 77, "port": 8780, "started_at": 1700000000})
+        self.assertEqual(bad["svc-nostarter.json"], "port missing or outside 1024-65535")
+        for cid in ("eng", "eng2", "eng3", "eng4", "eng5"):
+            self.assertTrue(apps[cid]["verified"], cid)
+            self.assertEqual((apps[cid]["port"], apps[cid]["port_from"], apps[cid]["up"]), (None, "runtime", False), cid)
+        self.assertIsNone(apps["eng"]["health"])
+        self.assertEqual(apps["eng2"]["health"], "/api/health")
+        self.assertNotIn("runtime_note", apps["eng"])
+        self.assertEqual(apps["eng2"]["runtime_note"], "runtime port is reserved")
+        self.assertEqual(apps["eng3"]["runtime_note"], "runtime pid is not running (stale)")
+        self.assertEqual(apps["eng4"]["runtime_note"], "runtime host is not loopback")
+        self.assertEqual(apps["eng5"]["runtime_note"], "no runtime file")
         self.fc.write_status()
         status = json.loads(self.fc.read("/data/hub/status.json"))
         self.assertEqual(status["id"], "hub")
@@ -577,6 +656,8 @@ class JDownloader(unittest.TestCase):
     """The JDownloader 2 step against the fake console, whose launcher plays java-worker.elf."""
 
     def setUp(self):
+        os.environ["OMNIBLOOM_ENABLE_JD"] = "1"          # the step is held back by default (audit JD-03)
+        self.addCleanup(os.environ.pop, "OMNIBLOOM_ENABLE_JD", None)
         self.tmp = tempfile.mkdtemp(prefix="omnibloom-jd-")
         self.fc = new_console(os.path.join(self.tmp, "console"))
         self.fc.start_launcher()
@@ -599,6 +680,16 @@ class JDownloader(unittest.TestCase):
     def run_setup(self):
         with connect(self.fc) as c:
             return jd.setup_jdownloader(c, self.cat, self.jdroot, log=self.log.append, sleep=lambda s: __import__("time").sleep(0.05))
+
+    def test_held_back_by_default(self):
+        """Audit JD-03: without the developer switch, the step refuses before touching the PS5."""
+        self.load_engine()
+        os.environ.pop("OMNIBLOOM_ENABLE_JD", None)
+        with connect(self.fc) as c:
+            with self.assertRaises(jd.CheckFailed) as ctx:
+                jd.setup_jdownloader(c, self.cat, self.jdroot, log=self.log.append)
+        self.assertIn("held back", str(ctx.exception))
+        self.assertFalse(self.fc.exists(config.JD_CONSOLE_ROOT + "java-worker.elf"))
 
     def test_detect_summary_and_revision(self):
         s = jd.summary(self.jdroot)
@@ -677,9 +768,22 @@ class JDownloader(unittest.TestCase):
         modes = [q["args"].split(" ")[2] for q in fc.state["launches"]]
         self.assertEqual(modes, ["providers", "jdownloader"])
         self.assertTrue(all(q["path"] == JD + "java-worker.elf" and q["daemon"] == "1" for q in fc.state["launches"]))
-        # engine is a receipt-tracked app, without a card (no fixed port)
+        # engine: a card without a port (item 15); Bloom Core takes its live port from runtime/jdownloader.json
         self.assertTrue(fc.exists(config.RECEIPTS_DIR + "jdownloader.json"))
-        self.assertFalse(fc.exists(config.CARDS_DIR + "jdownloader.json"))
+        raw = fc.read(config.CARDS_DIR + "jdownloader.json")
+        card = json.loads(raw)
+        self.assertNotIn("port", card)
+        self.assertIsNone(card["health"], "the bridge isn't HTTP: Bloom Core checks its runtime pid instead")
+        self.assertEqual(card["launch"]["started_by"], "downloads")
+        rec = json.loads(fc.read(config.RECEIPTS_DIR + "jdownloader.json"))
+        self.assertEqual(rec["card_sha256"], sha(raw))
+        self.assertNotIn("port", rec)
+        apps, invalid = fc.hub_scan()
+        eng = next(a for a in apps if a["id"] == "jdownloader")
+        self.assertEqual((eng["verified"], eng["port"], eng["port_from"], eng["runtime_note"]), (True, None, "runtime", "no runtime file"))
+        fc.write("/data/hub/runtime/jdownloader.json", json.dumps({"id": "jdownloader", "pid": os.getpid(), "port": 18950, "host": "127.0.0.1"}))
+        eng = next(a for a in fc.hub_scan()[0] if a["id"] == "jdownloader")
+        self.assertNotIn("runtime_note", eng)
         self.assertTrue(any("switched on" in l for l in self.log), self.log)
         self.assertEqual(result["acceptance"]["runs"]["providers"]["native_pid"], 4242)
         # Running it again is quick and keeps things on

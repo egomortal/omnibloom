@@ -233,6 +233,9 @@ class FakeConsole:
             self._runtime(app)
             apps.append(app)
         apps.sort(key=lambda a: a["id"])
+        for a in apps:
+            if a["dyn"]:
+                a["runtime_note"] = self._runtime_note(a, apps)
         for i, a in enumerate(apps):
             for b in apps[:i]:
                 if a["port"] and b["port"] == a["port"]:
@@ -272,6 +275,7 @@ class FakeConsole:
     def _runtime(self, a):
         path = self.path("/data/hub/runtime/%s.json" % a["id"])
         a["runtime"] = None
+        a["nonlocal"] = False
         if os.path.isfile(path) and os.path.getsize(path) <= 4 * 1024:
             try:
                 r = json.load(open(path))
@@ -279,6 +283,33 @@ class FakeConsole:
                 return
             if isinstance(r, dict) and ("id" not in r or r.get("id") == a["id"]):
                 a["runtime"] = {k: r[k] for k in ("pid", "port", "started_at") if type(r.get(k)) in (int, float) and r[k] > 0}
+                a["nonlocal"] = "host" in r and r["host"] not in ("127.0.0.1", "localhost")
+
+    @staticmethod
+    def _runtime_note(a, apps):
+        """hub.c (item 15): why a started_by app without a card port has no usable live port, or "" if it has one.
+        (This stub never probes, so its apps stay "up": false; live_port stays null like hub.c before a health pass.)"""
+        rt = a.get("runtime")
+        if rt is None:
+            return "no runtime file"
+        pid, port = rt.get("pid"), rt.get("port") or 0
+        if not pid:
+            return "runtime file has no pid"
+        try:
+            os.kill(int(pid), 0)
+        except PermissionError:
+            pass
+        except (OSError, OverflowError, ValueError):
+            return "runtime pid is not running (stale)"
+        if a.get("nonlocal"):
+            return "runtime host is not loopback"
+        if port < 1024:
+            return "runtime port missing or below 1024"
+        if port in (8760, 9021, 2121):
+            return "runtime port is reserved"
+        if any(b["port"] and b["port"] == port for b in apps):
+            return "runtime port belongs to another app"
+        return ""
 
     def write_status(self):
         """/data/hub/status.json, as hub_write_status writes it."""
@@ -286,7 +317,10 @@ class FakeConsole:
         self._hub_seq += 1
         body = {"name": "Bloom Core", "id": "hub", "version": "stub", "hub_api": 1, "pid": os.getpid(), "port": 8760,
                 "written_at": int(__import__("time").time()),
-                "apps": [{"id": a["id"], "version": a["version"], "port": a["port"], "verified": a["verified"],
+                "apps": [{"id": a["id"], "version": a["version"], "port": a["port"],
+                          **({"live_port": None} if a.get("port_from") else {}),
+                          **({"runtime_note": a["runtime_note"]} if a.get("runtime_note") else {}),
+                          "verified": a["verified"],
                           "status": a["status"], **({"why": a["why"]} if a.get("why") else {}), "up": False, "checked": False}
                          for a in apps],
                 "invalid": invalid, "seq": self._hub_seq}
@@ -486,20 +520,22 @@ def _card_check(c, stem):
     if kind not in ("title", "payload", "service"):
         return None, "kind must be title, payload or service"
     title = kind == "title"
+    lsb = c.get("launch").get("started_by") if isinstance(c.get("launch"), dict) else None
+    on_demand = isinstance(lsb, str)   # item 15: checked properly below
     port = 0
     if "port" in c and c["port"] is not None:
         if not _int_in(c["port"], 1024, 65535):
             return None, "port missing or outside 1024-65535"
         port = c["port"]
-    elif not title:
+    elif not title and not on_demand:
         return None, "port missing or outside 1024-65535"
     if port in (8760, 9021, 2121):
         return None, "port is reserved (8760, 9021, 2121)"
     if "health" in c:
         h = c["health"]
-        if not (title and h is None) and not _valid_path(h, 128):
+        if not ((title or on_demand) and h is None) and not _valid_path(h, 128):
             return None, "health must be a path like /api/health"
-    health = c.get("health") if isinstance(c.get("health"), str) else ("" if title else "/api/health")
+    health = c.get("health") if isinstance(c.get("health"), str) else ("" if title or ("health" in c and c["health"] is None) else "/api/health")
     launch = c.get("launch")
     autoload = started_by = ""
     if "launch" in c:
@@ -531,7 +567,8 @@ def _card_check(c, stem):
     if "icon" in c and not (isinstance(c["icon"], str) and len(c["icon"]) < 256):
         return None, "icon invalid"
     return {"id": cid, "name": c["name"], "version": c["version"], "kind": kind, "title_id": c.get("title_id", ""),
-            "port": port, "health": health, "autoload": autoload, "started_by": started_by}, None
+            "port": port, "health": health, "autoload": autoload, "started_by": started_by,
+            "dyn": not port and not title}, None
 
 
 def _emit(a):
@@ -549,6 +586,11 @@ def _emit(a):
         out["started_by"] = a["started_by"]
     if a.get("runtime") is not None:
         out["runtime"] = a["runtime"]
+    if a["dyn"]:
+        out["port_from"] = "runtime"
+        out["live_port"] = None
+        if a.get("runtime_note"):
+            out["runtime_note"] = a["runtime_note"]
     out.update(verified=a["verified"], status=a["status"])
     if a.get("why"):
         out["why"] = a["why"]

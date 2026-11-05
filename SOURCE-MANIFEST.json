@@ -618,8 +618,8 @@
     },
     {
       "path": "docs/BUILD.md",
-      "bytes": 4241,
-      "sha256": "6eeb896ab4c356ee0abc24cec67bf8c94c6e39a05eba3d96a1bf726bbc10d4f4"
+      "bytes": 5107,
+      "sha256": "31cdc337d80cd9724c85d474667c3f26d67ea894915bdd83ff4b0a6903993b84"
     },
     {
       "path": "docs/site/art/abyss.webp",
@@ -6323,28 +6323,28 @@
     },
     {
       "path": "setup/omnibloom_setup/cli.py",
-      "bytes": 5494,
-      "sha256": "d2490ac0af1f3e85699742f98ddf12f08d9403c0087193cb4b29339e550e6621"
+      "bytes": 5673,
+      "sha256": "7d845e91b22a7720a92e9a21a42e6e152cf97c2a00cafca94fdfc28bf24e7d02"
     },
     {
       "path": "setup/omnibloom_setup/config.py",
-      "bytes": 7399,
-      "sha256": "463fef58e50f815013277b07fecf9ad1a22aa852bc219474277f810861f64c4a"
+      "bytes": 7955,
+      "sha256": "e6570acc7b0163aef4ad859c9455e138aaff51175ffcf065f2af1bbbbf45a3e5"
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
-      "bytes": 31196,
-      "sha256": "f337ea0ad8e15b2dc3d46021a4c1fc64bf3e576b6c546514681750fbdb3959eb"
+      "bytes": 31379,
+      "sha256": "c5ccb92ac7cfcb20a9fe52f2875bd907de29a2c12205ea80241e92f6efa881cc"
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
-      "bytes": 23002,
-      "sha256": "b49deb4cf3520f8183ef99134872c30ca258f295a00cad2f03d05e4c8a05f9b0"
+      "bytes": 28466,
+      "sha256": "2eebaec2e1f81ef98f8adb32ce14ba4a9bd10dd8114e183d900c0716d35f02db"
     },
     {
       "path": "setup/omnibloom_setup/jd.py",
-      "bytes": 26674,
-      "sha256": "42e72086c11906c8468cf632721d05e69a63e158488e25aa44724c96b9341c6d"
+      "bytes": 26839,
+      "sha256": "5b80f42cde4c694fb19debe3aad55632243bea79179a167dc598b5dbe7fb2918"
     },
     {
       "path": "setup/omnibloom_setup/ports.py",
@@ -6358,8 +6358,8 @@
     },
     {
       "path": "setup/omnibloom_setup/release.py",
-      "bytes": 14689,
-      "sha256": "f98edf59875bde8c8b5e49b77dcf3c48c5cd3c63fd0c2aa85294fd21d454f3df"
+      "bytes": 17534,
+      "sha256": "2513c6189dc9a2c54312d14489868c2a22ef02c483d02984d15a476e9a0b4f75"
     },
     {
       "path": "setup/run_setup.py",
@@ -6373,8 +6373,8 @@
     },
     {
       "path": "tools/build_release.py",
-      "bytes": 6119,
-      "sha256": "912af980b5b7d676028039e40d78267f67d25e0371ffb9965c21fd5a6cf44055"
+      "bytes": 9248,
+      "sha256": "dbefdb847f6f47e0eed462da49abb05f769b92878b304d02d0345fcde848679b"
     }
   ]
 }

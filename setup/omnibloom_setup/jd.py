@@ -502,6 +502,8 @@ def switch_on(console, catalog, jd_manifest_sha, acceptance, stamp, log=print):
 
 def setup_jdownloader(console, catalog, folder, log=print, progress=None, sleep=time.sleep, clock=time.monotonic):
     """The whole JDownloader 2 step. On any failure JDownloader 2 is left switched off (yt-dlp keeps working)."""
+    if not config.jd_enabled():          # audit JD-03: no reviewed destination policy for JD's own connections yet
+        raise CheckFailed(config.JD_HELD_REASON)
     if not engine_ready(catalog):
         raise ValueError("The JDownloader 2 engine package isn't loaded.")
     collect(folder)                      # fail early on a bad folder, before touching the PS5

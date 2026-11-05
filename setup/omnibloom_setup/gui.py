@@ -412,7 +412,10 @@ class SetupApp:
         link.bind("<Button-1>", lambda e: webbrowser.open(config.JD_OFFICIAL_URL))
         p = self.panel(self.body)
         p.pack(fill="x", pady=(14, 0))
-        if wants_downloads:
+        if not config.jd_enabled():      # audit JD-03
+            self.jd_copy.set(False)
+            self.label(p, config.JD_HELD_REASON, "small", bg=C["panel"]).pack(anchor="w")
+        elif wants_downloads:
             ttk.Checkbutton(p, text="Set up JDownloader 2 on the PS5", variable=self.jd_copy, style="Panel.TCheckbutton").pack(anchor="w")
             self.label(p, "Setup copies your JDownloader 2, adds the PS5 engine (about 70 MB, downloaded once), and runs a short "
                           "check on the PS5 before switching it on. The check can take a few minutes.", "small",

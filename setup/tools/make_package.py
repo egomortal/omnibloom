@@ -52,7 +52,8 @@ APPS = {
         "card": {"name": "Omni Downloads", "kind": "service",
                  "launch": {"elf": "/data/omni-downloader/python-worker.elf", "autoload": "never"},
                  "health": "/api/health", "pages": {"main": "/"}, "provides": ["download.url"],
-                 "consumes": ["theme", "files.pick"], "public_pages": ["/", "/assets/"]},
+                 "consumes": ["theme", "files.pick"], "public_pages": ["/", "/downloads", "/assets/"],
+                 "page_apis": ["/api/"]},   # s2: Omni's port block lets only the downloads page itself call /api/
     },
     "files-broker": {
         "package": "omnibloom", "name": "USB Files", "autoload": "never",
@@ -69,17 +70,21 @@ APPS = {
         "package": "omnibloom-jd-engine", "name": "JDownloader 2 engine", "autoload": "never",
         "roots": [config.JD_CONSOLE_ROOT + "java-worker.elf", config.JD_CONSOLE_ROOT + "native/",
                   config.JD_CONSOLE_ROOT + "runtime/classes/", config.JD_CONSOLE_ROOT + "notices/"],
-        "port": None,   # the bridge binds a loopback port per session; it reports it in its own ready file
+        # Item 15: no card port. The bridge binds a loopback port per session; Bloom Core takes the live port from
+        # /data/hub/runtime/jdownloader.json. health null: the bridge speaks its own session protocol, not HTTP, so
+        # Bloom Core checks the runtime pid instead and never routes intents to it.
+        "port": None,
         "card": {"name": "JDownloader 2 engine", "kind": "service",
                  "launch": {"elf": config.JD_CONSOLE_ROOT + "java-worker.elf", "autoload": "never", "started_by": "downloads"},
                  "health": None, "pages": {}, "provides": ["download.engine.jdownloader"], "consumes": [], "public_pages": []},
     },
     "master-control": {
         "package": "master-control", "name": "Master Control", "autoload": "optional",
-        "roots": [PKG_PAYLOADS + "MasterControl/", ICONS + "master-control/"],
+        # Standard v1.1 item 7: the payload ELF and its icon live together in /data/pldmgr/payloads/<id>/.
+        "roots": [PKG_PAYLOADS + "master-control/"],
         "port": {"preferred": 8766, "movable": True},
         "card": {"name": "Master Control", "kind": "payload",
-                 "launch": {"elf": PKG_PAYLOADS + "MasterControl/master-control.elf", "autoload": "optional"},
+                 "launch": {"elf": PKG_PAYLOADS + "master-control/master-control.elf", "autoload": "optional"},
                  "health": "/api/health", "pages": {"main": "/", "overlay": "/overlay"},
                  # Exactly what Master Control 0.4.3 answers on POST /hub/intent; it serves no
                  # /fonts/ or /assets/ (fonts are embedded); its own page calls /api/*.

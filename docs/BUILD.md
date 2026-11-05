@@ -35,6 +35,16 @@ The destination must be new and outside the source tree. The driver verifies the
 
 The handoff tests process ordering and failures with mocks; it does not claim a new PyInstaller build or platform runtime result. Use separately recorded Setup reviews before distribution.
 
+## Release checksums and manifest
+
+After the release assets are built (console packages, Setup executables, source ZIP), put them in one new folder outside the source tree and run:
+
+```sh
+python tools/build_release.py --release-assets ../release-assets --tag v1.2.3 --commit <40-hex commit>
+```
+
+The driver verifies the source first, then writes `<asset>.sha256` for each asset (an existing one must agree), `SHA256SUMS` and `RELEASE-MANIFEST.json` (tag, source commit, SOURCE-MANIFEST.json hash, and every asset's name, size and SHA-256). It never overwrites. Upload all of them with the release: Setup refuses a downloaded package unless the manifest, its `.sha256` file and the download agree, and refuses a package placed next to Setup without a matching `.sha256` file. These are integrity and provenance checks on the same channel, not a publisher signature.
+
 ## Pages and docs
 
 `omni/pages/bundle-r46/` and `docs/site/` are buildless HTML/CSS/JavaScript. A desktop server does not provide omnibloomHost; fixture behavior is not native acceptance. Do not run provider/install flows merely to inspect a layout. New Universe art, pending Sleeve code and Arrange localization are not silently merged here. Preserve action IDs, protocol values, user text and controller focus.

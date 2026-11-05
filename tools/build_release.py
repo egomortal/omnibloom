@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Validate PC/UI source, archive source, or package Setup for the host OS.
+"""Validate PC/UI source, archive source, package Setup for the host OS, or write release provenance.
 No engine build, fetch, installation or console contact. GPL-3.0-or-later.
 """
-import argparse, ast, hashlib, json, subprocess, sys, zipfile, os, tempfile
+import argparse, ast, hashlib, json, re, subprocess, sys, zipfile, os, tempfile
 from pathlib import Path, PurePosixPath
 MANIFEST = 'SOURCE-MANIFEST.json'
+RELEASE_MANIFEST = 'RELEASE-MANIFEST.json'   # read by Setup before it installs a package (audit RL-01)
+SUMS = 'SHA256SUMS'
+ASSET_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._+-]{0,199}\Z')
 def sha(data): return hashlib.sha256(data).hexdigest()
 def source_files(root):
     return sorted(p for p in root.rglob('*') if p.is_file() and not {'.git', '__pycache__'}.intersection(p.relative_to(root).parts) and p.relative_to(root).as_posix() != MANIFEST)
@@ -57,6 +60,38 @@ def source_zip(root, out, manifest):
         return {'sha256':digest, 'members':len(paths), 'kind':'source-only', 'releaseApproved':False}
     finally:
         temporary.unlink(missing_ok=True)
+def release_assets(root, folder, tag, commit=None):
+    """Write <asset>.sha256, SHA256SUMS and RELEASE-MANIFEST.json for the finished assets in `folder`,
+    tied to this verified source tree. Nothing existing is overwritten (audit RL-01)."""
+    manifest = verify(root)
+    folder = Path(folder).resolve()
+    if not folder.is_dir() or folder.is_symlink(): raise ValueError('Release asset folder not found')
+    if not re.fullmatch(r'v?[0-9][0-9A-Za-z.+-]{0,63}', tag or ''): raise ValueError('Bad release tag')
+    if commit is not None and not re.fullmatch(r'[0-9a-f]{40}', commit): raise ValueError('Bad commit id')
+    for name in (RELEASE_MANIFEST, SUMS):
+        if (folder/name).exists(): raise ValueError(name+' already exists; use a fresh asset folder')
+    rows = []
+    for item in sorted(folder.iterdir()):
+        if item.name.endswith('.sha256'): continue
+        if item.is_symlink() or not item.is_file() or not ASSET_NAME.fullmatch(item.name): raise ValueError('Unsafe release asset: '+item.name)
+        raw = item.read_bytes()
+        rows.append({'name':item.name,'bytes':len(raw),'sha256':sha(raw)})
+    if not rows: raise ValueError('No release assets')
+    for row in rows:   # an existing checksum file must agree; a missing one is written
+        side = folder/(row['name']+'.sha256'); line = '%s  %s\n' % (row['sha256'], row['name'])
+        if side.exists():
+            if side.is_symlink() or side.read_text(encoding='ascii').split() != line.split(): raise ValueError('Checksum file disagrees: '+side.name)
+        else:
+            with open(side, 'x', encoding='ascii', newline='\n') as f: f.write(line)
+    source_sha = sha((root/MANIFEST).read_bytes())
+    release = {'schema':'omnibloom-release-manifest/v1','tag':tag,
+               'source':{'commit':commit,'sourceManifestSha256':source_sha,'sourceFiles':len(manifest['files'])},
+               'assets':rows,'releaseApproved':False}
+    with open(folder/SUMS, 'x', encoding='ascii', newline='\n') as f:
+        f.writelines('%s  %s\n' % (r['sha256'], r['name']) for r in rows)
+    with open(folder/RELEASE_MANIFEST, 'x', encoding='utf-8', newline='\n') as f:
+        f.write(json.dumps(release, indent=2)+'\n')
+    return {'releaseManifest':str(folder/RELEASE_MANIFEST),'assets':len(rows),'sourceManifestSha256':source_sha}
 def setup_plan(root, out):
     for rel in ('run_setup.py','omnibloom-setup.spec','assets/omnibloom-256.png','assets/omnibloom.ico'):
         if not (root/'setup'/rel).is_file(): raise ValueError('Missing Setup input: '+rel)
@@ -67,11 +102,17 @@ def main(argv=None):
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--source-zip',type=Path)
     group.add_argument('--setup',type=Path,help='Package Setup into a fresh external directory using already-installed PyInstaller')
+    group.add_argument('--release-assets',type=Path,help='Write checksums and RELEASE-MANIFEST.json for the finished assets in this folder')
+    parser.add_argument('--tag',help='Release tag, with --release-assets')
+    parser.add_argument('--commit',help='Source commit (40 hex), with --release-assets')
     args = parser.parse_args(argv)
     try:
         root=args.root.resolve(); manifest=verify(root)
         result={'checkedFiles':len(manifest['files']),'sourceVerified':True,'releaseApproved':False}
-        if args.source_zip:
+        if args.release_assets:
+            if root == args.release_assets.resolve() or args.release_assets.resolve().is_relative_to(root): raise ValueError('Asset folder must be outside source tree')
+            result.update(release_assets(root,args.release_assets,args.tag,args.commit))
+        elif args.source_zip:
             out=output_path(root,args.source_zip)
             if not out.parent.is_dir(): raise ValueError('Create output parent directory first')
             result.update(source_zip(root,out,manifest))
