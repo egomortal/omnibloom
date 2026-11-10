@@ -18,8 +18,8 @@ console; "built" means it passes its PC tests and is waiting for its console tes
   alternate rows; the graphics chip now matches it exactly (`OMNI_GPU_VERIFY10_V1`, thresholds unchanged). A real
   HDR10 video then played 4.5 minutes at 59.93 fps median, 0.2% dropped, with the HDR layer made on the graphics chip.
 - Checked on a TV: normal pages and video in HDR mode look normal; real HDR10 video looks like HDR.
-- **Built:** sending 10-bit HDR frames to the screen cost 17 ms of processor time at 4K (thousands of one-row
-  copies, twice per frame). One graphics-chip pass now does it (`OMNI_HDR_PRESENT10_V1`); console test pending.
+- **Fixed (proven on the console):** sending 10-bit HDR frames to the screen cost 17 ms of processor time at 4K (thousands of one-row
+  copies, twice per frame). One graphics-chip pass now does it (`OMNI_HDR_PRESENT10_V1`): 0.17 ms per frame on the console.
 - Still to test: the TV switching into and out of HDR when a video enters and leaves fullscreen (Auto).
 
 ### Smoother pages (built, console A/B running)
@@ -34,6 +34,11 @@ console; "built" means it passes its PC tests and is waiting for its console tes
 - **Found in testing:** the new JavaScript bytecode cache made YouTube videos start 1-3 minutes late. It rewrote
   YouTube's 30 MB player code to disk on the main thread again and again (2.1 GB in 5 minutes) and never got a hit.
   It is off for launch; every other network fix tested clean.
+- **Found in testing:** a header-buffering fix for HTTP/2 (`OMNI_NET_HDRBUF_V1`) stopped YouTube's player from starting
+  when built with the HTTP/2-capable network library. It is off by default (HTTP/2 itself stays off for launch).
+- **Launch candidate on the console:** YouTube starts in 13.7 s; HDR10 on the graphics chip at 59.94 fps with no
+  dropped frames; 4K60 at 59.94 fps (0.15% dropped); no crashes on the reddit test loop; the port-block security test
+  passes 65/65; no false low-memory events during 4K HDR.
 - **Memory:** Omni's page process now measures its own memory use, so WebKit's low-memory cleanup can run
   (`OMNI_MEMPRESSURE_V1`, with an off switch). Before, it always reported zero.
 - HTTP/2 stays off for launch, behind a switch. The cause is understood (a paused response froze its stream) and
@@ -48,7 +53,8 @@ console; "built" means it passes its PC tests and is waiting for its console tes
 ### Experimental: drawing pages with the graphics chip (not in the launch build)
 - Test app results on the console: the GL-on-Vulkan driver (Zink) runs on the PS5's graphics chip inside a
   PS5 app, and Omni's page process can borrow the graphics chip through the main app, run real GPU work and get a
-  working OpenGL ES 3.2 context. The next step (drawing) needs bigger thread stacks; that fix is being built.
+  working OpenGL ES 3.2 context, and draw through it (all 8 drawing tests pass on the console). Compositing layers
+  and threaded scrolling are built on top of the launch build, off by default, and waiting for their console test.
 - This is the foundation for compositing layers and scrolling that doesn't wait for a page's JavaScript.
 
 ### Downloads
