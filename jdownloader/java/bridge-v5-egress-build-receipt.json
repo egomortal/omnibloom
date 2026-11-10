@@ -1,0 +1,107 @@
+{
+ "schema": "omni-jd-bridge-v5-build/v1",
+ "passed": true,
+ "policy": "omni-public-only-v1",
+ "audit": "JD-03",
+ "baseline_receipt": "bridge-v4-build-receipt.json",
+ "baseline_source_sha256": "80b648b7602b83d47cb29f0a9ff22356c07afacc3c0eaeb54ad15609cf0a7886",
+ "changes": [
+  "egress policy omni-public-only-v1: guard proxy, JD proxy list, AppWork socket factory, JVM socket impl factory, JVM resolver provider",
+  "health reports egress_policy and an egress object only while every layer holds; JD is not started if a layer can't be installed",
+  "submit refuses literal private/numeric hosts and refuses while the policy is inactive"
+ ],
+ "sources": {
+  "META-INF/services/java.net.spi.InetAddressResolverProvider": "df55644e19804aae60e79c68554e980dd53de4c6a64639d54dba96efcce70742",
+  "OmniEgressPolicy.java": "2358966221e4e8d29e7b5389a32375197c72346d40c9f37e92edfe2d41d431f7",
+  "OmniJDownloaderBridge.java": "3e206b03776f1a75b7f70f264b5ed34621c94013a35f498987cd4dc0d8023bf1",
+  "OmniPublicAddress.java": "e2b5aee418714757171a6aa7c04a2093e2679db06dc4e0a51e53baf2ae322bef",
+  "OmniPublicResolverProvider.java": "82e418bb83a596f980efdecc7dafe01ef3825005d3451cf4bab0e412f738906f",
+  "upstream-adapted/org/jdownloader/api/myjdownloader/MyJDownloaderController.java": "3b6fe209940249f7aaca347db38cb7e943190625ffabf278f97f65e29dc825c2"
+ },
+ "tests": {
+  "EgressPolicyTests.java": "797fff690ccf218d5cc747534e0b8261b8b3875f6c0885d338e664fc55c7096e",
+  "run_egress_tests.py": "8050832cc114696f1551dfd46041cfbcaede83e15e5c07152e1561272ee821e5",
+  "bridge_e2e.py": "440c9e72e13ca88db47af91362c0810bd1cd81c711aa4384352ecc0da0a1dcd7"
+ },
+ "compiler": "java version \"21.0.11\" 2026-04-21 LTS",
+ "compiler_sha256": "70fccdaef6071181e39a42170d876be01fbe2f4a701c2c5f19608276532884c4",
+ "bytecode_release": 21,
+ "classes": {
+  "META-INF/services/java.net.spi.InetAddressResolverProvider": "df55644e19804aae60e79c68554e980dd53de4c6a64639d54dba96efcce70742",
+  "OmniEgressPolicy$CheckedSocketImpl.class": "3040ce23ec089dba6f06a9307c9292663ec81d77a9e0460b349476c2a5b241ad",
+  "OmniEgressPolicy$GuardedSocket.class": "2729cbff21cd98baad45f0e4fdc6e62b55b8184653e2e147894c5c98960fa194",
+  "OmniEgressPolicy$JdProxies.class": "6804668989143c67181e5f8da3086fb196be133974cc820cd4fc66d6d248184f",
+  "OmniEgressPolicy$JdSockets.class": "bce20569fb18e933c1bb24fe03f176f203ef296fa59199d877ef5f3123a8b639",
+  "OmniEgressPolicy$Refused.class": "13343b0426f88152758f823191e1b98b472639af4c5cf3125bea1ff251cc8c5c",
+  "OmniEgressPolicy$Selector.class": "3c62532ea8abed002fb17b50f8bef9105eea3a1517da642f09621327ba066622",
+  "OmniEgressPolicy.class": "5c9b9b2b6d90924c43a6e1805f46d18df925409ffe23afd34619a9e01619dc0b",
+  "OmniJDownloaderBridge$1$1.class": "59fde905ec1ecdb8e7d39241333a326febf21a074bb4f40c64a1c1ff786867a0",
+  "OmniJDownloaderBridge$1.class": "6b0a9a5e705973a2a9816ed1c3ba074a373ca287a4e2aa1b1ae59a18d62eff9a",
+  "OmniJDownloaderBridge$Job.class": "d44d232824213e4ede352428e8d229b316ff84827d29365ee7decb5270f202a8",
+  "OmniJDownloaderBridge.class": "db4b24ca1addf63b3d91eba265cdbf714bbdd09d408af2069c5833ff71f929cc",
+  "OmniPublicAddress.class": "a0a1f12acee42a7fd0443f68718893133e57f5c0ae2b63224dbe626b1e7fcdf1",
+  "OmniPublicResolverProvider$Filter.class": "938ab77aefa2ac543dd0ea5743526b3d3df85a9753c83b999237ea0912608fbe",
+  "OmniPublicResolverProvider.class": "8e67ee7e292b23ecfc9518e01bd87544246c3beb074ef18379495db5c720a60d",
+  "org/jdownloader/api/myjdownloader/MyJDownloaderController$1.class": "0a6bacbb29f1c336672c588198ac0f5d5836edc077228246990a82301a005822",
+  "org/jdownloader/api/myjdownloader/MyJDownloaderController$2.class": "02c2bddc0cdf603fb11d42dc5066b0de5a490aa22523dee31ed8f4fb93ef053c",
+  "org/jdownloader/api/myjdownloader/MyJDownloaderController$3.class": "32ca47c60432e54aa98a5a43636031aeadb9dd5ee56e33c4d6f567bb21127045",
+  "org/jdownloader/api/myjdownloader/MyJDownloaderController$4.class": "c456fe4de4b50e6a8e7bf54f2662bbab4f05da9afa6803f191e6660f8145429e",
+  "org/jdownloader/api/myjdownloader/MyJDownloaderController.class": "f0e10df00aa3db520667e45946688d39926a25afe434306ab5474c14d88df3f7"
+ },
+ "compiled_against": {
+  "jd_revision": 50639,
+  "note": "the user's own JDownloader 2 jars, read only, never shipped"
+ },
+ "pc_tests": {
+  "online": {
+   "passed": 6,
+   "failed": []
+  },
+  "prod": {
+   "passed": 65,
+   "failed": []
+  },
+  "redirect": {
+   "passed": 7,
+   "failed": []
+  },
+  "unit": {
+   "passed": 79,
+   "failed": []
+  }
+ },
+ "pc_end_to_end": {
+  "passed": true,
+  "checks": 18,
+  "failed": [],
+  "jd_build": {
+   "AppWorkUtilsRevision": 4055,
+   "JDBrowserRevision": 52119,
+   "JDClosedRevision": 1076,
+   "JDownloaderRevision": 50639,
+   "JDownloaderServerOptionsRevision": 6670,
+   "JDownloaderUpdaterRevision": 5770,
+   "MyJDownloaderClientRevision": 49320,
+   "UpdateClientV2Revision": 1061,
+   "buildDate": "Wed Oct 28 14:51:14 CET 2026",
+   "buildTimestamp": 1793195474114
+  },
+  "bridge_listening_seconds": 1.2,
+  "jd_ready_seconds_pc_jit": 2.8,
+  "public_download": {
+   "state": "completed",
+   "bytes": 8008,
+   "sha256": "b6869c8984701701bc2e6973b6ffc750d497f845cc1a65a106e9301590a13ab0",
+   "seconds": 9.1
+  },
+  "egress_counters": {
+   "allowed": 22,
+   "refused": 36,
+   "refused_direct": 3,
+   "console_subnets": 16
+  }
+ },
+ "make_package_check": "scratch build with these classes declares jdownloader_engine.egress_policy = omni-public-only-v1",
+ "target_tested": false,
+ "console_contacted": false
+}

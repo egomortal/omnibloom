@@ -82,7 +82,13 @@ JD = config.JD_CONSOLE_ROOT
 OVERRIDE = JD + "runtime/classes/org/jdownloader/api/myjdownloader/MyJDownloaderController.class"
 
 
-def make_engine_package(tmp, version="0.5.0", ready=True, extra=None):
+EGRESS_FILES = {JD + "runtime/classes/OmniEgressPolicy.class": b"\xca\xfe\xba\xbe egress",
+                JD + "runtime/classes/OmniPublicAddress.class": b"\xca\xfe\xba\xbe omni-public-only-v1",
+                JD + "runtime/classes/OmniPublicResolverProvider.class": b"\xca\xfe\xba\xbe resolver",
+                JD + "runtime/classes/META-INF/services/java.net.spi.InetAddressResolverProvider": b"OmniPublicResolverProvider\n"}
+
+
+def make_engine_package(tmp, version="0.5.0", ready=True, extra=None, egress=True):
     """The JDownloader 2 engine release asset: java-worker.elf, the Java image, our bridge classes, notices."""
     image_files = {"java25/lib/modules": b"\xda\xda\xfe\xca modules " + version.encode(), "java25/release": b'JAVA_VERSION="25.0.4"',
                    "java25/lib/server/libjvm.so": b"\x7fELF jvm", "java25/conf/security/java.security": b"# security",
@@ -91,11 +97,13 @@ def make_engine_package(tmp, version="0.5.0", ready=True, extra=None):
                 "files": [{"path": k, "bytes": len(v), "sha256": sha(v)} for k, v in sorted(image_files.items())]}
     files = {JD + "java-worker.elf": b"\x7fELF java-worker " + version.encode(),
              JD + "native/image-manifest.json": json.dumps(manifest, indent=2).encode(),
-             BRIDGE: b"\xca\xfe\xba\xbe bridge " + version.encode(),
+             BRIDGE: b"\xca\xfe\xba\xbe bridge " + (b"OmniEgressPolicy " if egress else b"") + version.encode(),
              JD + "runtime/classes/OmniJDownloaderBridge$Job.class": b"\xca\xfe\xba\xbe job",
              OVERRIDE: b"\xca\xfe\xba\xbe override",
              JD + "notices/openjdk/LICENSE": b"GPLv2 + CPE", JD + "notices/ps5-java25-homebrew/THIRD_PARTY_NOTICES.md": b"# notices"}
     files.update({JD + "native/" + k: v for k, v in image_files.items()})
+    if egress:
+        files.update(EGRESS_FILES)
     files.update(extra or {})
     stage = os.path.join(tmp, "stage-engine-%s" % version)
     _write_tree(stage, files)
@@ -681,15 +689,47 @@ class JDownloader(unittest.TestCase):
         with connect(self.fc) as c:
             return jd.setup_jdownloader(c, self.cat, self.jdroot, log=self.log.append, sleep=lambda s: __import__("time").sleep(0.05))
 
-    def test_held_back_by_default(self):
-        """Audit JD-03: without the developer switch, the step refuses before touching the PS5."""
+    def test_held_back_by_switch(self):
+        """Audit JD-03: OMNIBLOOM_ENABLE_JD=0 refuses before touching the PS5."""
         self.load_engine()
-        os.environ.pop("OMNIBLOOM_ENABLE_JD", None)
+        os.environ["OMNIBLOOM_ENABLE_JD"] = "0"
+        self.assertFalse(config.jd_enabled())
         with connect(self.fc) as c:
             with self.assertRaises(jd.CheckFailed) as ctx:
                 jd.setup_jdownloader(c, self.cat, self.jdroot, log=self.log.append)
         self.assertIn("held back", str(ctx.exception))
         self.assertFalse(self.fc.exists(config.JD_CONSOLE_ROOT + "java-worker.elf"))
+
+    def test_engine_without_egress_policy_is_refused(self):
+        """Audit JD-03: by default an engine that doesn't declare the egress policy is refused before the PS5 changes."""
+        os.environ.pop("OMNIBLOOM_ENABLE_JD", None)
+        old, _ = make_engine_package(os.path.join(self.tmp, "old"), version="0.4.9", egress=False)
+        self.cat.add(release.Package(old))
+        self.assertTrue(jd.engine_ready(self.cat))
+        self.assertNotIn("egress_policy", self.cat.jd_engine())
+        self.assertFalse(config.jd_enabled(self.cat.jd_engine()))
+        with connect(self.fc) as c:
+            with self.assertRaises(jd.CheckFailed) as ctx:
+                jd.setup_jdownloader(c, self.cat, self.jdroot, log=self.log.append)
+        self.assertIn("public addresses", str(ctx.exception))
+        self.assertFalse(self.fc.exists(config.JD_CONSOLE_ROOT + "java-worker.elf"))
+
+    def test_engine_with_egress_policy_switches_on_by_default(self):
+        """Audit JD-03: with an engine that declares omni-public-only-v1, no developer switch is needed."""
+        os.environ.pop("OMNIBLOOM_ENABLE_JD", None)
+        self.load_engine()
+        self.assertEqual(self.cat.jd_engine()["egress_policy"], "omni-public-only-v1")
+        self.assertTrue(config.jd_enabled())
+        self.assertTrue(config.jd_enabled(self.cat.jd_engine()))
+        result = self.run_setup()
+        self.assertTrue(self.fc.exists(config.JD_CONSOLE_ROOT + "native-install.json"))
+        self.assertIn("native_install", result)
+
+    def test_engine_package_refuses_a_partial_egress_policy(self):
+        partial = {JD + "runtime/classes/OmniEgressPolicy.class": b"\xca\xfe\xba\xbe egress"}
+        with self.assertRaises(subprocess.CalledProcessError) as ctx:
+            make_engine_package(os.path.join(self.tmp, "partial"), version="0.5.2", egress=False, extra=partial)
+        self.assertIn(b"only part of the egress policy", ctx.exception.stderr)
 
     def test_detect_summary_and_revision(self):
         s = jd.summary(self.jdroot)

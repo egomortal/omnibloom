@@ -96,6 +96,37 @@ APPS = {
 PREFIX = {s["package"]: s["prefix"] for s in config.SOURCES}
 
 
+# Audit JD-03: the bridge's egress policy (omni-public-only-v1) lives in these classes; the resolver provider is
+# registered through the service file. The manifest declares the policy only when all of them are in the package.
+EGRESS_CLASSES = ("runtime/classes/OmniEgressPolicy.class", "runtime/classes/OmniPublicAddress.class",
+                  "runtime/classes/OmniPublicResolverProvider.class")
+EGRESS_SERVICE = "runtime/classes/META-INF/services/java.net.spi.InetAddressResolverProvider"
+
+
+def egress_policy(rows, stage):
+    """The policy the packaged bridge enforces, or None for an engine without it. A partial set is an error."""
+    root = config.JD_CONSOLE_ROOT
+    by = {r["dest"]: r for r in rows}
+    parts = [root + p for p in EGRESS_CLASSES + (EGRESS_SERVICE,)]
+    present = [p for p in parts if p in by]
+    if not present:
+        return None
+    if len(present) != len(parts):
+        raise SystemExit("The engine package has only part of the egress policy: missing %s"
+                         % ", ".join(p for p in parts if p not in by))
+
+    def read(dest):
+        with open(os.path.join(stage, dest.lstrip("/")), "rb") as f:
+            return f.read()
+    if read(root + EGRESS_SERVICE).decode("utf-8").split() != ["OmniPublicResolverProvider"]:
+        raise SystemExit("The engine package's resolver service file doesn't name OmniPublicResolverProvider")
+    if config.JD_EGRESS_POLICY.encode() not in read(root + "runtime/classes/OmniPublicAddress.class"):
+        raise SystemExit("OmniPublicAddress.class doesn't carry policy %s" % config.JD_EGRESS_POLICY)
+    if b"OmniEgressPolicy" not in read(root + "runtime/classes/OmniJDownloaderBridge.class"):
+        raise SystemExit("OmniJDownloaderBridge.class doesn't use OmniEgressPolicy")
+    return config.JD_EGRESS_POLICY
+
+
 def engine_block(rows, stage):
     """Pins the console needs to approve the engine (native-install.json is written by Setup after its check)."""
     root = config.JD_CONSOLE_ROOT
@@ -107,12 +138,18 @@ def engine_block(rows, stage):
                  "runtime/classes/org/jdownloader/api/myjdownloader/MyJDownloaderController.class"):
         if root + need not in by:
             raise SystemExit("The engine package is missing " + need)
-    return {"ready": True, "elf": elf["dest"], "elf_sha256": elf["sha256"], "elf_bytes": elf["bytes"],
+    block = {"ready": True, "elf": elf["dest"], "elf_sha256": elf["sha256"], "elf_bytes": elf["bytes"],
             "image_manifest": image["dest"], "image_manifest_sha256": image["sha256"],
             "jd_tested_revision": config.JD_TESTED_REVISION,
             "java_port": {"repo": config.JAVA_PORT_REPO, "commit": config.JAVA_PORT_COMMIT, "url": config.JAVA_PORT_URL,
                           "source": config.JAVA_PORT_SOURCE_URL, "openjdk_source": config.OPENJDK_SOURCE_URL,
                           "licence": "OpenJDK parts: GPLv2 with the Classpath Exception (notices under notices/)"}}
+    policy = egress_policy(rows, stage)
+    if policy:
+        block["egress_policy"] = policy
+    else:
+        print("warning: this engine has no egress policy; Setup won't switch JDownloader 2 on with it", file=sys.stderr)
+    return block
 
 
 def main():

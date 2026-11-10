@@ -86,7 +86,7 @@ assert b'"approved": true' in fc.read(JD + "native-install.json")
 assert fc.read(EBOOT) == files[EBOOT]
 al = fc.read(config.AUTOLOAD_PATH).decode()
 assert "hub.elf" in al and "master-control.elf" in al, al
-assert sorted(fc.listdir(config.CARDS_DIR)) == ["downloads.json", "files-broker.json", "master-control.json", "omni.json"]
+assert sorted(fc.listdir(config.CARDS_DIR)) == ["downloads.json", "files-broker.json", "jdownloader.json", "master-control.json", "omni.json"]
 # Run again: Check → Installed apps → uninstall Master Control only.
 app.show(2)
 wait_for(lambda: str(app.next_btn["state"]) == "normal")
