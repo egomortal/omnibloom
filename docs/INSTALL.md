@@ -31,7 +31,7 @@ Setup then does every step for you, one at a time, ticking off a checklist and s
 | Downloads | Installs the downloads worker (port 8765). |
 | USB file access | Installs `omni-files.elf`. |
 | Master Control | Installs the controller app. It isn't added to the start list unless you ask (it takes PadBridge's or EeveeLution's place). |
-| JDownloader 2 | Looks for **your own** JDownloader 2 on this computer (Windows: `%LOCALAPPDATA%`, `%APPDATA%`, Program Files, your user folder; macOS: `/Applications/JDownloader2.app`; Linux and others: `~/jd2`, `/opt/jd2`), or the folder you name. If it isn't there, Setup asks first, then opens the official page <https://jdownloader.org/jdownloader2> and waits while you install it and open it once. It doesn't download JDownloader itself: the official installers are on mega.nz behind encrypted links, and the page lists a SHA-256 for each one that you can check. Once found, after the apps, Setup copies it to the PS5 with the JDownloader 2 engine and runs a check on the PS5 before switching it on. **In this release this last part is held back** (JDownloader 2's own connections don't go through Omnibloom's private-address check yet), so Setup only reports what it found. If this step fails, nothing else is undone and yt-dlp downloads keep working. Omnibloom never ships JDownloader 2. |
+| JDownloader 2 | Looks for **your own** JDownloader 2 on this computer (Windows: `%LOCALAPPDATA%`, `%APPDATA%`, Program Files, your user folder; macOS: `/Applications/JDownloader2.app`; Linux and others: `~/jd2`, `/opt/jd2`), or the folder you name. If it isn't there, Setup asks first, then opens the official page <https://jdownloader.org/jdownloader2> and waits while you install it and open it once. It doesn't download JDownloader itself: the official installers are on mega.nz behind encrypted links, and the page lists a SHA-256 for each one that you can check. Once found, after the apps, Setup copies it to the PS5 with the JDownloader 2 engine and runs a check on the PS5 before switching it on. **In this release JDownloader 2 on the PS5 is held back** (its own connections don't go through Omnibloom's private-address check yet): Setup only says whether it found your copy, and asks nothing and opens nothing. If this step fails, nothing else is undone and yt-dlp downloads keep working. Omnibloom never ships JDownloader 2. |
 | Settings | Sets Omni's HDR to **Auto** if you haven't chosen an HDR setting yet. A setting you chose is kept. |
 | Start and confirm | Starts Bloom Core (and Master Control) and asks Bloom Core to confirm every app. |
 
@@ -52,7 +52,8 @@ Omnibloom-Setup --cli oneclick --ip <ps5-address> # wait for that PS5
 Omnibloom-Setup --cli undo --ip <ps5-address>     # undo the last one-button install
 ```
 
-Options: `--wait-minutes 0` waits for the PS5 as long as it takes (default 30 minutes), `--no-master-control`,
+Setup waits for the PS5 as long as it takes (press Stop, or Ctrl+C on the command line, to stop waiting). Options:
+`--wait-minutes <n>` gives up after n minutes, `--no-master-control`,
 `--autoload-master-control`, `--no-start-master-control`, `--hdr keep`, `--jd-folder <folder>`, `--get-jdownloader`
 (open the JDownloader page without asking), `--no-jdownloader`. Undo covers the Omnibloom apps; JDownloader 2 on the
 PS5 is removed with Installed apps > Uninstall. The steps below are the same install done by hand.

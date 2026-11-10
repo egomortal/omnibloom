@@ -339,7 +339,8 @@ class JDownloader2(Base):
         self.assertTrue(result["ok"], self.texts())
         self.assertTrue(self.said("Found JDownloader 2 at %s" % self.jd_home))
         skip = [e for e in self.events if e.get("step") == "jdownloader" and e["state"] == "skip"]
-        self.assertTrue(skip and "held back" in skip[0]["text"], skip)
+        self.assertTrue(skip and "later update" in skip[0]["text"], skip)
+        self.assertTrue(self.said("held back"))
         self.assertEqual(asked, [], "nothing to fetch")
         self.assertFalse(fc.exists(JD + "native-install.json"))
 
@@ -350,7 +351,7 @@ class JDownloader2(Base):
         oc, result = self.one_click(zips, confirm=lambda q: asked.append(q) or True, open_page=opened.append)
         self.assertTrue(result["ok"], self.texts())
         self.assertEqual((asked, opened), ([], []))
-        self.assertTrue(self.said(config.JD_OFFICIAL_URL))
+        self.assertTrue(self.said("yt-dlp downloads are built in"))
 
     def test_missing_then_fetched_from_the_site_and_switched_on(self):
         os.environ["OMNIBLOOM_ENABLE_JD"] = "1"

@@ -227,7 +227,7 @@ class OneClick:
     checklist, or {"text"} for a line of narration (detail lines start with two spaces)."""
 
     def __init__(self, host=None, ftp_port=None, loader_port=None, websrv_port=None, catalog=None, catalog_loader=None,
-                 report=None, progress=None, cancel=None, wait_minutes=30, networks=None, master_control=True,
+                 report=None, progress=None, cancel=None, wait_minutes=0, networks=None, master_control=True,
                  start_master_control=True, autoload_master_control=False, hdr="auto-if-unset", sleep=time.sleep,
                  clock=time.time, record_dir=None, jdownloader=True, jd_folder=None, confirm=None, open_page=None,
                  launcher_port=None):
@@ -314,10 +314,10 @@ class OneClick:
                 self.detail(info["revision_note"])
         if held:
             self.jd_folder = None
-            self.step(JD_STEP, "skip", ("Found JDownloader 2 on this computer. " if folder else "") + config.JD_HELD_REASON +
-                      " Setup will copy it to the PS5 once a release turns it on.")
-            if not folder:
-                self.detail("When you want it: get JDownloader 2 from %s, install it and open it once." % config.JD_OFFICIAL_URL)
+            # Held back in this release (audit JD-03): one calm line, no questions, nothing to install.
+            self.step(JD_STEP, "skip", ("Found your JDownloader 2. " if folder else "") +
+                      "JDownloader 2 on the PS5 comes in a later update; yt-dlp downloads are built in and work now.")
+            self.detail(config.JD_HELD_REASON)
             return None
         if not folder:
             self.step(JD_STEP, "skip", "JDownloader 2: not set up (it isn't on this computer). yt-dlp downloads work without it.")

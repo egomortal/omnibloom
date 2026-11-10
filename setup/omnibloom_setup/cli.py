@@ -53,7 +53,7 @@ def main(argv=None):
     p.add_argument("--quick", action="store_true", help="skip the 18 s ShadowMountPlus activity check")
     p.add_argument("--jd-folder")
     p.add_argument("--network", action="append", help="subnet to scan, e.g. 192.168.0.0/24")
-    p.add_argument("--wait-minutes", type=float, default=30, help="oneclick: how long to wait for the PS5 (0 = until it answers)")
+    p.add_argument("--wait-minutes", type=float, default=0, help="oneclick: give up waiting for the PS5 after this many minutes (default 0: wait until it answers; Ctrl+C stops)")
     p.add_argument("--no-master-control", action="store_true", help="oneclick: leave Master Control out")
     p.add_argument("--no-start-master-control", action="store_true", help="oneclick: install Master Control but don't start it now")
     p.add_argument("--autoload-master-control", action="store_true",
