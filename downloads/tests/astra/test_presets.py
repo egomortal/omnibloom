@@ -26,7 +26,8 @@ class PresetTests(unittest.TestCase):
   from unittest.mock import patch
   module=ast.parse(((Path(__file__).resolve().parent.parent.parent/'worker')/'adapters.py').read_text(encoding='utf8'))
   node=next(n for n in module.body if isinstance(n,ast.ClassDef) and n.name=='PythonYtdlpAdapter')
-  env={'Path':Path,'preset_options':preset_options,'install_challenge_provider':lambda:None,'FFmpegAdapter':lambda:types.SimpleNamespace(executable=None)}
+  env={'Path':Path,'preset_options':preset_options,'install_challenge_provider':lambda:None,'FFmpegAdapter':lambda:types.SimpleNamespace(executable=None),
+       'guard_options':lambda o:o}  # downloader-8: the egress guard is tested in tests/test_download_egress.py
   exec(compile(ast.Module(body=[node],type_ignores=[]),'actual-adapter','exec'),env)
   with patch.dict(sys.modules,{'yt_dlp':types.ModuleType('yt_dlp')}):
    options=env['PythonYtdlpAdapter']().options(Path('.'),False,lambda _:None,preset='subtitles',subtitle_lang='de')

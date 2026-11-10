@@ -37,6 +37,49 @@ if DEPS.is_dir() and str(DEPS) not in sys.path:
     sys.path.insert(0, str(DEPS))
 
 
+# OMNI_EGRESS_GUARD_V2 (downloader-8, audit DW-01 download side): the download itself, not only the
+# deep check, is confined to public addresses. Every yt-dlp download (site extractor, generic page,
+# HLS/DASH fragments, the live-playlist check) and every direct file download goes through the
+# loopback egress guard (egress_guard.py), which allows public unicast addresses only and pins each
+# connection to the address it checked (so DNS can't switch it to a LAN address in between). The
+# submitted link is also checked up front, so a local/private link gets a clear message.
+PRIVATE_LINK = 'This link points at a local or private address; Omni only downloads from the internet.'
+
+
+def guard_url():
+    """The worker's shared loopback egress guard (started on first use)."""
+    import probe
+    from egress_guard import shared_guard
+    return shared_guard(probe.public_address).url
+
+
+def check_public_link(url):
+    """Refuse a link whose host resolves to a local/private address (before any request is made)."""
+    import probe
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in ('http', 'https') or not parts.hostname:
+        raise NoFallback('Enter an HTTP or HTTPS link.')
+    port = parts.port or (443 if parts.scheme == 'https' else 80)
+    try:
+        probe.resolve_within(probe.public_address, parts.hostname, port, probe.SOCKET_TIMEOUT)
+    except probe.Refused as error:
+        raise NoFallback(PRIVATE_LINK) from error
+    except TimeoutError as error:
+        raise RuntimeError("The site's address couldn't be looked up in time.") from error
+    except probe.Problem as error:
+        raise RuntimeError(str(error) or "The site's address could not be found.") from error
+
+
+def guard_options(options):
+    """Route yt-dlp through the guard; drop the per-request proxy overrides that could bypass it."""
+    options['proxy'] = guard_url()
+    options['geo_verification_proxy'] = None
+    headers = options.get('http_headers')
+    if isinstance(headers, dict):
+        options['http_headers'] = {k: v for k, v in headers.items() if str(k).lower() != 'ytdl-request-proxy'}
+    return options
+
+
 class NoFallback(Exception):
     """An outcome another engine must not retry (DRM, disk full, cancellation)."""
 
@@ -204,7 +247,7 @@ class PythonYtdlpAdapter:
         if referer:
             # OMNI_DOWNLOADS_PROBE_V5: the grabbing page's origin, as the browser itself sends it.
             options['http_headers'] = {'Referer': referer}
-        return options
+        return guard_options(options)   # OMNI_EGRESS_GUARD_V2: always last, so nothing above can remove it
 
     @staticmethod
     def extract(ydl, url, cancelled=lambda: False, attempts=None):
@@ -243,6 +286,7 @@ class PythonYtdlpAdapter:
     def download(self, url, folder, audio=False, hook=lambda _: None, metadata=lambda _: None, cancelled=lambda: False, postprocess_hook=lambda _: None,
                  fmt=None, referer=None, preset=None, subtitle_lang=None):
         import yt_dlp
+        check_public_link(url)
         options = self.options(folder, audio, hook, postprocess_hook, fmt=fmt, referer=referer, preset=preset, subtitle_lang=subtitle_lang)
         with yt_dlp.YoutubeDL(options) as ydl:
             info = self.extract(ydl, url, cancelled)
@@ -266,6 +310,7 @@ class NativePythonYtdlpAdapter(PythonYtdlpAdapter):
         if importlib.util.find_spec('_omni_native') is None:
             raise RuntimeError('Native CPython binding is required')
         import yt_dlp
+        check_public_link(url)
         folder = Path(folder).resolve()
         folder.mkdir(parents=True, exist_ok=True)
         options = self.options(folder, audio, hook, postprocess_hook, fmt=fmt, referer=referer, preset=preset, subtitle_lang=subtitle_lang)
@@ -448,9 +493,12 @@ class DirectFileAdapter:
                     raise urllib.error.HTTPError(newurl, code, 'Redirect left HTTP(S)', headers, fp)
                 if validate is not None:
                     validate(newurl)
+                check_public_link(newurl)   # a clear message; the guard below enforces it either way
                 return super().redirect_request(request, fp, code, message, headers, newurl)
         context = ssl.create_default_context(cafile=os.environ.get('SSL_CERT_FILE') or None)
-        return urllib.request.build_opener(Redirects, urllib.request.HTTPSHandler(context=context))
+        guard = guard_url()   # OMNI_EGRESS_GUARD_V2: every connection, redirects included, via the guard
+        return urllib.request.build_opener(urllib.request.ProxyHandler({'http': guard, 'https': guard}),
+                                           Redirects, urllib.request.HTTPSHandler(context=context))
 
     @staticmethod
     def _name(response, url):
@@ -470,6 +518,7 @@ class DirectFileAdapter:
         headers = {'User-Agent': 'Mozilla/5.0 (PlayStation; PlayStation 5) Omni', 'Accept': '*/*'}
         if self.referer:
             headers['Referer'] = self.referer
+        check_public_link(url)
         request = urllib.request.Request(url, headers=headers)
         try:
             response = self._opener().open(request, timeout=self.timeout)
