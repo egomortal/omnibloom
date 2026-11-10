@@ -33,10 +33,28 @@ MAX_BODY_BYTES = 8192
 ENGINE_NAMES = {'ytdlp': 'yt-dlp', 'jdownloader': 'JDownloader'}
 
 
+def _console_offset(schedule_path):
+    """Return offset_provider(now) reading <state>/tz-offset.json {"utcOffsetMinutes": int}; None when unavailable."""
+    def provider(now):
+        if not schedule_path:
+            return None
+        try:
+            with open(schedule_path.with_name("tz-offset.json"), "rb") as fh:
+                data = json.loads(fh.read(512))
+            value = data.get("utcOffsetMinutes")
+            return value if type(value) is int and -840 <= value <= 840 else None
+        except (OSError, ValueError, AttributeError):
+            return None
+    return provider
+
+
 class Jobs:
     def __init__(self, folder, state_file=None, jd_adapter=None, jd_lifecycle=None, policy=None):
         self.folder = Path(folder)
-        self.policy = policy or Policy(Path(state_file).with_name("schedule.json") if state_file else None)
+        _sched = Path(state_file).with_name("schedule.json") if state_file else None
+        # Schedule schema 2 (R3-045 fix): console-local minutes; the offset comes from the trusted host
+        # (Omni writes tz-offset.json beside the state file). Missing or invalid offset => no scheduled starts.
+        self.policy = policy or Policy(_sched, offset_provider=_console_offset(_sched))
         self.history = History(state_file)
         self.jobs = self.history.load()
         self.lock = threading.Lock()

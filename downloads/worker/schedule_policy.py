@@ -1,9 +1,9 @@
-"""UTC start windows and cooperative average-rate limits. GPL-3.0-or-later."""
+"""Console-local start windows and cooperative average-rate limits. GPL-3.0-or-later."""
 import datetime,json,os,threading,time
 from pathlib import Path
-DEFAULT={'schema':1,'enabled':False,'start':1320,'end':360,'days':list(range(7)),'rate':0,'playingRate':0}
+DEFAULT={'schema':2,'enabled':False,'start':1320,'end':360,'days':list(range(7)),'rate':0,'playingRate':0}
 def validate(p):
-    if not isinstance(p,dict) or type(p.get('enabled')) is not bool:raise ValueError('Invalid schedule')
+    if not isinstance(p,dict) or p.get('schema')!=2 or type(p.get('enabled')) is not bool:raise ValueError('Invalid schedule')
     for key in ('start','end'):
         if type(p.get(key)) is not int or not 0<=p[key]<1440:raise ValueError('Invalid time')
     if p['enabled'] and p['start']==p['end']:raise ValueError('Start and end must differ')
@@ -11,16 +11,17 @@ def validate(p):
     if not isinstance(days,list) or not days or any(type(d) is not int or not 0<=d<7 for d in days) or len(set(days))!=len(days):raise ValueError('Invalid weekdays')
     for key in ('rate','playingRate'):
         if type(p.get(key)) is not int or p[key]!=0 and not 65536<=p[key]<=33554432:raise ValueError('Invalid rate')
-    return {'schema':1,**{k:p[k] for k in ('enabled','start','end','rate','playingRate')},'days':list(days)}
+    return {'schema':2,**{k:p[k] for k in ('enabled','start','end','rate','playingRate')},'days':list(days)}
 class Policy:
-    def __init__(self,path=None,clock=time.monotonic):
+    def __init__(self,path=None,clock=time.monotonic,offset_provider=None):
+        self.offset_provider=offset_provider;self.migration_required=False
         self.path=Path(path) if path else None;self.clock=clock;self.lock=threading.Lock();self.value=validate(DEFAULT);self.playing=None;self.updated=None
         if self.path and self.path.exists():
             try:
                 with self.path.open('rb') as source:data=source.read(4097)
                 if len(data)>4096:raise ValueError('Large schedule')
                 self.value=validate(json.loads(data))
-            except (OSError,ValueError,TypeError):pass
+            except (OSError,ValueError,TypeError):self.migration_required=True
     def save(self,value):
         value=validate(value)
         with self.lock:
@@ -28,7 +29,7 @@ class Policy:
                 self.path.parent.mkdir(parents=True,exist_ok=True);temp=self.path.with_suffix('.new')
                 with temp.open('w',encoding='utf8') as dest:json.dump(value,dest);dest.flush();os.fsync(dest.fileno())
                 os.replace(temp,self.path)
-            self.value=value
+            self.value=value;self.migration_required=False
         return {'accepted':True}
     def mark_playing(self,playing):
         if type(playing) is not bool:raise ValueError('Gaming state must be boolean')
@@ -43,8 +44,13 @@ class Policy:
         if now.tzinfo is None:raise ValueError('UTC-aware clock required')
         now=now.astimezone(datetime.timezone.utc)
         with self.lock:p=dict(self.value)
+        if self.migration_required:return False
         if not p['enabled']:return True
-        day=now.weekday();minute=now.hour*60+now.minute
+        # Query for each dispatch: do not persist a seasonal offset with the schedule.
+        offset=self.offset_provider(now) if self.offset_provider else None
+        if type(offset) is not int or not -840<=offset<=840:return False
+        local=now+datetime.timedelta(minutes=offset)
+        day=local.weekday();minute=local.hour*60+local.minute
         if p['start']<p['end']:return day in p['days'] and p['start']<=minute<p['end']
         return day in p['days'] if minute>=p['start'] else minute<p['end'] and (day-1)%7 in p['days']
 class RateLimiter:

@@ -42,7 +42,7 @@ class PresetTests(unittest.TestCase):
    def start(self):pass
   module=ast.parse(((Path(__file__).resolve().parent.parent.parent/'worker')/'worker.py').read_text(encoding='utf8'))
   node=next(n for n in module.body if isinstance(n,ast.ClassDef) and n.name=='Jobs')
-  env={'Path':Path,'History':History,'threading':types.SimpleNamespace(Lock=threading.Lock,Condition=threading.Condition,Thread=Thread),'deque':collections.deque,'JDownloaderAdapter':types.SimpleNamespace(from_environment=lambda:types.SimpleNamespace(poisoned=False)),'validate_http_url':lambda u:None,'preset_options':preset_options,'quality_format':quality_format,'json':json,'secrets':secrets,'importlib':importlib,'TERMINAL':{'completed','failed'},'MAX_PENDING':8,'MAX_JOBS':100,'Policy':__import__('schedule_policy').Policy,'RateLimiter':__import__('schedule_policy').RateLimiter}
+  env={'Path':Path,'History':History,'threading':types.SimpleNamespace(Lock=threading.Lock,Condition=threading.Condition,Thread=Thread),'deque':collections.deque,'JDownloaderAdapter':types.SimpleNamespace(from_environment=lambda:types.SimpleNamespace(poisoned=False)),'validate_http_url':lambda u:None,'preset_options':preset_options,'quality_format':quality_format,'json':json,'secrets':secrets,'importlib':importlib,'TERMINAL':{'completed','failed'},'MAX_PENDING':8,'MAX_JOBS':100,'Policy':__import__('schedule_policy').Policy,'_console_offset':lambda path:(lambda now:0),'RateLimiter':__import__('schedule_policy').RateLimiter}
   exec(compile(ast.Module(body=[node],type_ignores=[]),'actual-worker','exec'),env)
   jobs=env['Jobs']('.')
   identity='a'*32
