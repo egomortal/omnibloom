@@ -1,0 +1,113 @@
+--- original/wsi_common_videoout.c
++++ private/wsi_common_videoout.c
+@@ -1,3 +1,4 @@
++#include "scanout_policy.h"
+ /*
+  * Copyright © 2026 Mihawk
+  *
+@@ -260,6 +261,7 @@
+    struct wsi_videoout_set {
+       const struct wsi_videoout_size *size;
+       uint8_t *buffers;
++      uint64_t pixel_format;
+    } sets[VIDEOOUT_SIZES];
+    uint32_t set_count;
+    /* The argument of the latest flip submitted; each flip's is one more. */
+@@ -447,11 +449,11 @@
+ /* The set of buffers of a size, cleared and registered the first time a
+  * swapchain of that size is made, and kept. Under lock. */
+ static VkResult
+-videoout_register_locked(const struct wsi_videoout_size *size, const struct wsi_videoout_set **set_out)
++videoout_register_locked(const struct wsi_videoout_size *size, uint64_t pixel_format, const struct wsi_videoout_set **set_out)
+ {
+    struct wsi_videoout_output *out = &videoout_output;
+    for (uint32_t i = 0; i < out->set_count; i++) {
+-      if (out->sets[i].size == size) {
++      if (out->sets[i].size == size && out->sets[i].pixel_format == pixel_format) {
+          *set_out = &out->sets[i];
+          return VK_SUCCESS;
+       }
+@@ -459,6 +461,8 @@
+    if (!videoout_open_locked())
+       return VK_ERROR_INITIALIZATION_FAILED;
+ 
++   if (out->set_count >= VIDEOOUT_SIZES)
++      return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+    const uint32_t index = out->set_count;
+    const size_t bytes = VIDEOOUT_BUFFERS * size->buffer_bytes;
+    uint8_t *buffers = NULL;
+@@ -492,7 +496,7 @@
+    for (uint32_t i = 0; i < VIDEOOUT_BUFFERS; i++)
+       registered[i] = (struct ps5_video_out_buffer){.data = buffers + i * size->buffer_bytes};
+    uint8_t attribute[PS5_VIDEO_OUT_ATTRIBUTE_BYTES] = {0};
+-   sceVideoOutSetBufferAttribute2(attribute, PS5_VIDEO_OUT_PIXEL_FORMAT_B8G8R8A8_SDR,
++   sceVideoOutSetBufferAttribute2(attribute, pixel_format,
+                                   PS5_VIDEO_OUT_TILING_64KB_R_X, size->extent.width, size->extent.height, 0, 0, 0);
+    if (result == 0)
+       result = sceVideoOutRegisterBuffers2(out->handle, (int32_t)index, (int32_t)(index * VIDEOOUT_BUFFERS),
+@@ -505,7 +509,7 @@
+    }
+    fprintf(stderr, "wsi/videoout: %ux%u framebuffers registered as set %u, buffers %u-%u\n", size->extent.width,
+            size->extent.height, index, index * VIDEOOUT_BUFFERS, index * VIDEOOUT_BUFFERS + VIDEOOUT_BUFFERS - 1);
+-   out->sets[index] = (struct wsi_videoout_set){.size = size, .buffers = buffers};
++   out->sets[index] = (struct wsi_videoout_set){.size = size, .buffers = buffers, .pixel_format = pixel_format};
+    out->set_count = index + 1;
+    *set_out = &out->sets[index];
+    return VK_SUCCESS;
+@@ -838,7 +842,10 @@
+ static const VkFormat videoout_formats[] = {
+    VK_FORMAT_B8G8R8A8_UNORM,
+    VK_FORMAT_B8G8R8A8_SRGB,
++   VK_FORMAT_A2B10G10R10_UNORM_PACK32,
+ };
++_Static_assert(VK_FORMAT_A2B10G10R10_UNORM_PACK32 == EXBOX_RGB10A2, "RGB10A2 enum");
++_Static_assert(VK_COLOR_SPACE_HDR10_ST2084_EXT == EXBOX_PQ_SPACE, "PQ enum");
+ 
+ static VkResult
+ videoout_surface_get_formats(VkIcdSurfaceBase *surface, struct wsi_device *wsi_device, uint32_t *pSurfaceFormatCount,
+@@ -849,7 +856,7 @@
+       vk_outarray_append_typed(VkSurfaceFormatKHR, &out, f)
+       {
+          f->format = videoout_formats[i];
+-         f->colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
++         f->colorSpace = videoout_formats[i] == VK_FORMAT_A2B10G10R10_UNORM_PACK32 ? VK_COLOR_SPACE_HDR10_ST2084_EXT : VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+       }
+    }
+    return vk_outarray_status(&out);
+@@ -865,7 +872,7 @@
+       {
+          assert(f->sType == VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR);
+          f->surfaceFormat.format = videoout_formats[i];
+-         f->surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
++         f->surfaceFormat.colorSpace = videoout_formats[i] == VK_FORMAT_A2B10G10R10_UNORM_PACK32 ? VK_COLOR_SPACE_HDR10_ST2084_EXT : VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+       }
+    }
+    return vk_outarray_status(&out);
+@@ -1149,7 +1156,8 @@
+ 
+    const struct wsi_videoout_set *set = NULL;
+    mtx_lock(&out->lock);
+-   VkResult result = videoout_register_locked(mode->size, &set);
++   const uint64_t pixel_format = exbox_scanout_format(pCreateInfo->imageFormat, pCreateInfo->imageColorSpace);
++   VkResult result = pixel_format ? videoout_register_locked(mode->size, pixel_format, &set) : VK_ERROR_FORMAT_NOT_SUPPORTED;
+    if (result == VK_SUCCESS && out->current && out->current != (struct wsi_videoout_swapchain *)
+                                                  wsi_swapchain_from_handle(pCreateInfo->oldSwapchain))
+       result = VK_ERROR_NATIVE_WINDOW_IN_USE_KHR;
+@@ -1243,3 +1251,17 @@
+ wsi_display_setup_syncobj_fd(struct wsi_device *wsi_device, int fd)
+ {
+ }
++
++/* Ex-Box diagnostic accessor; one title owns this output, no foreign handles. */
++struct exbox_output_status { uint32_t resolution,range; uint64_t refresh,flags; uint32_t mode,reserved[5]; };
++_Static_assert(sizeof(struct exbox_output_status)==48,"Omni output status ABI");
++int sceVideoOutGetOutputStatus(int32_t,struct exbox_output_status*);
++int exbox_presenter_probe(uint32_t *range,int64_t *shown);
++int exbox_presenter_probe(uint32_t *range,int64_t *shown) {
++ call_once(&videoout_once,videoout_output_init_once);
++ mtx_lock(&videoout_output.lock);
++ struct exbox_output_status status={0};
++ int rc=videoout_output.handle<0?-1:sceVideoOutGetOutputStatus(videoout_output.handle,&status);
++ *range=status.range;*shown=videoout_shown_argument_locked();
++ mtx_unlock(&videoout_output.lock);return rc;
++}

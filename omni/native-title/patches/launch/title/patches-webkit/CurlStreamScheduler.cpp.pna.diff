@@ -1,0 +1,22 @@
+--- a/WebCore/platform/network/curl/CurlStreamScheduler.cpp
++++ b/WebCore/platform/network/curl/CurlStreamScheduler.cpp
+@@ -44,7 +44,7 @@
+     ASSERT(isMainThread());
+ }
+ 
+-CurlStreamID CurlStreamScheduler::createStream(const URL& url, CurlStream::Client& client, CurlStream::ServerTrustEvaluation serverTrustEvaluation, CurlStream::LocalhostAlias localhostAlias)
++CurlStreamID CurlStreamScheduler::createStream(const URL& url, CurlStream::Client& client, CurlStream::ServerTrustEvaluation serverTrustEvaluation, CurlStream::LocalhostAlias localhostAlias, const URL& omniInitiator)   // OMNI_SEC_PNA_CONNECT_V1
+ {
+     ASSERT(isMainThread());
+ 
+@@ -55,8 +55,8 @@
+     auto streamID = m_currentStreamID;
+     m_clientList.add(streamID, &client);
+ 
+-    callOnWorkerThread([this, streamID, url = url.isolatedCopy(), serverTrustEvaluation, localhostAlias]() mutable {
+-        m_streamList.add(streamID, CurlStream::create(*this, streamID, WTF::move(url), serverTrustEvaluation, localhostAlias));
++    callOnWorkerThread([this, streamID, url = url.isolatedCopy(), serverTrustEvaluation, localhostAlias, omniInitiator = omniInitiator.isolatedCopy()]() mutable {
++        m_streamList.add(streamID, CurlStream::create(*this, streamID, WTF::move(url), serverTrustEvaluation, localhostAlias, WTF::move(omniInitiator)));
+     });
+ 
+     return streamID;

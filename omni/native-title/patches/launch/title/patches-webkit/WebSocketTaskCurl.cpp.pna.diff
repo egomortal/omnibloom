@@ -1,0 +1,20 @@
+--- a/WebKit/NetworkProcess/curl/WebSocketTaskCurl.cpp
++++ b/WebKit/NetworkProcess/curl/WebSocketTaskCurl.cpp
+@@ -61,7 +61,7 @@
+     if (networkSession() && networkSession()->networkProcess().localhostAliasesForTesting().contains<StringViewHashTranslator>(m_request.url().host()))
+         localhostAlias = WebCore::CurlStream::LocalhostAlias::Enable;
+ 
+-    m_streamID = m_scheduler.createStream(request.url(), *this, WebCore::CurlStream::ServerTrustEvaluation::Enable, localhostAlias);
++    m_streamID = m_scheduler.createStream(request.url(), *this, WebCore::CurlStream::ServerTrustEvaluation::Enable, localhostAlias, m_request.firstPartyForCookies());   // OMNI_SEC_PNA_CONNECT_V1
+ }
+ 
+ WebSocketTask::~WebSocketTask()
+@@ -277,7 +277,7 @@
+             if (networkSession() && networkSession()->networkProcess().localhostAliasesForTesting().contains<StringViewHashTranslator>(m_request.url().host()))
+                 localhostAlias = WebCore::CurlStream::LocalhostAlias::Enable;
+ 
+-            m_streamID = m_scheduler.createStream(m_request.url(), *this, WebCore::CurlStream::ServerTrustEvaluation::Disable, localhostAlias);
++            m_streamID = m_scheduler.createStream(m_request.url(), *this, WebCore::CurlStream::ServerTrustEvaluation::Disable, localhostAlias, m_request.firstPartyForCookies());   // OMNI_SEC_PNA_CONNECT_V1
+         } else
+             didFail(WTF::move(errorReason));
+     });

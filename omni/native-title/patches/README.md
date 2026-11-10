@@ -1,9 +1,11 @@
-# Omni native title: patch sets (s3.1c, s3.4c, s3.4d)
+# Omni native title: patch sets (s3.1c, s3.4c, s3.4d, launch)
 
-Experimental, not-yet-console-tested work (HDR10 output, the JSC heap change, the software-video overflow fix, GPU page
-drawing) is kept apart in [`experimental/`](experimental/README.md). None of it is part of a release build.
+**The release build is [`launch/`](launch/README.md):** title rc2 + engine child rc4 (2026-11-10), console-tested.
+It includes the HDR10, JSC heap and software-video work from `experimental/`; GPU page drawing stays experimental.
 
-## s3.4d: Dark mode uses the site's own dark theme first (current build, 2026-11-05)
+Still-experimental work (GPU page drawing) is kept apart in [`experimental/`](experimental/README.md).
+
+## s3.4d: Dark mode uses the site's own dark theme first (2026-11-05; the launch build's base and rollback)
 
 **s3.4d** = s3.4c + `OMNI_DARK_APPEARANCE_EMU_V1` (title `eboot.bin` `ca22b2e4…f7d26a41`; child unchanged, `7b810ea5…fd717c64`).
 The dark-mode standard is now three title-side patches, applied in this order:

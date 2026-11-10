@@ -1,7 +1,8 @@
-# Experimental Omni native work (not console-tested, not shipped)
+# Experimental Omni native work
 
-Everything in this folder is **built or prototyped but not yet proven on the console**. None of it is in the current
-build (s3.4d, `../README.md`). Each folder says what it is, what was tested on the host, and what is still missing.
+Everything in this folder was **built or prototyped before it was proven on the console**. Since 2026-11-10, `hdr/`,
+`jsc-heap/` and `swdec-pad/` are in the launch build ([`../launch/`](../launch/README.md)), console-tested there;
+`gpu-pages/` is still a prototype and not in any release build. Each folder says what it is, what was tested on the host, and what is still missing.
 
 | Folder | What | State |
 |---|---|---|

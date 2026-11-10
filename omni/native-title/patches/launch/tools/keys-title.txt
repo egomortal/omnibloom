@@ -1,0 +1,73 @@
+OMNI_ACK_V1
+OMNI ACK shell
+/data/omni/ack-off.flag
+OMNI_JANK_V1
+OMNI JANK hist
+OMNI JANK mark
+/data/omni/jank.flag
+OMNI_PAINT_HOLD_V1
+/data/omni/paint-hold-experimental.flag
+OMNIPH
+OMNI_ABR_SWITCH_V1
+abr-switch-disabled.flag
+quality switch: queue starts at
+the configure worker made
+queue grows
+OMNI_GPU_VERIFY10_V1
+v4colour
+V10 swscale BGRA model
+pictures now convert on the GPU
+OMNI_GPU_PRESENT_V4
+OMNI_GPU_VIDEO_V4
+OMNI_HDR_CAPS_V1
+GPU HDR decision
+HDR Auto: %s
+hdrfail
+HDR: armed
+VideoOut output range
+OMNI_VIDEO_FPS_V3
+out_mode=%s
+hdr-vp9-infer-disabled.flag
+vkCreateSwapchainKHR(%s
+wsi/videoout
+mediaSoon
+OMNI_MQ_NATIVE_V1
+video-hdr-preference.txt
+OMNI_VIDEO_STATS_BRIDGE_V1
+HDR Auto pending source passthrough
+/data/hub/apps/
+OMNI_POINTER_CROSS_V1
+OMNI_DARK_VIDEO_PLANE_V1
+OMNI_DARK_STANDARD_V1
+OMNI_DARK_APPEARANCE_EMU_V1
+OMNI_GPU_VIDEO_V2
+OMNI_GPU_PRESENT_V2
+OMNI_VIDEO_FPS_V1
+/data/omni/native/video-fps.log
+preinit: RADV set-up now
+HDR self-test
+HDR10_ST2084
+the SDL window surface is freed
+verify %d-bit %dx%d -> %dx%d (%s)
+layers imported once
+failsetup
+YTTL DONE
+OMNI_CRASH_V2
+FATAL end of report
+OMNI_PAGES_V1
+omni://pages
+OMNI_ADDONS_V1 ready
+OMNI_VAULT_V2
+OMNI_HUB_CARDS_V1
+Bloom Core is not running
+PADCTL TEST PASS
+Ad block
+Video found
+OMNI_SEC_PNA_CONNECT_V1
+OMNI_SEC_LOCALHOST_V1
+OMNI_JSC_JIT_V3
+jit: off (interpreter)
+accelerated compositing is off
+OMNI_HDR_PRESENT10_V1
+hdr-present10-disabled.flag
+p10sync

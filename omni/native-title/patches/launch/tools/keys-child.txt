@@ -1,0 +1,59 @@
+OMNI_ACK_V1
+OMNI ACK split
+OMNI ACK hist
+OMNI_ACK_PACE
+OMNI_ACK_CREDITS
+OMNI_ACK_HZ
+OMNI_JANK_PAGE_V1
+OMNI JANK pframe
+OMNI JANK phist
+/data/omni/jank.flag
+OMNI_PAINT_RECTS
+OMNI_YTPROF_V1
+OMNI YTPROF page
+/data/omni/ytprof.flag
+OMNI RASTER: config
+accelerated compositing is off
+OMNI_SEC_PNA_CONNECT_V1
+OMNI_CRASH_V2
+OMNI_JSC_JIT_V3
+jit: off (interpreter)
+OMNI_SEC_LOCALHOST_V1
+close-events.log
+OMNI NET curl
+OMNI NET req
+OMNI NET kill switch
+net-off-%s
+OMNI NET castore
+OMNI JSCACHE
+jscache hit
+OMNI NET cache model
+OMNI NET disk cache
+warm %s host
+OMNI_NO_MINI_MODE_V1
+/data/omni/malloc-mini-off.flag
+net-on-h2.flag
+diskcap
+net-off-hdrbuf.flag
+net-off-h2win.flag
+OMNI NET hdrbuf
+nghttp2
+BrotliDecoder
+OpenSSL 3.5.9
+8.23.0
+/data/omni/net5-off.flag
+/data/omni/s34g-off.flag
+/data/omni/ack-pace-off.flag
+OMNI_RASTER_%s
+OMNI MEMPRESSURE: on
+/data/omni/mempressure-off.flag
+OMNI PAINT RECTS V2:
+/data/omni/paint-rects-off.flag
+OMNI_RASTER_PAINT_RECTS
+OMNI NET kill switch on: net5
+requested %d -> %d
+OMNI NET preconnect: first request
+net-on-jscache.flag
+OMNI NET jscache: off by default
+net-on-hdrbuf.flag
+OMNI NET hdrbuf: off by default

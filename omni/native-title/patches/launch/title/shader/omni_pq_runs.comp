@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// OMNI_HDR_PRESENT10_V1 (omni-hdr-present10): HDR10 passthrough of the staged picture's opaque video runs in ONE
+// dispatch. V4 recorded one VkBufferImageCopy region per run (2-4 thousand per 4K frame, twice: the SDR layer into the
+// canvas and the PQ layer into the PQ image); RADV turns every region into its own meta draw (image view, pipeline
+// bind, descriptors, begin/end rendering) at ~1.9 us of CPU each. Here each workgroup copies one run of packed
+// A2B10G10R10 words from the PQ layer into the PQ buffer (after the SDR -> PQ pass, before the PQ buffer -> PQ image
+// copy), so the words land exactly where V4's per-run copies put them.
+#version 450
+layout(local_size_x = 64) in;
+layout(std430, set = 0, binding = 0) readonly buffer Src { uint src[]; };   // the PQ layer (imported host memory)
+layout(std430, set = 0, binding = 1) buffer Dst { uint dst[]; };            // the PQ buffer, w words per row
+layout(std430, set = 0, binding = 2) readonly buffer Runs { uvec4 runs[]; }; // x: source word (layer-relative), y: destination word, z: pixels
+layout(push_constant) uniform Push { uint count; uint srcBase; uint perRow; uint pad; } pc;
+void main()
+{
+    const uint r = gl_WorkGroupID.y * pc.perRow + gl_WorkGroupID.x;
+    if (r >= pc.count) return;
+    const uvec4 run = runs[r];
+    for (uint i = gl_LocalInvocationID.x; i < run.z; i += 64u) dst[run.y + i] = src[pc.srcBase + run.x + i];
+}

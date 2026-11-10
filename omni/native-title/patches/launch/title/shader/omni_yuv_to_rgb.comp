@@ -1,0 +1,112 @@
+#version 450
+// SPDX-License-Identifier: GPL-3.0-or-later
+// OMNI_GPU_VIDEO_V1: planar 4:2:0 (8-bit, or 10-bit low-aligned in 16-bit words) -> packed BGRA/RGBA,
+// scaled to dstW x dstH. Same input layout as the shell's swscale path (holeSplitPlanes):
+// Y (srcW x srcH), then U, then V (each ceil(srcW/2) x ceil(srcH/2)), rows tightly packed.
+// Scaling: bilinear taps; when shrinking, n x n taps across the source footprint (n = ceil(ratio), max 4)
+// so the result tracks swscale's SWS_BILINEAR (a widened triangle filter when shrinking).
+// Chroma is centre-sited (swscale's default for yuv420p) when scaling; at exactly 1:1 each chroma sample
+// covers its 2x2 luma block, as swscale's unscaled yuv2rgb path does. Output is full range, alpha 255.
+// OMNI_GPU_VIDEO_V4 (omni-native-s3.5-hdr): hdrMode 1 (an HDR10 source: BT.2020 NCL, SMPTE ST 2084) also writes the
+// picture's PQ layer: the BT.2020 NCL matrix gives R'G'B' that are already PQ-coded, so they are packed as they are
+// (no second PQ encode, no tone mapping). hdrMode 2 (an HLG source, ARIB STD-B67) is converted to PQ: HLG inverse
+// OETF, the BT.2100 OOTF at the nominal peak hlgPeak (gamma 1.2 at 1000 nits), then the PQ encode. The PQ layer is
+// packed as OmniHdrColour.h's pack(): R | G << 10 | B << 20 | 3 << 30 (VK_FORMAT_A2B10G10R10_UNORM_PACK32), same
+// stride as the RGBA8 layer. hdrMode 0 leaves every result of V3 unchanged.
+layout(local_size_x = 16, local_size_y = 8, local_size_z = 1) in;
+layout(std430, set = 0, binding = 0) readonly buffer Src { uint src[]; };
+layout(std430, set = 0, binding = 1) writeonly buffer Dst { uint dst[]; };
+layout(std430, set = 0, binding = 2) writeonly buffer Hdr { uint hdr[]; };   // V4: the PQ layer (bound to Dst when unused)
+layout(push_constant) uniform P {
+    int srcW, srcH, dstW, dstH;   // pixels
+    int dstStrideWords;           // destination row pitch in 32-bit words
+    int bps;                      // bytes per sample: 1 or 2
+    uint srcBase;                 // byte offset of the Y plane inside the source buffer (import alignment)
+    uint dstBase;                 // word offset of pixel (0,0) inside the destination buffer
+    int swapRB;                   // 1: bytes R,G,B,A; 0: B,G,R,A
+    float yOff, yMul, cMul;       // Y' = (Y - yOff) * yMul; C' = (C - cMid) * cMul
+    float cMid, crR, cbG, crG;    // R = Y' + crR*Cr'; G = Y' - cbG*Cb' - crG*Cr'
+    float cbB;                    // B = Y' + cbB*Cb'
+    int hdrMode;                  // V4: 0 none, 1 PQ source (pack R'G'B'), 2 HLG source (-> PQ)
+    uint hdrBase;                 // V4: word offset of pixel (0,0) inside the PQ layer (same row pitch as dst)
+    float hlgPeak;                // V4: nominal peak of the HLG display (nits)
+} pc;
+
+float sampleAt(uint planeByte, int w, int h, int x, int y)
+{
+    x = clamp(x, 0, w - 1); y = clamp(y, 0, h - 1);
+    uint i = planeByte + uint(y * w + x) * uint(pc.bps);
+    uint word = src[i >> 2];
+    if (pc.bps == 2) return float((word >> ((i & 2u) * 8u)) & 0xffffu);
+    return float((word >> ((i & 3u) * 8u)) & 0xffu);
+}
+
+vec3 pqEncode(vec3 nits)
+{
+    vec3 v = pow(clamp(nits / 10000.0, 0.0, 1.0), vec3(2610.0 / 16384.0));
+    return pow((3424.0 / 4096.0 + 2413.0 / 128.0 * v) / (1.0 + 2392.0 / 128.0 * v), vec3(2523.0 / 32.0));
+}
+vec3 hlgToPq(vec3 e)   // BT.2100: inverse OETF -> scene light, OOTF (gamma 1.2 at 1000 nits) -> display light -> PQ
+{
+    const float a = 0.17883277, b = 0.28466892, c = 0.55991073;
+    vec3 s = mix((exp((e - c) / a) + b) / 12.0, e * e / 3.0, lessThanEqual(e, vec3(0.5)));
+    float ys = dot(s, vec3(0.2627, 0.6780, 0.0593));
+    float gamma = 1.2 + 0.42 * log(pc.hlgPeak / 1000.0) / log(10.0);
+    vec3 nits = pc.hlgPeak * pow(max(ys, 1e-9), gamma - 1.0) * s;
+    return pqEncode(nits);
+}
+
+float bilinear(uint planeByte, int w, int h, vec2 p)   // p in pixel-centre space of the plane
+{
+    vec2 f = floor(p), t = p - f;
+    int x0 = int(f.x), y0 = int(f.y);
+    float a = sampleAt(planeByte, w, h, x0, y0), b = sampleAt(planeByte, w, h, x0 + 1, y0);
+    float c = sampleAt(planeByte, w, h, x0, y0 + 1), d = sampleAt(planeByte, w, h, x0 + 1, y0 + 1);
+    return mix(mix(a, b, t.x), mix(c, d, t.x), t.y);
+}
+
+void main()
+{
+    ivec2 o = ivec2(gl_GlobalInvocationID.xy);
+    if (o.x >= pc.dstW || o.y >= pc.dstH) return;
+    vec2 ratio = vec2(pc.srcW, pc.srcH) / vec2(pc.dstW, pc.dstH);
+    ivec2 n = clamp(ivec2(ceil(ratio - 0.01)), ivec2(1), ivec2(4));
+    int cw = (pc.srcW + 1) / 2, ch = (pc.srcH + 1) / 2;
+    uint yPlane = pc.srcBase;
+    uint uPlane = yPlane + uint(pc.srcW * pc.srcH * pc.bps);
+    uint vPlane = uPlane + uint(cw * ch * pc.bps);
+    float Y = 0.0, U = 0.0, V = 0.0;
+    // OMNI_GPU_VIDEO_V2: an enlargement follows the CPU's OMNI_FAST_UPSCALE rule exactly (the picture converted
+    // at its own size, then each output pixel takes the source pixel min(src-1, ((2*o+1)*src) / (2*dst)), integer
+    // maths), so the GPU result can be compared with the CPU result on enlargements too (1080p/1440p on a 2160 canvas).
+    bool enlarge = pc.dstW >= pc.srcW && pc.dstH >= pc.srcH && (pc.dstW > pc.srcW || pc.dstH > pc.srcH);
+    if ((pc.srcW == pc.dstW && pc.srcH == pc.dstH) || enlarge) {   // 1:1 (or its nearest-pixel enlargement): block chroma
+        ivec2 s = o;
+        if (enlarge) s = min(ivec2(pc.srcW, pc.srcH) - 1, ((2 * o + 1) * ivec2(pc.srcW, pc.srcH)) / (2 * ivec2(pc.dstW, pc.dstH)));
+        Y = sampleAt(yPlane, pc.srcW, pc.srcH, s.x, s.y);
+        U = sampleAt(uPlane, cw, ch, s.x >> 1, s.y >> 1);
+        V = sampleAt(vPlane, cw, ch, s.x >> 1, s.y >> 1);
+        n = ivec2(1);
+    } else
+    for (int j = 0; j < n.y; ++j) for (int i = 0; i < n.x; ++i) {
+        vec2 sub = (vec2(i, j) + 0.5) / vec2(n);                 // sub-position inside the output pixel
+        vec2 lp = (vec2(o) + sub) * ratio - 0.5;                 // luma pixel-centre coordinates
+        vec2 cp = (lp + 0.5) * 0.5 - 0.5;                        // centre-sited chroma
+        Y += bilinear(yPlane, pc.srcW, pc.srcH, lp);
+        U += bilinear(uPlane, cw, ch, cp);
+        V += bilinear(vPlane, cw, ch, cp);
+    }
+    float inv = 1.0 / float(n.x * n.y);
+    float yy = (Y * inv - pc.yOff) * pc.yMul;
+    float cb = (U * inv - pc.cMid) * pc.cMul, cr = (V * inv - pc.cMid) * pc.cMul;
+    vec3 rgb = clamp(vec3(yy + pc.crR * cr, yy - pc.cbG * cb - pc.crG * cr, yy + pc.cbB * cb), 0.0, 1.0);
+    uvec3 q = uvec3(rgb * 255.0 + 0.5);
+    uint px = pc.swapRB != 0 ? (q.r | (q.g << 8) | (q.b << 16) | 0xff000000u)
+                             : (q.b | (q.g << 8) | (q.r << 16) | 0xff000000u);
+    dst[pc.dstBase + uint(o.y * pc.dstStrideWords + o.x)] = px;
+    if (pc.hdrMode != 0) {   // V4: the PQ layer (R'G'B' unclamped above 1.0 are clamped, as OmniHdrColour's pack())
+        vec3 e = pc.hdrMode == 2 ? hlgToPq(rgb) : rgb;
+        uvec3 t = uvec3(clamp(e, 0.0, 1.0) * 1023.0 + 0.5);
+        hdr[pc.hdrBase + uint(o.y * pc.dstStrideWords + o.x)] = t.r | (t.g << 10) | (t.b << 20) | 0xc0000000u;
+    }
+}

@@ -1,0 +1,10 @@
+--- a/WebCore/platform/network/curl/CurlRequest.cpp
++++ b/WebCore/platform/network/curl/CurlRequest.cpp
+@@ -192,6 +192,7 @@
+     m_curlHandle = makeUnique<CurlHandle>();
+ 
+     m_curlHandle->setURL(m_request.url(), m_localhostAlias);
++    m_curlHandle->setOmniInitiator(m_request.firstPartyForCookies());   // OMNI_SEC_PNA_CONNECT_V1
+ 
+     m_curlHandle->appendRequestHeaders(httpHeaderFields);
+ 
