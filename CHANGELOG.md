@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased: launch build (in progress, November 9, 2026)
+## Unreleased: launch build (in progress, November 9-10, 2026)
 
 Everything below is going into one combined build for the November 12 release. "Proven" means tested on the
 console; "built" means it passes its PC tests and is waiting for its console test.
@@ -10,12 +10,17 @@ console; "built" means it passes its PC tests and is waiting for its console tes
   its picture buffer when a video's width was not a multiple of 16 (`OMNI_SWDEC_PAD_V1`). Before the fix the test
   page crashed after about 84 seconds; with it, 20.8 minutes and a full memory loop ran with no crash.
 
-### HDR10 output (s3.5-hdr)
+### HDR10 output (s3.5-hdr + fixes)
 - SDR is unchanged with HDR support built in: 4K60 at 59.94 fps median, 0.12% of frames dropped.
 - If the TV or system refuses HDR, Omni falls back to SDR and keeps playing (tested).
-- **Found in testing:** on real HDR videos the graphics chip's self-check rejected its own 10-bit result by a small
-  margin, which sent HDR videos to the processor (no HDR, dropped frames). A fix is in progress; HDR is not
-  enabled until it passes, plus a check on the TV.
+- **Fixed (proven on the console):** the graphics chip's self-check rejected its own 10-bit result on real HDR
+  videos, so HDR videos fell back to the processor. The processor's reference blends chroma differently on
+  alternate rows; the graphics chip now matches it exactly (`OMNI_GPU_VERIFY10_V1`, thresholds unchanged). A real
+  HDR10 video then played 4.5 minutes at 59.93 fps median, 0.2% dropped, with the HDR layer made on the graphics chip.
+- Checked on a TV: normal pages and video in HDR mode look normal; real HDR10 video looks like HDR.
+- **Built:** sending 10-bit HDR frames to the screen cost 17 ms of processor time at 4K (thousands of one-row
+  copies, twice per frame). One graphics-chip pass now does it (`OMNI_HDR_PRESENT10_V1`); console test pending.
+- Still to test: the TV switching into and out of HDR when a video enters and leaves fullscreen (Auto).
 
 ### Smoother pages (built, console A/B running)
 - **Repaint only what changed.** Omni merged every changed area of a page into one big rectangle and repainted all
@@ -26,6 +31,11 @@ console; "built" means it passes its PC tests and is waiting for its console tes
 ### Faster, steadier loading (built)
 - Network fixes for page loading, and a fix for the YouTube home page stalling on repeat visits (the memory
   allocator was giving memory back too eagerly).
+- **Found in testing:** the new JavaScript bytecode cache made YouTube videos start 1-3 minutes late. It rewrote
+  YouTube's 30 MB player code to disk on the main thread again and again (2.1 GB in 5 minutes) and never got a hit.
+  It is off for launch; every other network fix tested clean.
+- **Memory:** Omni's page process now measures its own memory use, so WebKit's low-memory cleanup can run
+  (`OMNI_MEMPRESSURE_V1`, with an off switch). Before, it always reported zero.
 - HTTP/2 stays off for launch, behind a switch. The cause is understood (a paused response froze its stream) and
   a fix is built for after launch.
 
@@ -34,6 +44,12 @@ console; "built" means it passes its PC tests and is waiting for its console tes
   at a time on the thread that feeds the screen, costing about half a second of frames. Buffers are now handed
   from the old quality to the new one and prepared ahead, inside a real memory limit (`OMNI_ABR_SWITCH_V1`,
   with a switch to turn it off).
+
+### Experimental: drawing pages with the graphics chip (not in the launch build)
+- Test app results on the console: the GL-on-Vulkan driver (Zink) runs on the PS5's graphics chip inside a
+  PS5 app, and Omni's page process can borrow the graphics chip through the main app, run real GPU work and get a
+  working OpenGL ES 3.2 context. The next step (drawing) needs bigger thread stacks; that fix is being built.
+- This is the foundation for compositing layers and scrolling that doesn't wait for a page's JavaScript.
 
 ### Downloads
 - The "Send to Downloads" fix (since s3.4) is in; it gets a final test from the in-browser button.
