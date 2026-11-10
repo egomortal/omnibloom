@@ -59,6 +59,14 @@ console; "built" means it passes its PC tests and is waiting for its console tes
 
 ### Downloads
 - The "Send to Downloads" fix (since s3.4) is in; it gets a final test from the in-browser button.
+- **Scheduled downloads use the console's local time.** Start windows were read as UTC; they now use the console's
+  own clock (Omni passes the UTC offset to the worker). Without a valid offset, nothing starts on a schedule. The
+  scheduler is still off by default and has no settings page yet. Installed on the console on November 10.
+
+### Source
+- The launch build's sources (title rc2 + engine child rc4: build recipes, WebKit patches, switches and tests) are in
+  `omni/native-title/patches/launch/`. It includes the HDR10, JavaScript heap and software-video work from
+  `experimental/`; GPU page drawing stays experimental.
 
 ## Unreleased: Omni native build s3.4d (November 5, 2026)
 
