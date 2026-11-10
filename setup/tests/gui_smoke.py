@@ -103,7 +103,9 @@ assert fc.state["deletes"] == []
 # The one button on a second, fresh PS5: Welcome → "Install everything for me" → checklist → Undo this install.
 oneclick.TIMING.update(poll=0.3, smp_poll=0.2, smp_settle=0.2, smp_settle_missing=0.2, status_timeout=10)
 fc2 = new_console(os.path.join(tmp, "console2"))
-app.ports = {"ftp": fc2.ftp_port, "loader": fc2.loader_port, "websrv": fc2.websrv_port, "host": "127.0.0.1"}
+fc2.start_launcher()
+app.ports = {"ftp": fc2.ftp_port, "loader": fc2.loader_port, "websrv": fc2.websrv_port, "launcher": fc2.launcher_port,
+             "host": "127.0.0.1"}
 app.host.set("127.0.0.1")
 app.show(0)
 shot("11-one-button")
@@ -112,6 +114,7 @@ wait_for(lambda: not app.oc_running, 180)
 shot("12-one-button-done")
 assert app.oc_result.get("ok"), app.logbox.get("1.0", "end")
 assert fc2.read(EBOOT) == files[EBOOT]
+assert app.oc_result.get("jdownloader", {}).get("ok"), app.oc_result.get("jdownloader")   # found on "this computer"
 assert fc2.read(config.OMNI_HDR_PREF) == b"1\tauto\n"
 app._oc_undo(confirm=False)
 wait_for(lambda: app.oc_undo_result is not None, 120)

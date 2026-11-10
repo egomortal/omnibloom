@@ -91,7 +91,15 @@ def candidate_folders():
     else:
         c += [os.path.join(home, "jd2"), os.path.join(home, "JDownloader 2.0"), os.path.join(home, "JDownloader2"),
               os.path.join(home, ".jd2"), "/opt/jd2", "/opt/JDownloader", "/opt/jdownloader2"]
+    if not any(x == os.path.join(home, "jd2") for x in c):
+        c.append(os.path.join(home, "jd2"))   # the folder the plain multi-OS JAR is usually run from
     return c
+
+
+def partial_folders():
+    """Folders with JDownloader.jar but no Core.jar yet: JDownloader 2 was downloaded but not opened once
+    (its first start fetches the rest)."""
+    return [p for p in candidate_folders() if os.path.isfile(os.path.join(p, "JDownloader.jar")) and not is_jd_folder(p)]
 
 
 def is_jd_folder(path):

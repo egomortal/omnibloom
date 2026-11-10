@@ -3,6 +3,7 @@
   --cli oneclick [--ip <ps5>]                  THE ONE BUTTON: waits for the PS5, installs everything in order,
                                                checks each app, rolls back on any failure, tells you each step
   --cli undo     --ip <ps5>                    undo the last one-button install on that PS5
+  (oneclick also finds JDownloader 2 on this computer; --jd-folder <dir>, --get-jdownloader, --no-jdownloader)
   --cli scan
   --cli check   --ip <ps5>
   --cli list    --ip <ps5>                     installed apps, versions and available updates
@@ -60,6 +61,9 @@ def main(argv=None):
     p.add_argument("--hdr", choices=["auto-if-unset", "auto", "keep"], default="auto-if-unset",
                    help="oneclick: Omni's HDR setting (default: Auto unless you already chose one)")
     p.add_argument("--run-file", help="undo: a specific run file instead of the last one")
+    p.add_argument("--no-jdownloader", action="store_true", help="oneclick: don't look for or set up JDownloader 2")
+    p.add_argument("--get-jdownloader", action="store_true",
+                   help="oneclick: if JDownloader 2 isn't on this computer, open its official download page and wait for it")
     a = p.parse_args(argv)
     log = lambda m: print(m, flush=True)
 
@@ -73,12 +77,21 @@ def main(argv=None):
                 print("[%s] %-24s %s" % (mark.get(e["state"], "   "), steps.get(e["step"], e["step"]), e.get("text", "")), flush=True)
             elif e.get("text"):
                 print(("      " + e["text"]) if e["text"].startswith("  ") else e["text"], flush=True)
+        def confirm(question):
+            if a.get_jdownloader:
+                return True
+            if not (sys.stdin and sys.stdin.isatty()):
+                log(question + " (no: run with --get-jdownloader to say yes)")
+                return False
+            return input(question + " [y/N] ").strip().lower() in ("y", "yes")
         nets = [ipaddress.ip_network(n, strict=False) for n in a.network] if a.network else None
         oc = oneclick.OneClick(host=a.ip, ftp_port=a.ftp_port, loader_port=a.loader_port, websrv_port=a.websrv_port,
+                               launcher_port=a.launcher_port,
                                catalog_loader=lambda lg: _catalog(a, lg), report=report, wait_minutes=a.wait_minutes,
                                networks=nets, master_control=not a.no_master_control,
                                start_master_control=not a.no_start_master_control,
-                               autoload_master_control=a.autoload_master_control, hdr=a.hdr)
+                               autoload_master_control=a.autoload_master_control, hdr=a.hdr,
+                               jdownloader=not a.no_jdownloader, jd_folder=a.jd_folder, confirm=confirm)
         try:
             result = oc.run()
         except KeyboardInterrupt:

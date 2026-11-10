@@ -192,7 +192,7 @@ class SetupApp:
         one.pack(fill="x", pady=(14, 0))
         self.label(one, "The easy way", "head", bg=C["panel"]).pack(anchor="w")
         self.label(one, "Press the button and Setup does everything: it waits for your PS5 to come on, installs Bloom Core, "
-                        "Omni, Downloads, USB file access and Master Control one at a time, checks each one, and tells you "
+                        "Omni, Downloads, USB file access and Master Control one at a time (and finds your JDownloader 2), checks each one, and tells you "
                         "what it's doing. If anything goes wrong it puts your PS5 back as it was.", "small",
                    bg=C["panel"]).pack(anchor="w", pady=(2, 8))
         row = tk.Frame(one, bg=C["panel"])
@@ -240,12 +240,29 @@ class SetupApp:
             import ipaddress
             nets = [ipaddress.ip_network(self.ports["host"] + "/30", strict=False)]
         oc = oneclick.OneClick(host=host, ftp_port=self.ports.get("ftp"), loader_port=self.ports.get("loader"),
-                               websrv_port=self.ports.get("websrv"), catalog=self.catalog,
+                               websrv_port=self.ports.get("websrv"), launcher_port=self.ports.get("launcher"), catalog=self.catalog,
                                catalog_loader=lambda log: release.load_catalog(log=log),
                                report=lambda e: self.q.put(lambda: self._oc_event(e)), progress=self._progress,
                                cancel=self.oc_cancel, networks=nets, start_master_control=self.start_mc.get(),
-                               autoload_master_control=self.autoload_mc.get())
+                               autoload_master_control=self.autoload_mc.get(),
+                               jd_folder=self.jd_folder.get().strip() or None, confirm=self._ask_from_worker)
         self.run_bg(oc.run, lambda result, err: self._oc_done(oc, result, err))
+
+    def _ask_from_worker(self, question):
+        """Yes/No asked on the window's thread for the one-button worker thread (which waits for the answer)."""
+        answer, done = [False], threading.Event()
+
+        def ask():
+            try:
+                answer[0] = self.ask_yes_no(question)
+            finally:
+                done.set()
+        self.q.put(ask)
+        done.wait()
+        return answer[0]
+
+    def ask_yes_no(self, question):   # tests replace this
+        return messagebox.askyesno(config.APP_NAME, question)
 
     def _oc_event(self, e):
         if not self.logbox.winfo_exists():

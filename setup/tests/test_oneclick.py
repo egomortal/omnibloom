@@ -18,12 +18,14 @@ sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 
 from fake_console import FakeConsole  # noqa: E402
-from test_end_to_end import EBOOT, HUB_ELF, MC_ELF, SUITE, WORKER, catalog_of, connect, make_packages, new_console  # noqa: E402
-from omnibloom_setup import cli, config, installer, oneclick, ps5  # noqa: E402
+from test_end_to_end import (EBOOT, HUB_ELF, JD, MC_ELF, SUITE, WORKER, catalog_of, connect, make_engine_package,  # noqa: E402
+                             make_jd_install, make_packages, new_console)
+from omnibloom_setup import cli, config, installer, jd, oneclick, ps5, release  # noqa: E402
 
 sha = lambda b: hashlib.sha256(b).hexdigest()
 FAST = dict(poll=0.2, scan_poll=0.2, remind=0.5, title_wait=20, title_poll=0.2, smp_limit=5, smp_poll=0.1, smp_settle=0.05,
-            smp_settle_missing=0.05, lock_wait=5, lock_poll=0.1, status_timeout=10, reconnect=2, no_websrv_pause=0.05)
+            smp_settle_missing=0.05, lock_wait=5, lock_poll=0.1, status_timeout=10, reconnect=2, no_websrv_pause=0.05,
+            jd_wait=20, jd_poll=0.2)
 PREF = config.OMNI_HDR_PREF
 USER_FILES = ("/data/omni/browser-profile/cookies.db", "/data/mastercontrol/pairings.json")
 
@@ -59,8 +61,16 @@ class Base(unittest.TestCase):
         oneclick.TIMING.update(FAST)
         self.events = []
         self.fc = None
+        self.jd_home = os.path.join(self.tmp, "jd2")             # the only place JDownloader 2 is looked for
+        self._candidates = jd.candidate_folders
+        jd.candidate_folders = lambda: [self.jd_home]
+        self._jd_env = os.environ.pop("OMNIBLOOM_ENABLE_JD", None)
 
     def tearDown(self):
+        jd.candidate_folders = self._candidates
+        os.environ.pop("OMNIBLOOM_ENABLE_JD", None)
+        if self._jd_env is not None:
+            os.environ["OMNIBLOOM_ENABLE_JD"] = self._jd_env
         oneclick.TIMING.clear()
         oneclick.TIMING.update(self._timing)
         if self._env is None:
@@ -80,11 +90,12 @@ class Base(unittest.TestCase):
     def index(self, words):
         return next(i for i, t in enumerate(self.texts()) if words in t)
 
-    def one_click(self, zips, **kw):
+    def one_click(self, zips, catalog=None, **kw):
         fc = self.fc
         kw.setdefault("host", "127.0.0.1")
         oc = oneclick.OneClick(ftp_port=fc.ftp_port, loader_port=fc.loader_port, websrv_port=fc.websrv_port,
-                               catalog=catalog_of(zips), report=self.events.append, sleep=lambda s: time.sleep(min(s, 0.05)), **kw)
+                               launcher_port=getattr(fc, "launcher_port", None), catalog=catalog or catalog_of(zips),
+                               report=self.events.append, sleep=lambda s: time.sleep(min(s, 0.05)), **kw)
         return oc, oc.run()
 
     def assert_never_deleted(self):
@@ -280,6 +291,104 @@ class Undo(Base):
         self.assertEqual(fc.read(config.SETTINGS_PATH), b'{"theme": "mine"}')
         self.assertEqual(fc.read(EBOOT), b"OLD-S0B-EBOOT", "everything else went back")
         self.assert_never_deleted()
+
+
+class DownloadsCard(Base):
+    def test_hand_installed_downloads_gets_a_matching_card_and_receipt(self):
+        """The console case: downloader-7 was copied by hand, but the card and Setup's receipt still describe the
+        older install. The Downloads step must rewrite card + receipt together so Bloom Core verifies it."""
+        old_zips, _ = make_packages(os.path.join(self.tmp, "old"))
+        fc = self.fc = new_console(os.path.join(self.tmp, "console"))
+        self.assertTrue(self.one_click(old_zips)[1]["ok"], self.texts())
+        new_zips, new_files = make_packages(os.path.join(self.tmp, "new"), changed=b" downloader-7", seed=1)
+        fc.write(WORKER, new_files[WORKER])                              # the hand install
+        self.assertEqual(json.loads(fc.read(config.CARDS_DIR + "downloads.json"))["version"], "0.5.0")
+        # the release names the Downloads app by its own version (make_package.py --app-version downloads=downloader-7)
+        stage = os.path.join(self.tmp, "new", "stage-omnibloom-0.5.0")
+        out = os.path.join(self.tmp, "dl7")
+        import subprocess
+        subprocess.run([sys.executable, os.path.join(os.path.dirname(HERE), "tools", "make_package.py"), "--package", "omnibloom",
+                        "--stage", stage, "--version", "0.5.1", "--app-version", "downloads=downloader-7", "--out", out],
+                       check=True, capture_output=True)
+        dl7 = [os.path.join(out, "omnibloom-console-0.5.1.zip"), new_zips[1]]
+        self.events.clear()
+        self.assertTrue(self.one_click(dl7)[1]["ok"], self.texts())
+        self.assertTrue(self.said("Downloads 0.5.0 → downloader-7 (update)"))
+        card_raw = fc.read(config.CARDS_DIR + "downloads.json")
+        receipt = json.loads(fc.read(config.RECEIPTS_DIR + "downloads.json"))
+        self.assertEqual(json.loads(card_raw)["version"], "downloader-7")
+        self.assertEqual(receipt["version"], "downloader-7")
+        self.assertEqual(receipt["card_sha256"], sha(card_raw))
+        self.assertEqual(fc.read(WORKER), new_files[WORKER])
+        with connect(fc) as c:
+            self.assertEqual(installer.verify_app(c, catalog_of(dl7), "downloads"), [])
+            status = installer.read_status(c, since=int(time.time()) + 1, want=["downloads"], timeout=10)
+        dl = next(a for a in status["apps"] if a["id"] == "downloads")
+        self.assertTrue(dl["verified"], dl)
+        self.assertEqual(dl["version"], "downloader-7")
+        self.assert_never_deleted()
+
+
+class JDownloader2(Base):
+    def test_held_back_still_finds_it_and_says_so(self):
+        zips, _ = make_packages(self.tmp)
+        make_jd_install(self.jd_home)
+        fc = self.fc = new_console(os.path.join(self.tmp, "console"))
+        asked = []
+        oc, result = self.one_click(zips, confirm=lambda q: asked.append(q) or True)
+        self.assertTrue(result["ok"], self.texts())
+        self.assertTrue(self.said("Found JDownloader 2 at %s" % self.jd_home))
+        skip = [e for e in self.events if e.get("step") == "jdownloader" and e["state"] == "skip"]
+        self.assertTrue(skip and "held back" in skip[0]["text"], skip)
+        self.assertEqual(asked, [], "nothing to fetch")
+        self.assertFalse(fc.exists(JD + "native-install.json"))
+
+    def test_held_back_and_missing_asks_nothing(self):
+        zips, _ = make_packages(self.tmp)
+        self.fc = new_console(os.path.join(self.tmp, "console"))
+        asked, opened = [], []
+        oc, result = self.one_click(zips, confirm=lambda q: asked.append(q) or True, open_page=opened.append)
+        self.assertTrue(result["ok"], self.texts())
+        self.assertEqual((asked, opened), ([], []))
+        self.assertTrue(self.said(config.JD_OFFICIAL_URL))
+
+    def test_missing_then_fetched_from_the_site_and_switched_on(self):
+        os.environ["OMNIBLOOM_ENABLE_JD"] = "1"
+        zips, _ = make_packages(self.tmp)
+        engine_zip, engine_files = make_engine_package(self.tmp)
+        fc = self.fc = new_console(os.path.join(self.tmp, "console"))
+        fc.start_launcher()
+        cat = catalog_of(zips)
+        cat.add(release.Package(engine_zip))
+        opened = []
+
+        def user_installs_it(url):                         # the user downloads, installs and opens it once
+            opened.append(url)
+            threading.Timer(0.6, lambda: make_jd_install(self.jd_home)).start()
+        oc, result = self.one_click(zips, catalog=cat, confirm=lambda q: True, open_page=user_installs_it)
+        self.assertTrue(result["ok"], self.texts())
+        self.assertEqual(opened, [config.JD_OFFICIAL_URL])
+        self.assertTrue(self.said("JDownloader 2 is installed. Carrying on."))
+        self.assertTrue(result["jdownloader"]["ok"], result.get("jdownloader"))
+        self.assertIn(("jdownloader", "ok"), [(e.get("step"), e.get("state")) for e in self.events])
+        self.assertIs(json.loads(fc.read(JD + "native-install.json"))["approved"], True)
+        self.assertTrue(self.said("mateo-cogeanu"), "the Java port is credited")
+        self.assert_never_deleted()
+
+    def test_no_go_ahead_means_no_page_and_no_jdownloader(self):
+        os.environ["OMNIBLOOM_ENABLE_JD"] = "1"
+        zips, _ = make_packages(self.tmp)
+        os.makedirs(self.jd_home)
+        with open(os.path.join(self.jd_home, "JDownloader.jar"), "wb") as f:
+            f.write(b"bootstrap only")                     # downloaded, never opened: no Core.jar yet
+        self.fc = new_console(os.path.join(self.tmp, "console"))
+        opened = []
+        oc, result = self.one_click(zips, confirm=lambda q: False, open_page=opened.append)
+        self.assertTrue(result["ok"], self.texts())
+        self.assertEqual(opened, [])
+        self.assertTrue(self.said("hasn't finished setting itself up"))
+        skip = [e for e in self.events if e.get("step") == "jdownloader" and e["state"] == "skip"]
+        self.assertTrue(skip and "yt-dlp downloads work" in skip[0]["text"], skip)
 
 
 if __name__ == "__main__":

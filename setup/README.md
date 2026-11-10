@@ -9,7 +9,8 @@ One download that puts the Omnibloom apps on a jailbroken PS5 from your computer
 2. On the PS5: run your jailbreak so the payload loader and FTP server are up, and load ShadowMountPlus and kstuff.
 3. Open Omnibloom Setup and press **Install everything for me**. Setup waits for the PS5 to answer, then installs
    Bloom Core, Omni, Downloads, USB file access and Master Control one at a time, checks each, sets Omni's HDR to Auto
-   (unless you chose a setting), starts Bloom Core and asks it to confirm, telling you every step. If anything fails it
+   (unless you chose a setting), finds your own JDownloader 2 (or opens its official page, if you say yes, and waits for
+   you to install it), starts Bloom Core and asks it to confirm, telling you every step. If anything fails it
    puts the PS5 back as it was. **Undo this install** does the same afterwards.
    (Or press **Next** to find the PS5, check it, tick apps and install them yourself.)
 4. Run it again any time: **Installed apps…** has Update, Repair and Uninstall for each app.

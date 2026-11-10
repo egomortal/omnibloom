@@ -7,6 +7,8 @@
   4. Bloom Core, Omni, Downloads, USB file access, Master Control
                           each one: install (copy, check, then move into place; old files kept as backups),
                           wait for ShadowMountPlus when Omni's own files changed, then check it file by file
+  JDownloader 2           found on this computer (or, with your OK, Setup opens the official download page and waits
+                          for you to install it); copied to the PS5 after the apps, when this release allows it
   5. Settings             Omni's HDR setting: Auto when there's none yet; a setting you chose is kept
   6. Start and confirm    Bloom Core (and Master Control) start only now, then Bloom Core is asked to confirm
 
@@ -22,7 +24,7 @@ import posixpath
 import threading
 import time
 
-from . import checks, config, installer, ps5, release
+from . import checks, config, installer, jd, ps5, release
 from .ports import PortPicker
 
 # Timings (seconds). Tests make them short.
@@ -41,6 +43,8 @@ TIMING = {
     "status_timeout": 25.0,  # Bloom Core rewrites its status about every 10 s
     "reconnect": 10 * 60,    # waiting for the PS5 to come back before an undo
     "no_websrv_pause": 30.0, # time to close Omni when Setup can't see the app list
+    "jd_wait": 30 * 60,      # how long to wait for you to install JDownloader 2 after opening its page
+    "jd_poll": 10.0,
 }
 
 SMALL = 256 * 1024           # files up to this size are saved before being overwritten (undo puts them back)
@@ -50,8 +54,9 @@ UNDONE = ".omnibloom-undone-"
 ORDER = (config.HUB_ID, "omni", "downloads", "files-broker", "master-control")
 NAMES = {config.HUB_ID: config.HUB_NAME, "omni": "Omni", "downloads": "Downloads", "files-broker": "USB file access",
          "master-control": "Master Control"}
+JD_STEP = "jdownloader"
 STEPS = (("apps", "Get the Omnibloom apps"), ("find", "Find your PS5"), ("check", "Check your PS5")) + tuple(
-    (a, NAMES[a]) for a in ORDER) + (("settings", "Settings"), ("start", "Start and confirm"))
+    (a, NAMES[a]) for a in ORDER) + ((JD_STEP, "JDownloader 2"), ("settings", "Settings"), ("start", "Start and confirm"))
 
 
 def _now():
@@ -224,11 +229,13 @@ class OneClick:
     def __init__(self, host=None, ftp_port=None, loader_port=None, websrv_port=None, catalog=None, catalog_loader=None,
                  report=None, progress=None, cancel=None, wait_minutes=30, networks=None, master_control=True,
                  start_master_control=True, autoload_master_control=False, hdr="auto-if-unset", sleep=time.sleep,
-                 clock=time.time, record_dir=None):
+                 clock=time.time, record_dir=None, jdownloader=True, jd_folder=None, confirm=None, open_page=None,
+                 launcher_port=None):
         self.host = host
         self.ftp_port = ftp_port or config.FTP_PORT
         self.loader_port = loader_port or config.LOADER_PORT
         self.websrv_port = websrv_port
+        self.launcher_port = launcher_port
         self.catalog = catalog
         self.catalog_loader = catalog_loader or (lambda log: release.load_catalog(log=log))
         self.report = report or (lambda e: print(e.get("text", ""), flush=True))
@@ -237,6 +244,13 @@ class OneClick:
         self.wait_seconds = None if not wait_minutes else wait_minutes * 60.0
         self.networks = networks
         self.master_control = master_control
+        self.jdownloader = jdownloader
+        self.jd_folder = jd_folder
+        self.confirm = confirm or (lambda question: False)   # asks the user; no answer = no
+        if open_page is None:
+            import webbrowser
+            open_page = webbrowser.open
+        self.open_page = open_page
         self.start_mc = start_master_control
         self.autoload_mc = autoload_master_control
         self.hdr = hdr
@@ -274,6 +288,109 @@ class OneClick:
             self.catalog = self.catalog_loader(self.detail)
         names = ", ".join("%s %s" % (NAMES.get(a, a), self.catalog.apps[a]["version"]) for a in ORDER if self.catalog.has(a))
         self.step("apps", "ok", "Got the apps: %s." % names)
+
+    # -- JDownloader 2 on this computer (before the PS5, so you can install it while the PS5 starts) -------------
+    def find_jdownloader(self):
+        """Sets self.jd_folder to a usable JDownloader 2 install, or leaves it None (and says why)."""
+        if not self.jdownloader:
+            self.step(JD_STEP, "skip", "JDownloader 2: left out.")
+            return None
+        held = not config.jd_enabled()
+        self.step(JD_STEP, "active", "Looking for JDownloader 2 on this computer…")
+        folder = self._jd_pick()
+        if not folder and not held:
+            folder = self._jd_get_from_site()
+        if folder:
+            try:
+                info = jd.summary(folder)
+            except ValueError as e:
+                self.step(JD_STEP, "fail", "JDownloader 2 at %s can't be used: %s" % (folder, e))
+                self.jd_folder = None
+                return None
+            self.jd_folder = folder
+            self.detail("Found JDownloader 2 at %s (%d files, %.0f MB%s)." % (
+                folder, info["files"], info["megabytes"], (", revision %d" % info["revision"]) if info["revision"] else ""))
+            if info["revision_note"]:
+                self.detail(info["revision_note"])
+        if held:
+            self.jd_folder = None
+            self.step(JD_STEP, "skip", ("Found JDownloader 2 on this computer. " if folder else "") + config.JD_HELD_REASON +
+                      " Setup will copy it to the PS5 once a release turns it on.")
+            if not folder:
+                self.detail("When you want it: get JDownloader 2 from %s, install it and open it once." % config.JD_OFFICIAL_URL)
+            return None
+        if not folder:
+            self.step(JD_STEP, "skip", "JDownloader 2: not set up (it isn't on this computer). yt-dlp downloads work without it.")
+            return None
+        self.step(JD_STEP, "active", "JDownloader 2 found; it goes on the PS5 after the apps.")
+        return folder
+
+    def _jd_pick(self):
+        if self.jd_folder:
+            if jd.is_jd_folder(self.jd_folder):
+                return self.jd_folder
+            self.detail("%s doesn't have JDownloader.jar and Core.jar; looking in the usual places instead." % self.jd_folder)
+            self.jd_folder = None
+        found = jd.detect()
+        if len(found) > 1:
+            self.detail("Found JDownloader 2 in more than one place; using %s." % found[0])
+        if found:
+            return found[0]
+        half = jd.partial_folders()
+        if half:
+            self.say("JDownloader 2 at %s hasn't finished setting itself up (Core.jar is missing). Open it once and "
+                     "let it finish updating." % half[0])
+        return None
+
+    def _jd_get_from_site(self):
+        """Not on this computer: with the user's OK, open the official download page and listen for the install."""
+        question = ("JDownloader 2 isn't on this computer. Open the official download page (%s) so you can install it? "
+                    "Setup waits and carries on as soon as it's installed." % config.JD_OFFICIAL_URL)
+        if not self.confirm(question):
+            return None
+        self.say("Opening %s. JDownloader's own installers are linked there (they are hosted on mega.nz, and the page "
+                 "lists a SHA-256 for each one: you can compare it before running the installer). Install JDownloader 2 "
+                 "and open it once so it finishes downloading its parts. Setup is waiting for it." % config.JD_OFFICIAL_URL)
+        try:
+            self.open_page(config.JD_OFFICIAL_URL)
+        except Exception:
+            self.say("Couldn't open the browser; please open %s yourself." % config.JD_OFFICIAL_URL)
+        start = self.clock()
+        next_remind = start + TIMING["remind"]
+        while self.clock() - start < TIMING["jd_wait"]:
+            self._wait(TIMING["jd_poll"])
+            folder = self._jd_pick()
+            if folder:
+                self.say("JDownloader 2 is installed. Carrying on.")
+                return folder
+            if self.clock() >= next_remind:
+                self.say("Still waiting for JDownloader 2 to be installed (%d min so far)…" % ((self.clock() - start) // 60))
+                next_remind = self.clock() + TIMING["remind"]
+        self.say("JDownloader 2 didn't appear within %d minutes; carrying on without it. Run Setup again after "
+                 "installing it." % (TIMING["jd_wait"] // 60))
+        return None
+
+    def setup_jdownloader(self, console):
+        """After the apps: the engine + the user's JDownloader 2 + the check on the PS5. A failure leaves it off and
+        doesn't undo anything else (yt-dlp downloads keep working)."""
+        if not self.jd_folder:
+            return
+        if "downloads" not in self.result["installed"]:
+            self.step(JD_STEP, "skip", "JDownloader 2 works through Downloads, which wasn't installed.")
+            return
+        self.step(JD_STEP, "active", "Setting up JDownloader 2 on the PS5 (the check on the PS5 can take a few minutes)…")
+        for line in jd.credit_lines():
+            self.detail(line)
+        try:
+            release.load_engine(self.catalog, log=self.detail)
+            out = jd.setup_jdownloader(console, self.catalog, self.jd_folder, log=self.detail, progress=self.progress,
+                                       sleep=self.sleep)
+            self.result["jdownloader"] = {"ok": True, "install_id": out["acceptance"]["install_id"]}
+            self.step(JD_STEP, "ok", "JDownloader 2 is on. Use it from Media downloads in Omni.")
+        except Exception as e:
+            self.result["jdownloader"] = {"ok": False, "why": str(e)}
+            self.step(JD_STEP, "fail", "JDownloader 2 stays off: %s Everything else is installed; yt-dlp downloads work."
+                      % (str(e).rstrip(".") + "."))
 
     # -- 2. find (listen for the PS5) --------------------------------------------------------------------
     def find_console(self):
@@ -328,7 +445,8 @@ class OneClick:
         return found
 
     def connect(self):
-        return ps5.Console(self.host, ftp_port=self.ftp_port, loader_port=self.loader_port, websrv_port=self.websrv_port).connect()
+        return ps5.Console(self.host, ftp_port=self.ftp_port, loader_port=self.loader_port, websrv_port=self.websrv_port,
+                           launcher_port=self.launcher_port).connect()
 
     # -- 3. check + lock ----------------------------------------------------------------------------------
     def check(self, console):
@@ -618,6 +736,7 @@ class OneClick:
         try:
             self.say("Omnibloom one-button install. Setup will tell you each step as it goes.")
             self.get_apps()
+            self.find_jdownloader()
             self.find_console()
         except Stopped as e:
             self.say(str(e))
@@ -665,6 +784,7 @@ class OneClick:
                 return self.result
             recorder.mark(state="committed")
             console.recorder = None
+            self.setup_jdownloader(console)
             try:
                 self.start_and_confirm(console)
             except Exception as e:   # the apps are installed and checked; starting is retried at the next boot
