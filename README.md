@@ -25,7 +25,7 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 | **Master Control** | A controller app: pair Xbox and other Bluetooth pads (plug an Xbox pad in, unplug it, and it pairs wirelessly by itself), use Switch-mode, 8BitDo, HORI and other USB pads, remap buttons. Runs in the background with its own menu. Its own repository | [egomortal/master-control](https://github.com/egomortal/master-control) |
 | **USB files broker** | A small helper that lets Omni open and save files on USB drives, and nowhere else | [`omni/files-broker/`](omni/files-broker) |
 | **JDownloader 2 engine** (optional) | Runs **your own** JDownloader 2 on the PS5, inside Omni's downloads, on the [PS5 Java 25 port by mateo-cogeanu](https://github.com/mateo-cogeanu/ps5-java25-homebrew). JDownloader 2 itself is never shipped; Setup copies yours | [`jdownloader/`](jdownloader) |
-| **Omnibloom Setup** | One file for your computer: finds the PS5, installs and updates everything, sets up JDownloader 2 | [`setup/`](setup) |
+| **Omnibloom Setup** | One file for your computer: one button waits for the PS5 and installs everything in order, telling you each step; also updates, repairs, undoes and sets up JDownloader 2 | [`setup/`](setup) |
 
 - **Using it?** See [FEATURES.md](FEATURES.md) for what works, what's being tested and what's coming.
 - **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) and [docs/BUILD.md](docs/BUILD.md).
@@ -38,7 +38,9 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 - **kstuff** (kstuff-lite works), for the kernel patches homebrew apps need.
 - A payload loader listening on port 9021 (elfldr) for the downloads worker, the files broker and Master Control.
 
-Install steps are in [docs/INSTALL.md](docs/INSTALL.md).
+The easy way: download **Omnibloom Setup**, open it and press **Install everything for me**. It waits for your PS5,
+installs each part in order, checks it and tells you what it is doing; if anything fails it puts the PS5 back as it
+was. Details and the manual steps are in [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Philosophy
 

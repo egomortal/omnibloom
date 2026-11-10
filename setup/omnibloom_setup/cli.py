@@ -1,5 +1,8 @@
 """Command-line mode (also used by the automated tests). The window (gui.py) is the default.
 
+  --cli oneclick [--ip <ps5>]                  THE ONE BUTTON: waits for the PS5, installs everything in order,
+                                               checks each app, rolls back on any failure, tells you each step
+  --cli undo     --ip <ps5>                    undo the last one-button install on that PS5
   --cli scan
   --cli check   --ip <ps5>
   --cli list    --ip <ps5>                     installed apps, versions and available updates
@@ -13,7 +16,7 @@ import argparse
 import json
 import sys
 
-from . import checks, config, installer, jd, ps5, release
+from . import checks, config, installer, jd, oneclick, ps5, release
 
 
 def _console(a):
@@ -33,7 +36,7 @@ def _csv(text):
 
 def main(argv=None):
     p = argparse.ArgumentParser(prog="omnibloom-setup", description=config.APP_NAME)
-    p.add_argument("command", choices=["scan", "check", "list", "install", "repair", "uninstall", "status", "jd-detect", "jd-setup", "jd-copy"])
+    p.add_argument("command", choices=["oneclick", "undo", "scan", "check", "list", "install", "repair", "uninstall", "status", "jd-detect", "jd-setup", "jd-copy"])
     p.add_argument("--ip")
     p.add_argument("--ftp-port", type=int, default=config.FTP_PORT)
     p.add_argument("--loader-port", type=int, default=config.LOADER_PORT)
@@ -49,8 +52,45 @@ def main(argv=None):
     p.add_argument("--quick", action="store_true", help="skip the 18 s ShadowMountPlus activity check")
     p.add_argument("--jd-folder")
     p.add_argument("--network", action="append", help="subnet to scan, e.g. 192.168.0.0/24")
+    p.add_argument("--wait-minutes", type=float, default=30, help="oneclick: how long to wait for the PS5 (0 = until it answers)")
+    p.add_argument("--no-master-control", action="store_true", help="oneclick: leave Master Control out")
+    p.add_argument("--no-start-master-control", action="store_true", help="oneclick: install Master Control but don't start it now")
+    p.add_argument("--autoload-master-control", action="store_true",
+                   help="oneclick: start Master Control with the PS5 (takes PadBridge/EeveeLution's place)")
+    p.add_argument("--hdr", choices=["auto-if-unset", "auto", "keep"], default="auto-if-unset",
+                   help="oneclick: Omni's HDR setting (default: Auto unless you already chose one)")
+    p.add_argument("--run-file", help="undo: a specific run file instead of the last one")
     a = p.parse_args(argv)
     log = lambda m: print(m, flush=True)
+
+    if a.command == "oneclick":
+        import ipaddress
+        steps = dict(oneclick.STEPS)
+        mark = {"active": "...", "ok": "OK ", "fail": "!! ", "skip": "-- ", "undone": "<< "}
+
+        def report(e):
+            if e.get("step"):
+                print("[%s] %-24s %s" % (mark.get(e["state"], "   "), steps.get(e["step"], e["step"]), e.get("text", "")), flush=True)
+            elif e.get("text"):
+                print(("      " + e["text"]) if e["text"].startswith("  ") else e["text"], flush=True)
+        nets = [ipaddress.ip_network(n, strict=False) for n in a.network] if a.network else None
+        oc = oneclick.OneClick(host=a.ip, ftp_port=a.ftp_port, loader_port=a.loader_port, websrv_port=a.websrv_port,
+                               catalog_loader=lambda lg: _catalog(a, lg), report=report, wait_minutes=a.wait_minutes,
+                               networks=nets, master_control=not a.no_master_control,
+                               start_master_control=not a.no_start_master_control,
+                               autoload_master_control=a.autoload_master_control, hdr=a.hdr)
+        try:
+            result = oc.run()
+        except KeyboardInterrupt:
+            oc.cancel.set()
+            log("Stopped.")
+            return 4
+        return 0 if result.get("ok") else (5 if result.get("rolled_back") else 2)
+    if a.command == "undo":
+        if not a.ip:
+            p.error("--ip is required for undo")
+        return 0 if oneclick.undo_last(a.ip, ftp_port=a.ftp_port, loader_port=a.loader_port, websrv_port=a.websrv_port,
+                                       report=lambda e: print(e.get("text", ""), flush=True), run_path=a.run_file) else 1
 
     if a.command == "scan":
         import ipaddress

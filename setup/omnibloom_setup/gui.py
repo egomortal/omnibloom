@@ -1,6 +1,8 @@
 """The Omnibloom Setup window: a simple step-by-step guide for people who've never used FTP or payloads.
 
 Steps: Welcome → Find your PS5 → Check → Choose apps → JDownloader 2 → Install → Done.
+Or the one button on the Welcome page ("Install everything for me"): Setup waits for the PS5 and does every step
+itself (oneclick.py), ticking off a checklist and saying what it's doing; "Undo this install" puts it all back.
 Bloom Core is required and always installed first. Apps already on the PS5 are listed on the
 "Installed apps" page with Update, Repair and Uninstall per app.
 Slow work runs on a background thread; Tk variables are only read on the window's thread.
@@ -14,10 +16,12 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
 
-from . import checks, config, installer, jd, ps5, release
+from . import checks, config, installer, jd, oneclick, ps5, release
 
 C = config.COLORS
 STATUS_MARK = {"ok": ("✓", C["ok"]), "warn": ("!", C["warn"]), "bad": ("✕", C["bad"]), "info": ("i", C["accent"])}
+STEP_MARK = {"pending": ("·", C["muted"]), "active": ("…", C["accent"]), "ok": ("✓", C["ok"]), "fail": ("✕", C["bad"]),
+             "skip": ("–", C["muted"]), "undone": ("↺", C["warn"])}
 SUB_APPS = {"downloads": "Downloads (yt-dlp built in)", "files-broker": "USB file access"}
 
 
@@ -44,6 +48,9 @@ class SetupApp:
         self.jd_copy = tk.BooleanVar(value=False)
         self.job = {"mode": "install"}
         self.result = {}
+        self.oc_cancel = threading.Event()
+        self.oc_running = False
+        self.oc_result = None
 
         root.title(config.APP_NAME)
         root.geometry("800x680")
@@ -115,8 +122,8 @@ class SetupApp:
     def show(self, index):
         self.step = index
         self._clear()
-        self.next_btn.configure(text="Next", state="normal")
-        self.back_btn.configure(state="normal" if 0 < index < 5 else "disabled")
+        self.next_btn.configure(text="Next", state="normal", command=self.next)
+        self.back_btn.configure(state="normal" if 0 < index < 5 else "disabled", command=self.back)
         self.steps[index]()
 
     def _clear(self):
@@ -181,8 +188,132 @@ class SetupApp:
                      "ShadowMountPlus and kstuff are loaded (Omnibloom needs both).",
                      "Your payload loader and FTP server are running (most jailbreak setups start them for you)."):
             self.label(p, "•  " + line, bg=C["panel"]).pack(anchor="w", pady=2)
-        self.label(self.body, "Nothing is deleted from your PS5. Anything Setup replaces is kept as a backup, and "
-                              "Uninstall puts it back.", "small").pack(anchor="w", pady=(14, 0))
+        one = self.panel(self.body)
+        one.pack(fill="x", pady=(14, 0))
+        self.label(one, "The easy way", "head", bg=C["panel"]).pack(anchor="w")
+        self.label(one, "Press the button and Setup does everything: it waits for your PS5 to come on, installs Bloom Core, "
+                        "Omni, Downloads, USB file access and Master Control one at a time, checks each one, and tells you "
+                        "what it's doing. If anything goes wrong it puts your PS5 back as it was.", "small",
+                   bg=C["panel"]).pack(anchor="w", pady=(2, 8))
+        row = tk.Frame(one, bg=C["panel"])
+        row.pack(fill="x")
+        ttk.Button(row, text="Install everything for me", style="Accent.TButton", command=self.page_oneclick).pack(side="left")
+        if not self.host.get():
+            self.host.set(oneclick._remembered_host() or "")
+        self.label(row, "PS5 address (optional):", "small", bg=C["panel"], wrap=0).pack(side="left", padx=(16, 6))
+        ttk.Entry(row, textvariable=self.host, width=16).pack(side="left")
+        self.label(self.body, "Or press Next to pick apps yourself. Nothing is deleted from your PS5. Anything Setup "
+                              "replaces is kept as a backup, and Uninstall puts it back.", "small").pack(anchor="w", pady=(14, 0))
+
+    # -- the one button ------------------------------------------------------------
+    def page_oneclick(self):
+        self._clear()
+        self.label(self.body, "Installing everything", "title").pack(anchor="w")
+        self.label(self.body, "Setup does each step for you and says what it's doing. Keep this window open and your PS5 on.",
+                   "muted").pack(anchor="w", pady=(2, 10))
+        lst = tk.Frame(self.body, bg=C["panel"], padx=12, pady=6)
+        lst.pack(fill="x")
+        self.oc_rows = {}
+        for key, name in oneclick.STEPS:
+            row = tk.Frame(lst, bg=C["panel"])
+            row.pack(fill="x")
+            mark = tk.Label(row, text=STEP_MARK["pending"][0], fg=STEP_MARK["pending"][1], bg=C["panel"], font=self.f_body, width=2)
+            mark.pack(side="left")
+            tk.Label(row, text=name, fg=C["text"], bg=C["panel"], font=self.f_small, width=22, anchor="w").pack(side="left")
+            note = tk.Label(row, text="", fg=C["muted"], bg=C["panel"], font=self.f_small, anchor="w", justify="left", wraplength=470)
+            note.pack(side="left", fill="x", expand=True)
+            self.oc_rows[key] = (mark, note)
+        self.bar = ttk.Progressbar(self.body, mode="determinate")
+        self.bar.pack(fill="x", pady=(10, 0))
+        self.logbox = tk.Text(self.body, height=8, bg=C["panel"], fg=C["muted"], bd=0, highlightthickness=0, font=self.f_small, wrap="word")
+        self.logbox.pack(fill="both", expand=True, pady=(8, 4))
+        self.oc_actions = tk.Frame(self.body, bg=C["ground"])
+        self.oc_actions.pack(fill="x")
+        self.back_btn.configure(state="disabled")
+        self.next_btn.configure(text="Stop", state="normal", command=self._oc_stop)
+        self.oc_cancel = threading.Event()
+        self.oc_running = True
+        self.oc_result = None
+        host = self.host.get().strip() or None
+        nets = None
+        if self.ports.get("host"):   # test mode: the fake PS5 is on this computer
+            import ipaddress
+            nets = [ipaddress.ip_network(self.ports["host"] + "/30", strict=False)]
+        oc = oneclick.OneClick(host=host, ftp_port=self.ports.get("ftp"), loader_port=self.ports.get("loader"),
+                               websrv_port=self.ports.get("websrv"), catalog=self.catalog,
+                               catalog_loader=lambda log: release.load_catalog(log=log),
+                               report=lambda e: self.q.put(lambda: self._oc_event(e)), progress=self._progress,
+                               cancel=self.oc_cancel, networks=nets, start_master_control=self.start_mc.get(),
+                               autoload_master_control=self.autoload_mc.get())
+        self.run_bg(oc.run, lambda result, err: self._oc_done(oc, result, err))
+
+    def _oc_event(self, e):
+        if not self.logbox.winfo_exists():
+            return
+        if e.get("step") in self.oc_rows:
+            mark, note = self.oc_rows[e["step"]]
+            sym, color = STEP_MARK.get(e["state"], STEP_MARK["pending"])
+            mark.configure(text=sym, fg=color)
+            note.configure(text=e.get("text", ""), fg=C["bad"] if e["state"] == "fail" else C["muted"])
+            if e["state"] == "active":
+                self.bar.configure(value=0)
+        if e.get("text"):
+            self.logbox.insert("end", e["text"] + "\n")
+            self.logbox.see("end")
+
+    def _oc_stop(self):
+        if self.oc_running:
+            self.oc_cancel.set()
+            self._oc_event({"text": "Stopping when the current wait ends (an install that has started finishes or is put back first)…"})
+            self.next_btn.configure(state="disabled")
+        else:
+            self.root.destroy()
+
+    def _oc_done(self, oc, result, err):
+        self.oc_running = False
+        self.oc_result = result or {}
+        if oc.host:
+            self.host.set(oc.host)
+        if oc.catalog is not None:
+            self.catalog = oc.catalog
+        if not self.logbox.winfo_exists():
+            return
+        if err:
+            self._oc_event({"text": "Stopped: %s" % err})
+        self.next_btn.configure(text="Close", state="normal", command=self._oc_stop)
+        self.back_btn.configure(state="normal", command=lambda: self.show(0))
+        for w in self.oc_actions.winfo_children():
+            w.destroy()
+        if self.oc_result.get("ok"):
+            mc = self.oc_result["installed"].get("master-control")
+            if mc and mc.get("port"):
+                self.label(self.oc_actions, "Master Control's menu: http://%s:%d/  (also from Omni)" % (oc.host, mc["port"]),
+                           "small").pack(anchor="w")
+            ttk.Button(self.oc_actions, text="Undo this install", style="Ghost.TButton", command=self._oc_undo).pack(side="left", pady=4)
+        else:
+            ttk.Button(self.oc_actions, text="Try again", style="Accent.TButton", command=self.page_oneclick).pack(side="left", pady=4)
+
+    def _oc_undo(self, confirm=True):
+        host = self.host.get().strip()
+        if confirm and not messagebox.askyesno(
+                config.APP_NAME, "Put your PS5 back the way it was before this install?\n\nApps that are running keep "
+                                 "running until the PS5 restarts. Your own data is kept."):
+            return
+        for w in self.oc_actions.winfo_children():
+            w.destroy()
+        self.next_btn.configure(state="disabled")
+        self.back_btn.configure(state="disabled")
+        self.oc_undo_result = None
+        report = lambda e: self.q.put(lambda: self._oc_event(e))
+
+        def done(ok, err):
+            self.oc_undo_result = bool(ok)
+            if err:
+                self._oc_event({"text": "Undo stopped: %s" % err})
+            self.next_btn.configure(state="normal")
+            self.back_btn.configure(state="normal")
+        self.run_bg(lambda: oneclick.undo_last(host, ftp_port=self.ports.get("ftp"), loader_port=self.ports.get("loader"),
+                                               websrv_port=self.ports.get("websrv"), report=report), done)
 
     # -- 2. find -----------------------------------------------------------------
     def page_find(self):

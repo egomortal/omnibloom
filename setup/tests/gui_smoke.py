@@ -12,11 +12,12 @@ sys.path.insert(0, HERE)
 import tkinter as tk  # noqa: E402
 
 from test_end_to_end import new_console, make_packages, make_engine_package, make_jd_install, EBOOT, JD  # noqa: E402
-from omnibloom_setup import config, gui, release  # noqa: E402
+from omnibloom_setup import config, gui, oneclick, release  # noqa: E402
 
 shots = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "shots")
 os.makedirs(shots, exist_ok=True)
 tmp = tempfile.mkdtemp(prefix="omnibloom-gui-")
+os.environ["LOCALAPPDATA"] = os.path.join(tmp, "pc")      # run files and the remembered PS5 stay in the test folder
 fc = new_console(os.path.join(tmp, "console"))
 zips, files = make_packages(tmp)
 make_engine_package(tmp)              # the JDownloader 2 engine sits next to Setup too
@@ -86,7 +87,7 @@ assert b'"approved": true' in fc.read(JD + "native-install.json")
 assert fc.read(EBOOT) == files[EBOOT]
 al = fc.read(config.AUTOLOAD_PATH).decode()
 assert "hub.elf" in al and "master-control.elf" in al, al
-assert sorted(fc.listdir(config.CARDS_DIR)) == ["downloads.json", "files-broker.json", "master-control.json", "omni.json"]
+assert sorted(fc.listdir(config.CARDS_DIR)) == ["downloads.json", "files-broker.json", "jdownloader.json", "master-control.json", "omni.json"]
 # Run again: Check → Installed apps → uninstall Master Control only.
 app.show(2)
 wait_for(lambda: str(app.next_btn["state"]) == "normal")
@@ -99,6 +100,26 @@ shot("10-uninstall-one")
 assert not fc.exists(config.CARDS_DIR + "master-control.json")
 assert fc.exists(config.CARDS_DIR + "omni.json")
 assert fc.state["deletes"] == []
+# The one button on a second, fresh PS5: Welcome → "Install everything for me" → checklist → Undo this install.
+oneclick.TIMING.update(poll=0.3, smp_poll=0.2, smp_settle=0.2, smp_settle_missing=0.2, status_timeout=10)
+fc2 = new_console(os.path.join(tmp, "console2"))
+app.ports = {"ftp": fc2.ftp_port, "loader": fc2.loader_port, "websrv": fc2.websrv_port, "host": "127.0.0.1"}
+app.host.set("127.0.0.1")
+app.show(0)
+shot("11-one-button")
+app.page_oneclick()
+wait_for(lambda: not app.oc_running, 180)
+shot("12-one-button-done")
+assert app.oc_result.get("ok"), app.logbox.get("1.0", "end")
+assert fc2.read(EBOOT) == files[EBOOT]
+assert fc2.read(config.OMNI_HDR_PREF) == b"1\tauto\n"
+app._oc_undo(confirm=False)
+wait_for(lambda: app.oc_undo_result is not None, 120)
+shot("13-one-button-undo")
+assert app.oc_undo_result, app.logbox.get("1.0", "end")
+assert fc2.read(EBOOT) == b"OLD-S0B-EBOOT"
+assert fc2.state["deletes"] == []
 print("GUI SMOKE PASS")
 root.destroy()
 fc.stop()
+fc2.stop()

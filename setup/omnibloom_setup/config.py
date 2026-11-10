@@ -83,7 +83,23 @@ PROTECTED_ROOTS = (
 
 # Files whose FTP readback is not the uploaded bytes: ftpsrv serves a decoded view of a
 # native title's eboot.bin, so its hash can only be checked locally before upload.
+# The console's rule is "eboot/prx readback is decrypted": the same goes for the title's .prx/.sprx modules.
 DECODED_ON_READBACK = ("eboot.bin",)
+DECODED_SUFFIXES = (".prx", ".sprx")
+
+# ShadowMountPlus logs a line when it (re)mounts a title; after Omni's files change, Setup waits for it.
+SMP_LOG = "/data/shadowmount/debug.log"
+SMP_MOUNT_WORDS = ("nullfs mounted", "mount.lnk created")
+# A running title shows as this process name in websrv's list. Setup waits for it to close; it never closes it.
+TITLE_PROCESS = "eboot.bin"
+
+# One Setup at a time per PS5 (the one-button install takes it; {"owner": null} when free).
+SETUP_LOCK = HUB_DIR + "setup-lock.json"
+SETUP_LOCK_MINUTES = 30
+
+# Omni's HDR setting (`<revision>TAB<off|auto|on>` and a newline; Omni treats a missing file as Off). The one-button install
+# sets Auto when there's no setting yet and keeps the user's choice otherwise.
+OMNI_HDR_PREF = "/data/omni/video-hdr-preference.txt"
 
 # Required console software, with how the setup recognises each one in autoload.txt.
 REQUIREMENTS = {
