@@ -1,6 +1,6 @@
 e6a6b15df038b9da0929d390bf4f517708dc1e2b085cd2c70a85f97d46542623  ./README.md
 1ebc3946c61fd810e81c2b7fba864651ecb537e70e585683faab1d87fdd51c1a  ./build/build-omni-launch-child-fallback.sh
-571a40a90a9e2dba54379293f7d7309eab381c5c77d4750c9a847d353c2536d7  ./build/build-omni-launch-child.sh
+4ba9c806211db4fff73a2bc0978ea544a045257779d0c20699efe6ec5bcfec34  ./build/build-omni-launch-child.sh
 3d30c95616cc5f48ce7a7db76e6721f3eb021a788a6e0f13ef9d030cda304e56  ./build/build-omni-launch-eboot.sh
 f740d16e6517e312998284b661e94875996dfde65fe1568d596bc972b9458d9c  ./build/build-omni-native-s31.sh
 7df14108e434646e84f79daa104325adcf0fb155f5ecd175099e21461018ec5b  ./build/build-omni-native-s31b.sh
@@ -9,6 +9,7 @@ f740d16e6517e312998284b661e94875996dfde65fe1568d596bc972b9458d9c  ./build/build-
 1726283d13cf734767617c18153a98c3cc32e9a8e478031f38784c5732c2a934  ./build/build-omni-native-s34b.sh
 175559e07bcd70138340b35b5e141c6e088825965cc1cda31239d51053569422  ./build/build-omni-native-s34c.sh
 1aeae50adf009f88214f0d18a332763861dd95b1fe85a13f2d661a972480a01e  ./build/build-omni-native-s34d.sh
+cbce46cde9ffd96cadf9b4b02fef94c54db343a9e8d88992f06922968e81ee19  ./build/build-omni-ytguard-title.sh
 c55ce749888dbd7ce7483179b634dc99f660a6be1dfebe6f87c0a3858bb3638e  ./clean4/integration.diff
 35e3038093e57815f2be8c0e6118ec8f19fc7c0f0740fab757b1b62d39c59786  ./engine-entry/OmniBlocker.cpp
 32018bedd4cc8934fcea87fdaa0d690ead63b343206d7e254974913fe6cbb45e  ./engine-entry/OmniBlocker.h
@@ -68,7 +69,12 @@ e887ed6cde755770f98f950efbfb340d78ea9ece59f6c50862df4f5c2e78b77e  ./experimental
 438a507dad564d08254465a74211cbbda0eb31925a095318e2b238d74c3e2ba2  ./experimental/swdec-pad/README.md
 895cfa980423a06892acde1c73fd9878fa603b2b4c22b135ba50ddc18eb5ebc8  ./experimental/swdec-pad/REPORT.md
 28f6672fa719c07aece6ce9429271619ef884efdab9bd139729de5ef8ec9b82b  ./experimental/swdec-pad/tools/apply_swdec_pad.py
-82e056e22093790038b644a9cb8f1d45180e43914ea31a9717e6c63395d3d103  ./launch/README.md
+c7321f070a4e7a738ed4b913162a201370b236ee8d8a78571d8e285aea236c05  ./launch/README.md
+d28d4e7c1e7320ee715ee716295ebd890fd86ffa6a5853e6e3d9b26aa2089a3c  ./launch/rc5/README.md
+4de18252fccd17e61130321fc8066d5a42319739968d38e9eeef641b83b9a790  ./launch/rc5/child/apply_nc_blob_copy.py
+6cfcc741cffff2d6458059904357367adceaa2ca7b4bfb717731cf711afacea1  ./launch/rc5/tests/guard_sim_test.js
+70e36ccb8548df3dd2df87695e72430db75a8c5cf438e6dffa7ffeadbf4165b0  ./launch/rc5/tests/guard_ump_test.js
+810b9b31ebc20c834479f5072f4ca4a8ace26da9c9fc2e870365164ade466b19  ./launch/rc5/title/OmniYtGuard.h
 e0ecfefbfa1c80007e035dde2a573400ef966b43480c66d0511d87b888b42098  ./launch/tests/ack_order_test.cpp
 f0db81f02db838e9f68527c33878a8149dcb372a8eae581cfe03e4dc3883fc3e  ./launch/tests/ack_pace_test.cpp
 69c82c330ee80322e34009abf532fefe2ea223553034033fb126f48b4aa1ebdf  ./launch/tests/ack_sink_test.cpp

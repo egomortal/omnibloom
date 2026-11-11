@@ -24,13 +24,13 @@
 # written straight onto /mnt/c came back corrupted for another build). SOURCE_DATE_EPOCH=1793793600. Own lock, overlays,
 # seclibs copy and /tmp names per variant. Never writes another build's tree (the s3.4g appliers are this folder's
 # copies). Startup/bootstrap code untouched. Build only: never deploys, never touches the console.
-VARIANT=${VARIANT:-clean}; case "$VARIANT" in diag) SUB=child-diag;; fallback) SUB=child-fallback;; rc3) SUB=child-rc3;; rc4) SUB=child-rc4;; *) VARIANT=clean; SUB=child;; esac
+VARIANT=${VARIANT:-clean}; case "$VARIANT" in diag) SUB=child-diag;; fallback) SUB=child-fallback;; rc3) SUB=child-rc3;; rc4) SUB=child-rc4;; rc5) SUB=child-rc5;; rc5np) SUB=child-rc5np;; rc6) SUB=child-rc6;; *) VARIANT=clean; SUB=child;; esac
 O='/path/to/workspace/outputs'; N="$O/omni-launch/$SUB"
 cat > /tmp/launchc-$VARIANT-inner-$$.sh <<'IN'
 #!/bin/bash
 O='/path/to/workspace/outputs'; N="$O/omni-launch-$VARIANT-bind"; NR="$V_NREAL"
 J="$O/omni-jank"; A="$O/omni-ack"; M="$O/omni-crash-memloop"; NET="$O/omni-net"; MP="$O/omni-mem-paint"; L="$O/omni-launch"
-MPS="$MP/src"; MPH="$MP/hosttest"; RC4=0; case "$VARIANT" in rc4|diag) RC4=1; MPS="$L/mempaint-rc4/src"; MPH="$L/mempaint-rc4/hosttest";; esac
+MPS="$MP/src"; MPH="$MP/hosttest"; RC4=0; case "$VARIANT" in rc4|rc5|rc5np|rc6|diag) RC4=1; MPS="$L/mempaint-rc4/src"; MPH="$L/mempaint-rc4/hosttest";; esac
 st(){ echo "$(date -u +%FT%TZ) [$VARIANT] $*" | tee -a "$N/build-steps.txt"; }
 export OMNI_SECLIBS=/home/builder/omni-seclibs/stage/user/homebrew/lib
 export SOURCE_DATE_EPOCH=1793793600
@@ -105,7 +105,7 @@ BH=$(sha256sum "$LOUT/child-base/omni-engine-child.elf" | cut -d' ' -f1); st "ba
 U_S34G(){ python3 "$N/tools/apply_nomini.py" "$1" > "$2/apply_nomini.log" 2>&1 && python3 "$N/tools/apply_heapcap.py" "$1" > "$2/apply_heapcap.log" 2>&1 \
   && python3 "$N/tools/apply_mallocmini.py" "$1" > "$2/apply_mallocmini.log" 2>&1 \
   && python3 "$L/tools/apply_launch_switches.py" "$1" --s34g --check-stock=/home/builder/s3 > "$2/apply_switch_s34g.log" 2>&1; }
-NETARGS=--no-diag; [ "$VARIANT" = diag ] && NETARGS=
+NETARGS=--no-diag; [ "$VARIANT" = diag ] && NETARGS=; [ "$VARIANT" = rc5np ] && NETARGS=   # rc5np: + OMNI_NETPROF_V1 (netprof.flag)
 JSCOPT=; [ "$VARIANT" = clean ] && JSCOPT=--no-jscache-optin   # rc2 recipe stays reproducible
 U_NET(){ python3 "$N/tools/apply_net.py" "$1" $NETARGS > "$2/apply_net.log" 2>&1 && python3 "$L/tools/apply_launch_switches.py" "$1" --net $JSCOPT > "$2/apply_switch_net.log" 2>&1; }
 U_H2B(){ python3 "$N/tools/apply_h2fix.py" "$1" > "$2/apply_h2fix.log" 2>&1 && { [ "$RC4" = 0 ] || python3 "$L/tools/apply_launch_switches.py" "$1" --hdrbuf-optin > "$2/apply_switch_hdrbuf.log" 2>&1; }; }
@@ -115,6 +115,9 @@ U_PRECTS(){ mkdir -p "$2/patches-jank"; if [ "$VARIANT" = diag ]; then OMNI_JANK
 U_ACK(){ mkdir -p "$2/patches-ack"; OMNI_ACK_SRC="$A/src" OMNI_ACK_PATCHES="$2/patches-ack" python3 "$A/tools/apply_ack_child.py" "$1" > "$2/apply_ack_child.log" 2>&1 \
   && python3 "$L/tools/apply_launch_switches.py" "$1" --ack --ack-inc="$2/patches-ack" > "$2/apply_switch_ack.log" 2>&1; }
 U_MEM(){ mkdir -p "$2/patches-mem"; OMNI_MEMPAINT_SRC="$MPS" OMNI_MEMPAINT_PATCHES="$2/patches-mem" python3 "$MP/tools/apply_mempaint.py" "$1" > "$2/apply_mempaint.log" 2>&1; }
+U_NCB(){ python3 "$O/omni-nc-blob/apply_nc_blob_copy.py" "$1/webkit" > "$2/apply_nc_blob.log" 2>&1 && grep -q 'applied at 2 sites' "$2/apply_nc_blob.log"; }
+U_NAVP(){ python3 "$O/omni-navplatform/apply_nav_platform.py" "$1/webkit" > "$2/apply_nav_platform.log" 2>&1 && grep -q '^applied' "$2/apply_nav_platform.log"; }
+U_JITV4(){ python3 "$O/omni-jit-fix/apply_jit_v4.py" "$1/webkit" > "$2/apply_jit_v4.log" 2>&1 && grep -q '^applied' "$2/apply_jit_v4.log"; }
 U_YTPROF(){ python3 "$N/tools/apply_ytprof.py" "$1" > "$2/apply_ytprof.log" 2>&1; }
 run_units(){ local t="$1" D="$2"; shift 2; for u in "$@"; do "U_$u" "$t" "$D" || { echo "$u"; return 1; }; done; }
 # declared dependencies kept in both orders (everything else is swapped): apply_h2fix runs AFTER apply_net (its own
@@ -123,6 +126,8 @@ run_units(){ local t="$1" D="$2"; shift 2; for u in "$@"; do "U_$u" "$t" "$D" ||
 # inside the same unit; diag: OMNI_JANK_PAGE_V1 needs OMNI_YTPROF_V1 first.
 case "$VARIANT" in
   clean|rc3|rc4) ORDA="S34G NET H2B SWPAD PRECTS ACK MEM";        ORDB="MEM ACK PRECTS SWPAD NET H2B S34G";;
+  rc5|rc5np) ORDA="S34G NET H2B SWPAD PRECTS ACK MEM NCB";    ORDB="NCB MEM ACK PRECTS SWPAD NET H2B S34G";;   # = shipped rc5-v3 (NAVP tested, not shipped)
+  rc6)      ORDA="S34G NET H2B SWPAD PRECTS ACK MEM NCB JITV4"; ORDB="JITV4 NCB MEM ACK PRECTS SWPAD NET H2B S34G";;   # rc5 + OMNI_JSC_JIT_V4 (W^X JIT pool)
   fallback) ORDA="H2B SWPAD PRECTS ACK MEM";                 ORDB="MEM ACK PRECTS SWPAD H2B";;
   diag)     ORDA="YTPROF S34G NET H2B SWPAD PRECTS ACK MEM"; ORDB="MEM ACK S34G NET H2B SWPAD YTPROF PRECTS";;
 esac

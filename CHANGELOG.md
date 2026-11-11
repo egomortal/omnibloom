@@ -1,9 +1,37 @@
 # Changelog
 
-## Unreleased: launch build (in progress, November 9-10, 2026)
+## Unreleased: launch build (in progress, November 9-11, 2026)
 
 Everything below is going into one combined build for the November 12 release. "Proven" means tested on the
 console; "built" means it passes its PC tests and is waiting for its console test.
+
+### YouTube no longer stops after a minute (launch build rc5, proven on the console, November 11)
+- **What was wrong:** YouTube played about a minute and then stopped. Two causes, both in Omni:
+  - **Omni's web cache never kept a large file.** On the PS5 the hard-link step reports success but creates
+    nothing, so YouTube's player script, its security scripts, fonts and big images were re-downloaded on every
+    visit. A cache built that way also stopped YouTube's player from ever making its playback token.
+  - **YouTube rejects about half of the tokens Omni makes**, even with nothing extra in the page.
+- **The fix:**
+  - The cache checks that each large file really exists and copies it if not (`OMNI_NC_BLOB_COPY_V3`), so repeat
+    visits load YouTube's player from the cache.
+  - The old, broken cache is set aside once on first start, never deleted (`OMNI_NC_RESET_V1`).
+  - When YouTube rejects a token, Omni reloads the page at the same position so a fresh one is made, up to 5
+    times per video (`OMNI_YT_ATTEST_GUARD_V1`, off with `/data/omni/ytguard-off.flag`).
+- **Results:** 4/4 test runs on a real profile played to the end, and 2/2 on the installed launch build. Sources:
+  `omni/native-title/patches/launch/rc5/`.
+
+### Setup, downloads and JDownloader 2
+- **One-button install:** Setup waits for the PS5 to answer, then installs everything step by step and says what
+  it is doing. It finds JDownloader 2 on the computer or points to its download page.
+- **Downloads (downloader-8):** the download itself now goes through the public-address check, not just the link
+  lookup.
+- **JDownloader 2 (audit JD-03):** JDownloader's own connections (plugins, redirects, updates) are confined to
+  public addresses by the bridge.
+  - Setup switches JDownloader 2 on only when the bridge reports that policy from the PS5 itself.
+  - Tested on the console: both checks passed, and the bridge reported `omni-public-only-v1`.
+- **Setup fixes found on the console:**
+  - A JDownloader session left open by a restart no longer blocks Setup.
+  - The command-line installer shows progress during the long JDownloader copy.
 
 ### Fixed (proven on the console)
 - **Reddit-style pages with many small videos no longer crash.** The software video player wrote up to 32 bytes past

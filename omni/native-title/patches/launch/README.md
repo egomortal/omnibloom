@@ -1,4 +1,6 @@
-# Launch build: title rc2 + engine child rc4 (2026-11-10)
+# Launch build: title rc2 + engine child rc4 (2026-11-10), now rc5 (2026-11-11)
+
+**The launch build is now rc5** (`rc5/README.md`): rc2 + the YouTube attestation guard and a one-time cache reset (title), rc4 + the network-cache blob copy (child). It fixes YouTube stopping at 1:00. Everything below describes rc2 + rc4, which rc5 is built on and which stays the rollback.
 
 The Omni build for the November 12 release: **title rc2** (`eboot.bin`) with **launch child rc4**
 (`omni-engine-child.elf`). Both are console-tested together (YouTube start 13.7 s, HDR10 on the GPU at 59.94 fps
@@ -37,6 +39,7 @@ is not.
 | `webkit/20-launch-child-rc4.patch` | The child rc4 build's changes on top of s3 (`engine/` and `webkit/`, 30 files) |
 | `tools/` | The switch layer, `additivity.py` (union check), `elfguard.py` (packaging guard), `ack_switch_test.cpp` |
 | `tests/` | Child unit tests: ack order/pace/sink, hdrbuf, jank sink, paint-rects |
+| `rc5/` | The rc5 changes: `title/OmniYtGuard.h`, `child/apply_nc_blob_copy.py`, their tests, results |
 | `../build/build-omni-launch-*.sh` | The build recipes: title (`eboot`), launch child, fallback child |
 
 Patches 10 and 20 share the s3 base but use different versions of `OmniBrowser.cpp`, `OmniPages.h`,
