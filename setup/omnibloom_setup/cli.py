@@ -97,7 +97,11 @@ def main(argv=None):
             if not (sys.stdin and sys.stdin.isatty()):
                 log(question + " (no: run with --get-jdownloader to say yes)")
                 return False
-            return input(question + " [y/N] ").strip().lower() in ("y", "yes")
+            try:
+                return input(question + " [y/N] ").strip().lower() in ("y", "yes")
+            except (EOFError, OSError):   # no one to answer (input closed): that's a no
+                log("(no answer: carrying on without JDownloader 2)")
+                return False
         nets = [ipaddress.ip_network(n, strict=False) for n in a.network] if a.network else None
         oc = oneclick.OneClick(host=a.ip, ftp_port=a.ftp_port, loader_port=a.loader_port, websrv_port=a.websrv_port,
                                launcher_port=a.launcher_port,

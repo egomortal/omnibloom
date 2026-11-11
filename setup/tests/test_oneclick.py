@@ -331,6 +331,7 @@ class DownloadsCard(Base):
 
 class JDownloader2(Base):
     def test_held_back_still_finds_it_and_says_so(self):
+        os.environ["OMNIBLOOM_ENABLE_JD"] = "0"            # held back (the switch, or an engine without the policy)
         zips, _ = make_packages(self.tmp)
         make_jd_install(self.jd_home)
         fc = self.fc = new_console(os.path.join(self.tmp, "console"))
@@ -345,6 +346,7 @@ class JDownloader2(Base):
         self.assertFalse(fc.exists(JD + "native-install.json"))
 
     def test_held_back_and_missing_asks_nothing(self):
+        os.environ["OMNIBLOOM_ENABLE_JD"] = "0"
         zips, _ = make_packages(self.tmp)
         self.fc = new_console(os.path.join(self.tmp, "console"))
         asked, opened = [], []
