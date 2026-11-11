@@ -481,6 +481,9 @@ def self_check(console, catalog, jd_manifest_sha, sleep=time.sleep, clock=time.m
             raise CheckFailed("JDownloader 2 from this computer didn't start on the PS5 (exit %s, %s). If it's much newer or "
                               "older than revision %d, update it and try again. JDownloader 2 stays off."
                               % (done2.get("exit_code"), done2.get("phase"), config.JD_TESTED_REVISION))
+        if config.jd_policy_declared(catalog.jd_engine()) and ready_value.get("egress_policy") != config.JD_EGRESS_POLICY:
+            raise CheckFailed("JDownloader 2 started on the PS5, but its connection guard (%s) wasn't fully in place (%s). "
+                              "JDownloader 2 stays off." % (config.JD_EGRESS_POLICY, ready_value.get("egress_problem") or "no detail"))
         if done2.get("exit_code") not in (0,):
             raise CheckFailed("JDownloader 2 started on the PS5 but didn't stop cleanly (exit %s, %s). JDownloader 2 stays off."
                               % (done2.get("exit_code"), done2.get("phase")))

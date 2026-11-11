@@ -404,7 +404,10 @@ class FakeConsole:
                     return finish(11, "Java-main-exception")
                 self.write(cfg["ready_file"], json.dumps({"host": "127.0.0.1", "port": 43210, "token": cfg["token"], "protocol": 2,
                                                           "target_tested": False, "session": cfg["session"],
-                                                          "install_id": cfg["install_id"], "native_pid": 4242}))
+                                                          "install_id": cfg["install_id"], "native_pid": 4242,
+                                                          # the bridge's own report of its egress layers (audit JD-03)
+                                                          "egress_policy": None if behaviour == "no-egress" else "omni-public-only-v1",
+                                                          "egress_problem": "JVM resolver is not the policy resolver" if behaviour == "no-egress" else ""}))
                 __import__("time").sleep(self.jd_behaviour.get("delay", 0.3))
                 return finish(0, "Java-main-and-destroy-complete")
             return finish(2, "mode")

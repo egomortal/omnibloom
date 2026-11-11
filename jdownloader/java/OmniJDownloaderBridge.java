@@ -98,8 +98,18 @@ public final class OmniJDownloaderBridge {
         server.setSoTimeout(1000);
         Path ready = Paths.get((String) config.get("ready_file"));
         diagnosticRoot = ready.toAbsolutePath().normalize().getParent();
+        // Audit JD-03: the ready file says whether every egress layer is in place, so Setup's console check can require
+        // the policy (JDownloader itself isn't initialised yet here; that is the only problem allowed at this point).
+        String egressPolicy = null, egressProblem = this.egressFailure;
+        if (egress != null) {
+            Map<String, Object> st = egress.status(false);
+            String problem = String.valueOf(st.get("problem"));
+            egressPolicy = "JDownloader is initializing".equals(problem) ? OmniEgressPolicy.POLICY : null;
+            egressProblem = egressPolicy != null ? "" : problem;
+        }
         byte[] data = JSonStorage.serializeToJsonByteArray(object("host", "127.0.0.1", "port", server.getLocalPort(), "token", secret,
-            "protocol", 2, "target_tested", false, "session", session, "install_id", installId, "native_pid", nativePid));
+            "protocol", 2, "target_tested", false, "session", session, "install_id", installId, "native_pid", nativePid,
+            "egress_policy", egressPolicy, "egress_problem", egressProblem));
         Files.write(ready, data, StandardOpenOption.CREATE_NEW);
     }
 

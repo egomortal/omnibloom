@@ -835,7 +835,8 @@ class JDownloader(unittest.TestCase):
 
     def test_failed_check_leaves_it_off(self):
         self.load_engine()
-        for mode, behaviour, words in (("providers", "fail", "native parts"), ("jdownloader", "no-ready", "didn't start")):
+        for mode, behaviour, words in (("providers", "fail", "native parts"), ("jdownloader", "no-ready", "didn't start"),
+                                       ("jdownloader", "no-egress", "connection guard")):
             self.fc.jd_behaviour = {"providers": "pass", "jdownloader": "pass", "delay": 0.1}
             self.fc.jd_behaviour[mode] = behaviour
             with self.assertRaises(jd.CheckFailed) as cm:
