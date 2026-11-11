@@ -5,6 +5,9 @@
   "decoded" view that differs from what was uploaded. Any DELE is recorded (the setup must never send one).
 - A loader stub (like port 9021) that records every ELF sent to it.
 - An optional websrv stub (like port 8084) with /processes_list.
+- ShadowMountPlus: a rename into /data/homebrew/<title>/ appends a remount line to /data/shadowmount/debug.log
+  (set `smp_remount = False` to leave it silent).
+- Fixed ports can be passed to start(), so a test can start the "PS5" after Setup has begun waiting for it.
 
 Run by itself:  python tests/fake_console.py <root>   (prints the ports)
 """
@@ -53,6 +56,19 @@ def make_handler(state):
         def ftp_NLST(self, path):
             self.respond("502 Command not implemented.")
 
+        def ftp_RNTO(self, path):
+            super().ftp_RNTO(path)
+            norm = path.replace("\\", "/")
+            if state.get("smp_remount", True) and "/data/homebrew/" in norm:
+                title = norm.split("/data/homebrew/", 1)[1].split("/", 1)[0]
+                log = os.path.join(state["root"], "data", "shadowmount", "debug.log")
+
+                def mounted():
+                    os.makedirs(os.path.dirname(log), exist_ok=True)
+                    with open(log, "a") as f:
+                        f.write("[MOUNT] nullfs mounted /data/homebrew/%s -> /system_ex/app/%s\n" % (title, title))
+                threading.Timer(0.2, mounted).start()
+
         def ftp_DELE(self, path):
             state["deletes"].append(path)
             try:
@@ -67,28 +83,36 @@ def make_handler(state):
 class FakeConsole:
     def __init__(self, root, websrv=True, processes=("shadowmountplus.elf", "kstuff-lite.elf", "ftpsrv.elf", "elfldr.elf")):
         self.root = root
-        self.state = {"deletes": [], "payloads": []}
+        self.state = {"deletes": [], "payloads": [], "root": root, "smp_remount": True}
         self.processes = list(processes)
         self.hub = None
         self.websrv_enabled = websrv
         self._threads = []
 
     # -- start/stop -------------------------------------------------------
-    def start(self):
+    @property
+    def smp_remount(self):
+        return self.state["smp_remount"]
+
+    @smp_remount.setter
+    def smp_remount(self, value):
+        self.state["smp_remount"] = value
+
+    def start(self, ftp_port=0, loader_port=0, websrv_port=0):
         os.makedirs(self.root, exist_ok=True)
         auth = DummyAuthorizer()
         auth.add_anonymous(self.root, perm="elradfmwMT")
         handler = make_handler(self.state)
         handler.authorizer = auth
         handler.passive_ports = None
-        self.ftp = ThreadedFTPServer(("127.0.0.1", 0), handler, ioloop=IOLoop())  # own loop per fake console
+        self.ftp = ThreadedFTPServer(("127.0.0.1", ftp_port), handler, ioloop=IOLoop())  # own loop per fake console
         self.ftp._exit = threading.Event()  # pyftpdlib shares this Event between servers by default
         self.ftp_port = self.ftp.socket.getsockname()[1]
         self._spawn(lambda: self.ftp.serve_forever(timeout=0.2, blocking=True, handle_exit=False))
 
         self.loader = socket.socket()
         self.loader.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.loader.bind(("127.0.0.1", 0))
+        self.loader.bind(("127.0.0.1", loader_port))
         self.loader.listen(4)
         self.loader_port = self.loader.getsockname()[1]
         self._spawn(self._loader_loop)
@@ -111,7 +135,7 @@ class FakeConsole:
                 pass
 
         if self.websrv_enabled:
-            self.web = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Web)
+            self.web = http.server.ThreadingHTTPServer(("127.0.0.1", websrv_port), Web)
             self.websrv_port = self.web.server_address[1]
             self._spawn(self.web.serve_forever)
         else:

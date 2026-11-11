@@ -43,7 +43,8 @@ def _json_bytes(value):
 
 
 def _decoded_on_readback(dest):
-    return posixpath.basename(dest) in config.DECODED_ON_READBACK
+    name = posixpath.basename(dest)
+    return name in config.DECODED_ON_READBACK or name.lower().endswith(config.DECODED_SUFFIXES)
 
 
 def _free_name(console, path, suffix):
@@ -481,6 +482,47 @@ def repair_app(console, catalog, app_id, log=print, progress=None):
         set_autoload(console, al["elf"], True, log)
     log("%s: checked %d files, repaired %d." % (receipt["name"], len(files), len(fixed)))
     return fixed
+
+
+# -- verify (read-only) -----------------------------------------------------
+def verify_app(console, catalog, app_id, progress=None):
+    """Read-only check that `app_id` is installed exactly as the release has it. Returns a list of plain-language
+    problems ([] = verified). Files the PS5 serves decoded (eboot.bin, .prx) must read back steadily and non-empty."""
+    problems = []
+    receipt = read_receipt(console, app_id)
+    if not receipt:
+        return ["its receipt is missing"]
+    want = catalog.apps[app_id]["version"]
+    if receipt["version"] != want:
+        problems.append("the receipt says %s, not %s" % (receipt["version"], want))
+    rows = catalog.files_for(app_id)
+    listings = {}
+    for i, row in enumerate(rows, 1):
+        dest = row["dest"]
+        parent, name = posixpath.split(dest)
+        if parent not in listings:
+            listings[parent] = console.listing(parent)
+        if name not in listings[parent]:
+            problems.append("%s is missing" % dest)
+        elif _decoded_on_readback(dest):
+            if console.stable_readback(dest)[0] is None:
+                problems.append("%s doesn't read back steadily" % dest)
+        elif _sha(console.read(dest)) != row["sha256"]:
+            problems.append("%s isn't the release's file" % dest)
+        if progress:
+            progress(i, len(rows))
+    card = receipt.get("card")
+    if writes_card(app_id, card):
+        raw = console.read(card_path(app_id)) if console.exists(card_path(app_id)) else None
+        if raw is None or _sha(raw) != receipt.get("card_sha256"):
+            problems.append("its ID card is missing or changed")
+    al = receipt.get("autoload") or {}
+    if al.get("changed") or catalog.apps[app_id]["autoload"] == "required":
+        elf = al.get("elf") or posixpath.basename((catalog.apps[app_id]["card"].get("launch") or {}).get("elf") or "")
+        text = console.read_text(config.AUTOLOAD_PATH, default="") or ""
+        if elf and elf not in [ln.strip() for ln in text.splitlines()]:
+            problems.append("%s isn't in the start list" % elf)
+    return problems
 
 
 # -- uninstall ------------------------------------------------------------

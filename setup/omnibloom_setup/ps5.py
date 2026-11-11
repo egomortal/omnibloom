@@ -5,6 +5,9 @@ The console's FTP server (ftpsrv) has quirks that our own deploy scripts learned
 - DELE answers 226 instead of 250 (Python's ftplib raises error_reply for it).
 - A native title's eboot.bin is served as a decoded view, so its readback differs from the upload.
 - Rename (RNFR/RNTO) works and is how we park or replace files. The setup never deletes.
+- A STOR is only trusted when every byte was sent and the reply is 226 (the copy-then-rename rule).
+A `recorder` (oneclick.Recorder) can be attached to a Console: it is told about every STOR and rename, so a
+whole one-button run can be undone step by step.
 """
 import concurrent.futures
 import ftplib
@@ -94,6 +97,7 @@ class Console:
         self.launcher_port = launcher_port or config.LAUNCHER_PORT
         self.timeout = timeout
         self.ftp = None
+        self.recorder = None   # oneclick.Recorder while a one-button run is recording, else None
 
     # -- connection -------------------------------------------------------
     def connect(self):
@@ -175,6 +179,32 @@ class Console:
                 pass
         return buf.getvalue()
 
+    def read_from(self, path, offset):
+        """The bytes of `path` after `offset` (b"" if it doesn't exist): used to follow a growing log."""
+        buf = io.BytesIO()
+        try:
+            self.ftp.retrbinary("RETR " + path, buf.write, rest=offset or None)
+        except ftplib.error_perm:
+            return b""
+        return buf.getvalue()
+
+    def stable_readback(self, path, tries=4):
+        """(sha256, bytes) of the first readback that repeats, or (None, 0). For files the PS5 serves as a
+        decoded view (eboot.bin, .prx): the hash isn't the upload's, but it must be non-empty and steady."""
+        last = None
+        for _ in range(tries):
+            try:
+                data = self.read(path)
+            except ftplib.error_perm:
+                return None, 0
+            if not data:
+                return None, 0
+            h = sha256(data)
+            if h == last:
+                return h, len(data)
+            last = h
+        return None, 0
+
     def read_text(self, path, default=None):
         try:
             return self.read(path).decode("utf-8", "replace")
@@ -195,9 +225,23 @@ class Console:
 
     def rename(self, src, dst):
         self.ftp.rename(src, dst)
+        if self.recorder:
+            self.recorder.renamed(src, dst)
 
     def store(self, path, data):
-        self.ftp.storbinary("STOR " + path, io.BytesIO(data))
+        """STOR with the byte count and the 226 reply checked (a short upload raises IOError)."""
+        token = self.recorder.before_store(self, path) if self.recorder else None
+        sent = [0]
+
+        def count(block):
+            sent[0] += len(block)
+        try:
+            resp = self.ftp.storbinary("STOR " + path, io.BytesIO(data), callback=count)
+        finally:
+            if self.recorder:
+                self.recorder.after_store(path, data, token)
+        if sent[0] != len(data) or not str(resp).startswith("226"):
+            raise IOError("The PS5 didn't take all of %s (%d of %d bytes, reply %r)." % (path, sent[0], len(data), str(resp)[:40]))
 
     def put_verified(self, path, data, readback=True):
         """Upload to `<path>.omnibloom-new`, check the readback, and return the temp name.
@@ -208,10 +252,11 @@ class Console:
             got = self.read(temp)
             if sha256(got) != sha256(data):
                 raise IOError("upload check failed for " + path)
-        else:
-            size = self.size(temp)
-            if size is None:
+        else:   # decoded view: counted STOR (in store) + listed + a steady, non-empty readback
+            if self.size(temp) is None:
                 raise IOError("upload did not arrive for " + path)
+            if self.stable_readback(temp)[0] is None:
+                raise IOError("upload of %s doesn't read back steadily" % path)
         return temp
 
     # -- loader -------------------------------------------------------------
