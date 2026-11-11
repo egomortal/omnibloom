@@ -227,6 +227,15 @@ class Console:
         finally:
             s.close()
 
+    def process_ids(self):
+        """Set of running process ids from websrv, or None if websrv isn't there."""
+        try:
+            url = "http://%s:%d/processes_list" % (self.host, self.websrv_port)
+            data = json.load(urllib.request.urlopen(url, timeout=4))
+            return {int(p["pid"]) for p in data.get("processes", []) if "pid" in p}
+        except Exception:
+            return None
+
     def processes(self):
         """Running process names from websrv, or None if websrv isn't there."""
         try:

@@ -13,6 +13,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 import urllib.request
 import zipfile
 
@@ -850,6 +851,25 @@ class JDownloader(unittest.TestCase):
         with self.assertRaises(jd.CheckFailed):
             self.run_setup()
         self.assertEqual(self.fc.read(JD + "native-install.json"), b'{"keep": true}', "nothing switched while JD runs")
+        self.assertEqual(self.fc.state.get("launches"), [])
+
+    def test_stale_session_after_restart(self):
+        # a session left "ready" by an engine that is no longer running (the PS5 restarted): Setup goes ahead
+        self.load_engine()
+        self.fc.write(JD + "lifecycle-state.json", json.dumps({"status": "ready", "session": "s1"}))
+        self.fc.write(JD + "bridge-ready.json", json.dumps({"session": "s1", "native_pid": 183}))
+        with mock.patch.object(ps5.Console, "process_ids", return_value={1, 95, 101}):
+            self.run_setup()
+        self.assertTrue(self.fc.exists(JD + "native-install.json"))
+
+    def test_live_session_still_refused(self):
+        self.load_engine()
+        self.fc.write(JD + "lifecycle-state.json", json.dumps({"status": "ready", "session": "s1"}))
+        self.fc.write(JD + "bridge-ready.json", json.dumps({"session": "s1", "native_pid": 183}))
+        for pids in ({1, 183}, None):          # the engine is running / the process list can't be read
+            with mock.patch.object(ps5.Console, "process_ids", return_value=pids):
+                with self.assertRaises(jd.CheckFailed):
+                    self.run_setup()
         self.assertEqual(self.fc.state.get("launches"), [])
 
     def test_no_launcher_means_off(self):

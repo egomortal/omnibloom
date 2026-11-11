@@ -220,8 +220,30 @@ def session_state(console):
     return _read_json(console, ROOT + "lifecycle-state.json")
 
 
-def ensure_idle(console):
+def _stale_session(console, st):
+    """True when the session state says JDownloader is active but its engine process provably isn't running: the
+    console lists its processes and none has the pid the bridge recorded (e.g. the PS5 restarted since). Anything
+    uncertain (no process list, no recorded pid) counts as running."""
+    pid = st.get("native_pid")
+    if pid is None:
+        ready = _read_json(console, ROOT + "bridge-ready.json") or {}
+        if ready.get("session") == st.get("session"):
+            pid = ready.get("native_pid")
+    lister = getattr(console, "process_ids", None)
+    pids = lister() if lister else None
+    try:
+        return pid is not None and pids is not None and int(pid) not in pids
+    except (TypeError, ValueError):
+        return False
+
+
+def ensure_idle(console, log=None):
     st = session_state(console)
+    if st and st.get("status") in ACTIVE_STATES and _stale_session(console, st):
+        if log:
+            log("An earlier JDownloader 2 session on the PS5 didn't close (its process is gone, e.g. after a restart); "
+                "treating it as closed.")
+        return dict(st, status="stale")
     if st and st.get("status") in ACTIVE_STATES:
         raise CheckFailed("JDownloader 2 is running on the PS5 right now (or its last start didn't finish). "
                           "Close Media downloads in Omni, wait a minute, then try again.")
@@ -231,7 +253,7 @@ def ensure_idle(console):
 def switch_off(console, stamp, log=print):
     """Park native-install.json (and a closed session's state) so the worker can't start Java mid-change.
     A closed state from an older install would otherwise stop the new one from starting."""
-    st = ensure_idle(console)
+    st = ensure_idle(console, log)
     parked = []
     for name in ("native-install.json", "lifecycle-state.json", "bridge-ready.json"):
         p = ROOT + name
