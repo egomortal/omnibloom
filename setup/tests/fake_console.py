@@ -80,6 +80,35 @@ def make_handler(state):
     return QuirkyHandler
 
 
+def _pid_alive(pid):
+    """Is a process with this pid running? (hub.c's kill(pid, 0) check.) On Windows os.kill(pid, 0) is not a probe:
+    signal 0 is CTRL_C_EVENT, which interrupts the whole console process group (it stopped the Windows CI run), so
+    ask the kernel for the process instead."""
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError, OverflowError):
+        return False
+    if os.name == "nt":
+        import ctypes
+        if pid <= 0 or pid > 0xFFFFFFFF:
+            return False
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x1000, False, pid)          # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return ctypes.GetLastError() == 5            # access denied: it exists
+        code = ctypes.c_ulong()
+        ok = k32.GetExitCodeProcess(h, ctypes.byref(code))
+        k32.CloseHandle(h)
+        return bool(ok) and code.value == 259            # STILL_ACTIVE
+    try:
+        os.kill(pid, 0)
+    except PermissionError:
+        return True
+    except (OSError, OverflowError, ValueError):
+        return False
+    return True
+
+
 class FakeConsole:
     def __init__(self, root, websrv=True, processes=("shadowmountplus.elf", "kstuff-lite.elf", "ftpsrv.elf", "elfldr.elf")):
         self.root = root
@@ -319,11 +348,7 @@ class FakeConsole:
         pid, port = rt.get("pid"), rt.get("port") or 0
         if not pid:
             return "runtime file has no pid"
-        try:
-            os.kill(int(pid), 0)
-        except PermissionError:
-            pass
-        except (OSError, OverflowError, ValueError):
+        if not _pid_alive(pid):
             return "runtime pid is not running (stale)"
         if a.get("nonlocal"):
             return "runtime host is not loopback"

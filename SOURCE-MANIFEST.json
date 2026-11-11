@@ -18,8 +18,8 @@
     },
     {
       "path": ".github/workflows/omnibloom-setup.yml",
-      "bytes": 2227,
-      "sha256": "a50c3ef884a18e9030ab22872794b36d62fe512af05a71e7c3918b692d2193ad"
+      "bytes": 2427,
+      "sha256": "9a7e212bad0284b4768607a7cc57de5dbbb764fba5b393d9cbf9e30c6c9961b4"
     },
     {
       "path": "addons/bundled/audio-tools/adapter.js",
@@ -17678,8 +17678,8 @@
     },
     {
       "path": "setup/tests/fake_console.py",
-      "bytes": 27681,
-      "sha256": "5b90e03cb5bfb48f6ba01f15735eeee78e3e6548598cdd95b79513237759d0c5"
+      "bytes": 28671,
+      "sha256": "49268fd68512e2412fa4676398b5d65055afe9cbfccf6a1e8d0fc822c6a01d48"
     },
     {
       "path": "setup/tests/gui_smoke.py",
