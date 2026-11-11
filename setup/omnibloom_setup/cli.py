@@ -31,6 +31,20 @@ def _catalog(a, log):
     return release.load_catalog(online=not a.offline, api_base=a.api, log=log)
 
 
+def _narrator(log):
+    """Progress for long copies in command-line mode: one line about every 10% (the GUI has its own bar)."""
+    state = {"last": -1}
+
+    def progress(done, total):
+        if not total:
+            return
+        step = max(1, total // 10)
+        if done == total or (done // step) != state["last"]:
+            state["last"] = done // step
+            log("  ... %d of %d files" % (done, total))
+    return progress
+
+
 def _csv(text):
     return [x for x in (text or "").split(",") if x]
 
@@ -162,7 +176,7 @@ def main(argv=None):
                 log(line)
             release.load_engine(cat, online=not a.offline, api_base=a.api, log=log)
             try:
-                jd.setup_jdownloader(c, cat, folder, log=log)
+                jd.setup_jdownloader(c, cat, folder, log=log, progress=_narrator(log))
             except jd.CheckFailed as e:
                 log("JDownloader 2 wasn't switched on: %s" % e)
                 return 3

@@ -132,15 +132,37 @@ JD_OFFICIAL_URL = "https://jdownloader.org/jdownloader2"
 JD_APP_ID = "jdownloader"                    # the engine app (our java-worker + bundled Java runtime)
 JD_TESTED_REVISION = 50639                   # JDownloaderRevision in build.json the bridge was built and tested with
 
-# Audit JD-03: JDownloader 2 opens its own connections (plugins, redirects, update checks) with no reviewed
-# destination policy yet, so Setup keeps the step held back. Developers can still test it with OMNIBLOOM_ENABLE_JD=1.
+# Audit JD-03: JDownloader 2 opens its own connections (plugins, redirects, update checks). The engine's bridge
+# confines all of them to public addresses and reports this policy; the engine package's manifest declares it
+# (jdownloader_engine.egress_policy), and Setup switches JDownloader 2 on only with an engine that declares it.
+# The downloads worker separately requires the running bridge to report the same policy before it uses JD.
+JD_EGRESS_POLICY = "omni-public-only-v1"
 JD_HELD_REASON = ("JDownloader 2 is held back in this release: its own connections (file-host plugins and their "
                   "redirects) don't yet go through Omnibloom's private-address check. yt-dlp downloads are not affected.")
+JD_ENGINE_POLICY_REASON = ("This JDownloader 2 engine doesn't confine JDownloader's own connections to public addresses "
+                           "(Omnibloom's private-address check), so Setup won't switch it on. Use the current engine "
+                           "package. yt-dlp downloads are not affected.")
 
 
-def jd_enabled():
+def jd_policy_declared(engine):
+    """True when an engine package's `jdownloader_engine` block declares the reviewed egress policy."""
+    return isinstance(engine, dict) and engine.get("egress_policy") == JD_EGRESS_POLICY
+
+
+def jd_enabled(engine=None):
+    """May Setup offer / run the JDownloader 2 step?
+
+    OMNIBLOOM_ENABLE_JD=0 always holds it back; =1 is the developer override (the downloads worker still refuses
+    JD unless the running bridge reports the policy). Otherwise the engine decides: with its `jdownloader_engine`
+    block it must declare JD_EGRESS_POLICY; before the engine is loaded the step is offered, and setup_jdownloader
+    checks the engine before anything on the PS5 changes."""
     import os
-    return os.environ.get("OMNIBLOOM_ENABLE_JD") == "1"
+    switch = os.environ.get("OMNIBLOOM_ENABLE_JD")
+    if switch == "0":
+        return False
+    if switch == "1":
+        return True
+    return True if engine is None else jd_policy_declared(engine)
 
 
 JD_CHECKS_DIR = JD_CONSOLE_ROOT + "setup-checks/"

@@ -49,6 +49,33 @@ The status is in `/tmp/jd-status/replay-status-001.json`, and the results in `/t
 - `java/`: the bridge, the adapted JDownloader class and the native-provider probe.
 - `notices/`: the port's notices and OpenJDK's LICENSE, ADDITIONAL_LICENSE_INFO and ASSEMBLY_EXCEPTION, unchanged.
 
+## Egress policy `omni-public-only-v1` (audit JD-03)
+Every connection JDownloader 2 makes on the PS5 (plugins, redirects, sub-requests, the updater) can only reach
+public addresses: never loopback, private, link-local, CGNAT, multicast, reserved or documentation ranges, and never
+a subnet the console itself is on. The same rule as yt-dlp's guard in the downloads worker (`egress_guard.py`).
+The bridge installs these layers before any JDownloader code runs, proves each with a self-test, and doesn't start
+JDownloader at all if one is missing:
+
+| Layer | Class | What it stops |
+|---|---|---|
+| Guard proxy on 127.0.0.1 | `OmniEgressPolicy` | resolves each target once, refuses unless every answer is public, pins the socket to the checked address (DNS rebinding), one request per connection |
+| JDownloader's proxy list | `OmniEgressPolicy.JdProxies` | the guard is JD's only proxy; "no proxy", proxy auto-detection, reconnect, local UPnP IP checks and auto-update checks are off; re-verified on every health call |
+| AppWork socket factory | `OmniEgressPolicy.JdSockets` | JD's HTTP stack may connect to the guard only, so a "no proxy" fallback fails instead of going direct |
+| Every `java.net.Socket` | `OmniEgressPolicy.CheckedSocketImpl` | `Socket.setSocketImplFactory`: raw, SSL and "no proxy" URL sockets connect only to the guard or a public address; `java.net.URL` goes to the guard (ProxySelector) |
+| JVM resolver | `OmniPublicResolverProvider` (+ `META-INF/services`) | names with any local/private answer fail JVM-wide |
+
+The health reply carries `egress_policy: "omni-public-only-v1"` (and an `egress` object with each layer's state and
+counters) only while all layers hold; replacing a layer at run time drops it for the rest of the session. The
+downloads worker uses JDownloader only when that field is present, and the engine package's manifest declares
+`jdownloader_engine.egress_policy`, which Setup requires before switching JDownloader 2 on.
+
+Not covered, by design: NIO `SocketChannel`s opened directly, UDP, and a `java.net.Socket` built with an explicit
+SOCKS/HTTP `Proxy` pointing at a literal private address. JDownloader's download paths use none of these (names in
+them still go through the resolver).
+
+PC tests: `java/tests/run_egress_tests.py` (address rules, every layer, DNS rebinding, redirects, public sites) and
+`java/tests/bridge_e2e.py` (the real JDownloader 2 core behind the bridge). Both need your own JDownloader 2 folder.
+
 ## How Setup uses it
 Omnibloom Setup (`setup/`) downloads the engine asset (or uses one next to Setup), copies the user's JDownloader 2, then runs two short checks on the PS5 before switching it on:
 1. the Java runtime boots and its native parts work;

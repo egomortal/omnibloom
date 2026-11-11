@@ -17,7 +17,9 @@ import org.jdownloader.api.linkcollector.v2.*;
 import org.jdownloader.api.downloads.v2.*;
 import jd.controlling.downloadcontroller.DownloadWatchDog;
 
-/** Experimental local bridge to actual JD APIs. No PS5 operations or cloud API. */
+/** Experimental local bridge to actual JD APIs. No PS5 operations or cloud API.
+ *  Egress policy omni-public-only-v1 (audit JD-03): see OmniEgressPolicy. JDownloader is only started when every
+ *  layer is installed, and health reports egress_policy only while every layer still holds. */
 public final class OmniJDownloaderBridge {
     private static final int MAX_REQUEST = 8192, MAX_RESPONSE = 65536, MAX_LINKS = 64;
     private final byte[] token;
@@ -36,6 +38,8 @@ public final class OmniJDownloaderBridge {
     private volatile boolean draining;
     private final AtomicInteger diagnosticErrors = new AtomicInteger();
     private final Path diagnosticRoot;
+    private final OmniEgressPolicy egress;
+    private final String egressFailure;
 
     private static String identity(Map<String,Object> config, String name, String pattern) {
         Object value = config.get(name);
@@ -68,7 +72,9 @@ public final class OmniJDownloaderBridge {
         return value;
     }
 
-    private OmniJDownloaderBridge(Map<String, Object> config) throws Exception {
+    private OmniJDownloaderBridge(Map<String, Object> config, OmniEgressPolicy egress, String egressFailure) throws Exception {
+        this.egress = egress;
+        this.egressFailure = egressFailure == null ? "" : egressFailure;
         String secret = (String) config.get("token");
         if (secret == null || !secret.matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Invalid session token");
         token = secret.getBytes(StandardCharsets.US_ASCII);
@@ -92,8 +98,18 @@ public final class OmniJDownloaderBridge {
         server.setSoTimeout(1000);
         Path ready = Paths.get((String) config.get("ready_file"));
         diagnosticRoot = ready.toAbsolutePath().normalize().getParent();
+        // Audit JD-03: the ready file says whether every egress layer is in place, so Setup's console check can require
+        // the policy (JDownloader itself isn't initialised yet here; that is the only problem allowed at this point).
+        String egressPolicy = null, egressProblem = this.egressFailure;
+        if (egress != null) {
+            Map<String, Object> st = egress.status(false);
+            String problem = String.valueOf(st.get("problem"));
+            egressPolicy = "JDownloader is initializing".equals(problem) ? OmniEgressPolicy.POLICY : null;
+            egressProblem = egressPolicy != null ? "" : problem;
+        }
         byte[] data = JSonStorage.serializeToJsonByteArray(object("host", "127.0.0.1", "port", server.getLocalPort(), "token", secret,
-            "protocol", 2, "target_tested", false, "session", session, "install_id", installId, "native_pid", nativePid));
+            "protocol", 2, "target_tested", false, "session", session, "install_id", installId, "native_pid", nativePid,
+            "egress_policy", egressPolicy, "egress_problem", egressProblem));
         Files.write(ready, data, StandardOpenOption.CREATE_NEW);
     }
 
@@ -195,6 +211,11 @@ public final class OmniJDownloaderBridge {
         }
     }
 
+    private Map<String, Object> egressStatus() {
+        if (egress != null) return egress.status(ready());
+        return object("policy", null, "guard", false, "problem", egressFailure);
+    }
+
     private static String safe(String value) { return value == null ? "Operation failed" : value.substring(0, Math.min(250, value.length())); }
     private boolean ready() { return jd.SecondLevelLaunch.INIT_COMPLETE.isReached(); }
     private static boolean terminal(Job job) { return Arrays.asList("completed", "failed", "cancelled").contains(job.state); }
@@ -243,7 +264,9 @@ public final class OmniJDownloaderBridge {
         if ("health".equals(action)) {
             CrawledLinkQueryStorable cq = new CrawledLinkQueryStorable(); cq.setMaxResults(MAX_LINKS+1);
             LinkQueryStorable dq = new LinkQueryStorable(); dq.setMaxResults(MAX_LINKS+1);
+            Map<String, Object> guard = egressStatus();
             return object("ok", true, "ready", ready(), "status", ready() ? "Real JDownloader core ready; target acceptance is external" : "JDownloader is initializing", "jobs", jobs.size(), "target_tested", false,
+                "egress_policy", guard.get("policy"), "egress", guard,
                 "session", session, "install_id", installId, "native_pid", nativePid,
                 "draining", draining, "startup_error", startupFailure,
                 "cloud_active", ready() && org.jdownloader.api.myjdownloader.MyJDownloaderController.getInstance().isActive(),
@@ -271,6 +294,11 @@ public final class OmniJDownloaderBridge {
             URI parsed = new URI(url);
             if (url.length() > 4096 || url.matches(".*[\\s\\\\].*") || parsed.getRawUserInfo() != null || parsed.getHost() == null
                 || !("http".equalsIgnoreCase(parsed.getScheme()) || "https".equalsIgnoreCase(parsed.getScheme()))) throw new IllegalArgumentException("Invalid HTTP(S) URL");
+            // Fail fast on what the guard would refuse anyway; the guard re-checks every connection JD makes.
+            InetAddress literal = OmniPublicAddress.literal(parsed.getHost());
+            if ((literal != null && !OmniPublicAddress.isPublic(literal)) || OmniPublicAddress.numericLooking(parsed.getHost()))
+                throw new IllegalArgumentException("Local or private address");
+            if (job == null && egressStatus().get("policy") == null) throw new IllegalStateException("JDownloader's public-address policy is not active");
             if (job != null) {
                 if (!job.url.equals(url)) throw new IllegalArgumentException("Job ID already used for another URL");
                 return object("ok", true, "replayed", true);
@@ -397,6 +425,16 @@ public final class OmniJDownloaderBridge {
         System.setProperty("omni.jd.localOnly", "true");
         System.setProperty("classloader_00000000", "org.jdownloader.update.launcher.ClassLoaderExtensionImpl");
         Class.forName("org.jdownloader.startup.Main");
+        // Audit JD-03: every egress layer is in place, and proven, before any JDownloader code can connect.
+        OmniEgressPolicy egress = null;
+        String egressFailure = "";
+        try {
+            egress = OmniEgressPolicy.install();
+            egress.configureJdownloader();
+        } catch (Throwable failure) {
+            egress = null;
+            egressFailure = "Egress policy unavailable: " + failure.getClass().getSimpleName() + ": " + safe(failure.getMessage());
+        }
         JsonConfig.create(org.jdownloader.api.RemoteAPIConfig.class).setHeadlessMyJDownloaderMandatory(false);
         JsonConfig.create(org.jdownloader.api.RemoteAPIConfig.class).setDeprecatedApiEnabled(false);
         JsonConfig.create(org.jdownloader.api.RemoteAPIConfig.class).setExternInterfaceEnabled(false);
@@ -406,7 +444,8 @@ public final class OmniJDownloaderBridge {
         general.setMaxSimultaneDownloads(1); general.setMaxChunksPerFile(1); general.setUseAvailableAccounts(false); general.setSaveLinkgrabberListEnabled(false);
         general.setAutoStartDownloadOption(org.jdownloader.settings.AutoDownloadStartOption.NEVER);
         Map<String, Object> config = JSonStorage.restoreFromString(Files.readString(Paths.get(args[0])), TypeRef.HASHMAP);
-        OmniJDownloaderBridge bridge = new OmniJDownloaderBridge(config);
+        OmniJDownloaderBridge bridge = new OmniJDownloaderBridge(config, egress, egressFailure);
+        if (egress == null) bridge.startupFailure = egressFailure;     // fail closed: JDownloader is never started
         Thread startup = new Thread(() -> {
             try { org.jdownloader.startup.Main.main(new String[]{"-norestart", "-silent"}); }
             catch (Throwable failure) {
@@ -414,7 +453,8 @@ public final class OmniJDownloaderBridge {
                 bridge.startupFailure = failure.getClass().getName() + ": " + safe(failure.getMessage());
             }
         }, "omni-jd-startup");
-        startup.setDaemon(true); startup.start();
+        startup.setDaemon(true);
+        if (egress != null) startup.start();
         ThreadPoolExecutor pool = new ThreadPoolExecutor(4, 4, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(8), task -> { Thread t = new Thread(task, "omni-jd-rpc"); t.setDaemon(true); return t; });
         try {
             while (!bridge.shutdown && bridge.shouldContinue()) {

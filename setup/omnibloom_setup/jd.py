@@ -228,8 +228,30 @@ def session_state(console):
     return _read_json(console, ROOT + "lifecycle-state.json")
 
 
-def ensure_idle(console):
+def _stale_session(console, st):
+    """True when the session state says JDownloader is active but its engine process provably isn't running: the
+    console lists its processes and none has the pid the bridge recorded (e.g. the PS5 restarted since). Anything
+    uncertain (no process list, no recorded pid) counts as running."""
+    pid = st.get("native_pid")
+    if pid is None:
+        ready = _read_json(console, ROOT + "bridge-ready.json") or {}
+        if ready.get("session") == st.get("session"):
+            pid = ready.get("native_pid")
+    lister = getattr(console, "process_ids", None)
+    pids = lister() if lister else None
+    try:
+        return pid is not None and pids is not None and int(pid) not in pids
+    except (TypeError, ValueError):
+        return False
+
+
+def ensure_idle(console, log=None):
     st = session_state(console)
+    if st and st.get("status") in ACTIVE_STATES and _stale_session(console, st):
+        if log:
+            log("An earlier JDownloader 2 session on the PS5 didn't close (its process is gone, e.g. after a restart); "
+                "treating it as closed.")
+        return dict(st, status="stale")
     if st and st.get("status") in ACTIVE_STATES:
         raise CheckFailed("JDownloader 2 is running on the PS5 right now (or its last start didn't finish). "
                           "Close Media downloads in Omni, wait a minute, then try again.")
@@ -239,7 +261,7 @@ def ensure_idle(console):
 def switch_off(console, stamp, log=print):
     """Park native-install.json (and a closed session's state) so the worker can't start Java mid-change.
     A closed state from an older install would otherwise stop the new one from starting."""
-    st = ensure_idle(console)
+    st = ensure_idle(console, log)
     parked = []
     for name in ("native-install.json", "lifecycle-state.json", "bridge-ready.json"):
         p = ROOT + name
@@ -467,6 +489,9 @@ def self_check(console, catalog, jd_manifest_sha, sleep=time.sleep, clock=time.m
             raise CheckFailed("JDownloader 2 from this computer didn't start on the PS5 (exit %s, %s). If it's much newer or "
                               "older than revision %d, update it and try again. JDownloader 2 stays off."
                               % (done2.get("exit_code"), done2.get("phase"), config.JD_TESTED_REVISION))
+        if config.jd_policy_declared(catalog.jd_engine()) and ready_value.get("egress_policy") != config.JD_EGRESS_POLICY:
+            raise CheckFailed("JDownloader 2 started on the PS5, but its connection guard (%s) wasn't fully in place (%s). "
+                              "JDownloader 2 stays off." % (config.JD_EGRESS_POLICY, ready_value.get("egress_problem") or "no detail"))
         if done2.get("exit_code") not in (0,):
             raise CheckFailed("JDownloader 2 started on the PS5 but didn't stop cleanly (exit %s, %s). JDownloader 2 stays off."
                               % (done2.get("exit_code"), done2.get("phase")))
@@ -510,10 +535,12 @@ def switch_on(console, catalog, jd_manifest_sha, acceptance, stamp, log=print):
 
 def setup_jdownloader(console, catalog, folder, log=print, progress=None, sleep=time.sleep, clock=time.monotonic):
     """The whole JDownloader 2 step. On any failure JDownloader 2 is left switched off (yt-dlp keeps working)."""
-    if not config.jd_enabled():          # audit JD-03: no reviewed destination policy for JD's own connections yet
+    if not config.jd_enabled():          # audit JD-03: held back by the user/developer switch
         raise CheckFailed(config.JD_HELD_REASON)
     if not engine_ready(catalog):
         raise ValueError("The JDownloader 2 engine package isn't loaded.")
+    if not config.jd_enabled(catalog.jd_engine()):   # audit JD-03: the engine must declare the egress policy
+        raise CheckFailed(config.JD_ENGINE_POLICY_REASON)
     collect(folder)                      # fail early on a bad folder, before touching the PS5
     stamp = _stamp()
     ensure_idle(console)
