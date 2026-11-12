@@ -110,7 +110,7 @@ def _pid_alive(pid):
 
 
 class FakeConsole:
-    def __init__(self, root, websrv=True, processes=("shadowmountplus.elf", "kstuff-lite.elf", "ftpsrv.elf", "elfldr.elf")):
+    def __init__(self, root, websrv=True, processes=("SceShellCore", "SceShellUI", "shadowmountplus.elf", "kstuff-lite.elf", "ftpsrv.elf", "elfldr.elf")):
         self.root = root
         self.state = {"deletes": [], "payloads": [], "root": root, "smp_remount": True}
         self.processes = list(processes)
@@ -127,21 +127,23 @@ class FakeConsole:
     def smp_remount(self, value):
         self.state["smp_remount"] = value
 
-    def start(self, ftp_port=0, loader_port=0, websrv_port=0):
+    def start(self, ftp_port=0, loader_port=0, websrv_port=0, host="127.0.0.1"):
+        """host: another loopback address (127.0.2.1, ...) stands in for a PS5 on a second network."""
+        self.host = host
         os.makedirs(self.root, exist_ok=True)
         auth = DummyAuthorizer()
         auth.add_anonymous(self.root, perm="elradfmwMT")
         handler = make_handler(self.state)
         handler.authorizer = auth
         handler.passive_ports = None
-        self.ftp = ThreadedFTPServer(("127.0.0.1", ftp_port), handler, ioloop=IOLoop())  # own loop per fake console
+        self.ftp = ThreadedFTPServer((host, ftp_port), handler, ioloop=IOLoop())  # own loop per fake console
         self.ftp._exit = threading.Event()  # pyftpdlib shares this Event between servers by default
         self.ftp_port = self.ftp.socket.getsockname()[1]
         self._spawn(lambda: self.ftp.serve_forever(timeout=0.2, blocking=True, handle_exit=False))
 
         self.loader = socket.socket()
         self.loader.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.loader.bind(("127.0.0.1", loader_port))
+        self.loader.bind((host, loader_port))
         self.loader.listen(4)
         self.loader_port = self.loader.getsockname()[1]
         self._spawn(self._loader_loop)
@@ -164,7 +166,7 @@ class FakeConsole:
                 pass
 
         if self.websrv_enabled:
-            self.web = http.server.ThreadingHTTPServer(("127.0.0.1", websrv_port), Web)
+            self.web = http.server.ThreadingHTTPServer((host, websrv_port), Web)
             self.websrv_port = self.web.server_address[1]
             self._spawn(self.web.serve_forever)
         else:

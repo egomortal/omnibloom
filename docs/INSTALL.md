@@ -27,7 +27,7 @@ Setup then does every step for you, one at a time, ticking off a checklist and s
 | Step | What Setup does |
 | --- | --- |
 | Get the apps | Downloads the release packages (or uses the zips next to Setup) and checks their hashes. |
-| Find your PS5 | Waits for FTP (2121) and the payload loader (9021) to answer. |
+| Find your PS5 | Looks on every network this computer is on (Ethernet, Wi-Fi, USB tethering), or at the address you typed or used last time. A device counts as your PS5 when its payload loader (9021) answers and, if websrv (8084) is running, its process list shows the PS5's own system processes, so no other device can be picked. FTP (2121) is needed to install: if the PS5 is found but FTP is off, Setup says so and waits until it's on. |
 | Check your PS5 | Read-only checks: the loader, kstuff, ShadowMountPlus. Then it takes Setup's lock on the PS5 (`/data/hub/setup-lock.json`) so two copies of Setup can't work at once. |
 | Bloom Core | Installs the hub that lets the apps find each other, and adds `hub.elf` to the start list (a backup of `autoload.txt` comes first). |
 | Omni | Installs the browser (title `PPSA99732`) and its engine (`omni-engine-child.elf`). If Omni or a game is open, Setup asks you to close it and waits; it never closes anything itself. After Omni's files change it waits for ShadowMountPlus to pick them up. |

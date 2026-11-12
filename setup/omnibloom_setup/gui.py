@@ -450,7 +450,8 @@ class SetupApp:
         if self.ports.get("host"):  # test mode: the fake PS5 is on this computer
             import ipaddress
             nets = [ipaddress.ip_network(self.ports["host"] + "/30", strict=False)]
-        self.run_bg(lambda: ps5.scan(nets, progress=prog, ftp_port=self.ports.get("ftp"), loader_port=self.ports.get("loader")),
+        self.run_bg(lambda: ps5.scan(nets, progress=prog, ftp_port=self.ports.get("ftp"), loader_port=self.ports.get("loader"),
+                                     websrv_port=self.ports.get("websrv")),
                     self._scan_done)
 
     def _scan_done(self, found, err):
@@ -462,7 +463,7 @@ class SetupApp:
                        fg=C["warn"]).pack(anchor="w")
             return
         for f in found:
-            note = "ready" if f["loader"] else "FTP only: the payload loader isn't running"
+            note = "ready" if f["ftp"] else "PS5 found, but its FTP server isn't running: load your FTP payload (ftpsrv)"
             ttk.Radiobutton(self.found_box, text="%s   (%s)" % (f["host"], note), value=f["host"], variable=self.host).pack(anchor="w", pady=2)
         if not self.host.get():
             self.host.set(found[0]["host"])

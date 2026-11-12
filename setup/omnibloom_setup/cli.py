@@ -130,7 +130,7 @@ def main(argv=None):
     if a.command == "scan":
         import ipaddress
         nets = [ipaddress.ip_network(n, strict=False) for n in a.network] if a.network else None
-        found = ps5.scan(nets, ftp_port=a.ftp_port, loader_port=a.loader_port)
+        found = ps5.scan(nets, ftp_port=a.ftp_port, loader_port=a.loader_port, websrv_port=a.websrv_port)
         print(json.dumps(found, indent=1))
         return 0 if found else 1
     if a.command == "jd-detect":

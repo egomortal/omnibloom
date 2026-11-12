@@ -16,6 +16,7 @@ import io
 import ipaddress
 import json
 import posixpath
+import re
 import socket
 import urllib.request
 
@@ -30,17 +31,55 @@ def port_open(host, port, timeout=1.0):
         return False
 
 
-def local_networks():
-    """The /24 networks this computer is on (private addresses only)."""
-    found = set()
-    candidates = set()
+# -- finding the PS5 -------------------------------------------------------------------------------------------
+# A device counts as a PS5 when its payload loader (9021) answers; FTP (2121) is checked second (Setup needs it to
+# install). When websrv (8084) answers too, its process list must show the PS5's own system processes, so a router
+# or NAS with an open port can't be picked. Every IPv4 network this computer is on is searched (Ethernet, Wi-Fi,
+# USB tethering...), not just the one with the default route.
+_IPV4 = re.compile(r"(?<![\d.])(\d{1,3}(?:\.\d{1,3}){3})(?![\d.])")
+
+
+def addresses_from_text(text):
+    """This computer's IPv4 addresses from `ipconfig` (any language: the line says "IPv4"), `ip -4 -o addr` or
+    `ifconfig` output."""
+    found = []
+    for line in text.splitlines():
+        m = re.search(r"\binet\s+(?:addr:)?(\d{1,3}(?:\.\d{1,3}){3})", line)      # ip / ifconfig
+        if m:
+            found.append(m.group(1))
+        elif "ipv4" in line.lower():                                               # ipconfig
+            m = _IPV4.search(line.split(":", 1)[-1])
+            if m:
+                found.append(m.group(1))
+    return found
+
+
+def _command_addresses():
+    """Interface addresses from the system's own tool (no extra packages; no console window flashes on Windows)."""
+    import subprocess
+    import sys
+    commands = [["ipconfig"]] if sys.platform.startswith("win") else [["ip", "-4", "-o", "addr", "show"], ["ifconfig"]]
+    flags = 0x08000000 if sys.platform.startswith("win") else 0      # CREATE_NO_WINDOW
+    for cmd in commands:
+        try:
+            out = subprocess.run(cmd, capture_output=True, timeout=5, creationflags=flags).stdout
+        except (OSError, subprocess.SubprocessError, ValueError):
+            continue
+        found = addresses_from_text(out.decode("latin-1", "replace"))
+        if found:
+            return found
+    return []
+
+
+def computer_addresses():
+    """Every IPv4 address this computer has, from all the sources available."""
+    candidates = set(_command_addresses())
     try:
         for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
             candidates.add(info[4][0])
     except OSError:
         pass
-    # The address used for the default route (no packet is sent for UDP connect).
-    for probe in ("10.255.255.255", "192.168.255.255", "172.31.255.255"):
+    for probe in ("10.255.255.255", "192.168.255.255", "172.31.255.255"):   # the default-route address (nothing is sent)
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect((probe, 9))
@@ -48,19 +87,56 @@ def local_networks():
             s.close()
         except OSError:
             pass
-    for addr in candidates:
+    return sorted(candidates)
+
+
+def local_networks(addresses=None):
+    """The private /24 networks of every IPv4 interface on this computer."""
+    found = set()
+    for addr in (computer_addresses() if addresses is None else addresses):
         try:
             ip = ipaddress.ip_address(addr)
         except ValueError:
             continue
-        if ip.is_private and not ip.is_loopback and not ip.is_link_local:
+        if ip.version == 4 and ip.is_private and not ip.is_loopback and not ip.is_link_local and not ip.is_unspecified:
             found.add(ipaddress.ip_network(addr + "/24", strict=False))
-    return sorted(found, key=str)
+    return sorted(found, key=lambda n: tuple(int(x) for x in str(n.network_address).split(".")))
 
 
-def scan(networks=None, ftp_port=None, loader_port=None, timeout=0.35, workers=96, progress=None):
-    """Find consoles: anything answering on the FTP port, then check the loader port.
-    Returns a list of dicts: {host, ftp, loader}."""
+def process_names(host, port, timeout=3.0):
+    """Process names from websrv's /processes_list, or None if it doesn't answer like websrv.
+    Goes straight to the address (no system proxy)."""
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open("http://%s:%d/processes_list" % (host, port), timeout=timeout) as r:
+            data = json.loads(r.read(1 << 20))
+        return [str(p.get("name", "")) for p in data.get("processes", [])]
+    except Exception:
+        return None
+
+
+def looks_like_ps5(names):
+    low = [n.lower() for n in names]
+    return any(any(s in n for n in low) for s in config.PS5_SYSTEM_PROCESSES)
+
+
+def check_host(host, ftp_port=None, loader_port=None, websrv_port=None, loader_known=False):
+    """What `host` is, or None when it isn't a PS5:
+    {"host", "loader": True, "ftp": bool, "confirmed": True (websrv shows PS5 system processes) | None (no websrv)}."""
+    ftp_port = ftp_port or config.FTP_PORT
+    loader_port = loader_port or config.LOADER_PORT
+    websrv_port = websrv_port or config.WEBSRV_PORT
+    if not loader_known and not port_open(host, loader_port, 1.0):
+        return None
+    names = process_names(host, websrv_port) if port_open(host, websrv_port, 1.0) else None
+    if names is not None and not looks_like_ps5(names):
+        return None              # websrv answered, but this isn't a PS5's process list
+    return {"host": host, "loader": True, "ftp": port_open(host, ftp_port, 1.0), "confirmed": True if names is not None else None}
+
+
+def scan(networks=None, ftp_port=None, loader_port=None, websrv_port=None, timeout=0.35, workers=96, progress=None):
+    """Find PS5s on every network this computer is on: the payload loader first, then FTP, then (when websrv answers)
+    the PS5's own processes. Returns [{host, loader, ftp, confirmed}], PS5s with FTP running first."""
     ftp_port = ftp_port or config.FTP_PORT
     loader_port = loader_port or config.LOADER_PORT
     nets = networks if networks is not None else local_networks()
@@ -68,7 +144,7 @@ def scan(networks=None, ftp_port=None, loader_port=None, timeout=0.35, workers=9
     hits = []
     done = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(port_open, h, ftp_port, timeout): h for h in hosts}
+        futures = {pool.submit(port_open, h, loader_port, timeout): h for h in hosts}
         for fut in concurrent.futures.as_completed(futures):
             done += 1
             if progress and done % 16 == 0:
@@ -77,7 +153,10 @@ def scan(networks=None, ftp_port=None, loader_port=None, timeout=0.35, workers=9
                 hits.append(futures[fut])
     results = []
     for h in sorted(hits, key=lambda a: ipaddress.ip_address(a)):
-        results.append({"host": h, "ftp": True, "loader": port_open(h, loader_port, 1.0)})
+        info = check_host(h, ftp_port, loader_port, websrv_port, loader_known=True)
+        if info:
+            results.append(info)
+    results.sort(key=lambda r: not r["ftp"])
     return results
 
 

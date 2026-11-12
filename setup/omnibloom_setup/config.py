@@ -92,6 +92,8 @@ SMP_LOG = "/data/shadowmount/debug.log"
 SMP_MOUNT_WORDS = ("nullfs mounted", "mount.lnk created")
 # A running title shows as this process name in websrv's list. Setup waits for it to close; it never closes it.
 TITLE_PROCESS = "eboot.bin"
+# PS5 system processes websrv lists: when websrv answers, a device is only taken for a PS5 if one of these is running.
+PS5_SYSTEM_PROCESSES = ("sceshellcore", "sceshellui")
 
 # One Setup at a time per PS5 (the one-button install takes it; {"owner": null} when free).
 SETUP_LOCK = HUB_DIR + "setup-lock.json"

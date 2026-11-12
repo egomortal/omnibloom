@@ -179,7 +179,8 @@ class Suite(unittest.TestCase):
         return json.loads(self.fc.read(config.RECEIPTS_DIR + app_id + ".json"))
 
     def test_t01_scan_and_checks(self):
-        found = ps5.scan([ipaddress.ip_network("127.0.0.0/30")], ftp_port=self.fc.ftp_port, loader_port=self.fc.loader_port)
+        found = ps5.scan([ipaddress.ip_network("127.0.0.0/30")], ftp_port=self.fc.ftp_port, loader_port=self.fc.loader_port,
+                         websrv_port=self.fc.websrv_port)
         self.assertEqual([f["host"] for f in found], ["127.0.0.1"])
         with connect(self.fc) as c:
             items, summary = checks.run_checks(c)

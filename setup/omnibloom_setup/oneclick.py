@@ -405,18 +405,19 @@ class OneClick:
                  % (self.ftp_port, self.loader_port))
         start = self.clock()
         next_remind = start + TIMING["remind"]
-        told_ftp_only = None
+        told_no_ftp = None
         while True:
             hosts = [self.host] if self.host else self._candidates()
             for h in hosts:
-                ftp_up = ps5.port_open(h, self.ftp_port, 1.5)
-                if not ftp_up:
+                if not ps5.port_open(h, self.loader_port, 1.5):   # the payload loader is how a PS5 is recognised
                     continue
-                if not ps5.port_open(h, self.loader_port, 1.5):
-                    if told_ftp_only != h:
-                        self.say("Your PS5 at %s answered on FTP (port %d). Waiting for its payload loader on port %d "
-                                 "(run your jailbreak's loader)…" % (h, self.ftp_port, self.loader_port))
-                        told_ftp_only = h
+                if not ps5.port_open(h, self.ftp_port, 1.5):
+                    if told_no_ftp != h:
+                        self.say("Found your PS5 at %s (its payload loader answers on port %d), but its FTP server isn't "
+                                 "running, and Setup needs it to copy the apps. Load your FTP payload (for example "
+                                 "ftpsrv) from your payload manager; Setup carries on by itself as soon as FTP (port %d) "
+                                 "answers." % (h, self.loader_port, self.ftp_port))
+                        told_no_ftp = h
                     continue
                 try:   # the ports are open: make sure FTP really lets us in
                     ps5.Console(h, ftp_port=self.ftp_port, timeout=15).connect().close()
@@ -440,9 +441,9 @@ class OneClick:
     def _candidates(self):
         found = []
         remembered = _remembered_host()
-        if remembered and ps5.port_open(remembered, self.ftp_port, 1.5):
+        if remembered and ps5.check_host(remembered, self.ftp_port, self.loader_port, self.websrv_port):
             return [remembered]
-        for f in ps5.scan(self.networks, ftp_port=self.ftp_port, loader_port=self.loader_port):
+        for f in ps5.scan(self.networks, ftp_port=self.ftp_port, loader_port=self.loader_port, websrv_port=self.websrv_port):
             found.append(f["host"])
         if len(found) > 1:
             self.say("Found more than one PS5 (%s); using %s. To pick another, type its address." % (", ".join(found), found[0]))

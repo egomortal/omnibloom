@@ -41,7 +41,7 @@ No internet on the computer? Put the console packages (`omnibloom-console-<v>.zi
 python run_setup.py                    # the window
 python run_setup.py --cli --help       # command line
 python run_setup.py --fake-console     # the window against a fake PS5 on this computer (needs pyftpdlib)
-python -m unittest tests.test_end_to_end tests.test_oneclick -v
+python -m unittest tests.test_end_to_end tests.test_oneclick tests.test_discovery -v
 xvfb-run -a python tests/gui_smoke.py shots     # walks every screen, saves screenshots
 python tools/make_package.py --package omnibloom --stage <tree> --version <v> --out dist
 pyinstaller omnibloom-setup.spec       # one-file app
