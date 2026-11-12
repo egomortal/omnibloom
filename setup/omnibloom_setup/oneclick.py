@@ -228,10 +228,12 @@ class OneClick:
 
     def __init__(self, host=None, ftp_port=None, loader_port=None, websrv_port=None, catalog=None, catalog_loader=None,
                  report=None, progress=None, cancel=None, wait_minutes=0, networks=None, master_control=True,
-                 start_master_control=True, autoload_master_control=False, hdr="auto-if-unset", sleep=time.sleep,
+                 start_master_control=True, autoload_master_control=True, hdr="auto-if-unset", sleep=time.sleep,
                  clock=time.time, record_dir=None, jdownloader=True, jd_folder=None, confirm=None, open_page=None,
-                 launcher_port=None):
+                 launcher_port=None, apps=None):
         self.host = host
+        # Which apps to install (Customize): None = the full package. Bloom Core is always installed.
+        self.apps = None if apps is None else set(apps) | {config.HUB_ID}
         self.ftp_port = ftp_port or config.FTP_PORT
         self.loader_port = loader_port or config.LOADER_PORT
         self.websrv_port = websrv_port
@@ -294,6 +296,9 @@ class OneClick:
         """Sets self.jd_folder to a usable JDownloader 2 install, or leaves it None (and says why)."""
         if not self.jdownloader:
             self.step(JD_STEP, "skip", "JDownloader 2: left out.")
+            return None
+        if self.apps is not None and "downloads" not in self.apps:
+            self.step(JD_STEP, "skip", "JDownloader 2: left out (it works through Downloads, which you left out).")
             return None
         held = not config.jd_enabled()
         self.step(JD_STEP, "active", "Looking for JDownloader 2 on this computer…")
@@ -513,7 +518,7 @@ class OneClick:
         installed = installer.installed_apps(console)
         order = []
         for app_id in ORDER:
-            if app_id == "master-control" and not self.master_control:
+            if (app_id == "master-control" and not self.master_control) or (self.apps is not None and app_id not in self.apps):
                 self.result["skipped"][app_id] = "you left it out"
                 continue
             if not self.catalog.has(app_id):
@@ -587,6 +592,17 @@ class OneClick:
         self._wait(TIMING["smp_settle_missing"])
         return False
 
+    def say_replaced_controllers(self, console):
+        """Master Control starts with the PS5 by default and takes the place of an older controller payload in the
+        start list (the list is backed up first, and Undo puts it back). Say so plainly."""
+        entries = checks.autoload_entries(console) or []
+        names = {"padbridge": "PadBridge", "eeveelution": "EeveeLution"}
+        found = [label for key, label in names.items() if any(key in e.lower() for e in entries)]
+        for label in found:
+            self.say("Master Control will manage your controllers instead of %s: it takes %s's place in the list of "
+                     "payloads that start with your PS5. To keep %s, untick \"Start it with the PS5\" in Customize "
+                     "(or use Undo afterwards)." % (label, label, label))
+
     def install_one(self, console, app_id, picker):
         name = NAMES.get(app_id, self.catalog.apps[app_id]["name"])
         version = self.catalog.apps[app_id]["version"]
@@ -594,6 +610,8 @@ class OneClick:
         title = self.title_changes(console, app_id)
         if title:
             self.wait_title_closed(console)
+        if app_id == "master-control" and self.autoload_mc:
+            self.say_replaced_controllers(console)
         offset = console.size(config.SMP_LOG) or 0
         before = len(console.recorder.ops) if console.recorder else 0
         receipt = installer.install_app(console, self.catalog, app_id, picker,

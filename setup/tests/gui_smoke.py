@@ -100,7 +100,7 @@ shot("10-uninstall-one")
 assert not fc.exists(config.CARDS_DIR + "master-control.json")
 assert fc.exists(config.CARDS_DIR + "omni.json")
 assert fc.state["deletes"] == []
-# The one button on a second, fresh PS5: Welcome → "Install everything for me" → checklist → Undo this install.
+# The one button on a second, fresh PS5: Welcome → "Install the full package" → checklist → Undo this install.
 oneclick.TIMING.update(poll=0.3, smp_poll=0.2, smp_settle=0.2, smp_settle_missing=0.2, status_timeout=10)
 fc2 = new_console(os.path.join(tmp, "console2"))
 fc2.start_launcher()
@@ -122,7 +122,26 @@ shot("13-one-button-undo")
 assert app.oc_undo_result, app.logbox.get("1.0", "end")
 assert fc2.read(EBOOT) == b"OLD-S0B-EBOOT"
 assert fc2.state["deletes"] == []
+# Customize on a third fresh PS5: untick USB file access and Master Control, then the Install button.
+fc3 = new_console(os.path.join(tmp, "console3"))
+fc3.start_launcher()
+app.ports = {"ftp": fc3.ftp_port, "loader": fc3.loader_port, "websrv": fc3.websrv_port, "launcher": fc3.launcher_port,
+             "host": "127.0.0.1"}
+app.show(0)
+app.page_customize()
+app.c_apps["files-broker"].set(False)
+app.c_apps["master-control"].set(False)
+shot("14-customize")
+app.next_btn.invoke()
+wait_for(lambda: not app.oc_running, 180)
+shot("15-customize-done")
+assert app.oc_result.get("ok"), app.logbox.get("1.0", "end")
+assert sorted(app.oc_result["installed"]) == ["downloads", "hub", "omni"], sorted(app.oc_result["installed"])
+assert app.oc_result.get("jdownloader", {}).get("ok"), app.oc_result.get("jdownloader")
+assert not fc3.exists(config.CARDS_DIR + "master-control.json") and not fc3.exists(config.CARDS_DIR + "files-broker.json")
+assert fc3.state["deletes"] == []
 print("GUI SMOKE PASS")
 root.destroy()
 fc.stop()
 fc2.stop()
+fc3.stop()

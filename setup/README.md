@@ -7,12 +7,13 @@ One download that puts the Omnibloom apps on a jailbroken PS5 from your computer
 ## For users
 1. Download `Omnibloom-Setup` for your computer from the latest release (Windows `.exe`, macOS, Linux).
 2. On the PS5: run your jailbreak so the payload loader and FTP server are up, and load ShadowMountPlus and kstuff.
-3. Open Omnibloom Setup and press **Install everything for me**. Setup waits for the PS5 to answer, then installs
+3. Open Omnibloom Setup and press **Install the full package (recommended)**, or **Customize…** to untick apps, Master
+   Control's start options, JDownloader 2 or HDR Auto, then **Install**. Setup waits for the PS5 to answer, then installs
    Bloom Core, Omni, Downloads, USB file access and Master Control one at a time, checks each, sets Omni's HDR to Auto
    (unless you chose a setting), finds your own JDownloader 2 (or opens its official page, if you say yes, and waits for
    you to install it), starts Bloom Core and asks it to confirm, telling you every step. If anything fails it
    puts the PS5 back as it was. **Undo this install** does the same afterwards.
-   (Or press **Next** to find the PS5, check it, tick apps and install them yourself.)
+   (Advanced: press **Next** to find the PS5, check it, tick apps and install them step by step yourself.)
 4. Run it again any time: **Installed apps…** has Update, Repair and Uninstall for each app.
 
 Command line: `--cli oneclick [--ip <ps5>]` is the same button; `--cli undo --ip <ps5>` undoes the last one. Each
@@ -30,7 +31,8 @@ No internet on the computer? Put the console packages (`omnibloom-console-<v>.zi
 - `/data/hub/apps/<id>.json`: the app's ID card, with the port Setup picked.
 - `/data/hub/receipts/<id>.json`: what was installed, backups, the card's hash, the autoload change.
 - `/data/hub/logs/<id>/`, `/data/hub/crash/<id>/`, and `/data/hub/settings.json` (created once; then it's yours).
-- `/data/pldmgr/autoload.txt`: Bloom Core always; Master Control only if you tick it. A backup copy comes first.
+- `/data/pldmgr/autoload.txt`: Bloom Core always; Master Control too unless you untick "Start it with the PS5"
+  (it takes PadBridge's or EeveeLution's place there). A backup copy comes first, and Undo puts it back.
 - One-button install only: `/data/hub/setup-lock.json` (one Setup at a time; `{"owner": null}` when free) and
   `/data/omni/video-hdr-preference.txt` (HDR Auto, only when there is no setting yet).
 

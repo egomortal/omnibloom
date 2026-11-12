@@ -3,7 +3,8 @@
   --cli oneclick [--ip <ps5>]                  THE ONE BUTTON: waits for the PS5, installs everything in order,
                                                checks each app, rolls back on any failure, tells you each step
   --cli undo     --ip <ps5>                    undo the last one-button install on that PS5
-  (oneclick also finds JDownloader 2 on this computer; --jd-folder <dir>, --get-jdownloader, --no-jdownloader)
+  (oneclick also finds JDownloader 2 on this computer; --jd-folder <dir>, --get-jdownloader, --no-jdownloader;
+   --apps omni,downloads,files-broker,master-control picks what goes on: Bloom Core always does)
   --cli scan
   --cli check   --ip <ps5>
   --cli list    --ip <ps5>                     installed apps, versions and available updates
@@ -70,6 +71,8 @@ def main(argv=None):
     p.add_argument("--wait-minutes", type=float, default=0, help="oneclick: give up waiting for the PS5 after this many minutes (default 0: wait until it answers; Ctrl+C stops)")
     p.add_argument("--no-master-control", action="store_true", help="oneclick: leave Master Control out")
     p.add_argument("--no-start-master-control", action="store_true", help="oneclick: install Master Control but don't start it now")
+    p.add_argument("--no-autoload-master-control", action="store_true",
+                   help="oneclick: don't add Master Control to the PS5's start list (default: it starts with the PS5)")
     p.add_argument("--autoload-master-control", action="store_true",
                    help="oneclick: start Master Control with the PS5 (takes PadBridge/EeveeLution's place)")
     p.add_argument("--hdr", choices=["auto-if-unset", "auto", "keep"], default="auto-if-unset",
@@ -108,8 +111,9 @@ def main(argv=None):
                                catalog_loader=lambda lg: _catalog(a, lg), report=report, wait_minutes=a.wait_minutes,
                                networks=nets, master_control=not a.no_master_control,
                                start_master_control=not a.no_start_master_control,
-                               autoload_master_control=a.autoload_master_control, hdr=a.hdr,
-                               jdownloader=not a.no_jdownloader, jd_folder=a.jd_folder, confirm=confirm)
+                               autoload_master_control=not a.no_autoload_master_control, hdr=a.hdr,
+                               jdownloader=not a.no_jdownloader, jd_folder=a.jd_folder, confirm=confirm,
+                               apps=_csv(a.apps))   # --apps omni,downloads,... picks the apps (default: all)
         try:
             result = oc.run()
         except KeyboardInterrupt:

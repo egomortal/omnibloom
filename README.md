@@ -38,7 +38,8 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 - **kstuff** (kstuff-lite works), for the kernel patches homebrew apps need.
 - A payload loader listening on port 9021 (elfldr) for the downloads worker, the files broker and Master Control.
 
-The easy way: download **Omnibloom Setup**, open it and press **Install everything for me**. It waits for your PS5,
+The easy way: download **Omnibloom Setup**, open it and press **Install the full package (recommended)** (or
+**Customize…** to pick what goes on). It waits for your PS5,
 installs each part in order, checks it and tells you what it is doing; if anything fails it puts the PS5 back as it
 was. Details and the manual steps are in [docs/INSTALL.md](docs/INSTALL.md).
 

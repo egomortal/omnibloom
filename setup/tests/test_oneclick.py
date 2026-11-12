@@ -154,7 +154,7 @@ class OneButton(Base):
         for p in USER_FILES:
             self.assertEqual(fc.read(p), b"user data " + p.encode())
         self.assertIn("hub.elf", fc.read(config.AUTOLOAD_PATH).decode().split())
-        self.assertNotIn("master-control.elf", fc.read(config.AUTOLOAD_PATH).decode().split(), "autoload only when asked")
+        self.assertIn("master-control.elf", fc.read(config.AUTOLOAD_PATH).decode().split(), "starts with the PS5 by default")
         self.assert_never_deleted()
         self.assert_lock_free()
         self.assertTrue(os.path.isfile(result["run_file"]))
@@ -392,6 +392,86 @@ class JDownloader2(Base):
         self.assertTrue(self.said("hasn't finished setting itself up"))
         skip = [e for e in self.events if e.get("step") == "jdownloader" and e["state"] == "skip"]
         self.assertTrue(skip and "yt-dlp downloads work" in skip[0]["text"], skip)
+
+
+class Customize(Base):
+    def test_only_what_you_ticked_goes_on(self):
+        """Customize with only Omni ticked: Bloom Core (always) + Omni; the rest is skipped and JDownloader 2 isn't
+        looked for or asked about, because it works through Downloads."""
+        zips, files = make_packages(self.tmp)
+        make_jd_install(self.jd_home)
+        fc = self.fc = new_console(os.path.join(self.tmp, "console"))
+        asked = []
+        oc, result = self.one_click(zips, apps=["omni"], confirm=lambda q: asked.append(q) or True)
+        self.assertTrue(result["ok"], self.texts())
+        self.assertEqual(sorted(result["installed"]), ["hub", "omni"])
+        for app in ("downloads", "files-broker", "master-control"):
+            self.assertIn({"step": app, "state": "skip", "text": "%s: skipped (you left it out)." % oneclick.NAMES[app]}, self.events)
+        jd_skip = [e for e in self.events if e.get("step") == "jdownloader"]
+        self.assertEqual([e["state"] for e in jd_skip], ["skip"], jd_skip)
+        self.assertIn("Downloads", jd_skip[0]["text"])
+        self.assertEqual(asked, [])
+        self.assertEqual(fc.read(EBOOT), files[EBOOT])
+        self.assertFalse(fc.exists(MC_ELF))
+        self.assertFalse(fc.exists(WORKER))
+        self.assertFalse(fc.exists(config.CARDS_DIR + "master-control.json"))
+        self.assertNotIn(sha(files[MC_ELF]), fc.state["payloads"], "Master Control isn't started")
+        self.assert_never_deleted()
+
+    def test_command_line_apps(self):
+        zips, files = make_packages(self.tmp)
+        fc = self.fc = new_console(os.path.join(self.tmp, "console"))
+        argv = ["oneclick", "--ip", "127.0.0.1", "--ftp-port", str(fc.ftp_port), "--loader-port", str(fc.loader_port),
+                "--websrv-port", str(fc.websrv_port), "--apps", "omni,downloads", "--no-jdownloader",
+                "--hdr", "keep"] + sum((["--package", z] for z in zips), [])
+        self.assertEqual(cli.main(argv), 0)
+        self.assertEqual(fc.read(WORKER), files[WORKER])
+        self.assertFalse(fc.exists(MC_ELF))
+        self.assertFalse(fc.exists(config.OMNI_HDR_PREF), "HDR left as it was")
+
+
+class MasterControlAtBoot(Base):
+    """Master Control starts with the PS5 unless you say otherwise; it takes EeveeLution's / PadBridge's place."""
+
+    def test_on_by_default_and_takes_eeveelutions_place(self):
+        zips, _ = make_packages(self.tmp)
+        fc = self.fc = new_console(os.path.join(self.tmp, "console"))     # its start list has EeveeLution-PS5.elf
+        before = fc.read(config.AUTOLOAD_PATH)
+        oc, result = self.one_click(zips)
+        self.assertTrue(result["ok"], self.texts())
+        entries = fc.read(config.AUTOLOAD_PATH).decode().split()
+        self.assertIn("master-control.elf", entries)
+        self.assertNotIn("EeveeLution-PS5.elf", entries)
+        self.assertTrue(self.said("Master Control will manage your controllers instead of EeveeLution"))
+        self.assertLess(self.index("instead of EeveeLution"), self.index("Master Control 0.4.3 is installed and checked"))
+        backups = [n for n in fc.listdir(config.PLDMGR_DIR) if n.startswith("autoload.txt.before-omnibloom")]
+        self.assertTrue(backups)
+        self.assertIn(before, [fc.read(config.PLDMGR_DIR + n) for n in backups], "the old start list is backed up")
+        # Undo puts EeveeLution back
+        self.events.clear()
+        self.assertTrue(oneclick.undo_last("127.0.0.1", ftp_port=fc.ftp_port, loader_port=fc.loader_port,
+                                           websrv_port=fc.websrv_port, report=self.events.append,
+                                           sleep=lambda s: time.sleep(min(s, 0.05))), self.texts())
+        self.assertEqual(fc.read(config.AUTOLOAD_PATH), before)
+
+    def test_opt_out_keeps_the_start_list(self):
+        zips, _ = make_packages(self.tmp)
+        fc = self.fc = new_console(os.path.join(self.tmp, "console"))
+        oc, result = self.one_click(zips, autoload_master_control=False)
+        self.assertTrue(result["ok"], self.texts())
+        entries = fc.read(config.AUTOLOAD_PATH).decode().split()
+        self.assertNotIn("master-control.elf", entries)
+        self.assertIn("EeveeLution-PS5.elf", entries)
+        self.assertFalse(self.said("instead of EeveeLution"))
+
+    def test_command_line_opt_out_and_old_flag(self):
+        zips, _ = make_packages(self.tmp)
+        fc = self.fc = new_console(os.path.join(self.tmp, "console"))
+        base = ["oneclick", "--ip", "127.0.0.1", "--ftp-port", str(fc.ftp_port), "--loader-port", str(fc.loader_port),
+                "--websrv-port", str(fc.websrv_port), "--no-jdownloader", "--no-start-master-control"] + \
+            sum((["--package", z] for z in zips), [])
+        self.assertEqual(cli.main(base + ["--no-autoload-master-control", "--autoload-master-control"]), 0)  # old flag: no-op
+        self.assertNotIn("master-control.elf", fc.read(config.AUTOLOAD_PATH).decode().split())
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 """The Omnibloom Setup window: a simple step-by-step guide for people who've never used FTP or payloads.
 
 Steps: Welcome → Find your PS5 → Check → Choose apps → JDownloader 2 → Install → Done.
-Or the one button on the Welcome page ("Install everything for me"): Setup waits for the PS5 and does every step
+Or the one button on the Welcome page ("Install the full package (recommended)", or "Customize…" to untick apps and
+options first): Setup waits for the PS5 and does every step
 itself (oneclick.py), ticking off a checklist and saying what it's doing; "Undo this install" puts it all back.
 Bloom Core is required and always installed first. Apps already on the PS5 are listed on the
 "Installed apps" page with Update, Repair and Uninstall per app.
@@ -42,7 +43,7 @@ class SetupApp:
         self.installed = {}
         self.pick = {g["id"]: tk.BooleanVar(value=True) for g in config.GROUPS}
         self.sub = {k: tk.BooleanVar(value=True) for k in SUB_APPS}
-        self.autoload_mc = tk.BooleanVar(value=False)
+        self.autoload_mc = tk.BooleanVar(value=True)   # Master Control starts with the PS5 unless you untick it
         self.start_mc = tk.BooleanVar(value=True)
         self.jd_folder = tk.StringVar()
         self.jd_copy = tk.BooleanVar(value=False)
@@ -51,6 +52,11 @@ class SetupApp:
         self.oc_cancel = threading.Event()
         self.oc_running = False
         self.oc_result = None
+        # Customize (one-button with choices): everything on by default, like the full package.
+        self.c_apps = {a: tk.BooleanVar(value=True) for a in ("omni", "downloads", "files-broker", "master-control")}
+        self.c_jd = tk.BooleanVar(value=True)
+        self.c_jd_get = tk.BooleanVar(value=True)
+        self.c_hdr = tk.BooleanVar(value=True)
 
         root.title(config.APP_NAME)
         root.geometry("800x680")
@@ -102,6 +108,8 @@ class SetupApp:
                     font=(base[0], base[1], "bold"))
         s.map("Accent.TButton", background=[("disabled", "#2A3B4A"), ("active", C["accent_light"])], foreground=[("disabled", C["muted"])])
         s.configure("Ghost.TButton", background=C["panel"], foreground=C["text"], padding=(16, 8), borderwidth=0)
+        s.configure("Alt.TButton", background="#1C3042", foreground=C["text"], padding=(18, 8), borderwidth=0)   # on a panel
+        s.map("Alt.TButton", background=[("active", "#264058")])
         s.map("Ghost.TButton", background=[("active", "#1A2A38"), ("disabled", C["ground"])], foreground=[("disabled", "#3A4A58")])
         s.configure("Small.TButton", background="#16242F", foreground=C["text"], padding=(10, 4), borderwidth=0)
         s.map("Small.TButton", background=[("active", "#1F3141"), ("disabled", C["panel"])], foreground=[("disabled", "#3A4A58")])
@@ -178,9 +186,8 @@ class SetupApp:
         words.pack(side="left", fill="x")
         self.label(words, "Omnibloom", "title").pack(anchor="w")
         self.label(words, config.TAGLINE, "muted").pack(anchor="w")
-        self.label(self.body, "Omnibloom Setup puts the Omnibloom apps on your PS5 over your home network: Omni, the web "
-                              "browser, and Master Control for other controllers. Pick what you want; you can add, "
-                              "update or remove apps any time.").pack(anchor="w", pady=(0, 14))
+        self.label(self.body, "Omnibloom Setup puts the Omnibloom apps on your PS5 over your home network. You can add, "
+                              "update or remove apps any time.").pack(anchor="w", pady=(0, 10))
         p = self.panel(self.body)
         p.pack(fill="x")
         self.label(p, "Before you start", "head", bg=C["panel"]).pack(anchor="w")
@@ -189,26 +196,100 @@ class SetupApp:
                      "Your payload loader and FTP server are running (most jailbreak setups start them for you)."):
             self.label(p, "•  " + line, bg=C["panel"]).pack(anchor="w", pady=2)
         one = self.panel(self.body)
-        one.pack(fill="x", pady=(14, 0))
-        self.label(one, "The easy way", "head", bg=C["panel"]).pack(anchor="w")
-        self.label(one, "Press the button and Setup does everything: it waits for your PS5 to come on, installs Bloom Core, "
-                        "Omni, Downloads, USB file access and Master Control one at a time (and finds your JDownloader 2), checks each one, and tells you "
-                        "what it's doing. If anything goes wrong it puts your PS5 back as it was.", "small",
+        one.pack(fill="x", pady=(10, 0))
+        self.label(one, "One button: press it and sit back", "head", bg=C["panel"]).pack(anchor="w")
+        self.label(one, "Setup waits for your PS5 to come on, then installs Bloom Core, Omni, Downloads, USB file access, "
+                        "Master Control and your JDownloader 2 one at a time, checks each one, and tells you what it's doing. "
+                        "If anything goes wrong it puts your PS5 back as it was.", "small",
                    bg=C["panel"]).pack(anchor="w", pady=(2, 8))
         row = tk.Frame(one, bg=C["panel"])
         row.pack(fill="x")
-        ttk.Button(row, text="Install everything for me", style="Accent.TButton", command=self.page_oneclick).pack(side="left")
+        ttk.Button(row, text="Install the full package (recommended)", style="Accent.TButton",
+                   command=self.page_oneclick).pack(side="left")
+        ttk.Button(row, text="Customize…", style="Alt.TButton", command=self.page_customize).pack(side="left", padx=(10, 0))
+        addr = tk.Frame(one, bg=C["panel"])
+        addr.pack(fill="x", pady=(8, 0))
         if not self.host.get():
             self.host.set(oneclick._remembered_host() or "")
-        self.label(row, "PS5 address (optional):", "small", bg=C["panel"], wrap=0).pack(side="left", padx=(16, 6))
-        ttk.Entry(row, textvariable=self.host, width=16).pack(side="left")
-        self.label(self.body, "Or press Next to pick apps yourself. Nothing is deleted from your PS5. Anything Setup "
-                              "replaces is kept as a backup, and Uninstall puts it back.", "small").pack(anchor="w", pady=(14, 0))
+        self.label(addr, "PS5 address (optional; Setup finds it by itself):", "small", bg=C["panel"], wrap=0).pack(side="left", padx=(0, 6))
+        ttk.Entry(addr, textvariable=self.host, width=16).pack(side="left")
+        self.label(self.body, "Advanced: press Next to go through each step yourself. Nothing is deleted from your PS5. Anything "
+                              "Setup replaces is kept as a backup, and Uninstall puts it back.", "small").pack(anchor="w", pady=(10, 0))
+
+    # -- customize (the one button, with your choices) --------------------------------
+    def page_customize(self):
+        self._clear()
+        self.label(self.body, "Customize", "title").pack(anchor="w")
+        self.label(self.body, "Untick what you don't want, then press Install. Setup still does every step for you.",
+                   "muted").pack(anchor="w", pady=(2, 10))
+        box = self.panel(self.body)
+        box.pack(fill="x")
+
+        def tick(text, var, indent=0, state="normal"):
+            w = ttk.Checkbutton(box, text=text, variable=var, style="Panel.TCheckbutton", state=state)
+            w.pack(anchor="w", padx=(indent, 0), pady=1)
+            return w
+        core = tk.BooleanVar(value=True)
+        self._c_core = core
+        tick("%s (required: lets the apps work together)" % config.HUB_NAME, core, state="disabled")
+        tick("Omni: the web browser", self.c_apps["omni"])
+        tick("Downloads: save videos and files (yt-dlp built in)", self.c_apps["downloads"])
+        tick("USB file access: open and save files on USB drives", self.c_apps["files-broker"])
+        tick("Master Control: use other controllers", self.c_apps["master-control"])
+        mc_now = tick("Start it now", self.start_mc, indent=24)
+        mc_boot = tick("Start it with the PS5 (takes PadBridge's / EeveeLution's place)", self.autoload_mc, indent=24)
+        jd_tick = tick("JDownloader 2: your own copy, through Downloads", self.c_jd)
+        jd_row = tk.Frame(box, bg=C["panel"])
+        jd_row.pack(fill="x", padx=(24, 0), pady=1)
+        if not self.jd_folder.get():
+            found = jd.detect()
+            if found:
+                self.jd_folder.set(found[0])
+        self.label(jd_row, "Folder (empty: Setup looks for it):", "small", bg=C["panel"], wrap=0).pack(side="left")
+        jd_entry = ttk.Entry(jd_row, textvariable=self.jd_folder, width=34)
+        jd_entry.pack(side="left", padx=6)
+        jd_browse = ttk.Button(jd_row, text="Browse…", style="Small.TButton", command=self._browse_jd_folder)
+        jd_browse.pack(side="left")
+        jd_get = tick("If it isn't on this computer, open the official download page for me and wait", self.c_jd_get, indent=24)
+        tick("Set Omni's HDR to Auto (only if you haven't picked an HDR setting)", self.c_hdr)
+
+        def refresh(*_):
+            mc = "normal" if self.c_apps["master-control"].get() else "disabled"
+            for w in (mc_now, mc_boot):
+                w.configure(state=mc)
+            dl = self.c_apps["downloads"].get()
+            jd_tick.configure(state="normal" if dl else "disabled")
+            on = dl and self.c_jd.get()
+            for w in (jd_entry, jd_browse, jd_get):
+                w.configure(state="normal" if on else "disabled")
+        for var in (self.c_apps["master-control"], self.c_apps["downloads"], self.c_jd):
+            var.trace_add("write", refresh)
+        refresh()
+        self.label(self.body, "Bloom Core is always installed first. Everything you leave out can be added later by running Setup "
+                              "again.", "small").pack(anchor="w", pady=(10, 0))
+        self.back_btn.configure(state="normal", command=lambda: self.show(0))
+        self.next_btn.configure(text="Install", state="normal", command=lambda: self.page_oneclick(customized=True))
+
+    def _browse_jd_folder(self):
+        folder = filedialog.askdirectory(title="Pick your JDownloader 2 folder")
+        if folder:
+            self.jd_folder.set(folder)
+
+    def customized_choices(self):
+        """The Customize ticks as OneClick options (read on the window's thread)."""
+        apps = [a for a, v in self.c_apps.items() if v.get()]
+        mc = "master-control" in apps
+        jd_on = "downloads" in apps and self.c_jd.get()
+        return {"apps": apps, "master_control": mc, "start_master_control": mc and self.start_mc.get(),
+                "autoload_master_control": mc and self.autoload_mc.get(), "jdownloader": jd_on,
+                "jd_folder": (self.jd_folder.get().strip() or None) if jd_on else None,
+                "get_jdownloader": jd_on and self.c_jd_get.get(), "hdr": "auto-if-unset" if self.c_hdr.get() else "keep"}
 
     # -- the one button ------------------------------------------------------------
-    def page_oneclick(self):
+    def page_oneclick(self, customized=False):
+        choice = self.customized_choices() if customized else None
         self._clear()
-        self.label(self.body, "Installing everything", "title").pack(anchor="w")
+        self.label(self.body, "Installing your choices" if customized else "Installing the full package", "title").pack(anchor="w")
         self.label(self.body, "Setup does each step for you and says what it's doing. Keep this window open and your PS5 on.",
                    "muted").pack(anchor="w", pady=(2, 10))
         lst = tk.Frame(self.body, bg=C["panel"], padx=12, pady=6)
@@ -239,13 +320,17 @@ class SetupApp:
         if self.ports.get("host"):   # test mode: the fake PS5 is on this computer
             import ipaddress
             nets = [ipaddress.ip_network(self.ports["host"] + "/30", strict=False)]
+        if choice is None:   # the full package: everything, Master Control started now and with the PS5, HDR Auto if unset
+            choice = {"apps": None, "master_control": True, "start_master_control": True, "autoload_master_control": True,
+                      "jdownloader": True, "jd_folder": self.jd_folder.get().strip() or None, "get_jdownloader": False,
+                      "hdr": "auto-if-unset"}
+        self.oc_choice = choice
+        confirm = (lambda question: True) if choice.pop("get_jdownloader") else self._ask_from_worker
         oc = oneclick.OneClick(host=host, ftp_port=self.ports.get("ftp"), loader_port=self.ports.get("loader"),
                                websrv_port=self.ports.get("websrv"), launcher_port=self.ports.get("launcher"), catalog=self.catalog,
                                catalog_loader=lambda log: release.load_catalog(log=log),
                                report=lambda e: self.q.put(lambda: self._oc_event(e)), progress=self._progress,
-                               cancel=self.oc_cancel, networks=nets, start_master_control=self.start_mc.get(),
-                               autoload_master_control=self.autoload_mc.get(),
-                               jd_folder=self.jd_folder.get().strip() or None, confirm=self._ask_from_worker)
+                               cancel=self.oc_cancel, networks=nets, confirm=confirm, **choice)
         self.run_bg(oc.run, lambda result, err: self._oc_done(oc, result, err))
 
     def _ask_from_worker(self, question):
@@ -308,7 +393,8 @@ class SetupApp:
                            "small").pack(anchor="w")
             ttk.Button(self.oc_actions, text="Undo this install", style="Ghost.TButton", command=self._oc_undo).pack(side="left", pady=4)
         else:
-            ttk.Button(self.oc_actions, text="Try again", style="Accent.TButton", command=self.page_oneclick).pack(side="left", pady=4)
+            again = self.page_customize if self.oc_choice.get("apps") is not None else self.page_oneclick
+            ttk.Button(self.oc_actions, text="Try again", style="Accent.TButton", command=again).pack(side="left", pady=4)
 
     def _oc_undo(self, confirm=True):
         host = self.host.get().strip()
