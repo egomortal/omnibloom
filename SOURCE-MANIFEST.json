@@ -18,8 +18,8 @@
     },
     {
       "path": ".github/workflows/omnibloom-setup.yml",
-      "bytes": 2427,
-      "sha256": "9a7e212bad0284b4768607a7cc57de5dbbb764fba5b393d9cbf9e30c6c9961b4"
+      "bytes": 2448,
+      "sha256": "217340a6d83108addbe3cb7da96931303fee9f4fd03064cf0845e9ddff4e8ab8"
     },
     {
       "path": ".gitignore",
@@ -798,8 +798,8 @@
     },
     {
       "path": "docs/INSTALL.md",
-      "bytes": 8242,
-      "sha256": "cb31883becc1d57f0627a75b61a7f96135ae2a7301c4b669eb068523b2fd6669"
+      "bytes": 9316,
+      "sha256": "b7e76679c56d3e8b3969c8410aa8b3893df9984a2c647218ed6edf701180467d"
     },
     {
       "path": "docs/manual/brand-icon.png",
@@ -17503,8 +17503,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5904,
-      "sha256": "14e47552d7d692aeec1a5aa324633c417fd6a85297133d1d740940f3221b7777"
+      "bytes": 5960,
+      "sha256": "ac656a1146e7cb5dbf1133dcc9d11e6fdd8befd61edea09d0cc7278cebaffc75"
     },
     {
       "path": "ROADMAP.md",
@@ -17533,8 +17533,8 @@
     },
     {
       "path": "setup/ci/github-workflow-omnibloom-setup.yml",
-      "bytes": 2227,
-      "sha256": "a50c3ef884a18e9030ab22872794b36d62fe512af05a71e7c3918b692d2193ad"
+      "bytes": 2248,
+      "sha256": "4b7d48fefc5ae72302ba9760f182f0dc7939477f31e90f666b9beb9c2f6cd043"
     },
     {
       "path": "setup/omnibloom-setup.spec",
@@ -17553,18 +17553,18 @@
     },
     {
       "path": "setup/omnibloom_setup/cli.py",
-      "bytes": 10177,
-      "sha256": "03927600cba7b6306a5cee5012c594efaf99effb648a6008fab12c04ba0a82b6"
+      "bytes": 10610,
+      "sha256": "0f76601f3702a5c7ffcec8e642ad4313f94556cb1ea826879e8aab304f6a8f45"
     },
     {
       "path": "setup/omnibloom_setup/config.py",
-      "bytes": 10273,
-      "sha256": "a2b835c839708398094eaeec07c37d44f152472dbdab64945ae6918d7d0d3a00"
+      "bytes": 10446,
+      "sha256": "8cbc045c7394e7568ba667c63c3614218aaca60fad4004c6e22cebc8fea567ee"
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
-      "bytes": 39818,
-      "sha256": "0018d38b6d48a6a59c18c16443db70e22f3d5e39cc60f664a79e16efed47e4aa"
+      "bytes": 45487,
+      "sha256": "0d8ec126d0a394ff212da0775b7843dc73fa4b00f0abec948cbefbf2398dc717"
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
@@ -17578,8 +17578,8 @@
     },
     {
       "path": "setup/omnibloom_setup/oneclick.py",
-      "bytes": 43299,
-      "sha256": "d84b16a2139b9ba5d773e99545d789de7e31ddf93d231279788f408826370c9c"
+      "bytes": 44975,
+      "sha256": "3f402bed74bcf78c7ed7e585fa614b07f811ef7c3c8669e874847727e8575e31"
     },
     {
       "path": "setup/omnibloom_setup/ports.py",
@@ -17588,8 +17588,8 @@
     },
     {
       "path": "setup/omnibloom_setup/ps5.py",
-      "bytes": 10983,
-      "sha256": "4d07675f863638a6ebd730975b1446bb6efcd9fefc0c740a1286920d60da646c"
+      "bytes": 14950,
+      "sha256": "f08b8a7a9846d04181aeeeded8c0dcadf0362b3838133a1f48a5e43c58a6d528"
     },
     {
       "path": "setup/omnibloom_setup/release.py",
@@ -17598,8 +17598,8 @@
     },
     {
       "path": "setup/README.md",
-      "bytes": 3238,
-      "sha256": "86ce56cb6c59ce1e2785697c160f8305134c9ca62b9d3a81c9384c37d05198f8"
+      "bytes": 3511,
+      "sha256": "92fb103b59128c99899d94a797b963ce39899fa774e1912995aedd6a056b0758"
     },
     {
       "path": "setup/REPORT.md",
@@ -17623,18 +17623,28 @@
     },
     {
       "path": "setup/screenshots/11-one-button.png",
-      "bytes": 71745,
-      "sha256": "3604796b28966e9da11867fe31851ea4c3803f8f2c265bcdcd79e6727e0c750b"
+      "bytes": 71019,
+      "sha256": "901ac69589c3d1c1016ddf7acf15142354b3c4f419784e8066c1463242b51175"
     },
     {
       "path": "setup/screenshots/12-one-button-done.png",
-      "bytes": 46402,
-      "sha256": "e199940efaa7fd9b74b5931c994a40b1a1b700312cb8633f5e716536c329bc72"
+      "bytes": 46591,
+      "sha256": "f8e1d180c29eb402a3204c458bc776fc07d4000bdf2fae340194354aaaa2041e"
     },
     {
       "path": "setup/screenshots/13-one-button-undo.png",
-      "bytes": 41468,
-      "sha256": "0a661a078887e4b7642fef6af21e127321a0f790903bbdfa85f8ddfdbd16c4f8"
+      "bytes": 41659,
+      "sha256": "95f0c131e8c974621fb1d2671dcca5834cfea8330e553091bbdd1ef4dd9d49a1"
+    },
+    {
+      "path": "setup/screenshots/14-customize.png",
+      "bytes": 33827,
+      "sha256": "eaf0ca476f092185041dd5558dbc5a1fdb936b09e55b63d5348b0c6e4570eda6"
+    },
+    {
+      "path": "setup/screenshots/15-customize-done.png",
+      "bytes": 45361,
+      "sha256": "61a281ee4f526d3605b16158f318c10c264063c5477d3cd0d413984be925721a"
     },
     {
       "path": "setup/screenshots/2-find.png",
@@ -17683,18 +17693,23 @@
     },
     {
       "path": "setup/tests/fake_console.py",
-      "bytes": 28671,
-      "sha256": "49268fd68512e2412fa4676398b5d65055afe9cbfccf6a1e8d0fc822c6a01d48"
+      "bytes": 28826,
+      "sha256": "1a3ce87111283d336cc697b2fa9380fb08492830c7293f8c832d6d3b0e73a0bb"
     },
     {
       "path": "setup/tests/gui_smoke.py",
-      "bytes": 4957,
-      "sha256": "256efd95311ad3a02cc385826351663a39a7086d3423bdf0e6977cc6c16f2cd2"
+      "bytes": 5930,
+      "sha256": "cd570d873696d683b836991db4e10cdea66ee101e4e9f7bf58da21fafef1e95d"
+    },
+    {
+      "path": "setup/tests/test_discovery.py",
+      "bytes": 9629,
+      "sha256": "afdc26f9233669f896e3c0dc5b6d2ea4d87e03fda4ce29e4f9758494a570b9a3"
     },
     {
       "path": "setup/tests/test_end_to_end.py",
-      "bytes": 51538,
-      "sha256": "546bbfe1c8c44b987ee850261f0268931bb7eeb1bb55d6457adc61fb9aef9e3b"
+      "bytes": 51596,
+      "sha256": "42e0a9f92c2ad6996c18b5dfae46f749e50d74da65ec179e554b6cb78f4472cf"
     },
     {
       "path": "setup/tests/test_install_journal.py",
@@ -17703,8 +17718,8 @@
     },
     {
       "path": "setup/tests/test_oneclick.py",
-      "bytes": 21299,
-      "sha256": "08828f501dd4704c8a504a51dcdde953c1a39e01d95ea34eb787448a6f16ba1e"
+      "bytes": 26242,
+      "sha256": "4fd424152f0f8243c4703dbdada56d24560b451127c9e1605b9a0239fadf09f9"
     },
     {
       "path": "setup/tests/test_release_provenance.py",
