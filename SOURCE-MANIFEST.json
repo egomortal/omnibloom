@@ -17918,8 +17918,8 @@
     },
     {
       "path": "setup/omnibloom_setup/oneclick.py",
-      "bytes": 44975,
-      "sha256": "3f402bed74bcf78c7ed7e585fa614b07f811ef7c3c8669e874847727e8575e31"
+      "bytes": 45169,
+      "sha256": "40b5579989ba7f1ea8e93bab6186d6f171b4001f9a2f205a1dd9aaf7907b084a"
     },
     {
       "path": "setup/omnibloom_setup/ports.py",
@@ -18068,8 +18068,8 @@
     },
     {
       "path": "setup/tests/test_oneclick.py",
-      "bytes": 26212,
-      "sha256": "b80053bc7ab1001be1494386c2ab2a7ef3b14e72ce37623803e819996b935b52"
+      "bytes": 26374,
+      "sha256": "59089e472a00d26e2cbc0e9c02e8e9ef43a57a8e3ed5f2c7d3117aa49085855b"
     },
     {
       "path": "setup/tests/test_release_provenance.py",

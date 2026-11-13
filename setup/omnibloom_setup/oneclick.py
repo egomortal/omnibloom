@@ -618,6 +618,8 @@ class OneClick:
         receipt = installer.install_app(console, self.catalog, app_id, picker,
                                         autoload_opt=(app_id == "master-control" and self.autoload_mc),
                                         start=False, log=self.detail, progress=self.progress)
+        if app_id == "omni":   # the two files Omni v0.5.1 needs before it starts the browser (installer.ensure_omni_first_run)
+            installer.ensure_omni_first_run(console, self.detail)
         changed = console.recorder.ops[before:] if console.recorder else []
         if title and any(op["op"] == "renamed" and op["dst"].startswith(config.TITLE_DIR) for op in changed):
             self.wait_smp(console, offset)

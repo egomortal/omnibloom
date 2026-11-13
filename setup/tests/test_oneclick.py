@@ -155,6 +155,8 @@ class OneButton(Base):
             self.assertEqual(fc.read(p), b"user data " + p.encode())
         self.assertIn(HUB_ELF, fc.read(config.AUTOLOAD_PATH).decode().split())
         self.assertIn(MC_ELF, fc.read(config.AUTOLOAD_PATH).decode().split(), "starts with the PS5 by default")
+        for path, _ in config.OMNI_FIRST_RUN_FILES:   # a fresh console gets the two files Omni needs to start
+            self.assertTrue(fc.exists(path), path)
         self.assert_never_deleted()
         self.assert_lock_free()
         self.assertTrue(os.path.isfile(result["run_file"]))
