@@ -85,7 +85,8 @@ class Listener:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((host, port))
         self.sock.listen(8)
-        threading.Thread(target=self._loop, daemon=True).start()
+        self.thread = threading.Thread(target=self._loop, daemon=True)
+        self.thread.start()
 
     def _loop(self):
         while True:
@@ -96,7 +97,15 @@ class Listener:
                 return
 
     def close(self):
+        # A plain close() while _loop sits in accept() leaves the port listening on Linux until accept returns,
+        # so a fake console taking the port over failed with "Address already in use" (CI, 2026-11-13).
+        # shutdown() wakes accept() first; then wait for the thread to let go of the socket.
+        try:
+            self.sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
         self.sock.close()
+        self.thread.join(2)
 
 
 def web(host, port, names):

@@ -18043,8 +18043,8 @@
     },
     {
       "path": "setup/tests/test_discovery.py",
-      "bytes": 9629,
-      "sha256": "afdc26f9233669f896e3c0dc5b6d2ea4d87e03fda4ce29e4f9758494a570b9a3"
+      "bytes": 10103,
+      "sha256": "9d4e82958a278161446586dc451d2594f455fe417a6700e7b96b1b11a5aafff1"
     },
     {
       "path": "setup/tests/test_end_to_end.py",
