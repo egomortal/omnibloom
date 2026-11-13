@@ -101,9 +101,19 @@ A tap of L2 will still open saved links. Full feature list: [FEATURES.md](FEATUR
 ## Requirements
 
 - A jailbroken PS5 on **firmware 13.60**. That is the only firmware I can test on. Others may work, but I can't promise anything.
-- **ShadowMountPlus**, to register and launch Omni as an app.
-- **kstuff** (kstuff-lite works), for the kernel patches homebrew apps need.
-- A payload loader listening on port 9021 (elfldr) for the downloads worker, the files broker and Master Control.
+- These small homebrew programs ("payloads") running on the PS5. All of them are in **Payload Manager**'s catalog:
+  add them there and tick "start with the PS5" so they come back after every restart.
+
+| Payload | What it is | Why Omnibloom needs it |
+| --- | --- | --- |
+| **ShadowMountPlus** | Mounts homebrew apps so they show up on the PS5's home screen | Registers and launches **Omni** like a normal app |
+| **kstuff** (kstuff-lite works) | Kernel patches that let homebrew apps run | Every Omnibloom app needs it |
+| **elfldr** (ELF loader, port 9021) | Starts any program (`.elf` file) sent to it over the network | Starts **Bloom Core**, **Master Control**, Omni's page engine, the **downloads worker** and the **USB files** helper |
+| **ftpsrv** (FTP server, port 2121) | Lets your computer copy files to and from the PS5 | **Omnibloom Setup** copies everything over it, and it's how you'd fix files by hand |
+| **websrv** (port 8080) | A small web server and app launcher on the PS5 | Omni uses it to start the downloads worker when you open Media downloads |
+
+  If Setup says it found your PS5 but something isn't answering, that payload isn't running: start it from Payload
+  Manager and Setup carries on by itself.
 
 The easy way: download **Omnibloom Setup**, open it and press **Install the full package (recommended)** (or
 **Customize…** to pick what goes on). It waits for your PS5,
