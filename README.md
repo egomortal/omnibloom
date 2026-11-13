@@ -91,9 +91,10 @@ Omni is built for the DualSense. PlayStation names first, Xbox names in brackets
 
 | Button | What it will do |
 | --- | --- |
-| **L2 + Square** | Copy: the selected text, else the link under the pointer, else the page address |
-| **L2 + Triangle** | Paste into the selected text box |
-| **L2 + Cross** | Quick bar |
+| **L2 + Square** (LT + X) | Copy: the selected text, else the link under the pointer, else the page address |
+| **L2 + Triangle** (LT + Y) | Paste into the selected text box |
+| **L2 + Cross** (LT + A) | Quick bar |
+| **L2 + Circle** (LT + B) | Browser settings (handy on an Xbox controller, where View may not reach Omni) |
 | **Create** | Opens the full Browser settings: Dark mode (Off / Natural / Forced), your own quick-access buttons, and hide toggles for the quick-access row and the bottom button bar |
 
 A tap of L2 will still open saved links. Full feature list: [FEATURES.md](FEATURES.md).
