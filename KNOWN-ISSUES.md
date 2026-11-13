@@ -7,6 +7,19 @@ If something here affects you, the workaround is listed with it. If you hit a pr
 
 ## Open issues
 
+### YouTube stops at 720p, uBlock doesn't block, no HDR (fresh installs)
+- **What happens:** on a console that never had an older Omni, YouTube only offers up to 720p, video can stutter, ads aren't blocked, HDR stays off and Media downloads says it's disabled.
+- **Why:** Omni v0.5.1 switches these features on with small files in `/data/omni/`, and Setup didn't create them. The consoles Omni was tested on had them from earlier versions:
+  - `mse-preview.flag`: Media Source Extensions, which YouTube needs for anything above 720p;
+  - `hw-decode.flag`: hardware video decoding;
+  - `media-preview.flag`: the video player for normal video files;
+  - `ublock-native.flag`: uBlock Origin's built-in blocker;
+  - `hdr-auto.flag`: HDR;
+  - `media-downloads-enabled.flag`: Media downloads.
+- **Fix:** download Omnibloom Setup again from the [v0.5.1 release](https://github.com/egomortal/omnibloom/releases/tag/v0.5.1), open **Installed apps…** and press **Repair** next to Omni (or install again). Setup creates any missing switch and never changes one you already have. Then restart Omni.
+- **By hand (FTP):** create each file above in `/data/omni/`, containing `1`, and restart Omni.
+- **Status:** fixed in the current Setup; the next Omni version turns these on by default.
+
 ### Omni won't start: "Omni Engine: upload omni-engine.elf to /data/omni first"
 - **What happens:** after a fresh install, opening Omni shows that notification and nothing else.
 - **Why:** Omni checks for two files from older test setups before it starts the browser: `/data/omni/omni-engine.elf` and `/data/omni/browser-mode.flag`. It doesn't run that file; it starts its page engine from `/data/omni/native/omni-engine-child.elf`, which Setup installs. Consoles that had an older Omni already have the file, so the check never showed up in testing. Setup doesn't create it.
