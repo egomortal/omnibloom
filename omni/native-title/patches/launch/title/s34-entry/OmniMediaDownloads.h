@@ -215,8 +215,18 @@ inline Outcome ensureReady(const Hooks& hooks, uint64_t& nextLaunchAt, uint16_t*
     const unsigned selected = hooks.port();
     if (selected < 8761 || selected > 8899) return Outcome::Unavailable;
     const uint16_t workerPort = static_cast<uint16_t>(selected);
-    HttpResult health = hooks.fetch(workerPort, "/healthz", 800);
+    HttpResult health = hooks.fetch(workerPort, "/healthz", 4000); // OMNI_MEDIA_HEALTH_V2: was 800 ms
     if (healthy(health)) { if (readyPort) *readyPort = workerPort; return Outcome::Ready; }
+    // OMNI_MEDIA_HEALTH_V2: a slow or failed answer (not a refusal, not a wrong one) is retried for up to 30 s; the
+    // worker can be slow to answer while the console has it paged down in the background.
+    if (health.state != HttpState::Refused && health.state != HttpState::Complete) {
+        const uint64_t retryUntil = hooks.clock() + 30000;
+        while (hooks.clock() < retryUntil && health.state != HttpState::Refused && health.state != HttpState::Complete) {
+            hooks.sleep(500);
+            health = hooks.fetch(workerPort, "/healthz", 4000);
+            if (healthy(health)) { if (readyPort) *readyPort = workerPort; return Outcome::Ready; }
+        }
+    }
     // Only connection refusal establishes an unused listener. Any other owner/failure is left alone.
     if (health.state != HttpState::Refused) return Outcome::Unavailable;
     if (!hooks.packageReady()) return Outcome::PackageMissing;
@@ -226,7 +236,7 @@ inline Outcome ensureReady(const Hooks& hooks, uint64_t& nextLaunchAt, uint16_t*
     if (launch.state == HttpState::Refused || (launch.state == HttpState::Complete && launch.status != 200)) return Outcome::LauncherRejected;
     const uint64_t deadline = hooks.clock() + 30000;
     do {
-        health = hooks.fetch(workerPort, "/healthz", 800);
+        health = hooks.fetch(workerPort, "/healthz", 4000); // OMNI_MEDIA_HEALTH_V2: was 800 ms
         if (healthy(health)) { if (readyPort) *readyPort = workerPort; return Outcome::Ready; }
         if (health.state == HttpState::Complete) return Outcome::Unavailable;
         if (hooks.clock() >= deadline) break;
