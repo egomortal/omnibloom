@@ -16,6 +16,12 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 
 > Not affiliated with Omni Browser (Android, RebelRoot), The Omni Group / OmniWeb, or OmniPad-PS5.
 
+> **My bad: I put out the coughing baby and forgot to arm it. 😅**
+> The first v0.5.1 downloads were missing a few small setup files. On a fresh console Omni either didn't start,
+> ran a self-test and closed, capped YouTube at 720p, or left uBlock off. It's fixed: **download Omnibloom Setup again
+> from the [v0.5.1 release](https://github.com/egomortal/omnibloom/releases/tag/v0.5.1) and press Repair** next to Omni
+> (or install again). Details in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
+
 ## What's in it
 
 | Part | What it is | Folder |
@@ -31,6 +37,66 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 - **Something not working?** See [KNOWN-ISSUES.md](KNOWN-ISSUES.md) for current problems and their workarounds.
 - **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) and [docs/BUILD.md](docs/BUILD.md).
 - **Before asking for a feature or firmware support,** please read my [personal notes](personal%20notes.md).
+
+## Controller shortcuts
+
+Omni is built for the DualSense. PlayStation names first, Xbox names in brackets.
+
+### Browsing
+
+| Button | What it does |
+| --- | --- |
+| Left stick | Move the pointer (it snaps to the nearest link) |
+| Right stick | Scroll in any direction |
+| **Cross** (A) | Click. **Hold** for half a second: the right-click menu (copy link, open in new tab, save…) |
+| **Circle** (B) | Go back |
+| **Square** (X) | New tab |
+| **Triangle** (Y) | Address bar |
+| **L1 / R1** (LB / RB) | Previous / next tab |
+| **L1 + R1 together** (LB + RB) | **Media downloads** (grabs the media links on the page and opens the downloads tab) |
+| **L2** (LT) | Saved links |
+| **R2** (RT) | Send this page's media link to Media downloads |
+| **L3** (press left stick) | Save this site to your shortcuts |
+| **R3** (press right stick) | Close tab |
+| D-pad up / down | Scroll |
+| D-pad left / right | Back / forward (or switch tabs, in Settings) |
+| Touchpad | Translate the page |
+| **Options** (Menu) | Quick menu: Browse, Quick toggles, Apps, Settings, More (Exit is in it) |
+| **Create** (View) | Settings |
+
+### Typing (on-screen keyboard)
+
+| Button | What it does |
+| --- | --- |
+| **L1 / R1** | Move the cursor |
+| **L2 / R2** | Move the cursor a whole word |
+| **Square** | Delete |
+| **Triangle** | Space |
+| **L3** | Shift |
+| **R3** | Symbols |
+| Touchpad | Edit row: copy, cut, paste, undo, select all, **Fill saved login**, **Fill form** |
+| **Options** | Go |
+
+### Fullscreen video
+
+| Button | What it does |
+| --- | --- |
+| **Square** | Pause / play |
+| **L1 / R1** | Back / forward 10 seconds |
+| **Triangle** | Captions |
+| **L3** | Mute |
+| **Circle** | Leave fullscreen |
+
+### Coming in the next version (being tested now)
+
+| Button | What it will do |
+| --- | --- |
+| **L2 + Square** | Copy: the selected text, else the link under the pointer, else the page address |
+| **L2 + Triangle** | Paste into the selected text box |
+| **L2 + Cross** | Quick bar |
+| **Create** | Opens the full Browser settings: Dark mode (Off / Natural / Forced), your own quick-access buttons, and hide toggles for the quick-access row and the bottom button bar |
+
+A tap of L2 will still open saved links. Full feature list: [FEATURES.md](FEATURES.md).
 
 ## Requirements
 
