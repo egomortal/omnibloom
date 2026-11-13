@@ -2068,8 +2068,8 @@
     },
     {
       "path": "downloads/tests/test-universes.cjs",
-      "bytes": 14072,
-      "sha256": "3ee0cfe9010c10a90a471720a1a2d042aface9b7ff645dda1d45590b4dfeed89"
+      "bytes": 14040,
+      "sha256": "6e185c0a618090c9b889cb26edc3946032d50c0b1a971e6928274327d2aa8a79"
     },
     {
       "path": "downloads/tests/test_deep_probe_redirect.py",
@@ -2118,8 +2118,8 @@
     },
     {
       "path": "downloads/worker/app.js",
-      "bytes": 107249,
-      "sha256": "208f5308abf22fb7cbf65a0006f52a9b699753bdc41a20e49185ae0a171b3e4f"
+      "bytes": 95848,
+      "sha256": "f04b5ed327eca7bf4291951bfa08b387412712f17f6d89a16be1c455a9d677b1"
     },
     {
       "path": "downloads/worker/assets/art/abyss.webp",
@@ -2202,9 +2202,79 @@
       "sha256": "51095707250c6921ba42bdace83facc9477bee725b9f3a4517e13bd8bacc0b0c"
     },
     {
+      "path": "downloads/worker/assets/candidate-wire.js",
+      "bytes": 3358,
+      "sha256": "b9588761fc0d1869c91eca12dd7fe7fe85f5982a3d5294619b3b4460fb02fbd6"
+    },
+    {
+      "path": "downloads/worker/assets/favicon.svg",
+      "bytes": 500,
+      "sha256": "16eed941bbd3f4696fca620316894964dff5623ee15936dcf489cb81eab96d47"
+    },
+    {
+      "path": "downloads/worker/assets/guide.css",
+      "bytes": 3165,
+      "sha256": "e2c0093b2d03de04d1b6198d0f96ef91246c4c59b9f9f5cffde729784e50a311"
+    },
+    {
+      "path": "downloads/worker/assets/guide.js",
+      "bytes": 10765,
+      "sha256": "ef506e538419c9275f235a950a6a8b2f33ad02e545a149ce1cec7c063628cfd1"
+    },
+    {
+      "path": "downloads/worker/assets/icons.svg",
+      "bytes": 11050,
+      "sha256": "71e86230a7a37c289fed87ebc01ae54a9a65a9f8d3fd77be87c96e8d74cc1ffb"
+    },
+    {
+      "path": "downloads/worker/assets/job-details.css",
+      "bytes": 3163,
+      "sha256": "64ba92a0f5e587fe45c0698ceeb25a342455aa824561a3bb461e4efb181ae7ce"
+    },
+    {
+      "path": "downloads/worker/assets/job-details.js",
+      "bytes": 13841,
+      "sha256": "cf00b1b88540b673e49fff6e90737f54543254f4a93c4a23ff38ea0e26ef59cb"
+    },
+    {
+      "path": "downloads/worker/assets/landscape.svg",
+      "bytes": 690,
+      "sha256": "3fecb7170d0fb843ca3f005b28783adb5fd48eb3ed5474b3bd35e4a4973ab275"
+    },
+    {
+      "path": "downloads/worker/assets/link-tools.js",
+      "bytes": 11797,
+      "sha256": "c6350c8e19cbd5adf3b8822d2b071c561cace734f1bfd69541038b52e2af2545"
+    },
+    {
+      "path": "downloads/worker/assets/nav-symbols.svg",
+      "bytes": 8959,
+      "sha256": "b2a800ae654b20d03f9f4fa2e9b44d83f782f6084627dc57e4f7dab2bb301b72"
+    },
+    {
+      "path": "downloads/worker/assets/navigator.css",
+      "bytes": 3799,
+      "sha256": "d3623e12c02aecbe85b9c8dc3247285ec7080d4825ea2cc2079ba0647ae74054"
+    },
+    {
+      "path": "downloads/worker/assets/navigator.js",
+      "bytes": 20615,
+      "sha256": "d26a11038d0caa01d9c2e05447d3708baaec720969e126c37db43857d1e8b1ac"
+    },
+    {
+      "path": "downloads/worker/assets/orbital.svg",
+      "bytes": 832,
+      "sha256": "d1bfb5a5004b55eb0a1c03e5f842189438d3cd913b289de592df141a949568b4"
+    },
+    {
       "path": "downloads/worker/assets/production-api.js",
       "bytes": 20017,
       "sha256": "d24b509ad2b91af389b3f937a450f34460c216dca25ddd46d49414aa9851a44d"
+    },
+    {
+      "path": "downloads/worker/assets/soundwave.svg",
+      "bytes": 518,
+      "sha256": "715e77be598936afe0360713b40a520380b0190e2b2b0f69000437f23e07e3c7"
     },
     {
       "path": "downloads/worker/assets/universe-symbols.svg",
@@ -2213,8 +2283,8 @@
     },
     {
       "path": "downloads/worker/assets/universes.css",
-      "bytes": 12551,
-      "sha256": "34bfcc430daf1f6144e7634663e1af70ebc1af280c79ddb42a08734435884ea3"
+      "bytes": 12506,
+      "sha256": "c151029e5dde6c5c9a1728c07e3f50212598d135889751af7ff678c32236606c"
     },
     {
       "path": "downloads/worker/caption_tools.py",
@@ -2243,8 +2313,8 @@
     },
     {
       "path": "downloads/worker/index.html",
-      "bytes": 9981,
-      "sha256": "93a9191d0a8ca84c6ec451309d9bae0b3bf5f600a9478d9d012966857e021514"
+      "bytes": 8738,
+      "sha256": "292712e9985a807778803619f9ca1dbec9f0721d393decde7f84fc41220dcbba"
     },
     {
       "path": "downloads/worker/jd_adapter.py",
@@ -2288,8 +2358,8 @@
     },
     {
       "path": "downloads/worker/styles.css",
-      "bytes": 72524,
-      "sha256": "3c0851857c3d74fb47861bbdf4a79466c6524e3b12493d0b1d4211b9ed7facfd"
+      "bytes": 60421,
+      "sha256": "d24c3a02b5363044b02b15961ff647327a3d874e0e09ff567105b66d0a4bc881"
     },
     {
       "path": "downloads/worker/suite_port.py",
@@ -2418,8 +2488,8 @@
     },
     {
       "path": "downloads/worker/worker.py",
-      "bytes": 40840,
-      "sha256": "3962f5abbfefb60ad593a903a6fa48a56ac3ac8bac4512e6ea5a00c74912317c"
+      "bytes": 40748,
+      "sha256": "0f7b2ed48d8ac40ba0f9d864bad9d53fd30b8f5d9aa009e46288689b3c47cf63"
     },
     {
       "path": "FEATURES.md",
