@@ -633,8 +633,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 13347,
-      "sha256": "ebcc095d9459fc4ff4feb9ea24fcb7c12612cdd78d03b3f07bdfd2fa8c6d1db7"
+      "bytes": 13754,
+      "sha256": "9cf71c36f9e7a052b681aa4fdb27d3bd39dd43dd182d5d5a5474d10544195592"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2843,8 +2843,8 @@
     },
     {
       "path": "KNOWN-ISSUES.md",
-      "bytes": 6747,
-      "sha256": "5c9ac218045a2f98d2c9b4d212056671167f32f268a1ee058d8535bb047e7905"
+      "bytes": 6936,
+      "sha256": "3401266036ebe6d6b410ee3c9ff68710590302ee613ab064934766b65d07642a"
     },
     {
       "path": "LICENSE",
@@ -17898,8 +17898,8 @@
     },
     {
       "path": "setup/omnibloom_setup/config.py",
-      "bytes": 10526,
-      "sha256": "4e3871439872043650112aeadff9131e24b245bba61f7207c7d7ace31f6dac9c"
+      "bytes": 11086,
+      "sha256": "9b7b2608711df9606e6c54c22e2f5b29a50f81987f9e568564889fb003bb79e6"
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
@@ -17908,8 +17908,8 @@
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
-      "bytes": 32079,
-      "sha256": "9679055e9f0e5019ed1d1fa3fec91981e58260b475f4299e73fa52b917213f0e"
+      "bytes": 32899,
+      "sha256": "d456b2242502f1beda65b5cacbd8ce84f8a93a070507ffcc74aeacc8ed176813"
     },
     {
       "path": "setup/omnibloom_setup/jd.py",
@@ -18055,6 +18055,11 @@
       "path": "setup/tests/test_end_to_end.py",
       "bytes": 51624,
       "sha256": "21ba117ff1da4818b710dfcf63403677b78c61c4b9b010617331ad49d3414fd6"
+    },
+    {
+      "path": "setup/tests/test_first_run.py",
+      "bytes": 1689,
+      "sha256": "16ea671c78d8612bc352a46abd2060f6d992ceb4bb1a58316e331417a53b745d"
     },
     {
       "path": "setup/tests/test_install_journal.py",

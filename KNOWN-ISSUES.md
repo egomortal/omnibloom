@@ -15,7 +15,7 @@ If something here affects you, the workaround is listed with it. If you hit a pr
   2. Create a small text file `/data/omni/browser-mode.flag` containing `1`. Without it, Omni starts its engine self-test, not the browser.
 
   Then open Omni again.
-- **Status:** being fixed in Setup and the console package, so that a fresh install starts without the extra step.
+- **Status:** fixed in the current Setup: download it again from the [v0.5.1 release](https://github.com/egomortal/omnibloom/releases/tag/v0.5.1) and press **Repair** (or Install). It creates both files when they're missing and never replaces existing ones. The next Omni version won't need them at all.
 
 ### YouTube sometimes doesn't start playing
 - **What happens:** the video page opens but the video never starts, or Omni reloads the page a few times first.

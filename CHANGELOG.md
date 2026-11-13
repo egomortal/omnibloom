@@ -28,6 +28,10 @@
   start list as bare file names (`hub.elf`), which Payload Manager v0.6.3 doesn't start. It now writes full paths
   (`/data/pldmgr/payloads/BloomCore/hub.elf`), replaces bare entries left by an older Setup, and **Repair** puts back
   any required entry that's missing.
+- **Omni starts after a fresh install.** Setup now creates `/data/omni/omni-engine.elf` (a small placeholder) and
+  `/data/omni/browser-mode.flag` when they're missing. Omni v0.5.1 needs both before it starts the browser; without
+  them it said "upload omni-engine.elf to /data/omni first", or ran its engine self-test and closed. Existing files
+  are never replaced. **Install** and **Repair** both do it.
 
 ### Downloads
 - **Media downloads shortcut (LT / double bumper) no longer says "unavailable" while the worker is running.** Omni

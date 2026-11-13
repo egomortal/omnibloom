@@ -103,6 +103,13 @@ SETUP_LOCK_MINUTES = 30
 # Omni's HDR setting (`<revision>TAB<off|auto|on>` and a newline; Omni treats a missing file as Off). The one-button install
 # sets Auto when there's no setting yet and keeps the user's choice otherwise.
 OMNI_HDR_PREF = "/data/omni/video-hdr-preference.txt"
+# Omni titles up to v0.5.1 only start the browser when both of these exist (KNOWN-ISSUES: "upload omni-engine.elf to
+# /data/omni first"). The title never runs the .elf: it starts its engine from /data/omni/native/omni-engine-child.elf.
+# Setup creates them when missing and never replaces an existing file (an older Omni may own a real engine there).
+OMNI_FIRST_RUN_FILES = (
+    ("/data/omni/omni-engine.elf", b"Omnibloom: placeholder. Omni starts its engine from /data/omni/native/omni-engine-child.elf.\n"),
+    ("/data/omni/browser-mode.flag", b"1\n"),
+)
 
 # Required console software, with how the setup recognises each one in autoload.txt.
 REQUIREMENTS = {

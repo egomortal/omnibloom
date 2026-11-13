@@ -468,7 +468,25 @@ def install(console, catalog, app_ids, autoload=(), start=(), log=print, progres
         hub_start = app_id == config.HUB_ID  # Bloom Core is started right away
         receipts[app_id] = install_app(console, catalog, app_id, picker, autoload_opt=app_id in autoload,
                                        start=hub_start or app_id in start, log=log, progress=progress)
+    if "omni" in receipts:
+        ensure_omni_first_run(console, log)
     return receipts
+
+
+def ensure_omni_first_run(console, log):
+    """Create the two files older Omni titles need before they start the browser (config.OMNI_FIRST_RUN_FILES).
+    Existing files are left exactly as they are. Returns the paths it created."""
+    made = []
+    for path, data in config.OMNI_FIRST_RUN_FILES:
+        if console.exists(path):
+            continue
+        console.makedirs(posixpath.dirname(path))
+        console.store(path, data)
+        if console.read(path) != data:
+            raise IOError("Couldn't write %s; Omni may not start until it exists." % path)
+        made.append(path)
+        log("Created %s (Omni needs it to start)." % path)
+    return made
 
 
 # -- repair ---------------------------------------------------------------
@@ -503,6 +521,8 @@ def repair_app(console, catalog, app_id, log=print, progress=None):
     if al.get("changed") or (catalog.has(app_id) and catalog.apps[app_id]["autoload"] == "required"):
         if set_autoload(console, _autoload_elf(catalog, app_id, al.get("elf")), True, log)["changed"]:
             fixed.append(config.AUTOLOAD_PATH)
+    if app_id == "omni":
+        fixed += ensure_omni_first_run(console, log)
     log("%s: checked %d files, repaired %d." % (receipt["name"], len(files), len(fixed)))
     return fixed
 
