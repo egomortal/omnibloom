@@ -73,10 +73,10 @@ body.reduced-motion .u-nav button{transition:none;animation:none!important}
 body.reduced-motion .u-nav button.is-current{transform:none}
 @media(prefers-reduced-motion:reduce){.u-nav button{transition:none;animation:none!important}.u-nav button.is-current{transform:none}}
 @media(max-width:800px){.u-band{grid-template-columns:repeat(3,minmax(0,1fr))}.u-kinetic button,.u-kinetic button:nth-child(n){margin-top:18px}.u-kinetic .u-cord,.u-kinetic button:nth-child(n) .u-cord{height:28px}}
-/* Public copy, every Universe: the mark is the user's own swirl icon (the old hourglass mark is not shipped). */
+/* Public copy, every Universe: the mark is the user's own swirl icon. */
 .brand-mark{background:var(--panel) url('/assets/brand-icon.png') center/86% no-repeat}
 .brand-mark i{display:none}
-.omni-transition:not([data-effect=solstice]):not([data-effect=cassette]) .transform-hourglass{clip-path:none;width:84px;height:84px;background:url('/assets/brand-icon.png') center/contain no-repeat;filter:drop-shadow(0 0 14px var(--accent))}
+.omni-transition:not([data-effect=solstice]):not([data-effect=cassette]) .transform-mark{clip-path:none;width:84px;height:84px;background:url('/assets/brand-icon.png') center/contain no-repeat;filter:drop-shadow(0 0 14px var(--accent))}
 /* Keep the header readable over bright art. */
 body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .topbar-actions .local-badge{background:#060b14cc;border:1px solid #ffffff26;border-radius:8px;padding:5px 10px;color:var(--ink)}
 body:is([data-theme=bloom],[data-theme=relay],[data-theme=loom],[data-theme=kinetic],[data-theme=tide]) .topbar-context{background:#060b14b3;border-radius:8px;padding:5px 10px}

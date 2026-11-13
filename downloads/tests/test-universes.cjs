@@ -123,7 +123,7 @@ const check = (name, ok, data = {}) => { if (!ok) failures++; results.push({ che
   // ---- Theme gallery: originals only, 15 Universes, none of the removed ones
   { const { ctx, p, errs } = await run('bloom', 1.5);
     await p.evaluate(() => document.querySelector('#theme-toggle').click()); await p.waitForTimeout(500);
-    const g = await p.evaluate(() => ({ ids: [...document.querySelectorAll('#theme-grid [data-theme-choice]')].map(n => n.dataset.themeChoice), legendsTab: !document.querySelector('[data-theme-collection="legends"]').hidden, games: !document.querySelector('#games-toggle').hidden }));
+    const g = await p.evaluate(() => ({ ids: [...document.querySelectorAll('#theme-grid [data-theme-choice]')].map(n => n.dataset.themeChoice), legendsTab: !!document.querySelector('[data-theme-collection]'), games: !!document.querySelector('#games-toggle') }));
     check('gallery: 15 original Universes, Bloom first', g.ids.length === 15 && g.ids[0] === 'bloom' && NEW.concat(OLD).every(id => g.ids.includes(id)), { ids: g.ids });
     check('gallery: no Omnitrix or franchise Universes', !g.ids.some(id => GONE.includes(id)) && !g.legendsTab && !g.games, g);
     await p.screenshot({ path: path.join(outDir, 'gallery-1080p.png') });
@@ -131,7 +131,7 @@ const check = (name, ok, data = {}) => { if (!ok) failures++; results.push({ che
     await ctx.close(); }
   // ---- Public mark: the user's swirl icon, no hourglass
   { const { ctx, p } = await run('bloom', 1.5);
-    const m = await p.evaluate(() => ({ mark: getComputedStyle(document.querySelector('.brand-mark')).backgroundImage, i: getComputedStyle(document.querySelector('.brand-mark i')).display, sigil: getComputedStyle(document.querySelector('.transform-hourglass')).clipPath, sigilBg: getComputedStyle(document.querySelector('.transform-hourglass')).backgroundImage }));
+    const m = await p.evaluate(() => ({ mark: getComputedStyle(document.querySelector('.brand-mark')).backgroundImage, i: getComputedStyle(document.querySelector('.brand-mark i')).display, sigil: getComputedStyle(document.querySelector('.transform-mark')).clipPath, sigilBg: getComputedStyle(document.querySelector('.transform-mark')).backgroundImage }));
     const iconOk = await p.evaluate(async () => (await fetch('/assets/brand-icon.png')).status);
     check('mark: swirl icon in the header, no hourglass anywhere', /brand-icon\.png/.test(m.mark) && m.i === 'none' && m.sigil === 'none' && /brand-icon\.png/.test(m.sigilBg) && iconOk === 200, { ...m, iconOk });
     await ctx.close(); }

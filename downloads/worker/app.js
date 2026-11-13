@@ -20,8 +20,6 @@
     {id:'activity', label:'Activity', icon:'activity', heading:'The whole picture.', subtitle:'A quiet little record of your discoveries.'},
     {id:'settings', label:'Settings', icon:'settings', heading:'Make it yours.', subtitle:'Small details. A space that feels like you.'}
   ];
-  const legends = undefined; // OMNIBLOOM_UNIVERSES_V1: the public copy has no franchise Universes
-  let themeCollection = 'originals';
   const themes = [
     {id:'bloom',name:'Bloom',symbol:'bloom',type:'UNFURLING PETALS',description:'Potential, opening into possibility.',detail:'Five destinations unfold from one living mark.',hint:'Move between petals<br>{cross} opens a destination',bg:'#11152a',color:'#f0afd0'},
     {id:'relay',name:'Relay',symbol:'relay',type:'PATCHBOARD',description:'Make the next connection.',detail:'Plug into a destination on a quiet signal board.',hint:'Choose a socket<br>{cross} makes the connection',bg:'#091a25',color:'#9ce2df'},
@@ -39,17 +37,11 @@
     {id:'atlas',name:'Atlas',symbol:'bento',type:'SPATIAL TILES',description:'A home for every little adventure.',detail:'A tactile grid of spaces, each one a doorway.',hint:'Pick a space<br>Everything has its own place',bg:'#e5e9d7',color:'#627340'},
     {id:'cassette',name:'Cassette',symbol:'deck',type:'TAPE DECK',description:'Put on your favorite way around.',detail:'Skip tracks, scrub, then press play.',hint:'Skip to a track<br>Press play to make it yours',bg:'#30251b',color:'#e6ba76'}
   ];
-  if (legends?.themes) themes.push(...legends.themes);
   const routeIds = routes.map(route => route.id);
-  const sirenModel=undefined;
-  let storedSiren;
-  try{storedSiren=localStorage.getItem(sirenModel?.storageKey);}catch(_){}
-  const sirenController=sirenModel?.create(storedSiren);
   let state = {jobs:[], saved_links:[], preferences:{theme:'bloom',reduced_motion:false}, summary:{}};
   let currentRoute = new URLSearchParams(location.hash.slice(1)).get('view')==='saved'?'library':'launch';
   let theme = 'bloom';
   let previewIndex = routeIds.indexOf(currentRoute);
-  let watchOpen = false;
   let transformationTimer;
   let transformationEnd;
   let transformationSequence = 0;
@@ -66,7 +58,7 @@
   let candidateSnapshot=null,candidateWireError='';
   // OMNI_DOWNLOADS_PAD_V2: the last input decides what Cross acts on. 'pointer' lets the
   // engine's native click land under the pointer; 'pad' acts on the focused control.
-  let inputMode='pointer',pointerAt=null,padAnchor=null,keyboardArmedUntil=0,artTimer=0,previewArt='',appliedCard='',padRestoreId='';
+  let inputMode='pointer',pointerAt=null,padAnchor=null,keyboardArmedUntil=0,appliedCard='',padRestoreId='';
   document.documentElement.dataset.omniInput=inputMode;
   const setText=(node,value)=>{value=String(value);if(node&&node.textContent!==value)node.textContent=value;};
   const setAttr=(node,name,value)=>{value=String(value);if(node&&node.getAttribute(name)!==value)node.setAttribute(name,value);};
@@ -106,7 +98,7 @@
     dialog.showModal();
     if (id === 'theme-dialog') {
       // Start on the theme in use, so the D-pad begins inside the grid.
-      previewArt='';renderThemeGallery();
+      renderThemeGallery();
       const cards=$$('#theme-grid [data-theme-choice]');
       const card=cards.find(node=>node.dataset.themeChoice===theme)||cards[0];
       if(card){card.focus({preventScroll:true});padReveal(card);}
@@ -125,17 +117,16 @@
 
   $$('dialog').forEach(dialog => {
     dialog.addEventListener('close', () => {
-      if (dialog.id==='theme-dialog'){clearTimeout(artTimer);appliedCard='';if(previewArt){previewArt='';renderThemeGallery();}}
+      if (dialog.id==='theme-dialog')appliedCard='';
       if ((dialog.id==='quality-dialog'||!document.querySelector('dialog[open]'))&&dialog._returnFocus?.isConnected) dialog._returnFocus.focus({preventScroll:true});
     });
     dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
   });
 
-  // A card's state: selected (check + border) and whether its wallpaper art is shown.
-  const themeCardState = item => `${item.id===theme?1:0}${item.collection==='legends'&&(item.id===theme||item.id===previewArt)?1:0}`;
+  // A card's state: selected (check + border).
+  const themeCardState = item => `${item.id===theme?1:0}`;
   function themeCardInner(item, index) {
-    const art=item.collection==='legends'&&(item.id===theme||item.id===previewArt);
-    return `<div class="theme-art"><span class="theme-type">${String(index+1).padStart(2,'0')} / ${item.type}</span>${item.id==='omnitrix'?'<img class="theme-watch-art" src="/assets/watch-bezel.svg" alt="">':art?`<img class="theme-hero-art${item.id===theme?'':' theme-hero-preview'}" src="/assets/art/${item.id}.png" alt="" decoding="async">`:emblem(item.symbol)}${item.id === theme ? `<span class="theme-check">${icon('check')}</span>` : ''}</div><div class="theme-label"><strong>${item.name}</strong><small>${item.detail}</small></div>`;
+    return `<div class="theme-art"><span class="theme-type">${String(index+1).padStart(2,'0')} / ${item.type}</span>${emblem(item.symbol)}${item.id === theme ? `<span class="theme-check">${icon('check')}</span>` : ''}</div><div class="theme-label"><strong>${item.name}</strong><small>${item.detail}</small></div>`;
   }
   function themeCard(item, index) {
     return `<button type="button" class="theme-option" data-theme-choice="${item.id}" data-card-state="${themeCardState(item)}" aria-pressed="${item.id === theme}" style="--theme-bg:${item.bg};--theme-color:${item.color}">${themeCardInner(item,index)}</button>`;
@@ -143,10 +134,10 @@
 
   function renderThemeGallery() {
     const grid=$('#theme-grid');
-    const shown=themes.filter(item=>(item.collection||'originals')===themeCollection);
+    const shown=themes;
     const cards=[...grid.children];
-    if(grid.dataset.collection===themeCollection&&cards.length===shown.length&&cards.every((node,index)=>node.dataset.themeChoice===shown[index].id)) {
-      // Same collection: patch only the cards whose state changed. The button elements
+    if(cards.length===shown.length&&cards.every((node,index)=>node.dataset.themeChoice===shown[index].id)) {
+      // Same cards: patch only the ones whose state changed. The button elements
       // stay, so D-pad focus and the pointer's hover are kept and nothing else repaints.
       shown.forEach((item,index)=>{
         const node=cards[index],next=themeCardState(item);
@@ -157,56 +148,26 @@
         node.innerHTML=themeCardInner(item,themes.indexOf(item));
       });
     } else {
-      grid.dataset.collection=themeCollection;
       grid.innerHTML = shown.map(item=>themeCard(item,themes.indexOf(item))).join('');
     }
-    $$('[data-theme-collection]').forEach(node=>{
-      setAttr(node,'aria-pressed',node.dataset.themeCollection===themeCollection);
-      setText($('span',node),themes.filter(item=>(item.collection||'originals')===node.dataset.themeCollection).length);
-    });
-  }
-
-  // Wallpaper preview: after a short dwell on a game card (D-pad or pointer), show its art in
-  // the card. The dwell keeps quick moves cheap; at most one preview image is kept.
-  function themeArtPreview(node) {
-    clearTimeout(artTimer);
-    const item=themes.find(entry=>entry.id===node?.dataset?.themeChoice);
-    const want=item&&item.collection==='legends'&&item.id!==theme?item.id:'';
-    if(!want){if(previewArt){previewArt='';renderThemeGallery();}return;}
-    if(want===previewArt)return;
-    artTimer=setTimeout(()=>{
-      if(!$('#theme-dialog').open||!node.isConnected)return;
-      previewArt=want;renderThemeGallery();
-    },260);
   }
 
   function applyThemeChoice(card) {
     const id=card.dataset.themeChoice;
     if(!themes.some(item=>item.id===id))return;
-    appliedCard=id;previewArt='';clearTimeout(artTimer);
+    appliedCard=id;
     // Applies at once; the picker stays open so the new look is visible right away.
     changeTheme(id);
     const same=$$('#theme-grid [data-theme-choice]').find(node=>node.dataset.themeChoice===id);
     if(same&&document.activeElement!==same&&$('#theme-dialog').open)same.focus({preventScroll:true});
   }
 
-  function openThemeCollection(collection) {
-    if(!['originals','legends'].includes(collection))return;
-    $$('dialog').filter(dialog=>dialog.open).forEach(dialog=>dialog.close());
-    themeCollection=collection;
-    renderThemeGallery();
-    $(collection==='legends'?'#games-toggle':'#theme-toggle').focus({preventScroll:true});
-    openDialog('theme-dialog');
-  }
-
   async function changeTheme(id, save = true) {
     const selected = themes.find(item => item.id === id);
     if (!selected) return;
     cancelTransformation();
-    watchOpen = false;
     uEnter = save && id === 'bloom' && theme !== 'bloom';
     theme = id;
-    themeCollection = selected.collection || 'originals';
     document.body.dataset.theme = id;
     $('meta[name=theme-color]').content = selected.bg;
     $('#universe-title').textContent = selected.name;
@@ -217,9 +178,9 @@
     if ($('#hero-theme-symbol')) $('#hero-theme-symbol').innerHTML = emblem(selected.symbol);
     $('#navigation-hint').innerHTML = glyphText(selected.hint);
     const eyebrow=$('.page-top .eyebrow');
-    if(eyebrow)eyebrow.innerHTML=`<span class="status-dot"></span> ${id==='omnitrix'?`FORM 0${routeIds.indexOf(currentRoute)+1} · ${formNames[currentRoute]}`:'YOUR DOWNLOAD STUDIO'}`;
+    if(eyebrow)eyebrow.innerHTML=`<span class="status-dot"></span> YOUR DOWNLOAD STUDIO`;
     const dateLabel=$('.date-label');
-    if(dateLabel)dateLabel.innerHTML=icon('spark')+(id==='omnitrix'?'SYSTEM READY · AWAITING INPUT':'A good day to discover');
+    if(dateLabel)dateLabel.innerHTML=icon('spark')+'A good day to discover';
     previewIndex = routeIds.indexOf(currentRoute);
     renderNavigation();
     renderThemeGallery();
@@ -238,31 +199,10 @@
     return filtered.length ? filtered.map(route=>`<button ${routeAttributes(route,routeIds.indexOf(route.id))}>${icon(route.icon)}<span>${route.label}</span><kbd>↵</kbd></button>`).join('') : '<p class="no-command">No destination yet. Try “Queue” or “Saved”.</p>';
   }
 
-  function sirenHint() {
-    const choice=sirenController.selection();
-    if(choice==='mix')return 'Rotates ten original character studies. Story spoilers; not an exhaustive canon roster.';
-    if(choice==='mix-all')return 'Rotates all twelve studies, including two imagined historical silhouettes.';
-    return sirenModel.profiles.find(profile=>profile.id===choice).note;
-  }
-
-  function sirenControls() {
-    if(!sirenController)return '';
-    const choice=sirenController.selection();
-    const option=(value,name)=>`<option value="${value}" ${choice===value?'selected':''}>${esc(name)}</option>`;
-    return `<section class="siren-showcase" aria-label="Siren showcase"><label for="borderlands-siren">SIREN SHOWCASE</label><select id="borderlands-siren" aria-describedby="siren-hint">${option('mix','Mix character studies')}${option('mix-all','Mix + imagined lore')}<optgroup label="Character studies">${sirenModel.familiar.map(profile=>option(profile.id,profile.name)).join('')}</optgroup><optgroup label="Historical concepts · imagined appearance">${sirenModel.profiles.filter(profile=>profile.evidence==='concept').map(profile=>option(profile.id,profile.name+' · concept')).join('')}</optgroup></select><p id="siren-hint" role="status">${esc(sirenHint())}</p><button type="button" class="secondary-button" id="siren-preview">${icon('play')} Preview ability</button><small>Original fan-art action studies. Powers and appearances may be interpretations.</small></section>`;
-  }
-
   function renderNavigation(query = '') {
     const nav = $('#navigation');
     nav.dataset.pattern = themes.find(item => item.id === theme).symbol;
-    if (themes.find(item=>item.id===theme).collection==='legends') {
-      nav.dataset.pattern=theme;
-      nav.innerHTML=legends.renderNavigation(themes.find(item=>item.id===theme),{routes,currentRoute,previewIndex,icon,emblem,routeAttributes});
-      if(theme==='borderlands')nav.insertAdjacentHTML('beforeend',sirenControls());
-    } else if (theme === 'omnitrix') {
-      document.body.dataset.watch = watchOpen?'open':'closed';
-      nav.innerHTML = `<div class="watch-device ${watchOpen?'watch-open':''}"><div class="watch-strap" aria-hidden="true"></div><div class="watch-chassis" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="watch-selector" id="watch-selector" ${watchOpen?'':'inert aria-hidden="true"'}><div class="dial"><div class="dial-ring"></div><button type="button" id="dial-activate" class="dial-center" aria-label="Activate ${routes[previewIndex].label}"><span id="dial-core-icon">${icon(routes[previewIndex].icon)}</span><small>ACTIVATE</small></button>${routes.map((route,index)=>`<button ${routeAttributes(route,index).replace('class="','class="dial-node ')}><span class="node-icon">${icon(route.icon)}</span><span>${route.label}</span></button>`).join('')}</div><div class="dial-controls"><button type="button" class="icon-button" id="dial-prev" aria-label="Rotate dial left">${icon('arrow-left')}</button><span id="dial-selection">${routes[previewIndex].label}</span><button type="button" class="icon-button" id="dial-next" aria-label="Rotate dial right">${icon('arrow-right')}</button></div><button type="button" class="watch-close" id="watch-close">${icon('chevron-down')} Close dial</button></div><button type="button" id="watch-open" class="watch-lid" aria-label="Open the Omnitrix dial" aria-expanded="${watchOpen}" aria-controls="watch-selector" ${watchOpen?'disabled tabindex="-1"':''}><img src="/assets/watch-bezel.svg" alt=""><span class="watch-press-label">PRESS TO OPEN</span></button><div class="watch-closed-label" aria-hidden="true"><span>FORM 0${routeIds.indexOf(currentRoute)+1}</span><strong>${routes[routeIds.indexOf(currentRoute)].label}</strong><small>PRESS THE FACE TO OPEN</small></div></div><div class="watch-readout"><span class="status-dot"></span><span id="watch-status" role="status">${watchOpen?'Selector ready. Choose a form.':'Dial locked. Ready when you are.'}</span><kbd>O</kbd></div>`;
-    } else if (UNIVERSE_SYMBOLS.includes(theme)) {
+    if (UNIVERSE_SYMBOLS.includes(theme)) {
       const band=['relay','loom','kinetic'].includes(theme),enter=theme==='bloom'&&uEnter;uEnter=false;
       nav.innerHTML=`<div class="u-nav u-${theme}${band?' u-band':''}${enter?' u-enter':''}">${routes.map((route,index)=>`<button ${routeAttributes(route,index)}>${theme==='relay'?'<span class="u-socket" aria-hidden="true"></span>':''}${theme==='kinetic'?'<i class="u-cord" aria-hidden="true"></i>':''}${band?'':`<span class="u-num">0${index+1}</span>`}<span>${route.label}</span>${band?'':'<span class="u-arrow" aria-hidden="true">↗</span>'}</button>`).join('')}</div>`;
     } else if (theme === 'aurora') {
@@ -290,13 +230,6 @@
 
   function preview(delta) {
     previewIndex = (previewIndex+delta+routes.length)%routes.length;
-    if (theme === 'omnitrix') {
-      $('#dial-selection').textContent = routes[previewIndex].label;
-      $('#dial-activate').setAttribute('aria-label','Activate '+routes[previewIndex].label);
-      $('#dial-core-icon').innerHTML = icon(routes[previewIndex].icon);
-      $('.dial-ring').style.transform = `rotate(${previewIndex*72}deg)`;
-      $$('#navigation [data-route]').forEach((node,index)=>node.classList.toggle('is-current',index===previewIndex));
-    }
     if (theme === 'arcade') {
       $$('#navigation [data-route]').forEach((node,index)=>node.classList.toggle('is-current',index === previewIndex));
       $('#arcade-activate').setAttribute('aria-label','Enter '+routes[previewIndex].label+' level');
@@ -308,37 +241,17 @@
     }
   }
 
-  function setWatchOpen(value, focus = true) {
-    if(theme!=='omnitrix')return;
-    watchOpen=!!value;
-    document.body.dataset.watch=watchOpen?'open':'closed';
-    $('.watch-device').classList.toggle('watch-open',watchOpen);
-    const selector=$('#watch-selector'),lid=$('#watch-open');
-    selector.inert=!watchOpen;
-    if(watchOpen)selector.removeAttribute('aria-hidden');else selector.setAttribute('aria-hidden','true');
-    lid.disabled=watchOpen;lid.tabIndex=watchOpen?-1:0;lid.setAttribute('aria-expanded',String(watchOpen));
-    $('#watch-status').textContent=watchOpen?'Selector ready. Dial a form, then activate.':'Dial locked. Ready when you are.';
-    if(focus){if(watchOpen)$('#dial-activate').focus({preventScroll:true});else lid.focus({preventScroll:true});}
-    if(watchOpen && focus && innerWidth<=800)$('.navigator').scrollIntoView({behavior:document.body.classList.contains('reduced-motion')||matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
-  }
-
   function cancelTransformation() {
     transformationSequence++;
     clearTimeout(transformationTimer);clearTimeout(transformationEnd);
     if(transformationResolve){transformationResolve(false);transformationResolve=null;}
     document.body.classList.remove('is-transforming');
     $('#omni-transition').dataset.state='idle';
-    delete $('#omni-transition').dataset.siren;
-    delete $('#omni-transition').dataset.sirenEffect;
-    $('.character-action-borderlands').style.removeProperty('background-image');
-    $('#siren-caption').textContent='';
     $('#main-content').classList.remove('omni-page-enter');
   }
 
-  const formNames={launch:'LINK CHAMBER',queue:'TRANSFER MATRIX',library:'DNA ARCHIVE',activity:'SYSTEM LOG',settings:'DEVICE CONFIGURATION'};
-
   function pageHeader(route, actions='') {
-    return `<div class="page-top"><div><span class="eyebrow"><span class="status-dot"></span> ${theme==='omnitrix'?`FORM 0${routeIds.indexOf(route.id)+1} · ${formNames[route.id]}`:'YOUR DOWNLOAD STUDIO'}</span><h1>${route.heading}</h1><p>${route.subtitle}</p></div>${actions || `<span class="date-label">${icon('spark')} ${theme==='omnitrix'?'SYSTEM READY · AWAITING INPUT':'A good day to discover'}</span>`}</div>`;
+    return `<div class="page-top"><div><span class="eyebrow"><span class="status-dot"></span> YOUR DOWNLOAD STUDIO</span><h1>${route.heading}</h1><p>${route.subtitle}</p></div>${actions || `<span class="date-label">${icon('spark')} A good day to discover</span>`}</div>`;
   }
 
   function engineChoices() {
@@ -387,37 +300,25 @@
   async function navigate(id, focus = false, previewOnly = false) {
     if(!routeIds.includes(id))return;
     const reduce=document.body.classList.contains('reduced-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const fromWatch=theme==='omnitrix' && watchOpen;
-    const moveToPage=()=>{if(fromWatch && innerWidth<=800)$('#main-content').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});};
     if(!ready || reduce || $$('dialog').some(dialog=>dialog.open)) {
       cancelTransformation();
-      if(theme==='omnitrix')watchOpen=false;
-      if(!previewOnly){commitNavigation(id,focus||fromWatch);moveToPage();}return;
+      if(!previewOnly)commitNavigation(id,focus);return;
     }
     cancelTransformation();
     // Flush the idle stage so rapid same-theme requests restart CSS timelines.
     void $('#omni-transition').offsetWidth;
-    setWatchOpen(false,false);
     const sequence=transformationSequence;
-    const duration=['bayonetta','borderlands','dishonored','bioshockinfinite'].includes(theme)?1100:780;
-    $('#transform-destination').textContent=theme==='omnitrix'?formNames[id]:routes.find(route=>route.id===id).label.toUpperCase();
+    const duration=780;
+    $('#transform-destination').textContent=routes.find(route=>route.id===id).label.toUpperCase();
     $('#omni-transition').dataset.effect=theme;
     $('#omni-transition').style.setProperty('--transition-duration',duration+'ms');
-    if(theme==='borderlands'&&sirenController) {
-      const profile=sirenController.next();
-      $('#omni-transition').dataset.siren=profile.id;
-      $('#omni-transition').dataset.sirenEffect=profile.effect;
-      $('#omni-transition').style.setProperty('--siren-color',profile.color);
-      $('.character-action-borderlands').style.backgroundImage=`url("${profile.image}")`;
-      $('#siren-caption').textContent=profile.name+' · '+profile.study;
-    }
     $('#omni-transition').dataset.state='transforming';
     document.body.classList.add('is-transforming');
     return new Promise(resolve=>{
       transformationResolve=resolve;
       transformationTimer=setTimeout(()=>{
         if(sequence!==transformationSequence)return;
-        if(!previewOnly){commitNavigation(id,focus||fromWatch);moveToPage();$('#main-content').classList.add('omni-page-enter');}
+        if(!previewOnly){commitNavigation(id,focus);$('#main-content').classList.add('omni-page-enter');}
       },Math.round(duration*.29));
       transformationEnd=setTimeout(()=>{if(sequence===transformationSequence){transformationResolve=null;cancelTransformation();resolve(true);}},duration);
     });
@@ -588,24 +489,13 @@
     if (target.id === 'theme-toggle' || target.hasAttribute('data-open-themes')) return openDialog('theme-dialog');
     if (target.id === 'preview-info' || target.hasAttribute('data-preview-info')) return openDialog('info-dialog');
     if (target.dataset.themeChoice) return applyThemeChoice(target);
-    if (target.dataset.themeCollection) {if(['originals','legends'].includes(target.dataset.themeCollection)){themeCollection=target.dataset.themeCollection;previewArt='';renderThemeGallery();}return;}
     if (target.dataset.route) return navigate(target.dataset.route,true);
     if (target.dataset.openRoute){event.preventDefault();return navigate(target.dataset.openRoute,true);}
-    if (target.id==='games-toggle') {
-      return openThemeCollection('legends');
-    }
-    if(target.id==='siren-preview'&&theme==='borderlands') {
-      if(document.body.classList.contains('reduced-motion')||matchMedia('(prefers-reduced-motion: reduce)').matches)return toast('Reduced motion is on. Ability previews stay still.');
-      return navigate(currentRoute,false,true);
-    }
     if (target.id === 'add-link') return openDialog('add-dialog');
-    if (target.id === 'watch-open') return setWatchOpen(true);
-    if (target.id === 'watch-recall') return setWatchOpen(true);
-    if (target.id === 'watch-close') return setWatchOpen(false);
     if (target.dataset.engine) return setEngine(target.dataset.engine);
-    if (['dial-prev','arcade-left','arcade-up','tape-prev'].includes(target.id)) return preview(-1);
-    if (['dial-next','arcade-right','arcade-down','tape-next'].includes(target.id)) return preview(1);
-    if (['dial-activate','arcade-activate','tape-activate'].includes(target.id)) return navigate(routeIds[previewIndex],true);
+    if (['arcade-left','arcade-up','tape-prev'].includes(target.id)) return preview(-1);
+    if (['arcade-right','arcade-down','tape-next'].includes(target.id)) return preview(1);
+    if (['arcade-activate','tape-activate'].includes(target.id)) return navigate(routeIds[previewIndex],true);
     if (['book-prev','book-next','station-next'].includes(target.id)) return navigate(routeIds[(routeIds.indexOf(currentRoute)+(target.id==='book-prev'?-1:1)+routes.length)%routes.length],true);
     if (target.dataset.filter) {
       jobFilter = target.dataset.filter;
@@ -655,7 +545,7 @@
     $$('dialog').filter(dialog=>dialog.open).forEach(dialog=>dialog.close());
     navigate(event.detail.route,true);
   });
-  window.addEventListener('omni:collection',event=>openThemeCollection(event.detail?.collection));
+  window.addEventListener('omni:collection',()=>{$$('dialog').filter(dialog=>dialog.open).forEach(dialog=>dialog.close());openDialog('theme-dialog');});
 
   window.addEventListener('omni:overlay-open',cancelTransformation);
   const osMotionPreference=matchMedia('(prefers-reduced-motion: reduce)');
@@ -730,7 +620,7 @@
 
   document.addEventListener('focusin',event=>{
     const routeButton=event.target.closest('#navigation [data-route]');
-    if(routeButton && ['omnitrix','arcade','cassette'].includes(theme)) {
+    if(routeButton && ['arcade','cassette'].includes(theme)) {
       previewIndex=Number(routeButton.dataset.index);
       preview(0);
     }
@@ -740,15 +630,7 @@
     const target=event.target;
     if(target.id==='glyph-select'){glyphSet=target.value==='playstation'?'playstation':'xbox';try{localStorage.setItem('omni.glyphs',glyphSet);}catch(_){}applyGlyphs();const shown=themes.find(item=>item.id===theme);if(shown)$('#navigation-hint').innerHTML=glyphText(shown.hint);toast(glyphSet==='xbox'?'Xbox button labels.':'PlayStation button labels.',1400);return;}
     if(['download-engine','download-demo','quick-demo'].includes(target.id)){updateFormControls();return;}
-    if(target.id==='borderlands-siren'&&sirenController) {
-      if(sirenController.select(target.value)) {
-        try{localStorage.setItem(sirenModel.storageKey,target.value);}catch(_){}
-        $('#siren-hint').textContent=sirenHint();
-      }
-      return;
-    }
     if(['depth-range','tape-seek'].includes(target.id))return navigate(routeIds[Number(target.value)]);
-    if(target.hasAttribute('data-pack-range'))return navigate(routeIds[Number(target.value)]);
     if(target.id==='motion-toggle') {
       cancelTransformation();
       document.body.classList.toggle('reduced-motion',target.checked);
@@ -780,8 +662,6 @@
       if(event.target.id==='command-query' && event.key==='ArrowDown') {event.preventDefault();$('#navigation [data-route]')?.focus();}
       return;
     }
-    if(theme==='omnitrix' && event.key.toLowerCase()==='o' && !event.ctrlKey && !event.metaKey && !event.altKey) {event.preventDefault();setWatchOpen(!watchOpen);return;}
-    if(theme==='omnitrix' && event.key==='Escape' && watchOpen) {event.preventDefault();setWatchOpen(false);return;}
     if(event.key.toLowerCase()==='t' && !event.ctrlKey && !event.metaKey && !event.altKey){event.preventDefault();openDialog('theme-dialog');return;}
     if(event.altKey && /^[1-5]$/.test(event.key)){event.preventDefault();navigate(routeIds[Number(event.key)-1],true);return;}
     if(theme==='sakura' && ['PageDown','PageUp'].includes(event.key)){event.preventDefault();navigate(routeIds[(routeIds.indexOf(currentRoute)+(event.key==='PageDown'?1:-1)+5)%5]);return;}
@@ -789,12 +669,12 @@
       if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) {
         event.preventDefault();
         const delta=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1;
-        if(['omnitrix','arcade','cassette'].includes(theme))return preview(delta);
+        if(['arcade','cassette'].includes(theme))return preview(delta);
         const buttons=$$('#navigation [data-route]');
         const at=buttons.indexOf(event.target.closest('[data-route]'));
         buttons[(at+delta+buttons.length)%buttons.length]?.focus();
       }
-      if(event.key==='Enter' && ['omnitrix','arcade','cassette'].includes(theme) && (event.target.dataset.route || ['dial-activate','arcade-activate','tape-activate'].includes(event.target.id))) {event.preventDefault();navigate(routeIds[previewIndex]);}
+      if(event.key==='Enter' && ['arcade','cassette'].includes(theme) && (event.target.dataset.route || ['arcade-activate','tape-activate'].includes(event.target.id))) {event.preventDefault();navigate(routeIds[previewIndex]);}
     }
   });
 
@@ -1122,7 +1002,6 @@
     padAnchor=pointerAt?{x:pointerAt.x,y:pointerAt.y}:null; // OMNI_DOWNLOADS_NAV_V4
     node.focus({preventScroll:true});
     padReveal(node);
-    if(node.dataset.themeChoice)themeArtPreview(node);
   }
   function padMove(direction,modal){
     const nodes=padCandidates(modal);
@@ -1163,7 +1042,7 @@
     options[(at+delta+options.length)%options.length].selected=true;
     node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}));
   }
-  // Left/right change a focused slider or turn the open Omnitrix dial; elsewhere they move
+  // Left/right change a focused slider; elsewhere they move
   // focus (a select keeps left/right for moving on; Cross steps through its options).
   function padAdjust(node,direction){
     if((direction!=='left'&&direction!=='right')||inputMode!=='pad'||!node||node.nodeType!==1||node.disabled)return null;
@@ -1173,7 +1052,6 @@
       if(node.value!==before){padRestoreId=node.id||'';node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}));}
       return true;
     }
-    if(theme==='omnitrix'&&watchOpen&&node.id==='dial-activate'){preview(delta);return true;}
     return null;
   }
   function padChoose(modal){
@@ -1200,7 +1078,6 @@
       // Handle only explicit actions in the current modal; never its backdrop.
       if(modal){modal.close();return true;}
       if(typing)return false;
-      if(theme==='omnitrix'&&watchOpen){setWatchOpen(false);return true;}
     }
     // Triangle on a focused field: false, so the engine opens its on-screen keyboard.
     if(modal||typing)return false;
@@ -1225,7 +1102,6 @@
     if(known&&!(inputMode==='pad'&&padAnchor&&Math.hypot(x-padAnchor.x,y-padAnchor.y)<PAD_POINTER_SLOP))setInputMode('pointer');
   },{passive:true});
   document.addEventListener('keydown',event=>{if(!event.ctrlKey&&!event.metaKey&&!event.altKey)setInputMode('pad');});
-  $('#theme-grid').addEventListener('mouseover',event=>{if(inputMode!=='pointer')return;const card=event.target.closest('[data-theme-choice]');if(card)themeArtPreview(card);});
   window.addEventListener('hashchange',takeNativeLink);
   window.addEventListener('message',event=>{if(parent===window||event.source!==parent||event.origin!==location.origin||event.data?.type!=='omni-media-section-visibility'||typeof event.data.visible!=='boolean')return;sectionVisible=event.data.visible;if(sectionActive())loadState().catch(()=>{});else cancelTransformation();});
   document.addEventListener('visibilitychange',()=>{if(sectionActive())loadState().catch(()=>{});else cancelTransformation();});

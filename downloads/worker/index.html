@@ -10,7 +10,6 @@
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/universes.css">
-  <link rel="stylesheet" href="/assets/action-motion.css">
   <link rel="stylesheet" href="/assets/guide.css">
   <link rel="stylesheet" href="/assets/navigator.css">
   <link rel="stylesheet" href="/assets/job-details.css">
@@ -22,7 +21,7 @@
     <header class="topbar">
       <a class="brand" href="/downloads" data-open-route="launch" aria-label="Omni home"><span class="brand-mark" aria-hidden="true"><i></i></span><span>omni<span class="brand-dot">.</span><small>DOWNLOAD STUDIO</small></span></a>
       <div class="topbar-context"><span class="status-dot"></span> A space for your next discovery</div>
-      <div class="topbar-actions"><span class="local-badge" title="Connected to the authenticated local download worker.">Local worker</span><button class="universe-button game-section-button" id="games-toggle" type="button" hidden aria-haspopup="dialog" aria-controls="theme-dialog"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#controller"></use></svg><span>Video games</span></button><button class="universe-button" id="theme-toggle" type="button"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#spark"></use></svg><span>Change universe</span><kbd>T</kbd></button><button class="avatar" type="button" aria-label="Open preferences" data-open-route="settings">O</button></div>
+      <div class="topbar-actions"><span class="local-badge" title="Connected to the authenticated local download worker.">Local worker</span><button class="universe-button" id="theme-toggle" type="button"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#spark"></use></svg><span>Change universe</span><kbd>T</kbd></button><button class="avatar" type="button" aria-label="Open preferences" data-open-route="settings">O</button></div>
     </header>
     <div class="workspace">
       <aside class="navigator" aria-label="Universe navigation">
@@ -36,7 +35,7 @@
   </div>
   <dialog id="theme-dialog" aria-labelledby="theme-heading">
     <div class="dialog-heading"><div><span class="eyebrow">A CHANGE OF SCENERY</span><h2 id="theme-heading">Pick your universe.</h2><p>New atmosphere. A completely different way around.</p></div><button class="icon-button" type="button" aria-label="Close themes" data-close-dialog="theme-dialog"><svg class="icon"><use href="/assets/icons.svg#close"></use></svg></button></div>
-    <div class="theme-collections" role="group" aria-label="Theme collection"><button type="button" data-theme-collection="legends" aria-pressed="false" hidden>Video games <span>22</span></button><button type="button" data-theme-collection="originals" aria-pressed="true">Original styles <span>11</span></button><p>Every Universe here is an Omnibloom original.</p></div>
+    <div class="theme-collections"><p>Every Universe here is an Omnibloom original.</p></div>
     <div class="theme-grid" id="theme-grid"></div>
     <div class="theme-dialog-footer"><span>Your downloads stay right where they are.</span><span class="theme-pad-hint">D-pad to move · <kbd data-glyph="cross">A</kbd> to apply · <kbd data-glyph="circle">B</kbd> or <kbd>Esc</kbd> to close</span><button type="button" class="primary-button theme-done" data-close-dialog="theme-dialog">Done</button></div>
   </dialog>
@@ -54,8 +53,7 @@
   <dialog id="quality-dialog" aria-labelledby="quality-heading"><div class="dialog-heading"><div><span class="eyebrow">CHECKED LINK</span><h2 id="quality-heading">Choose a quality</h2><p id="quality-summary"></p></div><button class="icon-button" type="button" aria-label="Close quality" data-close-dialog="quality-dialog"><svg class="icon"><use href="/assets/icons.svg#close"></use></svg></button></div><div id="quality-options" class="quality-options" role="group" aria-label="Video quality"></div><div id="quality-langs" class="quality-options" role="group" aria-label="Audio language" hidden></div><button type="button" class="primary-button full" id="quality-done">Use this quality</button></dialog>
   <dialog id="info-dialog" aria-labelledby="info-heading"><div class="dialog-heading"><div><span class="eyebrow">YOUR DOWNLOAD WORKER</span><h2 id="info-heading">Both engines. One space.</h2></div><button type="button" class="icon-button" aria-label="Close download information" data-close-dialog="info-dialog">Close</button></div><p>Real requests use the local authenticated worker. Demo jobs simulate progress and save no media. Engine readiness is checked from worker status; selecting an engine never starts Java.</p><p>The queue hold affects waiting jobs only. Active jobs can be cancelled; pause, byte-resume and same-engine retry are not offered. If the first engine can’t take a link, the other engine takes it automatically and the job card names the engine that did. After an interrupted job, submit its source again explicitly. History may not retain the original source after restart.</p><p>Themes and reduced motion are saved in this browser. Worker history and saved links use the runtime's storage. Reported paths are not file-existence checks. Universe artwork uses finite animations; Reduce motion makes page changes immediate.</p><button class="primary-button" type="button" data-close-dialog="info-dialog">Ready</button></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <div id="omni-transition" class="omni-transition" aria-hidden="true" data-state="idle"><div class="transform-shutter transform-shutter-left"></div><div class="transform-shutter transform-shutter-right"></div><div class="transform-sigil"><span class="transform-hourglass"></span><span id="transform-destination">LINK CHAMBER</span></div><div class="character-action character-action-bayonetta"></div><div class="character-action character-action-borderlands"></div><div class="character-action character-action-dishonored"></div><div class="character-action character-action-bioshockinfinite"></div><div class="action-muzzle"></div><div class="action-siren-pulse"></div><div class="action-blink-trace"></div><div class="action-tear"></div><div id="siren-caption" class="siren-caption"></div></div>
-  <button type="button" class="watch-recall" id="watch-recall" hidden><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#controller"></use></svg> Open dial</button>
+  <div id="omni-transition" class="omni-transition" aria-hidden="true" data-state="idle"><div class="transform-shutter transform-shutter-left"></div><div class="transform-shutter transform-shutter-right"></div><div class="transform-sigil"><span class="transform-mark"></span><span id="transform-destination">LINK CHAMBER</span></div></div>
   <script src="/assets/candidate-wire.js" defer></script>
   <script src="/assets/production-api.js" defer></script>
   <script src="/assets/app.js" defer></script>

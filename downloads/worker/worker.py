@@ -476,8 +476,7 @@ class DeadlineReader(io.RawIOBase):
 
 class WorkerHandler(BaseHTTPRequestHandler):
     MAX_STATIC_BYTES = 4 * 1024 * 1024
-    ASSETS = {'/assets/action-motion.css': ('assets/action-motion.css', 'text/css; charset=utf-8'),
-     '/assets/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+    ASSETS = {'/assets/app.js': ('app.js', 'text/javascript; charset=utf-8'),
      '/assets/art/abyss.webp': ('assets/art/abyss.webp', 'image/webp'),
      '/assets/art/arcade.webp': ('assets/art/arcade.webp', 'image/webp'),
      '/assets/art/atlas.webp': ('assets/art/atlas.webp', 'image/webp'),

@@ -1,0 +1,37 @@
+/* Scoped local quick guide. Inherits the active universe; no global layout overrides. */
+#help-toggle{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--ink)}
+#help-toggle .icon{width:14px;height:14px}
+#guide-dialog{width:min(760px,calc(100% - 36px));scrollbar-gutter:stable}
+#guide-dialog .dialog-heading{margin-bottom:18px}
+#guide-dialog .dialog-heading h2{max-width:540px}
+#guide-dialog .guide-preview-note{margin:0 0 24px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:12px;line-height:1.65;color:var(--ink)}
+#guide-dialog .guide-section{padding:20px 0;border-top:1px solid var(--line)}
+#guide-dialog .guide-section h3{font-size:17px;line-height:1.4;margin:0 0 14px;font-weight:650;letter-spacing:-.3px}
+#guide-dialog .guide-current-mode{display:inline-block;margin:0 0 9px;padding:5px 10px;border:1px solid var(--line);border-radius:99px;font-size:11px;font-weight:650;background:var(--panel);color:var(--ink)}
+#guide-dialog .guide-navigation-lead{margin:0 0 11px;font-size:14px;line-height:1.6;color:var(--ink)}
+#guide-dialog .guide-steps{margin:0;padding-left:22px;display:grid;gap:10px;color:var(--ink);font-size:13px;line-height:1.65}
+#guide-dialog .guide-steps li{padding-left:5px}
+#guide-dialog .guide-steps li::marker{color:var(--ink);font-weight:650}
+#guide-dialog .guide-route-list{margin:0;display:grid;gap:13px}
+#guide-dialog .guide-route-list>div{display:grid;grid-template-columns:100px minmax(0,1fr);gap:15px;align-items:baseline}
+#guide-dialog .guide-route-list dt{font-weight:650;font-size:13px;line-height:1.6}
+#guide-dialog .guide-route-list dd{margin:0;font-size:13px;line-height:1.65;color:var(--ink)}
+#guide-dialog .guide-engine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#guide-dialog .guide-engine-card{padding:15px;border:1px solid var(--line);border-radius:13px;background:var(--panel)}
+#guide-dialog .guide-engine-card h4{font-size:14px;margin:0 0 8px;line-height:1.4}
+#guide-dialog .guide-engine-card p{margin:0;font-size:13px;line-height:1.65;color:var(--ink)}
+#guide-dialog .guide-small-note{font-size:12px;line-height:1.65;margin:13px 0 0;color:var(--ink)}
+#guide-dialog .guide-dialog-footer{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:20px;border-top:1px solid var(--line)}
+#guide-dialog .guide-dialog-footer p{font-size:12px;line-height:1.65;margin:0;max-width:355px;color:var(--ink)}
+#guide-dialog .guide-dialog-footer .primary-button{flex:none;white-space:nowrap}
+@media(max-width:520px){
+  #guide-dialog{width:calc(100% - 24px)}
+  #guide-dialog .dialog-heading h2{font-size:26px}
+  #guide-dialog .guide-preview-note{font-size:12px;padding:11px;margin-bottom:17px}
+  #guide-dialog .guide-section{padding:17px 0}
+  #guide-dialog .guide-route-list>div{grid-template-columns:1fr;gap:3px}
+  #guide-dialog .guide-route-list{gap:15px}
+  #guide-dialog .guide-engine-grid{grid-template-columns:1fr}
+  #guide-dialog .guide-dialog-footer{align-items:stretch;flex-direction:column;gap:14px}
+  #guide-dialog .guide-dialog-footer .primary-button{justify-content:center;min-height:44px}
+}
