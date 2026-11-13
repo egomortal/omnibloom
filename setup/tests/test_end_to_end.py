@@ -220,7 +220,7 @@ class Suite(unittest.TestCase):
         self.assertEqual(self.card("master-control")["icon"], MC_ICON)
         self.assertEqual(self.card("master-control")["launch"]["elf"], MC_ELF)
         al = fc.read(config.AUTOLOAD_PATH).decode()
-        self.assertEqual(al, "shadowmountplus.elf\r\nkstuff-lite.elf\r\nftpsrv.elf\r\nhub.elf\r\nmaster-control.elf\r\n")
+        self.assertEqual(al, "shadowmountplus.elf\r\nkstuff-lite.elf\r\nftpsrv.elf\r\n" + HUB_ELF + "\r\n" + MC_ELF + "\r\n")   # absolute: PM v0.6.3
         self.assertEqual(json.loads(fc.read(MC_ELF + ".json"))["checksum"], sha(self.files[MC_ELF]))
         self.assertEqual(json.loads(fc.read(HUB_ELF + ".json"))["filename"], "hub.elf")
         self.assertIn(sha(self.files[HUB_ELF]), fc.state["payloads"])

@@ -633,8 +633,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 12933,
-      "sha256": "bcab914fb1480e6967922950026f56225daea7d1b075c439ecef58b11f0a39f2"
+      "bytes": 13347,
+      "sha256": "ebcc095d9459fc4ff4feb9ea24fcb7c12612cdd78d03b3f07bdfd2fa8c6d1db7"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -17893,8 +17893,8 @@
     },
     {
       "path": "setup/omnibloom_setup/config.py",
-      "bytes": 10446,
-      "sha256": "8cbc045c7394e7568ba667c63c3614218aaca60fad4004c6e22cebc8fea567ee"
+      "bytes": 10526,
+      "sha256": "4e3871439872043650112aeadff9131e24b245bba61f7207c7d7ace31f6dac9c"
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
@@ -17903,8 +17903,8 @@
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
-      "bytes": 30637,
-      "sha256": "aff0b5da25429407c4e1a7e44feef20f68c91e1b6246801831e48ee9fccfbf39"
+      "bytes": 32079,
+      "sha256": "9679055e9f0e5019ed1d1fa3fec91981e58260b475f4299e73fa52b917213f0e"
     },
     {
       "path": "setup/omnibloom_setup/jd.py",
@@ -18028,13 +18028,18 @@
     },
     {
       "path": "setup/tests/fake_console.py",
-      "bytes": 28826,
-      "sha256": "1a3ce87111283d336cc697b2fa9380fb08492830c7293f8c832d6d3b0e73a0bb"
+      "bytes": 28926,
+      "sha256": "750bdd00220c1e5932c0d95740cfc182b374f659d06bd8a6f6116e17974441f2"
     },
     {
       "path": "setup/tests/gui_smoke.py",
       "bytes": 5930,
       "sha256": "cd570d873696d683b836991db4e10cdea66ee101e4e9f7bf58da21fafef1e95d"
+    },
+    {
+      "path": "setup/tests/test_autoload_paths.py",
+      "bytes": 2539,
+      "sha256": "89955d11d3453ede93ba62b4b554c7bd7b37d076774fb2082304fefb6660dae0"
     },
     {
       "path": "setup/tests/test_discovery.py",
@@ -18043,8 +18048,8 @@
     },
     {
       "path": "setup/tests/test_end_to_end.py",
-      "bytes": 51596,
-      "sha256": "42e0a9f92c2ad6996c18b5dfae46f749e50d74da65ec179e554b6cb78f4472cf"
+      "bytes": 51624,
+      "sha256": "21ba117ff1da4818b710dfcf63403677b78c61c4b9b010617331ad49d3414fd6"
     },
     {
       "path": "setup/tests/test_install_journal.py",
@@ -18053,8 +18058,8 @@
     },
     {
       "path": "setup/tests/test_oneclick.py",
-      "bytes": 26242,
-      "sha256": "4fd424152f0f8243c4703dbdada56d24560b451127c9e1605b9a0239fadf09f9"
+      "bytes": 26212,
+      "sha256": "b80053bc7ab1001be1494386c2ab2a7ef3b14e72ce37623803e819996b935b52"
     },
     {
       "path": "setup/tests/test_release_provenance.py",

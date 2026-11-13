@@ -115,6 +115,7 @@ class FakeConsole:
         self.state = {"deletes": [], "payloads": [], "root": root, "smp_remount": True}
         self.processes = list(processes)
         self.hub = None
+        self.web = self.ftp = self.loader = None   # stop() is safe even if start() failed part-way
         self.websrv_enabled = websrv
         self._threads = []
 

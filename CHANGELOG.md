@@ -23,6 +23,12 @@
 - Sources: `omni/native-title/patches/experimental/gpu-pages/stage1/`; the write-up is
   [`docs/research/gpu-page-layers-ps5.md`](docs/research/gpu-page-layers-ps5.md).
 
+### Setup (updated after the release)
+- **Bloom Core and Master Control now start after a reboot.** Setup used to add them to Payload Manager's
+  start list as bare file names (`hub.elf`), which Payload Manager v0.6.3 doesn't start. It now writes full paths
+  (`/data/pldmgr/payloads/BloomCore/hub.elf`), replaces bare entries left by an older Setup, and **Repair** puts back
+  any required entry that's missing.
+
 ### Downloads
 - **Media downloads shortcut (LT / double bumper) no longer says "unavailable" while the worker is running.** Omni
   gave the worker 0.8 s to answer; it now waits up to 4 s and retries within 30 s (`OMNI_MEDIA_HEALTH_V2`).

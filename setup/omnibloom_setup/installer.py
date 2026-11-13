@@ -225,8 +225,19 @@ def _split_lines(text):
     return text.replace("\r\n", "\n").split("\n"), nl
 
 
+def _same_payload(line, elf):
+    """True when an autoload line starts `elf`: the same absolute path, or a bare name (written by older Setups)
+    for the same file name."""
+    line = line.strip()
+    return line == elf or posixpath.basename(line) == posixpath.basename(elf)
+
+
 def set_autoload(console, elf_name, enable, log, replace=()):
-    """Add or remove one payload in autoload.txt (bare file names only). Returns the receipt record."""
+    """Add or remove one payload in autoload.txt. Returns the receipt record.
+
+    Entries are written as ABSOLUTE paths (`/data/pldmgr/payloads/<dir>/<file>.elf`): Payload Manager v0.6.3 failed
+    to start bare `hub.elf` / `master-control.elf` entries after a reboot while it loaded the absolute ones
+    (console, 2026-11-13). A bare entry for the same file, from an older Setup, is replaced by the absolute one."""
     original = console.read_text(config.AUTOLOAD_PATH, default="")
     lines, nl = _split_lines(original)
     lines = [ln for ln in lines if ln.strip()]
@@ -235,7 +246,9 @@ def set_autoload(console, elf_name, enable, log, replace=()):
         keep = []
         for ln in lines:
             low = ln.strip().lower()
-            if replace and low != elf_name and any(n in low for n in replace):
+            if _same_payload(ln, elf_name) and ln.strip() != elf_name:
+                continue   # the old bare (or moved) entry for this payload: replaced below
+            if replace and not _same_payload(ln, elf_name) and any(n in low for n in replace):
                 removed.append(ln.strip())
                 continue
             keep.append(ln)
@@ -243,7 +256,7 @@ def set_autoload(console, elf_name, enable, log, replace=()):
             keep.append(elf_name)
         new_lines = keep
     else:
-        new_lines = [ln for ln in lines if ln.strip() != elf_name]
+        new_lines = [ln for ln in lines if not _same_payload(ln, elf_name)]
     if new_lines == lines:
         return {"elf": elf_name, "changed": False, "removed": [], "backup": None}
     new_text = nl.join(new_lines) + nl
@@ -261,6 +274,15 @@ def set_autoload(console, elf_name, enable, log, replace=()):
         raise IOError("autoload.txt didn't save correctly; the old list was put back.")
     log("%s %s the start list (backup: %s)." % (elf_name, "added to" if enable else "removed from", backup or "none"))
     return {"elf": elf_name, "changed": True, "removed": removed, "backup": backup}
+
+
+def _autoload_elf(catalog, app_id, recorded=None):
+    """The absolute autoload entry for `app_id`: the release's launch path, or the recorded one if it is absolute.
+    Receipts from older Setups recorded a bare file name, which Payload Manager v0.6.3 doesn't start."""
+    elf = (catalog.apps[app_id]["card"].get("launch") or {}).get("elf") if catalog.has(app_id) else None
+    if recorded and recorded.startswith("/"):
+        return recorded
+    return elf or recorded
 
 
 def _restore_autoload_entries(console, names, log):
@@ -401,7 +423,7 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
     al = (previous or {}).get("autoload")
     if elf and (app["autoload"] == "required" or (app["autoload"] == "optional" and autoload_opt)):
         replace = config.REPLACED_CONTROLLER_PAYLOADS if app_id == "master-control" else ()
-        change = set_autoload(console, posixpath.basename(elf), True, log, replace=replace)
+        change = set_autoload(console, elf, True, log, replace=replace)   # absolute path (see set_autoload)
         if change["changed"] or not al:
             al = change
         if change["changed"]:
@@ -478,8 +500,9 @@ def repair_app(console, catalog, app_id, log=print, progress=None):
         fixed.append(card_path(app_id))
         log("Repaired %s's ID card" % receipt["name"])
     al = receipt.get("autoload") or {}
-    if al.get("changed"):
-        set_autoload(console, al["elf"], True, log)
+    if al.get("changed") or (catalog.has(app_id) and catalog.apps[app_id]["autoload"] == "required"):
+        if set_autoload(console, _autoload_elf(catalog, app_id, al.get("elf")), True, log)["changed"]:
+            fixed.append(config.AUTOLOAD_PATH)
     log("%s: checked %d files, repaired %d." % (receipt["name"], len(files), len(fixed)))
     return fixed
 
@@ -518,7 +541,7 @@ def verify_app(console, catalog, app_id, progress=None):
             problems.append("its ID card is missing or changed")
     al = receipt.get("autoload") or {}
     if al.get("changed") or catalog.apps[app_id]["autoload"] == "required":
-        elf = al.get("elf") or posixpath.basename((catalog.apps[app_id]["card"].get("launch") or {}).get("elf") or "")
+        elf = _autoload_elf(catalog, app_id, al.get("elf"))   # a bare entry no longer counts: repair rewrites it
         text = console.read_text(config.AUTOLOAD_PATH, default="") or ""
         if elf and elf not in [ln.strip() for ln in text.splitlines()]:
             problems.append("%s isn't in the start list" % elf)

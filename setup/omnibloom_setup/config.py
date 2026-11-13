@@ -53,7 +53,8 @@ TITLE_ID = "PPSA99732"
 TITLE_DIR = "/data/homebrew/" + TITLE_ID + "/"
 
 # Payload Manager (pldmgr) layout, proven on the console: one folder per payload,
-# `<file>.elf` + `<file>.elf.json`, and autoload.txt lists bare file names only.
+# `<file>.elf` + `<file>.elf.json`. autoload.txt entries are absolute paths: Payload Manager v0.6.3 did not start
+# bare file names after a reboot (2026-11-13).
 PLDMGR_DIR = "/data/pldmgr/"
 AUTOLOAD_PATH = PLDMGR_DIR + "autoload.txt"
 
