@@ -2493,8 +2493,8 @@
     },
     {
       "path": "FEATURES.md",
-      "bytes": 12181,
-      "sha256": "da675043975002f522f502c389ebde6e2d058cfac4f4b27441c1394ee002b243"
+      "bytes": 12164,
+      "sha256": "fa6d8a4307f11f91a95af4b46dcb646d988d9beb876e605c2bdfc00dd96c9e25"
     },
     {
       "path": "jdownloader/collect_sources.py",
@@ -2840,6 +2840,11 @@
       "path": "jdownloader/recipe/scripts/resident_spec.py",
       "bytes": 1552,
       "sha256": "7ad56255432a5e236a564740e33c3db753c0c8af1d185d440bc4dfcd8f0084ed"
+    },
+    {
+      "path": "KNOWN-ISSUES.md",
+      "bytes": 5685,
+      "sha256": "b18dbffd73c59138428e9b07d8c50fae79636d05889d9738dd399f12d7f85da4"
     },
     {
       "path": "LICENSE",
@@ -17838,8 +17843,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5960,
-      "sha256": "ac656a1146e7cb5dbf1133dcc9d11e6fdd8befd61edea09d0cc7278cebaffc75"
+      "bytes": 6072,
+      "sha256": "be8a3a69cfec2cfe8bb35530c4ca8b7cede8492b4f03602a19b67eb3ba6b970c"
     },
     {
       "path": "ROADMAP.md",

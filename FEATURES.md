@@ -165,13 +165,15 @@ navigation. If you leave the controller alone, the pointer also gets out of the 
 
 ## ⚠️ Known limits
 
+Current problems and their workarounds are in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
+
 - **No Netflix, Disney+ or other copy-protected video.**
 - **Nothing above 4K.**
 - **Some JavaScript-heavy sites run slower** than on a PC or phone, even with the JIT on.
 - **Saved passwords are only scrambled, not encrypted,** because the console has no secure storage Omni can use.
 - **No location, camera, microphone, notifications or video calls.**
 - **No HDR video yet.** HDR videos play, but as SDR (HDR output is built and being tested).
-- **Known issue: pages with many small videos can crash.** On Reddit-style feeds where lots of small videos autoplay at once, the page's process can crash; Omni recovers and you can reload the page. The cause is found and a fix is pending (it still needs a console test).
+- **YouTube sometimes doesn't start playing.** Reload the page if it happens. See [KNOWN-ISSUES.md](KNOWN-ISSUES.md) for this and other current problems, with workarounds.
 
 ## 🔜 What's next
 

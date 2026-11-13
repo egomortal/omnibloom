@@ -28,6 +28,7 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 | **Omnibloom Setup** | One file for your computer: one button waits for the PS5 and installs everything in order, telling you each step; also updates, repairs, undoes and sets up JDownloader 2 | [`setup/`](setup) |
 
 - **Using it?** See [FEATURES.md](FEATURES.md) for what works, what's being tested and what's coming.
+- **Something not working?** See [KNOWN-ISSUES.md](KNOWN-ISSUES.md) for current problems and their workarounds.
 - **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) and [docs/BUILD.md](docs/BUILD.md).
 - **Before asking for a feature or firmware support,** please read my [personal notes](personal%20notes.md).
 

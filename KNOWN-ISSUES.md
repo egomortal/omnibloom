@@ -1,0 +1,76 @@
+# Known issues and workarounds
+
+*Last updated November 13, 2026 (v0.5.1). Tested on one PS5, firmware 13.60.*
+
+If something here affects you, the workaround is listed with it. If you hit a problem that isn't listed, please
+[open an issue](https://github.com/egomortal/omnibloom/issues) and say which version and firmware you're on.
+
+## Open issues
+
+### YouTube sometimes doesn't start playing
+- **What happens:** the video page opens but the video never starts, or Omni reloads the page a few times first.
+- **Why:** YouTube checks a playback token from its player before it streams. On the PS5 it rejects about half of the tokens Omni's player makes.
+  - Omni's YouTube guard notices a rejected token and reloads the page at the same spot to get a new one, up to 5 times per video. That usually fixes it on its own.
+  - In one console test, YouTube rejected three tokens in a row. The fourth was accepted, but the video still didn't start.
+- **Workaround:** reload the page (or open the video again). If it keeps happening, close Omni and open it again.
+- **Status:** being worked on. The fix will make Omni notice "token accepted but nothing playing" and recover by itself.
+
+### "Media downloads unavailable" (LT / double bumper)
+- **What happens:** the Media downloads shortcut says it's unavailable, even though the downloads worker is installed.
+- **Why:** Omni finds the downloads worker through **Bloom Core**. If Bloom Core isn't running, Omni can't find it.
+  - Before v0.5.1's Setup update, Setup added Bloom Core and Master Control to Payload Manager's start list as bare file names (`hub.elf`).
+  - Payload Manager v0.6.3 doesn't start bare names, so after a reboot Bloom Core never came up.
+- **Workaround:** download the current **Omnibloom Setup** from the [v0.5.1 release](https://github.com/egomortal/omnibloom/releases/tag/v0.5.1) and press **Repair**. It rewrites the start list with full paths.
+  - Or edit `/data/pldmgr/autoload.txt` yourself and change the lines to:
+    ```
+    /data/pldmgr/payloads/BloomCore/hub.elf
+    /data/pldmgr/payloads/master-control/master-control.elf
+    ```
+  - Then reboot and run your jailbreak.
+- **Status:** fixed in the Setup apps now attached to v0.5.1. If Bloom Core is running and it still says unavailable, the worker may be slow to answer. v0.5.1 now gives it up to 4 seconds and keeps trying for 30 seconds.
+
+### YouTube links fail in Downloads with "points to a local or private address"
+- **What happens:** Downloads refuses YouTube links.
+- **Why:** some jailbreak setups run a DNS blocker (for example nanoDNS) that hides YouTube's addresses to protect the exploit. The worker got `0.0.0.0` back and, correctly, refused it.
+- **Workaround:** none needed from v0.5.1 (downloader-9). When the console's own lookup is blocked or fails, the worker asks public DNS (1.1.1.1, 8.8.8.8) itself, and every address still has to pass the public-address check.
+- **Status:** fixed and tested on a PC with the block simulated. It hasn't been tested on a console yet.
+
+### GPU page drawing ("layers") is experimental
+- **What happens:** with layers turned on, pages aren't faster than normal drawing yet, and the first full page takes about 1.5 to 3 seconds of shader compiling. Mesa's shader cache can't work in this build.
+- **Workaround:** layers is **off by default**. If you turned it on and something looks wrong, delete `/data/omni/gpu-pages-stage1.flag` or create `/data/omni/gpu-pages-stage1-off.flag`, then restart Omni.
+- **Status:** video plays at full speed with layers on. The speed-up is expected to come from drawing the page content itself on the GPU, which is the next stage.
+
+### A site misbehaves with the JavaScript JIT on
+- **What happens:** the JIT is on by default since v0.5.1. If a site crashes or acts oddly, the JIT is worth ruling out.
+- **Workaround:** **Settings > JavaScript JIT** turns it off. Creating `/data/omni/jsc-jit-off.flag` does the same.
+- **Status:** no site is known to break with it. Please report one if you find it.
+
+### HDR video
+- **What happens:** HDR videos may be shown as SDR.
+- **Status:** HDR10 output is built and passes its tests. It's still being checked on real TVs, see [FEATURES.md](FEATURES.md).
+
+## Limits (by design or not possible yet)
+
+- **No Netflix, Disney+ or other copy-protected video.** Omni never bypasses copy protection.
+- **Nothing above 4K.**
+- **Some JavaScript-heavy sites run slower** than on a PC or phone, even with the JIT on.
+- **Saved passwords are only scrambled, not encrypted,** because the console has no secure storage Omni can use.
+- **No location, camera, microphone, notifications or video calls.**
+- **Only firmware 13.60 is tested.** Others may work. See [personal notes](personal%20notes.md).
+- **JDownloader 2 isn't included.** Setup uses your own copy from [jdownloader.org](https://jdownloader.org/jdownloader2).
+
+## Setup checklist (most install problems)
+
+Setup needs these running on the PS5 before it can install:
+- **An FTP server** (for example ftpsrv) on port 2121.
+- **A payload loader** (elfldr) on port 9021.
+- **ShadowMountPlus** and **kstuff** in your Payload Manager start list.
+
+If Setup says your PS5 was found but FTP isn't running, load your FTP payload from Payload Manager. Setup carries
+on by itself as soon as FTP answers.
+
+## Fixed recently
+
+- **Reddit-style pages with many small videos crashed** (v0.5.0). The software video player wrote past its picture buffer for some video widths. Fixed and tested for 20 minutes on the console.
+- **YouTube stopped after about a minute** (v0.5.0). Fixed by a cache fix and the YouTube guard.
+- **Setup's start list used bare names** (v0.5.1 Setup update). Covered above.
