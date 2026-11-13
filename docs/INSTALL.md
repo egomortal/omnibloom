@@ -29,7 +29,7 @@ Setup then does every step for you, one at a time, ticking off a checklist and s
 | Get the apps | Downloads the release packages (or uses the zips next to Setup) and checks their hashes. |
 | Find your PS5 | Looks on every network this computer is on (Ethernet, Wi-Fi, USB tethering), or at the address you typed or used last time. A device counts as your PS5 when its payload loader (9021) answers and, if websrv (8084) is running, its process list shows the PS5's own system processes, so no other device can be picked. FTP (2121) is needed to install: if the PS5 is found but FTP is off, Setup says so and waits until it's on. |
 | Check your PS5 | Read-only checks: the loader, kstuff, ShadowMountPlus. Then it takes Setup's lock on the PS5 (`/data/hub/setup-lock.json`) so two copies of Setup can't work at once. |
-| Bloom Core | Installs the hub that lets the apps find each other, and adds `hub.elf` to the start list (a backup of `autoload.txt` comes first). |
+| Bloom Core | Installs the hub that lets the apps find each other, and adds `/data/pldmgr/payloads/BloomCore/hub.elf` to the start list as a full path (a backup of `autoload.txt` comes first). |
 | Omni | Installs the browser (title `PPSA99732`) and its engine (`omni-engine-child.elf`). If Omni or a game is open, Setup asks you to close it and waits; it never closes anything itself. After Omni's files change it waits for ShadowMountPlus to pick them up. |
 | Downloads | Installs the downloads worker (port 8765). |
 | USB file access | Installs `omni-files.elf`. |
@@ -100,7 +100,13 @@ Master Control has its own repository and releases: <https://github.com/egomorta
 
 1. Download `master-control.elf` from [its Releases page](https://github.com/egomortal/master-control/releases), then send it to the payload loader on port 9021 (`nc <console-ip> 9021 < master-control.elf`, or your payload manager's send button).
 2. A notification says Master Control is ready. Its menu is at the address in the notification (the port is moving off 8095; see the Master Control README), and Omni can open it too.
-3. To start it every time, add `master-control.elf` to your payload manager's autoload list. Don't autoload PadBridge or EeveeLution at the same time.
+3. To start it every time, copy `master-control.elf` to the PS5 at `/data/pldmgr/payloads/master-control/master-control.elf` (FTP, port 2121), then add that **full path** as a line in `/data/pldmgr/autoload.txt`:
+
+   ```
+   /data/pldmgr/payloads/master-control/master-control.elf
+   ```
+
+   Use the full path, not just `master-control.elf`: Payload Manager v0.6.3 doesn't start bare file names after a reboot. Don't autoload PadBridge or EeveeLution at the same time.
 
 Master Control keeps its pairings and settings in `/data/mastercontrol/`. If you used PadBridge
 before, your pairings are copied over the first time; PadBridge's own folder is never changed.
