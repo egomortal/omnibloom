@@ -10,7 +10,7 @@ import zipfile
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from omnibloom_setup import diagnostics  # noqa: E402
 
-PERSONAL = ["www.youtube.com", "LXb3EKWsInQ", "192.168.1.189", "someone@example.com", "hunter2", "news.example.org",
+PERSONAL = ["www.youtube.com", "LXb3EKWsInQ", "10.20.30.40", "someone@example.com", "hunter2", "news.example.org",
             "aa:bb:cc:dd:ee:ff", "secret-session-value", "my-bank.com"]
 
 
@@ -43,7 +43,7 @@ def console():
         "/data/omni/native/boot.log": (b"[0.5] children: engine /data/omni/native/omni-engine-child.elf\n"
                                        b"browser: YTTL run 0: https://www.youtube.com/watch?v=LXb3EKWsInQ\n"
                                        b"page: OMNI_YTGUARD on /watch vid=LXb3EKWsInQ host www.youtube.com\n"
-                                       b"net: connect 192.168.1.189:2121 from someone@example.com password=hunter2\n"
+                                       b"net: connect 10.20.30.40:2121 from someone@example.com password=hunter2\n"
                                        b"pad aa:bb:cc:dd:ee:ff cookie: SID=secret-session-value\n"),
         "/data/omni/native/crash.log": b"crash diagnostics: OMNI_CRASH_V2 process pid=152 base=400000\n",
         "/data/omni/media-downloads.log": b"1794 fetch 8765/healthz -> state=0 status=200 body=48 12ms {\"service\":\"omni-media-worker\"}\n",

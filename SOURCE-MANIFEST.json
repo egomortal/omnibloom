@@ -18058,8 +18058,8 @@
     },
     {
       "path": "setup/tests/test_diagnostics.py",
-      "bytes": 5186,
-      "sha256": "4fb78b3a172df9094a25699ddd348275162d9b36e3a3db8f99fb8f1e843f2f58"
+      "bytes": 5182,
+      "sha256": "53abf0cc2a95b965d305ceec07137bf059a03dc195f16ac5edc462c3b403465f"
     },
     {
       "path": "setup/tests/test_discovery.py",
