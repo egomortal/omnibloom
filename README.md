@@ -62,30 +62,30 @@ Omni is built for the DualSense. PlayStation names first, Xbox names in brackets
 | D-pad left / right | Back / forward (or switch tabs, in Settings) |
 | Touchpad | Translate the page |
 | **Options** (Menu) | Quick menu: Browse, Quick toggles, Apps, Settings, More (Exit is in it) |
-| **Create** (View) | Settings |
+| **Create** (View) | Settings (on an Xbox controller View may not reach Omni: use **LT + B**, in the next version) |
 
 ### Typing (on-screen keyboard)
 
 | Button | What it does |
 | --- | --- |
-| **L1 / R1** | Move the cursor |
-| **L2 / R2** | Move the cursor a whole word |
-| **Square** | Delete |
-| **Triangle** | Space |
-| **L3** | Shift |
-| **R3** | Symbols |
+| **L1 / R1** (LB / RB) | Move the cursor |
+| **L2 / R2** (LT / RT) | Move the cursor a whole word |
+| **Square** (X) | Delete |
+| **Triangle** (Y) | Space |
+| **L3** (press left stick) | Shift |
+| **R3** (press right stick) | Symbols |
 | Touchpad | Edit row: copy, cut, paste, undo, select all, **Fill saved login**, **Fill form** |
-| **Options** | Go |
+| **Options** (Menu) | Go |
 
 ### Fullscreen video
 
 | Button | What it does |
 | --- | --- |
-| **Square** | Pause / play |
-| **L1 / R1** | Back / forward 10 seconds |
-| **Triangle** | Captions |
-| **L3** | Mute |
-| **Circle** | Leave fullscreen |
+| **Square** (X) | Pause / play |
+| **L1 / R1** (LB / RB) | Back / forward 10 seconds |
+| **Triangle** (Y) | Captions |
+| **L3** (press left stick) | Mute |
+| **Circle** (B) | Leave fullscreen |
 
 ### Coming in the next version (being tested now)
 
@@ -95,9 +95,9 @@ Omni is built for the DualSense. PlayStation names first, Xbox names in brackets
 | **L2 + Triangle** (LT + Y) | Paste into the selected text box |
 | **L2 + Cross** (LT + A) | Quick bar |
 | **L2 + Circle** (LT + B) | Browser settings (handy on an Xbox controller, where View may not reach Omni) |
-| **Create** | Opens the full Browser settings: Dark mode (Off / Natural / Forced), your own quick-access buttons, and hide toggles for the quick-access row and the bottom button bar |
+| **Create** (View) | Opens the full Browser settings: Dark mode (Off / Natural / Forced), your own quick-access buttons, and hide toggles for the quick-access row and the bottom button bar |
 
-A tap of L2 will still open saved links. Full feature list: [FEATURES.md](FEATURES.md).
+A tap of L2 will still open saved links. Omnibloom Setup shows this list too: the **All controller shortcuts…** button after installing, or `omnibloom-setup shortcuts` on the command line. Full feature list: [FEATURES.md](FEATURES.md).
 
 ## Requirements
 

@@ -17,7 +17,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
 
-from . import checks, config, diagnostics, installer, jd, oneclick, ps5, release
+from . import checks, config, diagnostics, installer, jd, oneclick, ps5, release, shortcuts
 
 C = config.COLORS
 STATUS_MARK = {"ok": ("✓", C["ok"]), "warn": ("!", C["warn"]), "bad": ("✕", C["bad"]), "info": ("i", C["accent"])}
@@ -306,10 +306,10 @@ class SetupApp:
             self.oc_rows[key] = (mark, note)
         self.bar = ttk.Progressbar(self.body, mode="determinate")
         self.bar.pack(fill="x", pady=(10, 0))
+        self.oc_actions = tk.Frame(self.body, bg=C["ground"])
+        self.oc_actions.pack(side="bottom", fill="x")   # packed first so the log shrinks, not the buttons
         self.logbox = tk.Text(self.body, height=8, bg=C["panel"], fg=C["muted"], bd=0, highlightthickness=0, font=self.f_small, wrap="word")
         self.logbox.pack(fill="both", expand=True, pady=(8, 4))
-        self.oc_actions = tk.Frame(self.body, bg=C["ground"])
-        self.oc_actions.pack(fill="x")
         self.back_btn.configure(state="disabled")
         self.next_btn.configure(text="Stop", state="normal", command=self._oc_stop)
         self.oc_cancel = threading.Event()
@@ -392,6 +392,8 @@ class SetupApp:
                 self.label(self.oc_actions, "Master Control's menu: http://%s:%d/  (also from Omni)" % (oc.host, mc["port"]),
                            "small").pack(anchor="w")
             ttk.Button(self.oc_actions, text="Undo this install", style="Ghost.TButton", command=self._oc_undo).pack(side="left", pady=4)
+            ttk.Button(self.oc_actions, text="Controller shortcuts…", style="Ghost.TButton",
+                       command=self.show_shortcuts).pack(side="left", padx=8, pady=4)
         else:
             again = self.page_customize if self.oc_choice.get("apps") is not None else self.page_oneclick
             ttk.Button(self.oc_actions, text="Try again", style="Accent.TButton", command=again).pack(side="left", pady=4)
@@ -816,7 +818,36 @@ class SetupApp:
             self.label(p, "JDownloader 2 is on. Use it from Media downloads in Omni." if jdr["ok"] else
                        "JDownloader 2 is off: %s" % jdr["why"], "small" if not jdr["ok"] else "body",
                        fg=C["ok"] if jdr["ok"] else C["warn"], bg=C["panel"]).pack(anchor="w", pady=2)
+        if "omni" in self.result:
+            self._shortcut_panel(self.body)
         self.label(self.body, "Run Omnibloom Setup again any time to add, update, repair or remove apps.", "small").pack(anchor="w")
+
+    # -- controller shortcuts (the same list as the README) ---------------------------
+    def _shortcut_panel(self, parent):
+        p = self.panel(parent)
+        p.pack(fill="x", pady=(0, 12))
+        self.label(p, "Controller shortcuts in Omni (Xbox names in brackets)", "head", bg=C["panel"]).pack(anchor="w")
+        grid = tk.Frame(p, bg=C["panel"])
+        grid.pack(anchor="w", pady=(4, 0))
+        for i, (ps, xb, what) in enumerate(shortcuts.KEY):
+            self.label(grid, shortcuts.label(ps, xb), "small", fg=C["accent"], bg=C["panel"]).grid(row=i, column=0, sticky="w", padx=(0, 18))
+            self.label(grid, what, "small", fg=C["text"], bg=C["panel"]).grid(row=i, column=1, sticky="w")
+        ttk.Button(p, text="All controller shortcuts…", style="Alt.TButton",
+                   command=self.show_shortcuts).pack(anchor="w", pady=(6, 2))
+
+    def show_shortcuts(self):
+        win = tk.Toplevel(self.root)
+        win.title("Omni controller shortcuts")
+        win.configure(bg=C["ground"])
+        win.geometry("760x560")
+        box = tk.Text(win, font=("Consolas", 10), bg=C["panel"], fg=C["text"], wrap="word", relief="flat",
+                      padx=12, pady=10)
+        bar = ttk.Scrollbar(win, command=box.yview)
+        box.configure(yscrollcommand=bar.set)
+        bar.pack(side="right", fill="y")
+        box.pack(fill="both", expand=True)
+        box.insert("1.0", shortcuts.text())
+        box.configure(state="disabled")
 
 
 def main(test_ports=None):

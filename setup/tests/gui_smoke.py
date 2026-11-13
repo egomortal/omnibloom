@@ -82,6 +82,12 @@ wait_for(lambda: str(app.next_btn["state"]) == "normal", 180)
 shot("6-install")
 app.next()
 shot("7-done")
+before = set(root.winfo_children())
+app.show_shortcuts()               # the "All controller shortcuts..." window opens with the full list
+pump(0.3)
+pop = [w for w in root.winfo_children() if w not in before and isinstance(w, tk.Toplevel)]
+assert pop and "LB + RB" in [w for w in pop[0].winfo_children() if isinstance(w, tk.Text)][0].get("1.0", "end"), pop
+pop[0].destroy()
 assert app.result.get("_jd", {}).get("ok"), app.result.get("_jd")
 assert b'"approved": true' in fc.read(JD + "native-install.json")
 assert fc.read(EBOOT) == files[EBOOT]

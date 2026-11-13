@@ -18,8 +18,8 @@
     },
     {
       "path": ".github/workflows/omnibloom-setup.yml",
-      "bytes": 2518,
-      "sha256": "04422f0c93753db636c4ac11ce60818cc6f8ba48a4d5b15fcf2e56b318ee9579"
+      "bytes": 2557,
+      "sha256": "126bb96a27e00a0587c853a62411ee73abb708e671bd41e669e72d3cc8b4e8d8"
     },
     {
       "path": ".gitignore",
@@ -17843,8 +17843,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 9924,
-      "sha256": "e781af14f70be8e87411d07041b1fe71d37423e75389579350af179271c4e482"
+      "bytes": 10281,
+      "sha256": "cfd516a3bc0997bec35f93680556c7180f97000851317973b331da16c55e7812"
     },
     {
       "path": "ROADMAP.md",
@@ -17893,8 +17893,8 @@
     },
     {
       "path": "setup/omnibloom_setup/cli.py",
-      "bytes": 11115,
-      "sha256": "bddc2bdd99a2cdcc35ce63557cdbb97747e6b841dd6a160072d43a82b62f1235"
+      "bytes": 11280,
+      "sha256": "9c705efd6d18370f3c6042b31fce57d7a145fbf74f3f7a836a5f3ae4893b2207"
     },
     {
       "path": "setup/omnibloom_setup/config.py",
@@ -17913,8 +17913,8 @@
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
-      "bytes": 47143,
-      "sha256": "f7c0539d0dad17c57a1fe7da2f2bd97afef37411afeba6d4f9f939dba5ad3df8"
+      "bytes": 48946,
+      "sha256": "e3e385595be77a67912101a26be6bea63b376ad396e458acce1e43669acb5a8b"
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
@@ -17945,6 +17945,11 @@
       "path": "setup/omnibloom_setup/release.py",
       "bytes": 17534,
       "sha256": "2513c6189dc9a2c54312d14489868c2a22ef02c483d02984d15a476e9a0b4f75"
+    },
+    {
+      "path": "setup/omnibloom_setup/shortcuts.py",
+      "bytes": 3389,
+      "sha256": "92a45b76aabb7ec0f9234eb4d8dde4d47dd788c02475f61a2f6653d15a58ca5a"
     },
     {
       "path": "setup/README.md",
@@ -18048,8 +18053,8 @@
     },
     {
       "path": "setup/tests/gui_smoke.py",
-      "bytes": 5930,
-      "sha256": "cd570d873696d683b836991db4e10cdea66ee101e4e9f7bf58da21fafef1e95d"
+      "bytes": 6304,
+      "sha256": "4ea41b6f34c5e722809e4362b853bcfe503f1f24cbb9806418b2c206e342ae75"
     },
     {
       "path": "setup/tests/test_autoload_paths.py",
@@ -18095,6 +18100,11 @@
       "path": "setup/tests/test_release_provenance.py",
       "bytes": 5411,
       "sha256": "2291517990c62778a3e21419d5fe47f7dbc0c20bc808a1e98df0f58b381b6735"
+    },
+    {
+      "path": "setup/tests/test_shortcuts.py",
+      "bytes": 1818,
+      "sha256": "c1501b511d2b502d17463eb2e44790bde92ad9861d45619d770475cebf78a79d"
     },
     {
       "path": "setup/tools/frozen_check.py",

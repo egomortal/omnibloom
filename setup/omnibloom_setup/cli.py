@@ -18,7 +18,7 @@ import argparse
 import json
 import sys
 
-from . import checks, config, diagnostics, flavor, installer, jd, oneclick, ps5, release
+from . import checks, config, diagnostics, flavor, installer, jd, oneclick, ps5, release, shortcuts
 
 
 def _console(a):
@@ -52,7 +52,7 @@ def _csv(text):
 
 def main(argv=None):
     p = argparse.ArgumentParser(prog="omnibloom-setup", description=config.APP_NAME)
-    p.add_argument("command", choices=["oneclick", "undo", "scan", "check", "list", "install", "repair", "uninstall", "status", "jd-detect", "jd-setup", "jd-copy", "diagnostics"])
+    p.add_argument("command", choices=["oneclick", "undo", "scan", "check", "list", "install", "repair", "uninstall", "status", "jd-detect", "jd-setup", "jd-copy", "diagnostics", "shortcuts"])
     p.add_argument("--ip")
     p.add_argument("--ftp-port", type=int, default=config.FTP_PORT)
     p.add_argument("--loader-port", type=int, default=config.LOADER_PORT)
@@ -137,6 +137,9 @@ def main(argv=None):
         found = ps5.scan(nets, ftp_port=a.ftp_port, loader_port=a.loader_port, websrv_port=a.websrv_port)
         print(json.dumps(found, indent=1))
         return 0 if found else 1
+    if a.command == "shortcuts":   # Omni's controller shortcuts (no PS5 needed)
+        sys.stdout.write(shortcuts.text())
+        return 0
     if a.command == "jd-detect":
         print(json.dumps([jd.summary(f) for f in jd.detect()], indent=1))
         return 0
