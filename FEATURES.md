@@ -41,7 +41,8 @@ Developers: see [DEVELOPERS.md](DEVELOPERS.md).
 | Form autofill | 🧪 | One profile (name, email, address and so on) that you fill in under Settings. Omni writes it into a form only when you pick **Fill form**. |
 | Choose your pointer | 🧪 | Pick the pointer's style, size and colour from a set of free Kenney cursors and crosshairs. |
 | Open and save files on USB drives | 🧪 | Upload a file from a USB drive, or save to one. Omni can only reach USB drives, and can't delete or overwrite files. |
-| Faster JavaScript (JIT) | 🧪 | **Settings > JavaScript JIT (faster, less safe).** Off by default. Makes script-heavy sites faster, at some cost to safety. |
+| Faster JavaScript (JIT) | ✅ | **On by default** since v0.5.1. Script-heavy sites run much faster. The JIT's code memory is now never writable and runnable at the same time (W^X), so it no longer costs safety. Turn it off under **Settings > JavaScript JIT**. |
+| GPU page drawing ("layers") | 🧪 | **Opt-in test, off by default.** Composites web pages on the PS5's graphics chip instead of the processor. Turn it on by creating `/data/omni/gpu-pages-stage1.flag`. Video plays at full speed with it on, but it isn't faster than normal drawing yet. Details: `omni/native-title/patches/experimental/gpu-pages/stage1/`. |
 | Controllers on web pages | 🧪 | Browser games and other pages can read your controller (the web Gamepad API). Only the tab you're looking at gets the input. You can turn it off in Settings. |
 | Location, camera, microphone, notifications, video calls | ❌ | Not included in this version of Omni. |
 
@@ -85,7 +86,7 @@ rules as **uBlock Origin**. You don't need to install anything.
 | Link grabber | ✅ | Finds video and media links on the page, including ones hidden inside embedded players. Found links show up in the Downloads dialog and on the Launch page. |
 | Know what you're getting | 🧪 | Each link is checked before you download it: real file type, resolution, bitrate and size where the site gives them, best first. Links that won't work say why: copy-protected (never bypassed), live stream, dead link, sign-in needed. |
 | Quality picker | 🧪 | Choose the quality you want when a link offers more than one. |
-| yt-dlp | 🧪 | The downloads worker uses yt-dlp for video sites. |
+| yt-dlp | 🧪 | The downloads worker uses yt-dlp for video sites. If your console's DNS blocker hides YouTube (as some jailbreak setups do), the worker looks the address up itself, and it prefers IPv4. |
 | JDownloader | 🚧 | The worker can drive JDownloader for file hosts, but JDownloader itself is not part of this release. |
 | Privacy | ✅ | Only runs when **Media Downloads** is turned on, never in private tabs, and keeps no browsing history. |
 
@@ -166,7 +167,7 @@ navigation. If you leave the controller alone, the pointer also gets out of the 
 
 - **No Netflix, Disney+ or other copy-protected video.**
 - **Nothing above 4K.**
-- **Some JavaScript-heavy sites run slower** than on a PC or phone. The optional JIT setting helps, but it's off by default.
+- **Some JavaScript-heavy sites run slower** than on a PC or phone, even with the JIT on.
 - **Saved passwords are only scrambled, not encrypted,** because the console has no secure storage Omni can use.
 - **No location, camera, microphone, notifications or video calls.**
 - **No HDR video yet.** HDR videos play, but as SDR (HDR output is built and being tested).

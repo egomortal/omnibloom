@@ -1,9 +1,41 @@
 # Changelog
 
-## Unreleased: launch build (in progress, November 9-11, 2026)
+## v0.5.1 (November 13, 2026)
 
-Everything below is going into one combined build for the November 12 release. "Proven" means tested on the
-console; "built" means it passes its PC tests and is waiting for its console test.
+### JavaScript JIT on by default (launch build rc6, proven on the console)
+- **What changed:** the JIT makes script-heavy sites much faster but was opt-in ("faster, less safe"), because its
+  code memory stayed writable and runnable at the same time. Now the same memory is mapped twice: one view runs code,
+  a separate view is the only place it can be written (`OMNI_JSC_JIT_V4`). Permissions are set once and never
+  changed, which also keeps it clear of the firmware 13.60 permission-change stalls.
+- **On by default** (`OMNI_JIT_DEFAULT_ON_V1`). Turn it off in **Settings > JavaScript JIT** or with
+  `/data/omni/jsc-jit-off.flag`.
+- **Results:** same speed as the old JIT on six sites, a 20-minute YouTube soak with 0 stalls, a 9-minute JavaScript
+  soak with 0 errors. Sources: `omni/native-title/patches/launch/rc6/`.
+
+### GPU page drawing ("layers"), opt-in experiment
+- Omni can now composite web pages on the PS5's graphics chip (Zink on RADV, through the title's GPU broker). It is
+  in the launch build but **off unless you create `/data/omni/gpu-pages-stage1.flag`**.
+- Fixed on the way: a too-broad `dladdr` helper that slowed start-up by 5-9 s, animation frames that stopped reaching
+  the page (YouTube stopped fetching video), an unpaced compositor, a jammed GPU queue from many small read-backs, and
+  a GPU memory budget that was too small.
+- **Results:** three back-to-back YouTube runs on the console, layers on and off, all passed at 59.94 fps with
+  video starting in 12.9-14.5 s. It isn't faster than normal drawing yet.
+- Sources: `omni/native-title/patches/experimental/gpu-pages/stage1/`; the write-up is
+  [`docs/research/gpu-page-layers-ps5.md`](docs/research/gpu-page-layers-ps5.md).
+
+### Downloads
+- **Media downloads shortcut (LT / double bumper) no longer says "unavailable" while the worker is running.** Omni
+  gave the worker 0.8 s to answer; it now waits up to 4 s and retries within 30 s (`OMNI_MEDIA_HEALTH_V2`).
+- **YouTube links work with a DNS blocker on the console (downloader-9).** Some jailbreak setups block YouTube's
+  addresses in DNS to protect the exploit. The worker now asks public DNS (1.1.1.1, 8.8.8.8) itself when the
+  console's answer is blocked or fails, and prefers IPv4. Every answer still goes through the public-address check.
+  Tested on a PC with the block simulated (the old worker failed, the new one found 47 formats); the console retest
+  is pending.
+
+## v0.5.0: launch build (November 9-11, 2026)
+
+Released as v0.5.0 on November 11. "Proven" means tested on the console; "built" means it passes its PC tests and
+was waiting for its console test.
 
 ### YouTube no longer stops after a minute (launch build rc5, proven on the console, November 11)
 - **What was wrong:** YouTube played about a minute and then stopped. Two causes, both in Omni:

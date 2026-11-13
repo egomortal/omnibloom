@@ -24,6 +24,8 @@ upstream project's source, at the version named.
 | SQLite | from the PacBrew sysroot | Public domain | <https://sqlite.org> |
 | SDL2 | from the PS5 Payload SDK | zlib License | <https://libsdl.org> |
 | Mesa (RADV, Zink, EGL) | from the PacBrew sysroot | MIT | <https://mesa3d.org> |
+| PS5_Mesa (RADV, Zink, EGL for GPU page drawing) | commit 1ba9874f (Mesa 26.2.0) plus `omni/native-title/patches/experimental/gpu-pages/prototype/mesa-patches/` | MIT | RADV PS5 winsys by Mihawk (MIT), in `.../gpu-pages/stage1/cp2-client/`. |
+| PS5_Vulkan GPU broker | `tooling/gpu-broker`, compared against commit f410e67, with one change (`OMNI_GPUPAGES_MEMSPLIT_V1`) | LGPL-2.1-or-later | Mihawk-99 (2026). Source and notices in `omni/native-title/patches/experimental/gpu-pages/stage1/broker/`. |
 | zlib | from the PacBrew sysroot | zlib License | <https://zlib.net> |
 
 ## Networking, media and image libraries
