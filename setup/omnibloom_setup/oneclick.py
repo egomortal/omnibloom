@@ -24,7 +24,7 @@ import posixpath
 import threading
 import time
 
-from . import checks, config, installer, jd, ps5, release
+from . import checks, config, flavor, installer, jd, ps5, release
 from .ports import PortPicker
 
 # Timings (seconds). Tests make them short.
@@ -400,6 +400,7 @@ class OneClick:
     # -- 2. find (listen for the PS5) --------------------------------------------------------------------
     def find_console(self):
         self.step("find", "active", "Waiting for your PS5…")
+        flavor.say(self.say)
         self.say("Turn your PS5 on and run your jailbreak, so its FTP server (port %d) and payload loader (port %d) "
                  "are running. Setup keeps checking and carries on by itself as soon as both answer."
                  % (self.ftp_port, self.loader_port))

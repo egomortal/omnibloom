@@ -24,6 +24,11 @@
   [`docs/research/gpu-page-layers-ps5.md`](docs/research/gpu-page-layers-ps5.md).
 
 ### Setup (updated after the release)
+- **Collect diagnostics…**: a button (and `--cli diagnostics`) that saves the PS5's technical logs, with web
+  addresses, site names, video IDs, IP and e-mail addresses and passwords removed, to your Downloads folder for bug
+  reports. Nothing is uploaded.
+- **A little fun while it works:** morph calls from across the seasons show up during installs, repairs and waits.
+  `--plain` turns them off.
 - **Bloom Core and Master Control now start after a reboot.** Setup used to add them to Payload Manager's
   start list as bare file names (`hub.elf`), which Payload Manager v0.6.3 doesn't start. It now writes full paths
   (`/data/pldmgr/payloads/BloomCore/hub.elf`), replaces bare entries left by an older Setup, and **Repair** puts back

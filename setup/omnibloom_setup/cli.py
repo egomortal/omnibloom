@@ -18,7 +18,7 @@ import argparse
 import json
 import sys
 
-from . import checks, config, diagnostics, installer, jd, oneclick, ps5, release
+from . import checks, config, diagnostics, flavor, installer, jd, oneclick, ps5, release
 
 
 def _console(a):
@@ -77,12 +77,15 @@ def main(argv=None):
                    help="oneclick: start Master Control with the PS5 (takes PadBridge/EeveeLution's place)")
     p.add_argument("--hdr", choices=["auto-if-unset", "auto", "keep"], default="auto-if-unset",
                    help="oneclick: Omni's HDR setting (default: Auto unless you already chose one)")
+    p.add_argument("--plain", action="store_true", help="plain progress messages (no morph calls)")
     p.add_argument("--out", help="diagnostics: where to save the zip (default: your Downloads folder)")
     p.add_argument("--run-file", help="undo: a specific run file instead of the last one")
     p.add_argument("--no-jdownloader", action="store_true", help="oneclick: don't look for or set up JDownloader 2")
     p.add_argument("--get-jdownloader", action="store_true",
                    help="oneclick: if JDownloader 2 isn't on this computer, open its official download page and wait for it")
     a = p.parse_args(argv)
+    if a.plain:
+        flavor.set_plain(True)
     log = lambda m: print(m, flush=True)
 
     if a.command == "oneclick":

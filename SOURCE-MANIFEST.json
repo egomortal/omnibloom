@@ -633,8 +633,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 13754,
-      "sha256": "9cf71c36f9e7a052b681aa4fdb27d3bd39dd43dd182d5d5a5474d10544195592"
+      "bytes": 14156,
+      "sha256": "77959bc5d685102a44f5b2f187537760d2daa0c62d0e25e60c1d66f1b119be92"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -17908,8 +17908,8 @@
     },
     {
       "path": "setup/omnibloom_setup/flavor.py",
-      "bytes": 1541,
-      "sha256": "26a42988c5935451514e5a96fb75d3d3dac6ffb86315da3eff287572a14ba199"
+      "bytes": 1662,
+      "sha256": "37ae671c7b4e6b39fa9cabd1cfaf7923e71bf9d95b6541f171fb8f689e28e86a"
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
@@ -18078,8 +18078,8 @@
     },
     {
       "path": "setup/tests/test_flavor.py",
-      "bytes": 1047,
-      "sha256": "bb5f03c9351f410cd0bf17399ffa7ae8755b9ce4d101be3ba109d4ac93560aff"
+      "bytes": 1149,
+      "sha256": "b20bc5d4748ce9f7139506af1e671cf29c5636301c46c81a67d678dc437b9584"
     },
     {
       "path": "setup/tests/test_install_journal.py",

@@ -19,7 +19,7 @@ import json
 import os
 import posixpath
 
-from . import config
+from . import config, flavor
 from .ports import PortPicker
 from .release import cache_dir, version_key
 
@@ -335,6 +335,7 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
     app = catalog.apps[app_id]
     rows = catalog.files_for(app_id)
     log("%s %s: checking %d file%s…" % (app["name"], app["version"], len(rows), "" if len(rows) == 1 else "s"))
+    flavor.say(log)   # a morph call for fans (--plain turns these off)
     blobs = {r["dest"]: catalog.data(app_id, r) for r in rows}
     previous = read_receipt(console, app_id)
     prev_files = {f["dest"]: f for f in (previous or {}).get("files", [])}
@@ -495,6 +496,7 @@ def repair_app(console, catalog, app_id, log=print, progress=None):
     receipt = read_receipt(console, app_id)
     if not receipt:
         raise IOError("%s isn't installed on this PS5." % app_id)
+    flavor.say(log)
     want = {r["dest"]: r for r in catalog.files_for(app_id)} if catalog.has(app_id) else {}
     fixed = []
     files = [f for f in receipt["files"] if f["dest"] in want]
