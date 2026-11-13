@@ -31,12 +31,15 @@ class FirstRun(unittest.TestCase):
     def test_fresh_console_gets_both_files(self):
         c = Console()
         made = installer.ensure_omni_first_run(c, lambda *_: None)
-        self.assertEqual(made, ["/data/omni/omni-engine.elf", "/data/omni/browser-mode.flag"])
+        self.assertEqual(made, [p for p, _ in config.OMNI_FIRST_RUN_FILES])
+        for flag in ("mse-preview", "hw-decode", "ublock-native", "media-preview"):   # 720p cap / uBlock off without these
+            self.assertIn("/data/omni/%s.flag" % flag, made)
         self.assertEqual(c.files["/data/omni/browser-mode.flag"], b"1\n")
         self.assertIn(b"placeholder", c.files["/data/omni/omni-engine.elf"])
 
     def test_existing_files_are_never_replaced(self):
-        old = {"/data/omni/omni-engine.elf": b"\x7fELF real engine", "/data/omni/browser-mode.flag": b"1"}
+        old = {p: b"x" for p, _ in config.OMNI_FIRST_RUN_FILES}
+        old["/data/omni/omni-engine.elf"] = b"\x7fELF real engine"
         c = Console(old)
         self.assertEqual(installer.ensure_omni_first_run(c, lambda *_: None), [])
         self.assertEqual(c.files, old)

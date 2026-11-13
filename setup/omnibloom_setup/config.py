@@ -103,12 +103,24 @@ SETUP_LOCK_MINUTES = 30
 # Omni's HDR setting (`<revision>TAB<off|auto|on>` and a newline; Omni treats a missing file as Off). The one-button install
 # sets Auto when there's no setting yet and keeps the user's choice otherwise.
 OMNI_HDR_PREF = "/data/omni/video-hdr-preference.txt"
-# Omni titles up to v0.5.1 only start the browser when both of these exist (KNOWN-ISSUES: "upload omni-engine.elf to
+# Omni titles up to v0.5.1 only start the browser when the first two of these exist (KNOWN-ISSUES: "upload omni-engine.elf to
 # /data/omni first"). The title never runs the .elf: it starts its engine from /data/omni/native/omni-engine-child.elf.
 # Setup creates them when missing and never replaces an existing file (an older Omni may own a real engine there).
 OMNI_FIRST_RUN_FILES = (
     ("/data/omni/omni-engine.elf", b"Omnibloom: placeholder. Omni starts its engine from /data/omni/native/omni-engine-child.elf.\n"),
     ("/data/omni/browser-mode.flag", b"1\n"),
+    # The switches Omni v0.5.1 was tested with. Without them a fresh install had YouTube capped at 720p (no MSE),
+    # software video decoding, uBlock's native blocker off, HDR off and Media downloads off.
+    ("/data/omni/mse-preview.flag", b"1\n"),               # Media Source Extensions: YouTube above 720p
+    ("/data/omni/media-preview.flag", b"1\n"),             # the video file player
+    ("/data/omni/hw-decode.flag", b"1\n"),                 # hardware video decoding
+    ("/data/omni/hdr-auto.flag", b"1\n"),                  # HDR output when the video and TV support it
+    ("/data/omni/ublock-native.flag", b"1\n"),             # uBlock Origin's native blocker
+    ("/data/omni/media-downloads-enabled.flag", b"1\n"),   # Media downloads
+    ("/data/omni/main10-sdr-fast-test.flag", b"1\n"),      # fast 10-bit to SDR path (tested default)
+    ("/data/omni/reduced-copy-test.flag", b"1\n"),         # fewer video frame copies (tested default)
+    ("/data/omni/hls-native-advertise-disabled.flag", b"1\n"),  # tested default
+    ("/data/omni/crash-diagnostics.flag", b"1\n"),         # crash details in /data/omni/native/crash.log
 )
 
 # Required console software, with how the setup recognises each one in autoload.txt.

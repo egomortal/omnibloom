@@ -2843,8 +2843,8 @@
     },
     {
       "path": "KNOWN-ISSUES.md",
-      "bytes": 7438,
-      "sha256": "fb32349c6bcdde85e75ccd792b0a85bd89cbfacd38f7ed0830c3450f42f32919"
+      "bytes": 8715,
+      "sha256": "95ab013a5fcfa0d9c69359d3cb9c7d1c5eb83368a42aac93e9a555021c8ef9b3"
     },
     {
       "path": "LICENSE",
@@ -17893,18 +17893,23 @@
     },
     {
       "path": "setup/omnibloom_setup/cli.py",
-      "bytes": 10960,
-      "sha256": "a19fcf93a3a75ebd1af1d402e5b75715d44d5d670877f5d9179961646abe8a53"
+      "bytes": 11115,
+      "sha256": "bddc2bdd99a2cdcc35ce63557cdbb97747e6b841dd6a160072d43a82b62f1235"
     },
     {
       "path": "setup/omnibloom_setup/config.py",
-      "bytes": 11086,
-      "sha256": "9b7b2608711df9606e6c54c22e2f5b29a50f81987f9e568564889fb003bb79e6"
+      "bytes": 12241,
+      "sha256": "20bcebdc71e32b7fd1967657a57f0cb7d623876da66c598657468566d16f14c5"
     },
     {
       "path": "setup/omnibloom_setup/diagnostics.py",
       "bytes": 12254,
       "sha256": "ee07eb0c1d1f3488ab12c6dfc4a7f76e22f420d583fc8656fac0501ee39ad7a2"
+    },
+    {
+      "path": "setup/omnibloom_setup/flavor.py",
+      "bytes": 1541,
+      "sha256": "26a42988c5935451514e5a96fb75d3d3dac6ffb86315da3eff287572a14ba199"
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
@@ -17913,8 +17918,8 @@
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
-      "bytes": 32899,
-      "sha256": "d456b2242502f1beda65b5cacbd8ce84f8a93a070507ffcc74aeacc8ed176813"
+      "bytes": 32999,
+      "sha256": "cbcc00dae05d8c54747655d199149356a46b91e48326e6d906f7a540bb0d1cb5"
     },
     {
       "path": "setup/omnibloom_setup/jd.py",
@@ -17923,8 +17928,8 @@
     },
     {
       "path": "setup/omnibloom_setup/oneclick.py",
-      "bytes": 45169,
-      "sha256": "40b5579989ba7f1ea8e93bab6186d6f171b4001f9a2f205a1dd9aaf7907b084a"
+      "bytes": 45206,
+      "sha256": "85db0eb9874421e0dcd45ac76883b8420f5a5cc947786b10cd781239219c056a"
     },
     {
       "path": "setup/omnibloom_setup/ports.py",
@@ -18068,8 +18073,13 @@
     },
     {
       "path": "setup/tests/test_first_run.py",
-      "bytes": 1689,
-      "sha256": "16ea671c78d8612bc352a46abd2060f6d992ceb4bb1a58316e331417a53b745d"
+      "bytes": 1879,
+      "sha256": "1aba8db4f12c44afcdfe70508e3334c755cca5a2d39e7c9e21a0d11ed4b19290"
+    },
+    {
+      "path": "setup/tests/test_flavor.py",
+      "bytes": 1047,
+      "sha256": "bb5f03c9351f410cd0bf17399ffa7ae8755b9ce4d101be3ba109d4ac93560aff"
     },
     {
       "path": "setup/tests/test_install_journal.py",
