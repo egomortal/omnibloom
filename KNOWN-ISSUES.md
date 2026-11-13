@@ -9,8 +9,12 @@ If something here affects you, the workaround is listed with it. If you hit a pr
 
 ### Omni won't start: "Omni Engine: upload omni-engine.elf to /data/omni first"
 - **What happens:** after a fresh install, opening Omni shows that notification and nothing else.
-- **Why:** Omni checks that a file named `/data/omni/omni-engine.elf` exists before it starts. It doesn't run that file; it starts its page engine from `/data/omni/native/omni-engine-child.elf`, which Setup installs. Consoles that had an older Omni already have the file, so the check never showed up in testing. Setup doesn't create it.
-- **Workaround:** with an FTP client, copy `/data/omni/native/omni-engine-child.elf` to `/data/omni/omni-engine.elf` (same folder level as `native`, not inside it). Then open Omni again.
+- **Why:** Omni checks for two files from older test setups before it starts the browser: `/data/omni/omni-engine.elf` and `/data/omni/browser-mode.flag`. It doesn't run that file; it starts its page engine from `/data/omni/native/omni-engine-child.elf`, which Setup installs. Consoles that had an older Omni already have the file, so the check never showed up in testing. Setup doesn't create it.
+- **Workaround (two files, both in `/data/omni/`):**
+  1. With an FTP client, copy `/data/omni/native/omni-engine-child.elf` to `/data/omni/omni-engine.elf` (same folder level as `native`, not inside it).
+  2. Create a small text file `/data/omni/browser-mode.flag` containing `1`. Without it, Omni starts its engine self-test, not the browser.
+
+  Then open Omni again.
 - **Status:** being fixed in Setup and the console package, so that a fresh install starts without the extra step.
 
 ### YouTube sometimes doesn't start playing
