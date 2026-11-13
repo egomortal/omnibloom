@@ -55,12 +55,106 @@ class Problem(Exception):
         self.message = message
 
 
+# OMNI_DL9_OWN_DNS: the console's local DNS (nanoDNS) deliberately answers 0.0.0.0 for YouTube's domains so the PS5
+# YouTube app (the Y2JB entry point) cannot update. The browser resolves names itself and still reaches YouTube; the
+# downloads worker used the system resolver and got 0.0.0.0 ("This link points at a local or private address").
+# When the local answer is the unspecified address (a local block) or the local lookup fails, the worker asks these
+# public resolvers directly (the same ones nanoDNS forwards to). The answers then pass the same public-address checks.
+UPSTREAM_DNS = ('1.1.1.1', '8.8.8.8')
+UPSTREAM_DNS_TIMEOUT = 1.5
+
+
+def _dns_skip_name(data, at):
+    while True:
+        if at >= len(data):
+            raise ValueError('truncated name')
+        length = data[at]
+        if length & 0xC0 == 0xC0:
+            return at + 2
+        if length == 0:
+            return at + 1
+        at += 1 + length
+
+
+def _dns_query(server, host, qtype, timeout=UPSTREAM_DNS_TIMEOUT):
+    """One plain UDP DNS query; returns the addresses of type qtype (1 = A, 28 = AAAA) in the answer section."""
+    labels = host.rstrip('.').encode('idna').split(b'.')
+    if not labels or any(not label or len(label) > 63 for label in labels):
+        return []
+    ident = struct.unpack('!H', os.urandom(2))[0]
+    question = b''.join(bytes([len(label)]) + label for label in labels) + b'\0' + struct.pack('!HH', qtype, 1)
+    packet = struct.pack('!HHHHHH', ident, 0x0100, 1, 0, 0, 0) + question
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.settimeout(timeout)
+        sock.sendto(packet, (server, 53))
+        deadline = time.monotonic() + timeout
+        while True:
+            sock.settimeout(max(0.05, deadline - time.monotonic()))
+            data, source = sock.recvfrom(4096)
+            if source[0] == server and len(data) >= 12 and struct.unpack('!H', data[:2])[0] == ident:
+                break
+            if time.monotonic() >= deadline:
+                return []
+    except (OSError, socket.timeout):
+        return []
+    finally:
+        sock.close()
+    flags, qdcount, ancount = struct.unpack('!HHH', data[2:8])
+    if flags & 0x000F:   # rcode != NOERROR
+        return []
+    at = 12
+    try:
+        for _ in range(qdcount):
+            at = _dns_skip_name(data, at) + 4
+        found = []
+        for _ in range(ancount):
+            at = _dns_skip_name(data, at)
+            rtype, _, _, rdlength = struct.unpack('!HHIH', data[at:at + 10])
+            at += 10
+            rdata = data[at:at + rdlength]
+            at += rdlength
+            if rtype == qtype == 1 and rdlength == 4:
+                found.append(socket.inet_ntop(socket.AF_INET, rdata))
+            elif rtype == qtype == 28 and rdlength == 16:
+                found.append(socket.inet_ntop(socket.AF_INET6, rdata))
+        return found
+    except (ValueError, struct.error, OSError):
+        return []
+
+
+def _upstream_infos(host, port):
+    for server in UPSTREAM_DNS:
+        for qtype, family in ((1, socket.AF_INET), (28, socket.AF_INET6)):
+            addresses = _dns_query(server, host, qtype)
+            if addresses:
+                return [(family, socket.SOCK_STREAM, 6, '', (a, port) if family == socket.AF_INET else (a, port, 0, 0))
+                        for a in addresses]
+    return []
+
+
+def _is_ip_literal(host):
+    try:
+        ipaddress.ip_address(host.strip('[]').split('%', 1)[0])
+        return True
+    except ValueError:
+        return False
+
+
 def public_address(host, port):
     """Resolve host; refuse unless every address is a public unicast address."""
     try:
         infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        local_error = None
     except (socket.gaierror, UnicodeError, OSError) as error:
-        raise Problem('dead', "The site's address could not be found.") from error
+        infos, local_error = [], error
+    blocked = any(ipaddress.ip_address(info[4][0].split('%', 1)[0]).is_unspecified for info in infos)
+    if (blocked or not infos) and not _is_ip_literal(host):   # OMNI_DL9_OWN_DNS
+        upstream = _upstream_infos(host, port)
+        if upstream:
+            infos = upstream
+    if not infos:
+        raise Problem('dead', "The site's address could not be found.") from local_error
     chosen = None
     for family, _, _, _, sockaddr in infos:
         address = ipaddress.ip_address(sockaddr[0].split('%', 1)[0])
@@ -70,7 +164,10 @@ def public_address(host, port):
                 or address.is_reserved or address.is_unspecified or address in SHARED
                 or (isinstance(address, ipaddress.IPv6Address) and (address.is_site_local or address.teredo or address.sixtofour))):
             raise Refused('Local or private address')
-        if chosen is None:
+        # OMNI_DL9_IPV4_FIRST: every address was checked above; prefer IPv4. The guard pins ONE address and never
+        # falls back, and the PS5's resolver can list a site's IPv6 address first while the console cannot reach IPv6
+        # (YouTube: "Failed to establish a new connection" for every request while IPv4-only file hosts worked).
+        if chosen is None or (chosen[0] != socket.AF_INET and family == socket.AF_INET):
             chosen = (family, sockaddr[0], sockaddr[1])
     if chosen is None:
         raise Problem('dead', "The site's address could not be found.")
