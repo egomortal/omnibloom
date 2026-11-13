@@ -31,6 +31,8 @@
   console's answer is blocked or fails, and prefers IPv4. Every answer still goes through the public-address check.
   Tested on a PC with the block simulated (the old worker failed, the new one found 47 formats); the console retest
   is pending.
+- **The Downloads page is fully original.** Only the 15 original Universes remain, the leftover game-themed code is
+  gone, and the support files the page loads are all included (no more missing files). New bloom favicon.
 
 ## v0.5.0: launch build (November 9-11, 2026)
 
