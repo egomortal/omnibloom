@@ -18,8 +18,8 @@
     },
     {
       "path": ".github/workflows/omnibloom-setup.yml",
-      "bytes": 2448,
-      "sha256": "217340a6d83108addbe3cb7da96931303fee9f4fd03064cf0845e9ddff4e8ab8"
+      "bytes": 2518,
+      "sha256": "04422f0c93753db636c4ac11ce60818cc6f8ba48a4d5b15fcf2e56b318ee9579"
     },
     {
       "path": ".gitignore",
@@ -2843,8 +2843,8 @@
     },
     {
       "path": "KNOWN-ISSUES.md",
-      "bytes": 6936,
-      "sha256": "3401266036ebe6d6b410ee3c9ff68710590302ee613ab064934766b65d07642a"
+      "bytes": 7438,
+      "sha256": "fb32349c6bcdde85e75ccd792b0a85bd89cbfacd38f7ed0830c3450f42f32919"
     },
     {
       "path": "LICENSE",
@@ -17893,8 +17893,8 @@
     },
     {
       "path": "setup/omnibloom_setup/cli.py",
-      "bytes": 10610,
-      "sha256": "0f76601f3702a5c7ffcec8e642ad4313f94556cb1ea826879e8aab304f6a8f45"
+      "bytes": 10960,
+      "sha256": "a19fcf93a3a75ebd1af1d402e5b75715d44d5d670877f5d9179961646abe8a53"
     },
     {
       "path": "setup/omnibloom_setup/config.py",
@@ -17902,9 +17902,14 @@
       "sha256": "9b7b2608711df9606e6c54c22e2f5b29a50f81987f9e568564889fb003bb79e6"
     },
     {
+      "path": "setup/omnibloom_setup/diagnostics.py",
+      "bytes": 12254,
+      "sha256": "ee07eb0c1d1f3488ab12c6dfc4a7f76e22f420d583fc8656fac0501ee39ad7a2"
+    },
+    {
       "path": "setup/omnibloom_setup/gui.py",
-      "bytes": 45487,
-      "sha256": "0d8ec126d0a394ff212da0775b7843dc73fa4b00f0abec948cbefbf2398dc717"
+      "bytes": 47143,
+      "sha256": "f7c0539d0dad17c57a1fe7da2f2bd97afef37411afeba6d4f9f939dba5ad3df8"
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
@@ -18045,6 +18050,11 @@
       "path": "setup/tests/test_autoload_paths.py",
       "bytes": 2539,
       "sha256": "89955d11d3453ede93ba62b4b554c7bd7b37d076774fb2082304fefb6660dae0"
+    },
+    {
+      "path": "setup/tests/test_diagnostics.py",
+      "bytes": 5186,
+      "sha256": "4fb78b3a172df9094a25699ddd348275162d9b36e3a3db8f99fb8f1e843f2f58"
     },
     {
       "path": "setup/tests/test_discovery.py",

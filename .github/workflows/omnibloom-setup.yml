@@ -42,7 +42,7 @@ jobs:
       - name: Install build and test tools
         run: python -m pip install pyinstaller==6.16.0 pyftpdlib==2.0.1 pillow==11.0.0
       - name: Tests against the fake console
-        run: python -m unittest tests.test_end_to_end tests.test_oneclick tests.test_discovery -v
+        run: python -m unittest tests.test_end_to_end tests.test_oneclick tests.test_discovery tests.test_autoload_paths tests.test_first_run tests.test_diagnostics -v
       - name: Window walk-through (Linux)
         if: runner.os == 'Linux'
         run: |

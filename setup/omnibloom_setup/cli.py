@@ -18,7 +18,7 @@ import argparse
 import json
 import sys
 
-from . import checks, config, installer, jd, oneclick, ps5, release
+from . import checks, config, diagnostics, installer, jd, oneclick, ps5, release
 
 
 def _console(a):
@@ -52,7 +52,7 @@ def _csv(text):
 
 def main(argv=None):
     p = argparse.ArgumentParser(prog="omnibloom-setup", description=config.APP_NAME)
-    p.add_argument("command", choices=["oneclick", "undo", "scan", "check", "list", "install", "repair", "uninstall", "status", "jd-detect", "jd-setup", "jd-copy"])
+    p.add_argument("command", choices=["oneclick", "undo", "scan", "check", "list", "install", "repair", "uninstall", "status", "jd-detect", "jd-setup", "jd-copy", "diagnostics"])
     p.add_argument("--ip")
     p.add_argument("--ftp-port", type=int, default=config.FTP_PORT)
     p.add_argument("--loader-port", type=int, default=config.LOADER_PORT)
@@ -77,6 +77,7 @@ def main(argv=None):
                    help="oneclick: start Master Control with the PS5 (takes PadBridge/EeveeLution's place)")
     p.add_argument("--hdr", choices=["auto-if-unset", "auto", "keep"], default="auto-if-unset",
                    help="oneclick: Omni's HDR setting (default: Auto unless you already chose one)")
+    p.add_argument("--out", help="diagnostics: where to save the zip (default: your Downloads folder)")
     p.add_argument("--run-file", help="undo: a specific run file instead of the last one")
     p.add_argument("--no-jdownloader", action="store_true", help="oneclick: don't look for or set up JDownloader 2")
     p.add_argument("--get-jdownloader", action="store_true",
@@ -145,6 +146,9 @@ def main(argv=None):
             for it in items:
                 print("[%s] %s: %s" % (it["status"].upper(), it["label"], it["detail"]))
             return 0 if summary["can_install"] else 2
+        if a.command == "diagnostics":   # technical logs only, personal data removed, saved on this computer
+            diagnostics.collect(c, a.out, setup_version=config.SETUP_VERSION, log=log)
+            return 0
         if a.command == "uninstall":
             installer.uninstall_app(c, a.app or p.error("--app is required"), log=log)
             return 0

@@ -5,6 +5,12 @@
 If something here affects you, the workaround is listed with it. If you hit a problem that isn't listed, please
 [open an issue](https://github.com/egomortal/omnibloom/issues) and say which version and firmware you're on.
 
+**To attach logs:** in Omnibloom Setup, press **Collect diagnostics…** (or run `Omnibloom-Setup --cli diagnostics --ip <your PS5>`).
+Setup reads only technical logs from the PS5, replaces web addresses, site names, video IDs, IP and e-mail addresses,
+passwords and tokens, and saves `omnibloom-diagnostics-<date>.zip` in your Downloads folder. Nothing is uploaded: check
+the zip, then attach it to your issue. Your browsing history, bookmarks, cookies, saved passwords and downloads are
+never read.
+
 ## Open issues
 
 ### Omni won't start: "Omni Engine: upload omni-engine.elf to /data/omni first"

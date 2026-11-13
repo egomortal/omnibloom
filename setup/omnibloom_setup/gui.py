@@ -17,7 +17,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
 
-from . import checks, config, installer, jd, oneclick, ps5, release
+from . import checks, config, diagnostics, installer, jd, oneclick, ps5, release
 
 C = config.COLORS
 STATUS_MARK = {"ok": ("✓", C["ok"]), "warn": ("!", C["warn"]), "bad": ("✕", C["bad"]), "info": ("i", C["accent"])}
@@ -515,6 +515,9 @@ class SetupApp:
         ttk.Button(actions, text="Check again", style="Ghost.TButton", command=lambda: self.show(self.step)).pack(side="left")
         if self.installed:
             ttk.Button(actions, text="Installed apps…", style="Ghost.TButton", command=self.page_manage).pack(side="left", padx=8)
+        # Technical logs only, personal data removed, saved to Downloads: for bug reports (nothing is uploaded)
+        ttk.Button(actions, text="Collect diagnostics…", style="Ghost.TButton",
+                   command=lambda: self._start_job({"mode": "diagnostics"})).pack(side="left", padx=8)
         if self.summary["can_install"]:
             self.next_btn.configure(state="normal")
 
@@ -703,7 +706,8 @@ class SetupApp:
     def page_work(self):
         mode = self.job["mode"]
         name = self.installed.get(self.job.get("app"), {}).get("name", "")
-        words = {"install": "Installing", "repair": "Repairing " + name, "uninstall": "Removing " + name}[mode]
+        words = {"install": "Installing", "repair": "Repairing " + name, "uninstall": "Removing " + name,
+                 "diagnostics": "Collecting diagnostics"}[mode]
         self.label(self.body, words, "title").pack(anchor="w")
         self.label(self.body, "Keep this window open and your PS5 on. This can take a few minutes.", "muted").pack(anchor="w", pady=(2, 12))
         self.bar = ttk.Progressbar(self.body, mode="determinate")
@@ -729,6 +733,17 @@ class SetupApp:
         with self.console(job["host"]) as c:
             if job["mode"] == "uninstall":
                 installer.uninstall_app(c, job["app"], log=self._log)
+                return {}
+            if job["mode"] == "diagnostics":
+                self._log("Collecting technical logs from the PS5 (no browsing data; personal details removed)…")
+                path = diagnostics.collect(c, None, setup_version=config.SETUP_VERSION, log=self._log)
+                self.diag_path = path
+                self._log("Check the zip, then attach it to an issue at https://github.com/egomortal/omnibloom/issues")
+                try:
+                    if sys.platform == "win32":
+                        os.startfile(os.path.dirname(path))   # show the Downloads folder
+                except OSError:
+                    pass
                 return {}
             if job["mode"] == "repair":
                 installer.repair_app(c, self.catalog, job["app"], log=self._log, progress=self._progress)
@@ -771,6 +786,13 @@ class SetupApp:
         self.next_btn.configure(text="Close")
         self.back_btn.configure(state="disabled")
         mode = self.job["mode"]
+        if mode == "diagnostics":
+            self.label(self.body, "Diagnostics saved", "title").pack(anchor="w")
+            self.label(self.body, getattr(self, "diag_path", ""), "small").pack(anchor="w", pady=(2, 8))
+            self.label(self.body, "It holds technical logs from your PS5 with personal details removed (web addresses, site "
+                                  "names, IP and e-mail addresses, passwords). Nothing was sent anywhere. Open it to check, "
+                                  "then attach it to an issue at github.com/egomortal/omnibloom/issues.", wrap=640).pack(anchor="w")
+            return
         if mode == "uninstall":
             self.label(self.body, "Removed", "title").pack(anchor="w")
             self.label(self.body, "Its earlier files were put back. Your other apps and your own data are still there.").pack(anchor="w", pady=8)
