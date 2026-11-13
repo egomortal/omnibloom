@@ -7,6 +7,12 @@ If something here affects you, the workaround is listed with it. If you hit a pr
 
 ## Open issues
 
+### Omni won't start: "Omni Engine: upload omni-engine.elf to /data/omni first"
+- **What happens:** after a fresh install, opening Omni shows that notification and nothing else.
+- **Why:** Omni checks that a file named `/data/omni/omni-engine.elf` exists before it starts. It doesn't run that file; it starts its page engine from `/data/omni/native/omni-engine-child.elf`, which Setup installs. Consoles that had an older Omni already have the file, so the check never showed up in testing. Setup doesn't create it.
+- **Workaround:** with an FTP client, copy `/data/omni/native/omni-engine-child.elf` to `/data/omni/omni-engine.elf` (same folder level as `native`, not inside it). Then open Omni again.
+- **Status:** being fixed in Setup and the console package, so that a fresh install starts without the extra step.
+
 ### YouTube sometimes doesn't start playing
 - **What happens:** the video page opens but the video never starts, or Omni reloads the page a few times first.
 - **Why:** YouTube checks a playback token from its player before it streams. On the PS5 it rejects about half of the tokens Omni's player makes.
