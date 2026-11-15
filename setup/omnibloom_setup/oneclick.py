@@ -621,6 +621,7 @@ class OneClick:
                                         start=False, log=self.detail, progress=self.progress)
         if app_id == "omni":   # the two files Omni v0.5.1 needs before it starts the browser (installer.ensure_omni_first_run)
             installer.ensure_omni_first_run(console, self.detail)
+            installer.ensure_omni_ublock_files(console, self.detail)   # uBlock's rule files (Omni blocks every page without them)
         changed = console.recorder.ops[before:] if console.recorder else []
         if title and any(op["op"] == "renamed" and op["dst"].startswith(config.TITLE_DIR) for op in changed):
             self.wait_smp(console, offset)

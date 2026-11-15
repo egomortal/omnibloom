@@ -13,6 +13,13 @@ never read.
 
 ## Open issues
 
+### Every page fails: "Filtering failed. Requests blocked; restart Omni to retry. (error 1)"
+- **What happens:** after a fresh install, Omni opens but every site shows that error. Restarting Omni doesn't help.
+- **Why:** Setup turns on Omni's built-in ad blocker (`ublock-native.flag`, see the next issue) but didn't install its rule files. Omni's ad blocker refuses to let anything through when it can't start, so it blocked every page. The consoles Omni was tested on had the files from earlier versions.
+- **Quick workaround (FTP):** delete `/data/omni/ublock-native.flag` and restart Omni. Pages load, without ad blocking.
+- **To keep ad blocking (FTP):** copy `ublock-engine.js`, `ublock-compiled.txt`, `public-suffix-list.dat` and `ublock-popup-rules.txt` from [`omni/engine/resources`](omni/engine/resources) to `/data/omni/`, then restart Omni. Download them with GitHub's **Download raw file** button and copy them in binary mode. If they're converted to Windows line endings (some Git and editor settings do this), Omni loads them but blocks nothing.
+- **Status:** fixed in the next Setup: Install and **Repair** add the rule files. The next Omni version also loads pages, and shows "Ad block is off: its rule files are missing", instead of blocking everything when the files are missing.
+
 ### YouTube stops at 720p, uBlock doesn't block, no HDR (fresh installs)
 - **What happens:** on a console that never had an older Omni, YouTube only offers up to 720p, video can stutter, ads aren't blocked, HDR stays off and Media downloads says it's disabled.
 - **Why:** Omni v0.5.1 switches these features on with small files in `/data/omni/`, and Setup didn't create them. The consoles Omni was tested on had them from earlier versions:

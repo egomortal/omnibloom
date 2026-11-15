@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import posixpath
+import sys
 
 from . import config, flavor
 from .ports import PortPicker
@@ -471,6 +472,7 @@ def install(console, catalog, app_ids, autoload=(), start=(), log=print, progres
                                        start=hub_start or app_id in start, log=log, progress=progress)
     if "omni" in receipts:
         ensure_omni_first_run(console, log)
+        ensure_omni_ublock_files(console, log)
     return receipts
 
 
@@ -488,6 +490,53 @@ def ensure_omni_first_run(console, log):
         made.append(path)
         log("Created %s (Omni needs it to start)." % path)
     return made
+
+
+def ublock_source_dir():
+    """Where Setup's copy of uBlock's rule files is: bundled in the app, or omni/engine/resources in the repo."""
+    bundled = getattr(sys, "_MEIPASS", None)
+    if bundled:
+        return os.path.join(bundled, "assets", "ublock")
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "omni", "engine", "resources")
+
+
+def _ublock_ok(console, path):
+    size = console.size(path) if console.exists(path) else None
+    return size is not None and 0 < size <= config.OMNI_UBLOCK_MAX
+
+
+def ensure_omni_ublock_files(console, log, source=None):
+    """Install uBlock's rule files for Omni's network filter (config.OMNI_UBLOCK_*). If any core file is missing, empty or
+    too big, the whole core set is written (they must match); files already there are parked, never deleted. The popup
+    rules are added only when missing. Returns the paths written."""
+    source = source or ublock_source_dir()
+    core = [config.OMNI_UBLOCK_DIR + n for n in config.OMNI_UBLOCK_CORE]
+    names = list(config.OMNI_UBLOCK_CORE) if not all(_ublock_ok(console, p) for p in core) else []
+    names += [n for n in config.OMNI_UBLOCK_EXTRA if not console.exists(config.OMNI_UBLOCK_DIR + n)]
+    if not names:
+        return []
+    data = {}
+    for n in names:
+        try:
+            with open(os.path.join(source, n), "rb") as f:
+                # Unix line endings: with Windows ones (a Windows checkout) the engine loads but blocks nothing.
+                data[n] = f.read().replace(b"\r\n", b"\n")
+        except OSError:
+            data[n] = b""
+    if any(not data[n] for n in names if n in config.OMNI_UBLOCK_CORE):
+        log("Ad block rule files aren't in this copy of Setup; Omni's ad block stays off until they're installed.")
+        names = [n for n in names if n not in config.OMNI_UBLOCK_CORE]
+    written = []
+    console.makedirs(config.OMNI_UBLOCK_DIR.rstrip("/"))
+    for n in names:
+        if not data[n]:
+            continue
+        path = config.OMNI_UBLOCK_DIR + n
+        _replace(console, path, data[n], ".before-setup-" + _stamp())
+        written.append(path)
+    if written:
+        log("Installed Omni's ad block rule files (%s)." % ", ".join(posixpath.basename(p) for p in written))
+    return written
 
 
 # -- repair ---------------------------------------------------------------
@@ -525,6 +574,7 @@ def repair_app(console, catalog, app_id, log=print, progress=None):
             fixed.append(config.AUTOLOAD_PATH)
     if app_id == "omni":
         fixed += ensure_omni_first_run(console, log)
+        fixed += ensure_omni_ublock_files(console, log)
     log("%s: checked %d files, repaired %d." % (receipt["name"], len(files), len(fixed)))
     return fixed
 

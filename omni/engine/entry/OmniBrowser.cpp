@@ -6133,7 +6133,7 @@ void tick(void*)
     static unsigned profileReports = 0;
     static bool firstFrame = true;
     static uint32_t lastBlockerPoll = 0;
-    if (SDL_GetTicks() - lastBlockerPoll > 500) { OmniMedia::Hw::holePunchShellPhase(2); omniBlockerPoll(); OmniMedia::Hw::holePunchShellPhase(1); lastBlockerPoll = SDL_GetTicks(); } // OMNI_HOLEPUNCH_V7_STALLTRACE: uBlock
+    if (SDL_GetTicks() - lastBlockerPoll > 500) { OmniMedia::Hw::holePunchShellPhase(2); omniBlockerPoll(); { static bool omniUbMissingTold = false; if (!omniUbMissingTold && !access("/data/omni/ublock-missing.flag", F_OK)) { omniUbMissingTold = true; notice("Ad block is off: its rule files are missing. Run Omnibloom Setup > Repair."); } } /* OMNI_UBLOCK_MISSING_V1 */ OmniMedia::Hw::holePunchShellPhase(1); lastBlockerPoll = SDL_GetTicks(); } // OMNI_HOLEPUNCH_V7_STALLTRACE: uBlock
     for (auto& tab : tabs) {
         if (tab->pendingURL.empty()) continue;
         auto url = adoptWK(WKURLCreateWithUTF8CString(tab->pendingURL.c_str()));

@@ -25,6 +25,7 @@ struct Engine {
     JSObjectRef rewriter = nullptr;
     bool attempted = false;
     bool failed = false;
+    bool missing = false;   // OMNI_UBLOCK_MISSING_V1: the rule files are not there
 };
 Engine network { "ublock-compiled.txt", "ublock-test-compiled.txt", true };
 bool filterFailure() {
@@ -32,6 +33,17 @@ bool filterFailure() {
     unlink("/data/omni/ublock-ready.flag");
     if (FILE* file = fopen("/data/omni/ublock-error.flag", "w")) { fputs("1\n", file); fclose(file); }
     return true; // Do not silently allow requests while filtering is enabled.
+}
+// OMNI_UBLOCK_MISSING_V1: no rule files (an install without them) -> pages load unfiltered and Omni says so, once.
+bool filesMissing() {
+    static bool said = false;
+    if (!said) {
+        said = true;
+        unlink("/data/omni/ublock-ready.flag");
+        if (FILE* file = fopen("/data/omni/ublock-missing.flag", "w")) { fputs("1\n", file); fclose(file); }
+        fprintf(stderr, "ublock engine: rule files missing; pages load unfiltered (Omnibloom Setup > Repair installs them)\n");
+    }
+    return false;
 }
 bool filteringOff() {
     return access("/data/omni/ublock-native.flag", F_OK) || !access("/data/omni/ublock-disabled.flag", F_OK);
@@ -44,7 +56,11 @@ std::string readAsset(const char* name) {
     char chunk[4096]; size_t count;
     while ((count = fread(chunk, 1, sizeof(chunk), file)) && result.size() <= 8 * 1024 * 1024) result.append(chunk, count);
     if (ferror(file) || result.size() > 8 * 1024 * 1024) result.clear();
-    fclose(file); return result;
+    fclose(file);
+    size_t kept = 0;   // OMNI_UBLOCK_MISSING_V1: drop CR (a file with Windows line endings loaded but blocked nothing)
+    for (char c : result) if (c != '\r') result[kept++] = c;
+    result.resize(kept);
+    return result;
 }
 JSValueRef stringValue(JSContextRef ctx, const char* value) {
     auto string = JSStringCreateWithUTF8CString(value);
@@ -87,7 +103,7 @@ bool initialize(Engine& engine) {
     bool testRules = engine.testCompiledName && !access("/data/omni/ublock-test.flag", F_OK);
     auto compiled = readAsset(testRules ? engine.testCompiledName : engine.compiledName);
     auto suffixes = readAsset("public-suffix-list.dat");
-    if (bundle.empty() || compiled.empty() || suffixes.empty()) { fprintf(stderr,"ublock engine: missing assets (%s)\n", engine.compiledName); return false; }
+    if (bundle.empty() || compiled.empty() || suffixes.empty()) { engine.missing = true; fprintf(stderr,"ublock engine: missing assets (%s)\n", engine.compiledName); return false; }
     auto ctx = JSGlobalContextCreate(nullptr);
     engine.context = ctx;
     auto name = JSStringCreateWithUTF8CString("omniDecodeUTF8");
@@ -120,7 +136,7 @@ bool initialize(Engine& engine) {
 extern "C" bool omniUBlockShouldBlock(const char* url, const char* origin, const char* type) {
     if (filteringOff()) return false;
     if (network.failed) return true;
-    if (!initialize(network)) return filterFailure();
+    if (!initialize(network)) return network.missing ? filesMissing() : filterFailure();   // OMNI_UBLOCK_MISSING_V1
     auto ctx = network.context;
     JSValueRef arguments[] = { stringValue(ctx, url), stringValue(ctx, origin), stringValue(ctx, type) };
     JSValueRef exception = nullptr;

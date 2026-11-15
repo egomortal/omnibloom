@@ -642,7 +642,7 @@ bool omniBlockerEnabled() { return enabled; }
 bool omniBlockerUsesUBlock() { return nativeReady; }
 bool omniBlockerFailed() { return enabled && nativeFailed; }
 void omniBlockerPoll() {
-    nativeFailed = !access("/data/omni/ublock-error.flag", F_OK);
+    nativeFailed = !access("/data/omni/ublock-error.flag", F_OK) || !access("/data/omni/ublock-missing.flag", F_OK);   // OMNI_UBLOCK_MISSING_V1
     if (nativeFailed) { nativeReady = false; return; }
     if (!nativeReady && !access("/data/omni/ublock-native.flag", F_OK) && !access("/data/omni/ublock-ready.flag", F_OK)) {
         nativeReady = true;
@@ -678,6 +678,7 @@ void omniBlockerInitialize(bool testing, void (*ready)(bool))
     sitePreloadStart(); // OMNI_PERF_D_IDX
     unlink("/data/omni/ublock-ready.flag");
     unlink("/data/omni/ublock-error.flag");
+    unlink("/data/omni/ublock-missing.flag");   // OMNI_UBLOCK_MISSING_V1
     unlink("/data/omni/ublock-disabled.flag");
     completion = ready;
     FILE* file = fopen("/data/omni/content-blocker.json", "rb");

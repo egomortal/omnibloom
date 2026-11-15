@@ -1,0 +1,4 @@
+# uBlock rule files must keep Unix line endings: with Windows ones Omni loads them but blocks nothing.
+omni/engine/resources/ublock-*.txt text eol=lf
+omni/engine/resources/ublock-engine.js text eol=lf
+omni/engine/resources/public-suffix-list.dat text eol=lf
