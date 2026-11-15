@@ -28,8 +28,8 @@
     },
     {
       "path": ".gitignore",
-      "bytes": 21,
-      "sha256": "01d8d0360f02a0c00e236a4eb2a1d8bdf83377acf442eaafad7a136bf14d6bb0"
+      "bytes": 167,
+      "sha256": "32c782ddf022c89056e77b8caa8cfd778984a1865309af1eac8cba433b985c38"
     },
     {
       "path": "addons/bundled/audio-tools/adapter.js",
@@ -3952,6 +3952,11 @@
       "sha256": "ffc2886bc305386d111bafff315050d9580626d4d42664f27283919f760d5b02"
     },
     {
+      "path": "omni/engine/resources/ublock-rules.json",
+      "bytes": 610,
+      "sha256": "f75558c78325c4ebf9d31a01641b499a9e34c88cdd0fbe2eec92292bebb9ee55"
+    },
+    {
       "path": "omni/engine/resources/ublock-test-compiled.txt",
       "bytes": 579,
       "sha256": "3cc01bcb07343ad45001d13e835a731bd145132429ac301e96b4969f166a44f8"
@@ -4685,6 +4690,36 @@
       "path": "omni/engine/tools/patch_ws_a.py",
       "bytes": 58872,
       "sha256": "6c8241ac01b7852c43f7b3c1c85293c169a414374aeb8c6cab1c69beb4d3db29"
+    },
+    {
+      "path": "omni/engine/tools/ublock-lists/compile-lists.cjs",
+      "bytes": 14835,
+      "sha256": "0137fd0bc42d9599041a7923289321f520ce60a07b414624aff7012aeb4cbdce"
+    },
+    {
+      "path": "omni/engine/tools/ublock-lists/fetch-lists.sh",
+      "bytes": 1219,
+      "sha256": "6a326000ed703a5e909150d22c0e4f1f0910ec5eb31ab07ce2a279c2a23c054f"
+    },
+    {
+      "path": "omni/engine/tools/ublock-lists/omni-link-skip.txt",
+      "bytes": 3927,
+      "sha256": "2cf2c1337c2621d1b7fd9ad4257420e12a7c8a14e4bf0a95fec20dbb8a6cb11b"
+    },
+    {
+      "path": "omni/engine/tools/ublock-lists/peter-lowe-hosts.txt",
+      "bytes": 99101,
+      "sha256": "b664c0eb3ce98028b3b17620b8f2fae8b7e1397c041a1075b1171d19f99b3f88"
+    },
+    {
+      "path": "omni/engine/tools/ublock-lists/promote.cjs",
+      "bytes": 2429,
+      "sha256": "b9bfd20668b7a2e80ab6b429f2a75879da53bedd21514414742a827b358139a3"
+    },
+    {
+      "path": "omni/engine/tools/ublock-lists/README.md",
+      "bytes": 2004,
+      "sha256": "fd9d1f5a02b14e7b8fbf47fb7306fcbe54b78dfe8442e26d25031b846ad61505"
     },
     {
       "path": "omni/files-broker/build.sh",
@@ -18068,8 +18103,8 @@
     },
     {
       "path": "setup/omnibloom-setup.spec",
-      "bytes": 946,
-      "sha256": "28cf276d20eea75be68d3e173fa7a9350e9cbc025b1c76e3d98f59aa268b097a"
+      "bytes": 967,
+      "sha256": "7e39a3fe5d9d5f92433f7a1b29d3ea879038c9972ab0c4e4798592778642540d"
     },
     {
       "path": "setup/omnibloom_setup/__init__.py",
@@ -18088,8 +18123,8 @@
     },
     {
       "path": "setup/omnibloom_setup/config.py",
-      "bytes": 13196,
-      "sha256": "235a6af7434cc6882214b29111e3b50945d3bbbf041dc587bddabdc113b049f7"
+      "bytes": 13428,
+      "sha256": "a55fccdc45476fc6306439302bce74abb83e095f59767e98a216549cf5e3a373"
     },
     {
       "path": "setup/omnibloom_setup/diagnostics.py",
@@ -18108,8 +18143,8 @@
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
-      "bytes": 36109,
-      "sha256": "988c1ea17f87a90d293e818c320f60c0764b466ded0fb3bc4175f5322c0005f0"
+      "bytes": 39075,
+      "sha256": "672448d4a790d4652382205f91fa66af7ce8067d75bc3ee1dd2ae4e12cd1fe17"
     },
     {
       "path": "setup/omnibloom_setup/jd.py",
@@ -18138,8 +18173,8 @@
     },
     {
       "path": "setup/omnibloom_setup/shortcuts.py",
-      "bytes": 3465,
-      "sha256": "880fdd806f357828beec22dc3cc2c2598a275534932854c6d2f3d68ad857c77b"
+      "bytes": 3702,
+      "sha256": "0873acc4ffcda66dd25fe9b1eeb0573732904f779d7e0b175cc67c178eb27a21"
     },
     {
       "path": "setup/README.md",
@@ -18298,8 +18333,8 @@
     },
     {
       "path": "setup/tests/test_ublock_files.py",
-      "bytes": 4912,
-      "sha256": "f718739fd106a0e87c497aab8bb5c9ac6725d71316ce9f3ae0d44576c3cbfd1b"
+      "bytes": 8385,
+      "sha256": "c986d5e03baeba15f83c51622d8a10f2f1298590c4b84b8696f8047ab713f7ce"
     },
     {
       "path": "setup/tools/frozen_check.py",
