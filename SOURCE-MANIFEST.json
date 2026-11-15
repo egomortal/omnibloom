@@ -4823,8 +4823,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
-      "bytes": 22091,
-      "sha256": "f5fff2eb07af97f7b8a720f8751092b4e5f4441a3c8c63d48897fa18741f3e34"
+      "bytes": 22463,
+      "sha256": "4baaa123dcbbc276ed75ca3ee745067b3d01d54a26596a7524e0c1c4a1da2a3e"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-launch-child-fallback.sh",
