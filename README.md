@@ -62,7 +62,7 @@ Omni is built for the DualSense. PlayStation names first, Xbox names in brackets
 | D-pad left / right | Back / forward (or switch tabs, in Settings) |
 | Touchpad | Translate the page |
 | **Options** (Menu) | Quick menu: Browse, Quick toggles, Apps, Settings, More (Exit is in it) |
-| **Create** (View) | Settings (on an Xbox controller View may not reach Omni: use **LT + B**, in the next version) |
+| **Create** (View) | Browser settings: Dark mode (Off / Natural / Forced), your own quick-access buttons, hide the quick-access row or the bottom button bar. Press again to close. On an Xbox controller View may not reach Omni: use **LT + B** |
 
 ### Typing (on-screen keyboard)
 
@@ -87,17 +87,16 @@ Omni is built for the DualSense. PlayStation names first, Xbox names in brackets
 | **L3** (press left stick) | Mute |
 | **Circle** (B) | Leave fullscreen |
 
-### Coming in the next version (being tested now)
+### Hold L2 (LT) while browsing (v0.5.2)
 
-| Button | What it will do |
+| Button | What it does |
 | --- | --- |
 | **L2 + Square** (LT + X) | Copy: the selected text, else the link under the pointer, else the page address |
 | **L2 + Triangle** (LT + Y) | Paste into the selected text box |
 | **L2 + Cross** (LT + A) | Quick bar |
 | **L2 + Circle** (LT + B) | Browser settings (handy on an Xbox controller, where View may not reach Omni) |
-| **Create** (View) | Opens the full Browser settings: Dark mode (Off / Natural / Forced), your own quick-access buttons, and hide toggles for the quick-access row and the bottom button bar |
 
-A tap of L2 will still open saved links. Omnibloom Setup shows this list too: the **All controller shortcuts…** button after installing, or `omnibloom-setup shortcuts` on the command line. Full feature list: [FEATURES.md](FEATURES.md).
+A tap of L2 still opens saved links. The L2 shortcuts work while browsing, not in the keyboard, settings or fullscreen video. Omnibloom Setup shows this list too: the **All controller shortcuts…** button after installing, or `omnibloom-setup shortcuts` on the command line. Full feature list: [FEATURES.md](FEATURES.md).
 
 ## Requirements
 

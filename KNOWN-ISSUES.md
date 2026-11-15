@@ -72,7 +72,8 @@ never read.
 - **Status:** fixed and tested on a PC with the block simulated. It hasn't been tested on a console yet.
 
 ### GPU page drawing ("layers") is experimental
-- **What happens:** with layers turned on, pages aren't faster than normal drawing yet, and the first full page takes about 1.5 to 3 seconds of shader compiling. Mesa's shader cache can't work in this build.
+- **What happens:** with layers turned on, the first full page takes about 1.5 to 3 seconds of shader compiling. Mesa's shader cache can't work in this build.
+- **The console can freeze when Omni starts with layers on.** In our overnight tests (November 15) the console stopped responding twice, each time about 15 seconds after Omni opened with layers on, and needed a power cycle. We haven't seen it with layers off. If you use layers and this happens, turn it off (below).
 - **Workaround:** layers is **off by default**. If you turned it on and something looks wrong, delete `/data/omni/gpu-pages-stage1.flag` or create `/data/omni/gpu-pages-stage1-off.flag`, then restart Omni.
 - **Status:** video plays at full speed with layers on. The speed-up is expected to come from drawing the page content itself on the GPU, which is the next stage.
 
