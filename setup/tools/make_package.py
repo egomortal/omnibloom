@@ -36,7 +36,9 @@ APPS = {
     },
     "omni": {
         "package": "omnibloom", "name": "Omni", "autoload": "never",
-        "roots": [config.TITLE_DIR, "/data/omni/native/omni-engine-child.elf", "/data/omni/fonts/", ICONS + "omni/"],
+        "roots": [config.TITLE_DIR, "/data/omni/native/omni-engine-child.elf",
+                  "/data/omni/native/omni-starter.elf",   # OMNI_STARTER_V1: starts Omni's engine processes (omni/native-title/starter)
+                  "/data/omni/fonts/", ICONS + "omni/"],
         "port": None,
         "card": {"name": "Omni", "kind": "title", "title_id": config.TITLE_ID,
                  "launch": {"title_id": config.TITLE_ID, "autoload": "never"},

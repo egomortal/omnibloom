@@ -124,6 +124,9 @@ python3 "$NE/make_link_command.py" > "$F/logs/link-command-title.log" 2>&1 || { 
 python3 "$NE/tools/prep_launch.py" > "$F/logs/prep.log" 2>&1 || { st "prep FAILED: $(tail -2 "$F/logs/prep.log" | tr '\n' ' ' | cut -c1-500)"; exit 1; }
 python3 "$S1/tools/apply_zerocopy_present.py" "$NE/src" "$S1/src-title" > "$F/logs/apply_zerocopy_present.log" 2>&1 || { st "zero-copy present FAILED: $(tail -1 "$F/logs/apply_zerocopy_present.log")"; exit 1; }
 st "OMNI_GPUPAGES_ZEROCOPY_V1 present: $(tail -1 "$F/logs/apply_zerocopy_present.log")"
+# OMNI_STARTER_V1 (2026-11-15): engine processes through Omni's own starter (outputs/omni-starter), elfldr as the fallback
+python3 "$S1/tools/apply_starter.py" "$NE/src" > "$F/logs/apply_starter.log" 2>&1 || { st "starter launcher FAILED: $(tail -1 "$F/logs/apply_starter.log")"; exit 1; }
+st "OMNI_STARTER_V1: $(tail -1 "$F/logs/apply_starter.log")"
 OGP_BRK="$O/omni-gpupages-ls1b/broker-mem" python3 "$S1/tools/patch_title_build.py" "$NE/build.py" "$S1/src-title" > "$F/logs/patch-title-build.log" 2>&1 || { st "stage-1 title sources FAILED"; exit 1; }
 rm -rf "$NE/build" "$NE/out"
 nice -n 19 python3 "$NE/build.py" > "$F/logs/title-build.log" 2>&1 || { st "title FAILED: $(grep -o 'undefined symbol: .*' "$F/logs/title-build.log" | sort -u | head -6 | tr '\n' ' ') $(tail -3 "$F/logs/title-build.log" | tr '\n' ' ' | cut -c1-600)"; exit 1; }

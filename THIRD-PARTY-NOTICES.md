@@ -86,6 +86,13 @@ Master Control (the controller app) is a separate repository with its own notice
 PadBridge PS5 (X-F1REBALL-X), ps5-wireless-pads (AngelLopezTorres) and Ghost-Control (StonedModder),
 all GPL-3.0-or-later. Omnibloom doesn't include its code; Omni only talks to its local web API.
 
+## Omni engine starter
+
+`omni/native-title/starter/gpl/` (`elfldr.c`, `elfldr.h`, `pt.c`, `pt.h`) is from **ps5-payload-elfldr** by
+John Törnblom (GPL-3.0-or-later), by way of Ex-Box's launch helper. Omni changes `elfldr_load()` to build the program
+image in 16 MB pieces from a read-only file mapping (`OMNI_STARTER_V1`); the original copyright headers are kept and
+the licence text is in `omni/native-title/starter/COPYING`. `omni-starter.elf` is built from this folder.
+
 ## Toolchain
 
 | Project | Author | Licence |
