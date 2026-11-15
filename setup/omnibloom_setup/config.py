@@ -109,8 +109,10 @@ OMNI_HDR_PREF = "/data/omni/video-hdr-preference.txt"
 # uBlock Origin's rule files. Omni's network filter reads them from /data/omni/ when ublock-native.flag (below) is on. Up to
 # v0.5.1 nothing installed them, and Omni then blocked every page ("Filtering failed ... (error 1)", 2026-11-15).
 # Setup carries them (omni/engine/resources) and writes the set when any of the first three is missing, empty or too big
-# for Omni (over 8 MiB). A working set is never replaced; the popup rules are only added when missing.
+# for Omni (over 8 MiB). A set is updated only when Setup installed it and carries a newer version (OMNI_UBLOCK_MANIFEST,
+# omni/engine/resources/ublock-rules.json); a set Setup didn't install is never replaced.
 OMNI_UBLOCK_DIR = "/data/omni/"
+OMNI_UBLOCK_MANIFEST = "ublock-rules.json"   # name, version and file hashes of the rule set; written on the console too
 OMNI_UBLOCK_CORE = ("ublock-engine.js", "ublock-compiled.txt", "public-suffix-list.dat")
 OMNI_UBLOCK_EXTRA = ("ublock-popup-rules.txt",)
 OMNI_UBLOCK_MAX = 8 * 1024 * 1024   # OmniUBlock.cpp readAsset() treats a bigger file as missing

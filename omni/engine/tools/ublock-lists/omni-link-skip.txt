@@ -1,0 +1,72 @@
+! Title: Omni – link skipping and redirect unwrapping
+! Description: Go straight to the destination when a redirector carries it in
+!   the link itself (uBlock Origin `urlskip` syntax, compiled as a trusted list).
+!   Only `$doc` (top-level page) navigations are rewritten, as in uBlock.
+! Homepage: omni-browser/docs/UBLOCK-INTEGRATION.md
+! License: GPL-3.0-or-later
+!
+! Search engines
+||google.com/url?$doc,urlskip=?q -blocked
+||google.com/url?$doc,urlskip=?url -blocked
+||google.co.uk/url?$doc,urlskip=?q -blocked
+||google.ca/url?$doc,urlskip=?q -blocked
+||google.com.au/url?$doc,urlskip=?q -blocked
+||google.com/amp/s/$doc,urlskip=/\/amp\/s\/([^?#]+)/ +https -blocked
+||duckduckgo.com/l/?$doc,urlskip=?uddg -blocked
+||bing.com/ck/a?$doc,urlskip=?u /^a1([A-Za-z0-9_-]+)/ -safebase64 -blocked
+||search.yahoo.com/*/RU=$doc,urlskip=/\/RU=([^/]+)\// -uricomponent -blocked
+||r.search.yahoo.com/*/RU=$doc,urlskip=/\/RU=([^/]+)\// -uricomponent -blocked
+!
+! Video and social
+||youtube.com/redirect?$doc,urlskip=?q -blocked
+||l.facebook.com/l.php?$doc,urlskip=?u -blocked
+||lm.facebook.com/l.php?$doc,urlskip=?u -blocked
+||l.messenger.com/l.php?$doc,urlskip=?u -blocked
+||l.instagram.com/?$doc,urlskip=?u -blocked
+||l.threads.net/?$doc,urlskip=?u -blocked
+||out.reddit.com/$doc,urlskip=?url -blocked
+||t.umblr.com/redirect?$doc,urlskip=?z -blocked
+||vk.com/away.php?$doc,urlskip=?to -blocked
+||away.vk.com/away.php?$doc,urlskip=?to -blocked
+||ok.ru/dk?$doc,urlskip=?st.link -blocked
+||deviantart.com/users/outgoing?$doc,urlskip=&1 -blocked
+||pinterest.com/offsite/?$doc,urlskip=?url -blocked
+||linkedin.com/redir/redirect?$doc,urlskip=?url -blocked
+||linkedin.com/safety/go?$doc,urlskip=?url -blocked
+||slack-redir.net/link?$doc,urlskip=?url -blocked
+!
+! Gaming
+||steamcommunity.com/linkfilter/?$doc,urlskip=?u -blocked
+||steamcommunity.com/linkfilter/?$doc,urlskip=?url -blocked
+||store.steampowered.com/linkfilter/?$doc,urlskip=?u -blocked
+||curseforge.com/linkout?$doc,urlskip=?remoteUrl -uricomponent -blocked
+||nexusmods.com/*/redirect?$doc,urlskip=?url -blocked
+!
+! Mail and messaging link wrappers
+||safelinks.protection.outlook.com/?$doc,urlskip=?url -blocked
+||urldefense.proofpoint.com/v2/url?$doc,urlskip=?u -blocked
+||t.me/iv?$doc,urlskip=?url -blocked
+!
+! Dereferers and anonymizers
+||href.li/?$doc,urlskip=/^https?:\/\/href\.li\/\?(https?:\/\/.+)$/ -blocked
+||anonym.to/?$doc,urlskip=/^https?:\/\/anonym\.to\/\?(https?:\/\/.+)$/ -blocked
+||nullrefer.com/?$doc,urlskip=/^https?:\/\/(?:www\.)?nullrefer\.com\/\?(https?:\/\/.+)$/ -blocked
+||dereferer.me/?$doc,urlskip=/^https?:\/\/dereferer\.me\/\?(https?.+)$/ -uricomponent -blocked
+||exit.sc/?$doc,urlskip=?url -blocked
+!
+! Affiliate click wrappers (destination carried in the link)
+||go.skimresources.com/?$doc,urlskip=?url -blocked
+||go.redirectingat.com/?$doc,urlskip=?url -blocked
+||click.linksynergy.com/deeplink?$doc,urlskip=?murl -blocked
+||click.linksynergy.com/link?$doc,urlskip=?murl -blocked
+||click.linksynergy.com^*murl=http$doc,urlskip=?murl -blocked
+||go.redirectingat.com^*url=http$doc,urlskip=?url -blocked
+||go.skimresources.com^*url=http$doc,urlskip=?url -blocked
+||shareasale.com/r.cfm?$doc,urlskip=?urllink +https -blocked
+||awin1.com/cread.php?$doc,urlskip=?ued -blocked
+||anrdoezrs.net/links/*/type/dlg/$doc,urlskip=/\/type\/dlg\/(?:sid\/[^/]+\/)?(https?:\/\/.+)$/ -blocked
+||dpbolvw.net/links/*/type/dlg/$doc,urlskip=/\/type\/dlg\/(?:sid\/[^/]+\/)?(https?:\/\/.+)$/ -blocked
+||tkqlhce.com/links/*/type/dlg/$doc,urlskip=/\/type\/dlg\/(?:sid\/[^/]+\/)?(https?:\/\/.+)$/ -blocked
+||jdoqocy.com/links/*/type/dlg/$doc,urlskip=/\/type\/dlg\/(?:sid\/[^/]+\/)?(https?:\/\/.+)$/ -blocked
+||kqzyfj.com/links/*/type/dlg/$doc,urlskip=/\/type\/dlg\/(?:sid\/[^/]+\/)?(https?:\/\/.+)$/ -blocked
+||prf.hn/click/*/destination:$doc,urlskip=/\/destination:([^/?]+)/ -uricomponent -blocked

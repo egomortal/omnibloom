@@ -7,7 +7,7 @@ a = Analysis(
     datas=[("assets/omnibloom-256.png", "assets"), ("assets/omnibloom.ico", "assets")]
     # uBlock's rule files for Omni (installer.ensure_omni_ublock_files)
     + [("../omni/engine/resources/" + n, "assets/ublock")
-       for n in ("ublock-engine.js", "ublock-compiled.txt", "public-suffix-list.dat", "ublock-popup-rules.txt")],
+       for n in ("ublock-engine.js", "ublock-compiled.txt", "public-suffix-list.dat", "ublock-popup-rules.txt", "ublock-rules.json")],
     hiddenimports=[],
     excludes=["pyftpdlib", "PIL", "unittest", "pydoc"],   # test-only, not shipped
 )

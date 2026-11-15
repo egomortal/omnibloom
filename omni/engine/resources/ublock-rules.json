@@ -1,0 +1,12 @@
+{
+  "schema": "omni-ublock-rules/v1",
+  "version": "2026-11-13.1",
+  "lists": "Peter Lowe's ad and tracker host list (pgl.yoyo.org), compiled for uBlock Origin's network engine",
+  "files": {
+    "ublock-engine.js": "13f53aa894884e93f82447cee6afe4a6c710ebd5a568d8f4e123f4a47573c807",
+    "ublock-compiled.txt": "5dee0f864cd57212f1c29677edaf7639b007bf14e0b2c1766789d897d554a306",
+    "public-suffix-list.dat": "d805bffa0e2e203a8e27ca75c596e5b24ac096d11632904492115248e9ab9bd9",
+    "ublock-popup-rules.txt": "ffc2886bc305386d111bafff315050d9580626d4d42664f27283919f760d5b02"
+  },
+  "replaces": []
+}

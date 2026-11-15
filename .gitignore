@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+# fetched lists and compiled output (omni/engine/tools/ublock-lists)
+omni/engine/tools/ublock-lists/lists/
+omni/engine/tools/ublock-lists/out/

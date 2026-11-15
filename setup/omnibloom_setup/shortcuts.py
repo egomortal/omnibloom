@@ -22,7 +22,9 @@ SECTIONS = (
         ("D-pad left / right", "-", "Back / forward (or switch tabs, in Settings)"),
         ("Touchpad", "-", "Translate the page"),
         ("Options", "Menu", "Quick menu: Browse, Quick toggles, Apps, Settings, More (Exit is in it)"),
-        ("Create", "View", "Settings (on an Xbox controller View may not reach Omni: use LT + B, in the next version)"),
+        ("Create", "View", "Browser settings: Dark mode (Off / Natural / Forced), your own quick-access buttons, hide the "
+                           "quick-access row or the bottom button bar. Press again to close. On an Xbox controller View "
+                           "may not reach Omni: use LT + B"),
     )),
     ("Typing (on-screen keyboard)", (
         ("L1 / R1", "LB / RB", "Move the cursor"),
@@ -43,7 +45,7 @@ SECTIONS = (
     )),
 )
 
-COMING = ("Coming in the next version", (
+COMING = ("Hold L2 (LT) while browsing (v0.5.2)", (   # name kept: README "Hold L2" table
     ("L2 + Square", "LT + X", "Copy: the selected text, else the link under the pointer, else the page address"),
     ("L2 + Triangle", "LT + Y", "Paste into the selected text box"),
     ("L2 + Cross", "LT + A", "Quick bar"),

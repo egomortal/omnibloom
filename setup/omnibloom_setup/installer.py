@@ -505,14 +505,62 @@ def _ublock_ok(console, path):
     return size is not None and 0 < size <= config.OMNI_UBLOCK_MAX
 
 
+def _ublock_bundled_manifest(source):
+    try:
+        with open(os.path.join(source, config.OMNI_UBLOCK_MANIFEST), encoding="utf-8") as f:
+            doc = json.load(f)
+        return doc if isinstance(doc, dict) and doc.get("version") and isinstance(doc.get("files"), dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def _ublock_console_manifest(console):
+    path = config.OMNI_UBLOCK_DIR + config.OMNI_UBLOCK_MANIFEST
+    if not console.exists(path):
+        return None
+    try:
+        doc = json.loads(console.read(path).decode("utf-8"))
+        return doc if isinstance(doc, dict) and doc.get("version") else None
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
+def _ublock_plan(console, bundled):
+    """What to do with a complete rule set already on the console: "keep", "adopt" (it's exactly this Setup's set: just
+    record the version), or "update" (an older set Setup installed). A set Setup didn't install (no version file and
+    files Setup never shipped, e.g. a bigger list put there by hand) is always kept."""
+    if not bundled:
+        return "keep"
+    current = _ublock_console_manifest(console)
+    if current:
+        return "update" if version_key(str(current["version"])) < version_key(str(bundled["version"])) else "keep"
+    shas = {n: _sha(console.read(config.OMNI_UBLOCK_DIR + n).replace(b"\r\n", b"\n")) for n in config.OMNI_UBLOCK_CORE}
+    if all(shas[n] == bundled["files"].get(n) for n in config.OMNI_UBLOCK_CORE):
+        return "adopt"
+    for older in bundled.get("replaces") or []:
+        if isinstance(older, dict) and all(shas[n] == older.get(n) for n in config.OMNI_UBLOCK_CORE):
+            return "update"
+    return "keep"
+
+
 def ensure_omni_ublock_files(console, log, source=None):
     """Install uBlock's rule files for Omni's network filter (config.OMNI_UBLOCK_*). If any core file is missing, empty or
-    too big, the whole core set is written (they must match); files already there are parked, never deleted. The popup
-    rules are added only when missing. Returns the paths written."""
+    too big, the whole core set is written (they must match). A complete set is updated only when Setup put it there and
+    this Setup carries a newer one (ublock-rules.json versions); a set Setup didn't install is never touched. Files
+    already there are parked, never deleted. The popup rules are added when missing or updated with the set. Returns
+    the paths written."""
     source = source or ublock_source_dir()
+    bundled = _ublock_bundled_manifest(source)
     core = [config.OMNI_UBLOCK_DIR + n for n in config.OMNI_UBLOCK_CORE]
-    names = list(config.OMNI_UBLOCK_CORE) if not all(_ublock_ok(console, p) for p in core) else []
-    names += [n for n in config.OMNI_UBLOCK_EXTRA if not console.exists(config.OMNI_UBLOCK_DIR + n)]
+    missing = not all(_ublock_ok(console, p) for p in core)
+    plan = "update" if missing else _ublock_plan(console, bundled)
+    if plan == "adopt":
+        _replace(console, config.OMNI_UBLOCK_DIR + config.OMNI_UBLOCK_MANIFEST, _json_bytes(bundled), ".before-setup-" + _stamp())
+        log("Omni's ad block rules are this Setup's set (version %s)." % bundled["version"])
+    elif plan == "keep" and bundled and _ublock_console_manifest(console) is None:
+        log("Kept Omni's ad block rule files: they weren't installed by Setup.")
+    names = list(config.OMNI_UBLOCK_CORE) if plan == "update" else []
+    names += [n for n in config.OMNI_UBLOCK_EXTRA if plan == "update" or not console.exists(config.OMNI_UBLOCK_DIR + n)]
     if not names:
         return []
     data = {}
@@ -534,8 +582,12 @@ def ensure_omni_ublock_files(console, log, source=None):
         path = config.OMNI_UBLOCK_DIR + n
         _replace(console, path, data[n], ".before-setup-" + _stamp())
         written.append(path)
+    if bundled and all(config.OMNI_UBLOCK_DIR + n in written for n in config.OMNI_UBLOCK_CORE):
+        # The version stamp goes on last, once the whole core set is in place.
+        _replace(console, config.OMNI_UBLOCK_DIR + config.OMNI_UBLOCK_MANIFEST, _json_bytes(bundled), ".before-setup-" + _stamp())
     if written:
-        log("Installed Omni's ad block rule files (%s)." % ", ".join(posixpath.basename(p) for p in written))
+        log("Installed Omni's ad block rule files (%s)%s." % (", ".join(posixpath.basename(p) for p in written),
+                                                              ", version %s" % bundled["version"] if bundled else ""))
     return written
 
 
