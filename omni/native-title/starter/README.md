@@ -16,8 +16,22 @@ loads a page and the console's memory is tightest. The starter maps the engine f
   `/data/omni/native/`, one at a time, and logs to `/data/omni/native/starter.log`.
 - If it isn't installed or doesn't answer, Omni uses elfldr as before. `/data/omni/starter-off.flag` makes Omni use
   elfldr always.
+- Other requests: an empty line is a probe; `version` answers `OMNI_STARTER_V3`; `quit` ends it (a newer starter sends
+  this to take over the port). A refused or failed request gets a one-line `omni-starter: ...` answer.
+
+**Safety checks (V3):**
+- If it can't bind `127.0.0.1:9031` (an older starter won't let go), it exits. It never listens on any other address.
+- Before loading a file it checks the ELF: 64-bit, position-independent (`ET_DYN`), lowest address 0, image at most
+  1 GB, and every header, segment and relocation table inside the file. A cut-off or damaged file is refused (logged)
+  instead of being read past its end.
+- A process that fails to start is killed, never left stopped.
+- Omni sends it only `/data/omni/native/<name>.elf`; on its first check each session it asks `version`, and if an older
+  starter answers it starts the current one, which tells the old one to quit.
+
+**Versions:** V1 chunked loading. V2 reaps finished engines (V1 left them as zombies), `quit`, takes over from an older
+starter. V3 the safety checks above. `stop/` is a one-off helper that ended a V1 starter (V1 has no `quit`).
 
 **Build** (PS5 payload SDK at `/opt/ps5-payload-sdk`): `make` -> `build/omni-starter.elf`.
 
 **Licence:** GPL-3.0-or-later. `gpl/` is John Törnblom's ps5-payload-elfldr code (see `COPYING` and
-[THIRD-PARTY-NOTICES.md](../../../THIRD-PARTY-NOTICES.md)); the change is marked `OMNI_STARTER_V1` in `gpl/elfldr.c`.
+[THIRD-PARTY-NOTICES.md](../../../THIRD-PARTY-NOTICES.md)); the changes are marked `OMNI_STARTER_V1` (chunked loading) and `Omni V3` in `gpl/elfldr.c`.

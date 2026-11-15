@@ -95,7 +95,9 @@ ok_word = ('OmniGpuPagesS1Surface', 'AcceleratedSurface::', 's_asyncBroken', 'om
            # OMNI_UBLOCK_REFINE_V1 (OmniUBlock.cpp): the functions and two counters the refine patch changes or adds
            '(anonymous namespace)::matchFailure()', '(anonymous namespace)::failedInARow', '(anonymous namespace)::assetBroken',
            '(anonymous namespace)::globAt(', '(anonymous namespace)::patternMatches(', '(anonymous namespace)::pnaPrivate(',
-           'omniPrivateNetworkBlocked')
+           'omniPrivateNetworkBlocked',
+           # callers whose inlined code changes with it: the popup check (globAt/patternMatches) and filterFailure (now via matchFailure)
+           'omniUBlockPopupBlocked', '(anonymous namespace)::filterFailure()')
 bad = [n for n in dem(changed) + dem(added) + dem(gone) if not any(w in n for w in ok_word)]
 with open(sys.argv[3], 'w') as f:
     f.write('unique names %d; size-changed %d; added %d; gone %d\n' % (len(a.keys() & b.keys()), len(changed), len(added), len(gone)))
