@@ -1,0 +1,25 @@
+#version 450
+// SPDX-License-Identifier: GPL-3.0-or-later
+// OMNI_GPUPAGES_ZEROCOPY_V1 (outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md): the engine's page frame (BGRA8, rows of
+// `stride` uints, in broker memory imported by the title) composed into the canvas page rect UNDER the shell's overlays.
+// The shell left the page rect transparent (0) and blended its bars / toasts / pointer onto it, which leaves premultiplied
+// colour with its alpha; so: out = canvas.rgb + page.rgb * (1 - canvas.a). The page itself is first put over white, as
+// WKPagePaint's SrcOver onto the white page buffer does. Each page pixel covers (dw/sw) x (dh/sh) canvas pixels: the
+// half-resolution page doubled, as the CPU path's omniDoubleRow does.
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(rgba8, set = 0, binding = 0) uniform image2D canvas;
+layout(std430, set = 0, binding = 1) readonly buffer Page { uint px[]; };
+layout(push_constant) uniform P { int dx, dy, dw, dh, sw, sh, stride, bgra; } p;
+void main()
+{
+    ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+    if (xy.x >= p.dw || xy.y >= p.dh) return;
+    ivec2 c = xy + ivec2(p.dx, p.dy);
+    vec4 o = imageLoad(canvas, c);
+    if (o.a >= 1.0) return;                                    // an opaque overlay: the page is not seen here
+    ivec2 s = min((xy * ivec2(p.sw, p.sh)) / ivec2(p.dw, p.dh), ivec2(p.sw - 1, p.sh - 1));
+    vec4 v = unpackUnorm4x8(px[s.y * p.stride + s.x]);
+    vec3 rgb = p.bgra != 0 ? v.zyx : v.xyz;
+    vec3 page = rgb + (1.0 - v.w) * vec3(1.0);                 // over the white page buffer
+    imageStore(canvas, c, vec4(o.rgb + page * (1.0 - o.a), 1.0));
+}

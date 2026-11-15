@@ -74,6 +74,19 @@ IPC=$(cd "$V_UPB" && find . -path ./build -prune -o -type f \( -name '*.messages
 mkdir -p "$P/patches-gpupages-C6"
 OGP_S1_PATCHES="$P/patches-gpupages-C6" python3 "$S1/tools/apply_gpupages_child.py" $TB > "$L4/C/apply_gpupages.log" 2>&1 || { st "stage-1 patches FAILED on rc4: $(tail -3 "$L4/C/apply_gpupages.log" | tr '\n' ' ')"; exit 1; }
 python3 "$S1/tools/apply_gpupages_async.py" $TB > "$L4/C/apply_async.log" 2>&1 || { st "async gate FAILED"; exit 1; }
+# OMNI_MSE_QUOTA_V1 (2026-11-14): MSE buffer 32 -> 64 MiB by default, runtime-adjustable 4-512 via /data/omni/mse-quota-mb.txt (YouTube 4K HDR froze at ~11 s on QuotaExceededError)
+python3 "$S1/tools/apply_mse_quota.py" $TB > "$L4/C/apply_mse_quota.log" 2>&1 && grep -qE "^(applied|already)" "$L4/C/apply_mse_quota.log" || { st "MSE quota FAILED: $(tail -1 "$L4/C/apply_mse_quota.log")"; exit 1; }
+st "OMNI_MSE_QUOTA_V1: $(cat "$L4/C/apply_mse_quota.log")"
+# OMNI_PAINT_PROBE_V1 (2026-11-14 night run, diagnostics): Skia tile painting + texture upload timing lines
+python3 "$S1/tools/apply_paint_probe.py" $TB > "$L4/C/apply_paint_probe.log" 2>&1 && ! grep -q "anchor found" "$L4/C/apply_paint_probe.log" || { st "paint probe FAILED: $(tail -1 "$L4/C/apply_paint_probe.log")"; exit 1; }
+st "OMNI_PAINT_PROBE_V1: $(paste -sd' ' "$L4/C/apply_paint_probe.log")"
+# OMNI_GPU_PAGES_ASYNC_V2 (2026-11-14): the PlayStation UI forces threadedScrollingEnabled off, so V1 async never turned on;
+# V2 lets the flag-gated drawing area decide (child only; default unchanged without gpu-pages-async.flag)
+python3 "$S1/tools/apply_gpupages_async_v2.py" $TB > "$L4/C/apply_async_v2.log" 2>&1 && ! grep -q "anchor found" "$L4/C/apply_async_v2.log" || { st "async V2 FAILED: $(tail -1 "$L4/C/apply_async_v2.log")"; exit 1; }
+st "OMNI_GPU_PAGES_ASYNC_V2: $(paste -sd' ' "$L4/C/apply_async_v2.log")"
+# OMNI_COVERAGE_PROBE_V1 (2026-11-14): unpainted share of big layers per 2 s (does async scrolling checkerboard?)
+python3 "$S1/tools/apply_coverage_probe.py" $TB > "$L4/C/apply_coverage.log" 2>&1 && ! grep -q "anchor found" "$L4/C/apply_coverage.log" || { st "coverage probe FAILED: $(tail -1 "$L4/C/apply_coverage.log")"; exit 1; }
+st "OMNI_COVERAGE_PROBE_V1: $(cat "$L4/C/apply_coverage.log")"
 st "stage 1 + async applied on state C(rc4) ($(grep -c '^patched' "$L4/C/apply_gpupages.log") files; drawingarea.inc $(sha256sum "$TB/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ogp-s1-drawingarea.inc" | cut -c1-8))"
 # switch A to B (state C rc4)
 python3 - "$V_UPA" "$V_UPB" "$T" "$TB" > "$M4/switch-to-C4.txt" 2>&1 <<'PY'

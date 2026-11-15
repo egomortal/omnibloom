@@ -308,3 +308,14 @@ int omni_gpu_pages_s1_bind(char* why, unsigned long size)
     ogp_s1_note("bound to the title's gpu-broker in %.1f ms (cookie %d, endpoint fd %d)", ogp_s1_ms() - t0, cookie, endpoint);
     return 0;
 }
+
+/* OMNI_GPUPAGES_ASYNCREAD_V1: the pipelined readback (ogp-s1-surface.inc) reaches these GLES 3 entry points WEAKLY, because
+ * the title links that WebProcess code too and must import none of them. In the child they must be linked: this file is
+ * the child's only, so its strong references keep them (static Mesa defines them all). */
+extern void *glMapBufferRange(unsigned, long, long, unsigned);
+extern unsigned char glUnmapBuffer(unsigned);
+extern void *glFenceSync(unsigned, unsigned);
+extern unsigned glClientWaitSync(void *, unsigned, unsigned long long);
+extern void glDeleteSync(void *);
+__attribute__((used)) void *const ogp_s1_keep_gles3[] = { (void *)glMapBufferRange, (void *)glUnmapBuffer,
+                                                     (void *)glFenceSync, (void *)glClientWaitSync, (void *)glDeleteSync };

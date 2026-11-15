@@ -1,7 +1,29 @@
 # Experimental: GPU page drawing (Zink + EGL prototype)
 
-> **Prototype only. Never run on the console**, not part of any release build, and nothing in the s3.4d tree uses it.
-> Source only: no build outputs, logs or binaries are kept here.
+> **Experimental, console-tested (v0.5.2-dev, 2026-11-15), off by default.** Not part of a release build yet: every
+> piece below is behind its own `/data/omni/...` flag and kill switch. Source only: no build outputs, logs or binaries.
+>
+> **Where it stands (YouTube home page scrolled with layers on, PS5, HDR output):**
+>
+> | Step | Flag | Median fps | p10 |
+> |---|---|---|---|
+> | Layers, main-thread scrolling (stage 1) | `gpu-pages-stage1.flag` | 8.2 | ~4.9 |
+> | + async scrolling (`OMNI_GPU_PAGES_ASYNC_V2`) | `gpu-pages-async.flag` | 38-40 | ~32 |
+> | + pipelined readback (`OMNI_GPUPAGES_ASYNCREAD_V1`) | `gpu-pages-asyncread.flag` | 45.4 | 37-39 |
+> | + zero copy to the title's GPU (`OMNI_GPUPAGES_ZEROCOPY_V1`) | `gpu-pages-zerocopy.flag` | **51.6** | **44.7** |
+>
+> - Async scrolling: the PlayStation UI process forces WebKit's `threadedScrollingEnabled` off, so the first async gate
+>   never turned on; `stage1/tools/apply_gpupages_async_v2.py` lets the flag-gated drawing area decide.
+> - Zero copy: the page frame stays in GPU-broker memory (mapped at the same address in the title) and the title's
+>   present composites it under the shell's overlays; design and limits in
+>   [`stage1/ZERO-COPY-DESIGN.md`](stage1/ZERO-COPY-DESIGN.md). V1 covers HDR-armed canvases without video; SDR and video
+>   pages keep the CPU path.
+> - Known: brief unpainted tiles in the first ~2-6 s of each scroll (async scrolling); unexplained whole-console reboots
+>   under load are still being investigated (`stage1/klogsrv/` is the read-only kernel-log payload used for that).
+> - Also here: `apply_mse_quota.py` (the YouTube 4K freeze fix), a Mesa shader disk cache patch, and the diagnostics
+>   (`apply_paint_probe.py`, `apply_coverage_probe.py`).
+>
+> The original prototype notes follow.
 
 Today Omni draws web pages on the CPU and only video goes to the GPU. [`REPORT.md`](REPORT.md) is the feasibility study
 (prior art, options, licences, a console probe plan). The chosen route is the upstream WPE/GTK model: the page process

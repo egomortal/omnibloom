@@ -26,6 +26,10 @@
 #include <cstdio>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
+#include <cerrno>       // OMNI_GPUPAGES_ZEROCOPY_V1: the control page
+#include <cstdint>
+#include <fcntl.h>
+#include <sys/mman.h>
 
 #ifndef GL_READ_FRAMEBUFFER
 #define GL_READ_FRAMEBUFFER 0x8CA8
@@ -56,6 +60,20 @@ extern "C" void glDeleteVertexArrays(GLsizei, const GLuint*) __attribute__((weak
 #ifndef GL_VERTEX_ARRAY_BINDING
 #define GL_VERTEX_ARRAY_BINDING 0x85B5
 #endif
+// OMNI_GPUPAGES_ASYNCREAD_V1 (GLES 3.0, weak for the same reason, and under private names bound to the real symbols so
+// no GLES3 header can clash): pixel-pack buffers, mapping and fences for the pipelined readback.
+extern "C" void* omniGlMapBufferRange(GLenum, GLintptr, GLsizeiptr, GLbitfield) __asm__("glMapBufferRange") __attribute__((weak));
+extern "C" GLboolean omniGlUnmapBuffer(GLenum) __asm__("glUnmapBuffer") __attribute__((weak));
+extern "C" void* omniGlFenceSync(GLenum, GLbitfield) __asm__("glFenceSync") __attribute__((weak));
+extern "C" GLenum omniGlClientWaitSync(void*, GLbitfield, uint64_t) __asm__("glClientWaitSync") __attribute__((weak));
+extern "C" void omniGlDeleteSync(void*) __asm__("glDeleteSync") __attribute__((weak));
+#define OMNI_GL_PIXEL_PACK_BUFFER 0x88EB
+#define OMNI_GL_STREAM_READ 0x88E1
+#define OMNI_GL_MAP_READ_BIT 0x0001
+#define OMNI_GL_SYNC_GPU_COMMANDS_COMPLETE 0x9117
+#define OMNI_GL_SYNC_FLUSH_COMMANDS_BIT 0x00000001
+#define OMNI_GL_ALREADY_SIGNALED 0x911A
+#define OMNI_GL_CONDITION_SATISFIED 0x911C
 
 namespace WebKit {
 
@@ -90,6 +108,18 @@ struct State {
     double tWill { 0 };   // OMNI_GPUPAGES_TIMING_V2
     double lastStart { 0 };   // OMNI_GPUPAGES_PACE_V1: start of the previous frame
     unsigned frameNo { 0 };
+    // OMNI_GPUPAGES_ASYNCREAD_V1: a ring of pixel-pack buffers; frame N is read into one by the GPU (no wait) and handed
+    // on when its fence has passed: at the start of a later frame, or by the idle flush when no later frame comes.
+    struct Slot { GLuint pbo { 0 }; size_t bytes { 0 }; void* fence { nullptr }; WebCore::IntSize size; double tIssued { 0 }; };
+    static constexpr int kRing = 3;
+    Slot ring[kRing];
+    int ringHead { 0 }, ringPending { 0 };
+    bool flushScheduled { false };
+    uint64_t asyncIssued { 0 }, asyncDelivered { 0 }, asyncBlocked { 0 }, asyncIdleFlushes { 0 };
+    // OMNI_GPUPAGES_ZEROCOPY_V1: the frame number a ring slot was handed to the title as (0: not held by the title)
+    uint64_t zcHeld[kRing] { 0, 0, 0 };
+    uint64_t zcPublished { 0 }, zcOverruns { 0 }, zcBitmapFrames { 0 };
+    double asyncCopyMs { 0 }, asyncLastReport { 0 };
 };
 
 static Lock s_lock;
@@ -104,6 +134,8 @@ static State* find(const void* surface)
     auto it = table().find(surface);
     return it == table().end() ? nullptr : it->second.get();
 }
+
+static void asyncDrop(State&);   // OMNI_GPUPAGES_ASYNCREAD_V1 (defined with the ring, below; willRender uses it)
 
 static double nowMs()
 {
@@ -154,6 +186,7 @@ static bool willRender(const void* surface, const WebCore::IntSize& size)
     if (state->context != current) {   // a new context: every GL name we held belonged to the old one
         state->draw = { }; state->flipped = { }; state->flipped2 = { }; state->mask = { };
         state->prog = 0; state->vao = 0; state->progTried = false; state->havePrev = false;
+        asyncDrop(*state);   // OMNI_GPUPAGES_ASYNCREAD_V1: those buffers and fences belonged to the old context
         state->size = { };
         state->context = current;
         state->checked = false;
@@ -281,6 +314,248 @@ static bool diffTiles(State& s, const Target& curT, const Target& prevT, int cel
     return ok;
 }
 
+// OMNI_GPUPAGES_ASYNCREAD_V1: the pipelined readback. The synchronous path waits on the title's shared GPU queue twice
+// per frame (the tile-diff mask, then the pixels: ~6 ms p50, tails to 50+ ms), all on the compositor thread. Here the
+// GPU copies the flipped frame into a pixel-pack buffer and the thread goes on; the frame is handed to the main thread
+// once its fence has passed. Frames are always whole (no diff: while scrolling ~77% of frames were whole anyway).
+// Opt-in while it is tested: /data/omni/gpu-pages-asyncread.flag; gpu-pages-asyncread-off.flag wins. Any failure
+// (missing entry point, no buffer, no mapping) turns it off for the process and the synchronous path runs as before.
+static std::atomic<int> s_asyncBroken { 0 };
+static bool asyncReadOn()
+{
+    static const bool wanted = !access("/data/omni/gpu-pages-asyncread.flag", F_OK) && access("/data/omni/gpu-pages-asyncread-off.flag", F_OK);
+    static const bool have = omniGlMapBufferRange && omniGlUnmapBuffer && omniGlFenceSync && omniGlClientWaitSync && omniGlDeleteSync;
+    static std::atomic<bool> logged { false };
+    if (wanted && !logged.exchange(true))
+        fprintf(stderr, "OMNI GPUPAGES asyncread pid=%d: %s\n", getpid(), have ? "ON (pipelined readback, ring of 3)" : "OFF: GLES 3 entry points missing");
+    return wanted && have && !s_asyncBroken.load();
+}
+
+static void asyncDrop(State& s)   // the context went away or broke: forget the ring without touching GL
+{
+    for (auto& slot : s.ring) slot = { };
+    s.ringHead = 0; s.ringPending = 0;
+}
+
+static void asyncFreeGL(State& s)   // context current
+{
+    for (auto& slot : s.ring) {
+        if (slot.fence) omniGlDeleteSync(slot.fence);
+        if (slot.pbo) glDeleteBuffers(1, &slot.pbo);
+        slot = { };
+    }
+    s.ringHead = 0; s.ringPending = 0;
+}
+
+// OMNI_GPUPAGES_ZEROCOPY_V1 (see outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md). The ring's buffers are broker host memory:
+// mapped at the SAME address in the title, which can import them for its GPU. When the title asks for it (consumer == 1
+// in the control page), a finished frame is published as {frame, address, size} instead of being copied into a
+// ShareableBitmap; its slot is then left alone until the title reports it consumed. Otherwise: the bitmap path.
+struct OmniZcCtl {
+    uint32_t magic, version;
+    int32_t pid, consumer;       // consumer: written by the title (1: GPU, addresses; 0: bitmaps)
+    uint32_t seq;                // odd while the engine writes a frame record
+    uint32_t slot, width, height, stride, pad;
+    uint64_t address, frame;     // the published frame (frame numbers start at 1)
+    uint64_t consumed;           // written by the title: the last frame its GPU finished reading
+    uint64_t titleBeat;          // written by the title each time it looks
+    uint64_t engineBeat;         // written here each frame
+};
+static constexpr uint32_t kZcMagic = 0x5a43504fu;   // "OPCZ"
+static bool zcWanted()
+{
+    static const bool on = !access("/data/omni/gpu-pages-zerocopy.flag", F_OK) && access("/data/omni/gpu-pages-zerocopy-off.flag", F_OK);
+    return on;
+}
+static std::atomic<int> s_zcBroken { 0 };
+static OmniZcCtl* zcCtl()
+{
+    static OmniZcCtl* ctl = nullptr;
+    static bool tried = false;
+    if (tried) return ctl;
+    tried = true;
+    char path[96]; snprintf(path, sizeof path, "/data/omni/gpu-pages/zc-%d.ctl", getpid());
+    int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    if (fd < 0 || ftruncate(fd, 4096)) { fprintf(stderr, "OMNI GPUPAGES zerocopy pid=%d: control page %s FAILED (%s): bitmaps only\n", getpid(), path, strerror(errno)); if (fd >= 0) close(fd); return nullptr; }
+    void* m = mmap(nullptr, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+    if (m == MAP_FAILED) { fprintf(stderr, "OMNI GPUPAGES zerocopy pid=%d: control page map FAILED: bitmaps only\n", getpid()); return nullptr; }
+    ctl = static_cast<OmniZcCtl*>(m);
+    memset(ctl, 0, sizeof *ctl);
+    ctl->version = 1; ctl->pid = getpid();
+    __atomic_store_n(&ctl->magic, kZcMagic, __ATOMIC_RELEASE);
+    fprintf(stderr, "OMNI GPUPAGES zerocopy pid=%d: control page %s ready (the title chooses GPU or bitmaps)\n", getpid(), path);
+    return ctl;
+}
+// The broker's host windows (gpu-broker/protocol.h): the only memory the title can see at the same address.
+static bool zcInBrokerWindow(uint64_t a, uint64_t bytes)
+{
+    auto in = [&](uint64_t base, uint64_t len) { return a >= base && bytes <= len && a - base <= len - bytes; };
+    return in(UINT64_C(0x240000000), UINT64_C(512) << 20) || in(UINT64_C(0x3000000000), UINT64_C(16) << 30);
+}
+// The slot is about to be written again: if the title still holds it, wait a little for its GPU to finish reading.
+static void zcWaitSlot(State& s, int index)
+{
+    OmniZcCtl* ctl = zcCtl();
+    if (!ctl || !s.zcHeld[index]) return;
+    for (int i = 0; i < 20 && __atomic_load_n(&ctl->consumed, __ATOMIC_ACQUIRE) < s.zcHeld[index]; ++i) usleep(1000);
+    if (__atomic_load_n(&ctl->consumed, __ATOMIC_ACQUIRE) < s.zcHeld[index]) ++s.zcOverruns;   // reused anyway (counted)
+    s.zcHeld[index] = 0;
+}
+// Publishes the oldest slot (fence passed) to the title. false: the title does not want GPU frames (or this cannot work).
+static bool zcPublish(State& s, State::Slot& slot, int index)
+{
+    if (!zcWanted() || s_zcBroken.load()) return false;
+    OmniZcCtl* ctl = zcCtl();
+    if (!ctl) return false;
+    __atomic_store_n(&ctl->engineBeat, ctl->engineBeat + 1, __ATOMIC_RELAXED);
+    if (__atomic_load_n(&ctl->consumer, __ATOMIC_ACQUIRE) != 1) return false;
+    glBindBuffer(OMNI_GL_PIXEL_PACK_BUFFER, slot.pbo);
+    void* p = omniGlMapBufferRange(OMNI_GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(slot.bytes), OMNI_GL_MAP_READ_BIT);
+    if (p) omniGlUnmapBuffer(OMNI_GL_PIXEL_PACK_BUFFER);   // only the address is needed: the memory stays where it is
+    glBindBuffer(OMNI_GL_PIXEL_PACK_BUFFER, 0);
+    const uint64_t a = reinterpret_cast<uint64_t>(p);
+    if (!p || !zcInBrokerWindow(a, slot.bytes)) {
+        if (!s_zcBroken.exchange(1))
+            fprintf(stderr, "OMNI GPUPAGES zerocopy pid=%d: frame buffer at %p (%zu bytes) is %s: bitmaps only\n", getpid(), p, slot.bytes,
+                p ? "OUTSIDE the broker's shared windows" : "not mappable");
+        return false;
+    }
+    const uint64_t frame = ++s.zcPublished;
+    uint32_t seq = __atomic_load_n(&ctl->seq, __ATOMIC_RELAXED);
+    __atomic_store_n(&ctl->seq, seq + 1, __ATOMIC_RELEASE);   // odd: writing
+    ctl->slot = static_cast<uint32_t>(index); ctl->width = static_cast<uint32_t>(slot.size.width()); ctl->height = static_cast<uint32_t>(slot.size.height());
+    ctl->stride = static_cast<uint32_t>(slot.size.width() * 4); ctl->address = a; ctl->frame = frame;
+    __atomic_store_n(&ctl->seq, seq + 2, __ATOMIC_RELEASE);   // even: complete
+    s.zcHeld[index] = frame;
+    if (frame == 1 || !(frame % 600))
+        fprintf(stderr, "OMNI GPUPAGES zerocopy pid=%d: published frame %llu at %p %dx%d (consumed %llu, overruns %llu, bitmap frames %llu)\n", getpid(),
+            (unsigned long long)frame, p, slot.size.width(), slot.size.height(), (unsigned long long)__atomic_load_n(&ctl->consumed, __ATOMIC_ACQUIRE),
+            (unsigned long long)s.zcOverruns, (unsigned long long)s.zcBitmapFrames);
+    return true;
+}
+
+// Hands the oldest pending frame to the main thread if its fence has passed (or, with waitMs > 0, once it passes within
+// waitMs). Context current. false: nothing pending, or not ready yet.
+static bool asyncDeliverOldest(State& s, double waitMs)
+{
+    if (!s.ringPending) return false;
+    State::Slot& slot = s.ring[s.ringHead];
+    const uint64_t timeout = waitMs > 0 ? static_cast<uint64_t>(waitMs * 1e6) : 0;
+    const GLenum r = omniGlClientWaitSync(slot.fence, waitMs > 0 ? OMNI_GL_SYNC_FLUSH_COMMANDS_BIT : 0, timeout);
+    if (r != OMNI_GL_ALREADY_SIGNALED && r != OMNI_GL_CONDITION_SATISFIED) return false;
+    if (waitMs > 0) ++s.asyncBlocked;
+    if (zcPublish(s, slot, s.ringHead)) {   // OMNI_GPUPAGES_ZEROCOPY_V1: the title reads it in place; no bitmap, no copy
+        omniGlDeleteSync(slot.fence); slot.fence = nullptr;
+        s.ringHead = (s.ringHead + 1) % State::kRing; --s.ringPending;
+        ++s.asyncDelivered;
+        return true;
+    }
+    if (zcWanted()) ++s.zcBitmapFrames;
+    const double t0 = nowMs();
+    const int w = slot.size.width(), h = slot.size.height();
+    WebCore::IntRect bounds(0, 0, w, h);
+    WebCore::ShareableBitmapConfiguration configuration { bounds.size() };
+    const unsigned stride = configuration.bytesPerRow();
+    RefPtr bitmap = WebCore::ShareableBitmap::create(configuration);
+    glBindBuffer(OMNI_GL_PIXEL_PACK_BUFFER, slot.pbo);
+    const uint8_t* src = static_cast<const uint8_t*>(omniGlMapBufferRange(OMNI_GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(slot.bytes), OMNI_GL_MAP_READ_BIT));
+    bool ok = src && bitmap && bitmap->mutableSpan().size() >= static_cast<size_t>(stride) * h;
+    if (ok) {
+        uint8_t* dst = bitmap->mutableSpan().data();
+        const size_t row = static_cast<size_t>(w) * 4;
+        for (int y = 0; y < h; ++y) memcpy(dst + static_cast<size_t>(y) * stride, src + static_cast<size_t>(y) * row, row);
+        if (!s.bgra)
+            for (int y = 0; y < h; ++y) { uint8_t* p = dst + static_cast<size_t>(y) * stride; for (int x = 0; x < w; ++x) std::swap(p[x * 4], p[x * 4 + 2]); }
+    }
+    if (src) omniGlUnmapBuffer(OMNI_GL_PIXEL_PACK_BUFFER);
+    glBindBuffer(OMNI_GL_PIXEL_PACK_BUFFER, 0);
+    omniGlDeleteSync(slot.fence); slot.fence = nullptr;
+    s.ringHead = (s.ringHead + 1) % State::kRing; --s.ringPending;
+    if (!ok) {
+        if (!s_asyncBroken.exchange(1))
+            fprintf(stderr, "OMNI GPUPAGES asyncread pid=%d: %s: back to the synchronous readback\n", getpid(), src ? "no bitmap memory" : "map FAILED");
+        return false;
+    }
+    const double copyMs = nowMs() - t0, latencyMs = nowMs() - slot.tIssued;
+    s.asyncCopyMs += copyMs; ++s.asyncDelivered;
+    if (nowMs() - s.asyncLastReport >= 2000) {
+        fprintf(stderr, "OMNI GPUPAGES asyncread pid=%d: issued=%llu delivered=%llu blocked=%llu idleFlush=%llu copyMs/frame=%.2f lastLatencyMs=%.1f\n",
+            getpid(), (unsigned long long)s.asyncIssued, (unsigned long long)s.asyncDelivered, (unsigned long long)s.asyncBlocked,
+            (unsigned long long)s.asyncIdleFlushes, s.asyncDelivered ? s.asyncCopyMs / s.asyncDelivered : 0.0, latencyMs);
+        s.asyncLastReport = nowMs();
+    }
+    Vector<WebCore::IntRect> rects; rects.append(bounds);
+    RunLoop::mainSingleton().dispatch([page = s.page, bitmap = bitmap.releaseNonNull(), size = slot.size, bounds, rects = WTF::move(rects), copyMs]() mutable {
+        omniGpuPagesDeliverFrame(page, WTF::move(bitmap), size, bounds, WTF::move(rects), true, copyMs);
+    });
+    return true;
+}
+
+// No later frame came: hand on whatever is still pending, so the last frame of a burst is never held back.
+static void asyncIdleFlush(const void* surface)
+{
+    State* s = find(surface);
+    if (!s) return;
+    s->flushScheduled = false;
+    if (!s->ringPending) return;
+    // frames still coming: the next frame hands these on; look again later rather than block the compositor here
+    const double newest = s->ring[(s->ringHead + s->ringPending - 1) % State::kRing].tIssued;
+    if (nowMs() - newest < 20) {
+        s->flushScheduled = true;
+        RunLoop::currentSingleton().dispatchAfter(Seconds::fromMilliseconds(25), [surface] { asyncIdleFlush(surface); });
+        return;
+    }
+    EGLContext prev = eglGetCurrentContext();
+    EGLDisplay display = WebCore::PlatformDisplay::sharedDisplay().eglDisplay();
+    EGLSurface prevDraw = eglGetCurrentSurface(EGL_DRAW), prevRead = eglGetCurrentSurface(EGL_READ);
+    const bool switched = prev != s->context;
+    if (switched && !eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, s->context)) return;   // try again next frame
+    ++s->asyncIdleFlushes;
+    while (s->ringPending && asyncDeliverOldest(*s, 100)) { }
+    if (switched) eglMakeCurrent(display, prevDraw, prevRead, prev);
+}
+
+// The flipped frame (source FBO) goes into the next ring buffer; earlier frames whose copies are done are handed on first.
+static bool didRenderAsync(const void* surface, State& s, GLuint source, int w, int h)
+{
+    while (asyncDeliverOldest(s, 0)) { }                                  // done copies, oldest first, no waiting
+    if (s.ringPending == State::kRing && !asyncDeliverOldest(s, 100)) {   // ring full: wait for the oldest (bounded)
+        if (s_asyncBroken.load()) return false;
+        asyncFreeGL(s);                                                    // a copy that never finished: start over
+    }
+    if (s_asyncBroken.load()) return false;
+    const int slotIndex = (s.ringHead + s.ringPending) % State::kRing;
+    zcWaitSlot(s, slotIndex);   // OMNI_GPUPAGES_ZEROCOPY_V1: not while the title's GPU may still read it
+    State::Slot& slot = s.ring[slotIndex];
+    const size_t bytes = static_cast<size_t>(w) * h * 4;
+    if (!slot.pbo) glGenBuffers(1, &slot.pbo);
+    glBindBuffer(OMNI_GL_PIXEL_PACK_BUFFER, slot.pbo);
+    if (slot.bytes != bytes) { glBufferData(OMNI_GL_PIXEL_PACK_BUFFER, static_cast<GLsizeiptr>(bytes), nullptr, OMNI_GL_STREAM_READ); slot.bytes = bytes; }
+    glBindFramebuffer(GL_FRAMEBUFFER, source);
+    glPixelStorei(GL_PACK_ALIGNMENT, 4);
+    glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+    glReadPixels(0, 0, w, h, s.bgra ? GL_BGRA_EXT : GL_RGBA, GL_UNSIGNED_BYTE, nullptr);   // into the buffer: no wait
+    glBindBuffer(OMNI_GL_PIXEL_PACK_BUFFER, 0);
+    slot.fence = omniGlFenceSync(OMNI_GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (slot.fence) omniGlClientWaitSync(slot.fence, OMNI_GL_SYNC_FLUSH_COMMANDS_BIT, 0);   // flushes the copy to the GPU without waiting (no glFlush: the title's SDK stub lacks it)
+    glBindFramebuffer(GL_FRAMEBUFFER, s.draw.fbo);
+    if (GLenum error = glGetError(); error != GL_NO_ERROR || !slot.fence) {
+        if (!s_asyncBroken.exchange(1))
+            fprintf(stderr, "OMNI GPUPAGES asyncread pid=%d: issue FAILED (GL error 0x%x, fence %p): back to the synchronous readback\n", getpid(), error, slot.fence);
+        if (slot.fence) { omniGlDeleteSync(slot.fence); slot.fence = nullptr; }
+        return false;
+    }
+    slot.size = WebCore::IntSize(w, h); slot.tIssued = nowMs();
+    ++s.ringPending; ++s.asyncIssued;
+    if (s.flip) { s.cur ^= 1; s.havePrev = false; }   // whole frames only: the diff's previous frame is not kept
+    if (!s.flushScheduled) {
+        s.flushScheduled = true;
+        RunLoop::currentSingleton().dispatchAfter(Seconds::fromMilliseconds(25), [surface] { asyncIdleFlush(surface); });
+    }
+    return true;
+}
+
 // compositing thread, context current, frame painted: read it back (whole, or only its changed tiles) and send it to
 // the main thread
 static bool didRenderImpl(const void* surface)
@@ -299,6 +574,13 @@ static bool didRenderImpl(const void* surface)
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, curT->fbo);
         glBlitFramebuffer(0, 0, w, h, 0, h, w, 0, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         source = curT->fbo;
+    }
+    // OMNI_GPUPAGES_ASYNCREAD_V1: pipelined whole-frame readback when on; its failure falls through to the code below
+    if (asyncReadOn() && didRenderAsync(surface, *state, source, w, h)) {
+        if (++state->frameNo <= 40 || !(state->frameNo % 500))
+            fprintf(stderr, "OMNI GPUPAGES frame n=%u t=%.3f paint=%.1f read=%.1f full=1 rects=1 async=1\n", state->frameNo, nowMs() / 1000.0,
+                t0 - state->tWill, nowMs() - t0);
+        return true;
     }
 
     // Which part to read: whole, nothing (unchanged), or the changed tiles merged into rects.
@@ -424,6 +706,10 @@ static void destroyed(const void* surface)
         table().erase(it);
     }
     if (state->context != eglGetCurrentContext()) return;   // not ours to delete in another context
+    if (asyncReadOn()) {   // OMNI_GPUPAGES_ASYNCREAD_V1: hand on what is still pending, then free the ring
+        while (state->ringPending && asyncDeliverOldest(*state, 100)) { }
+        asyncFreeGL(*state);
+    }
     if (state->prog) glDeleteProgram(state->prog);
     if (state->vao && glDeleteVertexArrays) glDeleteVertexArrays(1, &state->vao);
     for (Target* target : { &state->draw, &state->flipped, &state->flipped2, &state->mask }) {

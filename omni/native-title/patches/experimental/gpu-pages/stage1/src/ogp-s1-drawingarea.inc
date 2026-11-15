@@ -2,6 +2,8 @@ extern "C" void omni_tc_snapshot(char*, unsigned long) __attribute__((weak));   
 // OMNI_GPUPAGES_DLADDR_V3: global scope (a weak declaration inside a namespace resolved to null before)
 extern "C" void omni_gpu_pages_s1_dladdr_window(int) __attribute__((weak));
 #include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
 // omni-gpu-pages stage 1 (OMNI_GPU_PAGES_STAGE1_V1): the WebProcess side of GPU compositing, part 1 of 2.
 // SPDX-License-Identifier: GPL-3.0-or-later (this file); WebKit's own files keep their licences.
 // Included once, into DrawingAreaCoordinatedGraphics.cpp, after its own includes. No WebKit header changes.
@@ -66,7 +68,20 @@ static void* initOnBigStack(void* p)
 {
     auto& r = *static_cast<InitResult*>(p);
     setenv("MESA_LOADER_DRIVER_OVERRIDE", "zink", 1);   // EGL: Zink on the no-DRM surfaceless path (OGP_SURFACELESS_ZINK_NO_DRM)
-    setenv("MESA_SHADER_CACHE_DISABLE", "1", 0);
+    // OMNI_GPUPAGES_SHADERCACHE_V2 (2026-11-14): Mesa's disk cache (Zink GLSL->SPIR-V + RADV pipelines) in /data/omni, so
+    // the TextureMapper shaders compile once per console instead of on every launch (~1.3 s on the first page frame). V1
+    // (b50dba7f) left the dir empty: Mesa gave up silently; the child now links OMNI_MESA_DISKCACHE_V1 (PS5 fallbacks +
+    // "OMNI MESA CACHE:" lines). /data/omni/gpu-pages-shadercache-off.flag turns it off (no cache, nothing written).
+    if (!access("/data/omni/gpu-pages-shadercache-off.flag", F_OK) || (mkdir("/data/omni/gpu-pages", 0777) && errno != EEXIST)
+        || (mkdir("/data/omni/gpu-pages/mesa-cache", 0777) && errno != EEXIST)) {
+        setenv("MESA_SHADER_CACHE_DISABLE", "1", 0);
+        fprintf(stderr, "OMNI GPUPAGES child pid=%d: shader cache off\n", getpid());
+    } else {
+        setenv("MESA_SHADER_CACHE_DISABLE", "false", 1);
+        setenv("MESA_SHADER_CACHE_DIR", "/data/omni/gpu-pages/mesa-cache", 0);
+        setenv("MESA_SHADER_CACHE_MAX_SIZE", "256M", 0);
+        fprintf(stderr, "OMNI GPUPAGES child pid=%d: shader cache on (/data/omni/gpu-pages/mesa-cache)\n", getpid());
+    }
     const char* client = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
     auto getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT"));
     if (!client || !WebCore::GLContext::isExtensionSupported(client, "EGL_MESA_platform_surfaceless") || !getPlatformDisplay) {

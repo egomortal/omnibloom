@@ -73,6 +73,27 @@ python3 "$S1/tools/apply_yttl_scroll.py" "$TT/engine/entry/OmniBrowser.cpp" > "$
 st "OMNI_YTTL_SCROLL_V1 (test-only, inert without scroll N): $(tail -1 "$LT_/apply_yttl_scroll.log")"
 python3 "$S1/tools/apply_media_health_fix.py" "$TT/engine/entry/OmniMediaDownloads.h" > "$LT_/apply_media_health.log" 2>&1 || { st "media health fix FAILED: $(tail -1 "$LT_/apply_media_health.log")"; exit 1; }
 st "OMNI_MEDIA_HEALTH_V2: $(tail -1 "$LT_/apply_media_health.log")"
+python3 "$S1/tools/apply_l2_chords.py" "$TT" > "$LT_/apply_l2_chords.log" 2>&1 || { st "L2 chords FAILED: $(tail -1 "$LT_/apply_l2_chords.log")"; exit 1; }
+st "OMNI_L2_CHORDS_V1: $(paste -sd' ' "$LT_/apply_l2_chords.log")"
+python3 "$S1/tools/apply_media_switch.py" "$TT" > "$LT_/apply_media_switch.log" 2>&1 || { st "media switch fix FAILED: $(tail -1 "$LT_/apply_media_switch.log")"; exit 1; }
+st "OMNI_MEDIA_SWITCH_V1: $(tail -1 "$LT_/apply_media_switch.log")"
+python3 "$S1/tools/apply_dark_qa.py" "$TT" > "$LT_/apply_dark_qa.log" 2>&1 || { st "dark/quick access FAILED: $(tail -1 "$LT_/apply_dark_qa.log")"; exit 1; }
+st "OMNI_DARK_CHOICE_V1 + OMNI_QA_CUSTOM_V1 + OMNI_SETTINGS_CREATE_V1: $(paste -sd' ' "$LT_/apply_dark_qa.log")"
+python3 "$S1/tools/apply_addon_cap.py" "$TT" > "$LT_/apply_addon_cap.log" 2>&1 || { st "add-on cap FAILED: $(tail -1 "$LT_/apply_addon_cap.log")"; exit 1; }
+st "OMNI_ADDON_CAP_40_V1: $(tail -1 "$LT_/apply_addon_cap.log")"
+python3 "$S1/tools/apply_first_run.py" "$TT" > "$LT_/apply_first_run.log" 2>&1 || { st "first-run fix FAILED: $(tail -1 "$LT_/apply_first_run.log")"; exit 1; }
+st "OMNI_FIRST_RUN_V1: $(tail -1 "$LT_/apply_first_run.log")"
+python3 "$S1/tools/apply_media_diag.py" "$TT" > "$LT_/apply_media_diag.log" 2>&1 || { st "media diag FAILED: $(tail -1 "$LT_/apply_media_diag.log")"; exit 1; }
+st "OMNI_MEDIA_DIAG_V1: $(paste -sd' ' "$LT_/apply_media_diag.log")"
+python3 "$S1/tools/apply_media_http.py" "$TT" > "$LT_/apply_media_http.log" 2>&1 || { st "media http FAILED: $(tail -1 "$LT_/apply_media_http.log")"; exit 1; }
+st "OMNI_MEDIA_HTTP_V3: $(tail -1 "$LT_/apply_media_http.log")"
+python3 "$S1/tools/apply_bars_hide.py" "$TT" > "$LT_/apply_bars_hide.log" 2>&1 || { st "bars hide FAILED: $(tail -1 "$LT_/apply_bars_hide.log")"; exit 1; }
+# OMNI_UA_OVERRIDE_V1: desktop user agent from /data/omni/ua-desktop.txt (YouTube BotGuard A/B tests)
+python3 "$S1/tools/apply_ua_override.py" "$TT" > "$LT_/apply_ua_override.log" 2>&1 || { st "UA override FAILED: $(tail -1 "$LT_/apply_ua_override.log")"; exit 1; }
+st "OMNI_BARS_HIDE_V1: $(paste -sd' ' "$LT_/apply_bars_hide.log")"
+# OMNI_GPUPAGES_ZEROCOPY_V1 (outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md): the shell side (inert without /data/omni/gpu-pages-zerocopy.flag)
+python3 "$S1/tools/apply_zerocopy_shell.py" "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_zerocopy_shell.log" 2>&1 || { st "zero-copy shell FAILED: $(tail -1 "$LT_/apply_zerocopy_shell.log")"; exit 1; }
+st "OMNI_GPUPAGES_ZEROCOPY_V1 shell: $(tail -1 "$LT_/apply_zerocopy_shell.log")"
 CGT=$TT/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics; CGB=$TB/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics
 for f in ogp-s1-drawingarea.inc ogp-s1-surface.inc ogp-s1-policy.h ogp-s1b-async.inc; do
   cmp -s "$CGT/$f" "$CGB/$f" && echo "same-as-child $f $(sha256sum "$CGT/$f" | cut -c1-8)" || echo "DIFF-from-child $f T $(sha256sum "$CGT/$f" | cut -c1-8) C $(sha256sum "$CGB/$f" | cut -c1-8)"
@@ -95,6 +116,8 @@ case "$IPCT" in da4a7562*) ;; *) st "IPC generated code $IPCT is not the pair's 
 # ---- 3. title link (launch recipe + stage-1 title sources) and the import gate
 python3 "$NE/make_link_command.py" > "$F/logs/link-command-title.log" 2>&1 || { st "title link command FAILED"; exit 1; }
 python3 "$NE/tools/prep_launch.py" > "$F/logs/prep.log" 2>&1 || { st "prep FAILED: $(tail -2 "$F/logs/prep.log" | tr '\n' ' ' | cut -c1-500)"; exit 1; }
+python3 "$S1/tools/apply_zerocopy_present.py" "$NE/src" "$S1/src-title" > "$F/logs/apply_zerocopy_present.log" 2>&1 || { st "zero-copy present FAILED: $(tail -1 "$F/logs/apply_zerocopy_present.log")"; exit 1; }
+st "OMNI_GPUPAGES_ZEROCOPY_V1 present: $(tail -1 "$F/logs/apply_zerocopy_present.log")"
 OGP_BRK="$O/omni-gpupages-ls1b/broker-mem" python3 "$S1/tools/patch_title_build.py" "$NE/build.py" "$S1/src-title" > "$F/logs/patch-title-build.log" 2>&1 || { st "stage-1 title sources FAILED"; exit 1; }
 rm -rf "$NE/build" "$NE/out"
 nice -n 19 python3 "$NE/build.py" > "$F/logs/title-build.log" 2>&1 || { st "title FAILED: $(grep -o 'undefined symbol: .*' "$F/logs/title-build.log" | sort -u | head -6 | tr '\n' ' ') $(tail -3 "$F/logs/title-build.log" | tr '\n' ' ' | cut -c1-600)"; exit 1; }
