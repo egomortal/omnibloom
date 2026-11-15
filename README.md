@@ -10,7 +10,7 @@ built on WebKit, the engine behind Safari, and runs as its own app on the consol
 console it shows as **Omni**.
 
 It is a hobby project by one developer, built with a lot of help from AI tools, including
-Claude and Astra.
+Claude and Astra. It went from no browser to v0.5.2 in under three months: [the story so far](docs/STORY.md).
 
 Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` links redirect here).
 
