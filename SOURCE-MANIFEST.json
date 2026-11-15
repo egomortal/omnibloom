@@ -23,8 +23,8 @@
     },
     {
       "path": ".github/workflows/omnibloom-setup.yml",
-      "bytes": 2625,
-      "sha256": "7699cc94072c659da4222215580979f68e28ae52051e8031ef061a1463198044"
+      "bytes": 2471,
+      "sha256": "751c24b498df5d2ecfe2362212204be4c478d3a59589e29ec4b3909ce3548696"
     },
     {
       "path": ".gitignore",
@@ -638,8 +638,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 19155,
-      "sha256": "b7a0956e93ed7c7bd51f3a17fd64177263b0a9943d851290fdcedfa5309d4359"
+      "bytes": 22176,
+      "sha256": "81cae1b57bc499f872631c004a87c6dcf018d931fd4570ff85483edd57ff6aa1"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2122,6 +2122,11 @@
       "sha256": "247ada5321bcb96e417e3b42499320af62b100276d102046224b77007e61680e"
     },
     {
+      "path": "downloads/tests/test_refinement_2026_11_15.py",
+      "bytes": 2820,
+      "sha256": "f4b5546e608ca64b91402048905b368e148cc6f7085c6bf6609e93a2c8994f61"
+    },
+    {
       "path": "downloads/worker/adapters.py",
       "bytes": 28953,
       "sha256": "6e42fd654b0f57a25c249638ed16de4697ad77fd11413f4fef9fbf1dca238074"
@@ -2313,8 +2318,8 @@
     },
     {
       "path": "downloads/worker/egress_guard.py",
-      "bytes": 9191,
-      "sha256": "99a667c4396365cbf323641b6e724dcfa092df99d985e43c4ca2024894d3d3e3"
+      "bytes": 10019,
+      "sha256": "2705129b3f9e088e259f276b87cc3eb6eccc1a3e1847a3dd4ec1637efcb6f7f6"
     },
     {
       "path": "downloads/worker/history.py",
@@ -2498,8 +2503,8 @@
     },
     {
       "path": "downloads/worker/worker.py",
-      "bytes": 40748,
-      "sha256": "0f7b2ed48d8ac40ba0f9d864bad9d53fd30b8f5d9aa009e46288689b3c47cf63"
+      "bytes": 41093,
+      "sha256": "fcdc8f651921efa9a6947af47c8f218043da43897ced52ee95beeb82790b7828"
     },
     {
       "path": "FEATURES.md",
@@ -3033,8 +3038,8 @@
     },
     {
       "path": "omni/engine/entry/OmniBrowser.cpp",
-      "bytes": 434359,
-      "sha256": "fe9ee2ccc2c1fb4d1f9b43c754520967eca42a530625071f1496b64bc7e79957"
+      "bytes": 434723,
+      "sha256": "65421c7d8e42561d7453771f3f1b5b4891d75ec3c851a75dd03fe65351206fe9"
     },
     {
       "path": "omni/engine/entry/OmniBrowserSettings.h",
@@ -3323,8 +3328,8 @@
     },
     {
       "path": "omni/engine/entry/OmniUBlock.cpp",
-      "bytes": 32573,
-      "sha256": "65495c1f7c3b1d4dbd498d05947e250ca564305eee1d06501513f59cc376e4cc"
+      "bytes": 35123,
+      "sha256": "54a442d5b250d702f87e82b6d2cb94498feaa62688df65154ac3c70fbc0b91f8"
     },
     {
       "path": "omni/engine/entry/OmniUBlockSite.h",
@@ -4838,8 +4843,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-child-relink.sh",
-      "bytes": 10048,
-      "sha256": "65e94d7a352cfb2edb2b928a2e644896c8f3702564712f7fbca1264f07e8c4b7"
+      "bytes": 10966,
+      "sha256": "7291fd70163f012faa0a5410bac113b34ccd122b259fe6f4b2dd3ff89bdda37e"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-launch-s1b-rc4.sh",
@@ -5288,8 +5293,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_starter.py",
-      "bytes": 5278,
-      "sha256": "319a648132b60809a1e0316b758a1e9e8638f5b6175282290e873491598ad16e"
+      "bytes": 9794,
+      "sha256": "e3d674123f8c03dfa6eb52450f7838a37e673f6ad2a3b2c9c8c24a8babbc9c20"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_ua_override.py",
@@ -5300,6 +5305,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_ublock_missing.py",
       "bytes": 4911,
       "sha256": "edaf0f9fe0ceb769a5dc3e72c750cdb6a0a6c7dc33fe9d5c07b8118dc8f36836"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_ublock_refine.py",
+      "bytes": 12386,
+      "sha256": "b6cdf2df8851d0adeb9b9bbc2f2460267800c19ba7dde838a2e08baa70e067ea"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_yttl_scroll.py",
@@ -6698,8 +6708,8 @@
     },
     {
       "path": "omni/native-title/starter/gpl/elfldr.c",
-      "bytes": 19079,
-      "sha256": "43f26c79d31643afaf7b4f24fa057010c5bdda42d296405bf83f8c8c684aef11"
+      "bytes": 19189,
+      "sha256": "f50c2e0360359c5fdab1472588a8e2e494f2650860918ce2672e12437320cb41"
     },
     {
       "path": "omni/native-title/starter/gpl/elfldr.h",
@@ -6718,13 +6728,13 @@
     },
     {
       "path": "omni/native-title/starter/main.c",
-      "bytes": 6749,
-      "sha256": "fa670913ab7cb2b99f7846e978881a5ba0295420d4a4c7181bed9f860d6ceff1"
+      "bytes": 11709,
+      "sha256": "c98cd6da2447501caf6782078bc6f2437fe872569ff0079652c5199e27ec928a"
     },
     {
       "path": "omni/native-title/starter/Makefile",
       "bytes": 528,
-      "sha256": "4a5acae58211b6d080374fd6ce3ebf47ad755e909b403624305bb8ed9f93ef03"
+      "sha256": "26ff520dbe6fa8939d7aa6f1bdad73c8037409c83c18e9cdbf2ca08be9ff6153"
     },
     {
       "path": "omni/native-title/starter/README.md",
@@ -6733,8 +6743,8 @@
     },
     {
       "path": "omni/native-title/starter/stop/main.c",
-      "bytes": 1954,
-      "sha256": "c1890245af5788be6d99edc9939271990742602faa9b72fdf369c5f336161ffb"
+      "bytes": 1980,
+      "sha256": "396d0cf3ba58c55a2818967004083d0589875d84d3b36b841b8f1bef5aa14720"
     },
     {
       "path": "omni/native-title/stubs/libSceVideodec2_stub.c",
@@ -18098,8 +18108,8 @@
     },
     {
       "path": "setup/ci/github-workflow-omnibloom-setup.yml",
-      "bytes": 2311,
-      "sha256": "d6653489d33c0a1abcba9ec55ef131be2ac520dd9773fc8b04199ed3ca2df32b"
+      "bytes": 2266,
+      "sha256": "93c817aa6bafd24e4d2b2ea6a03b37bfa2b3a63de0c6cc4abc5c0afc1aac9001"
     },
     {
       "path": "setup/omnibloom-setup.spec",
@@ -18113,8 +18123,8 @@
     },
     {
       "path": "setup/omnibloom_setup/checks.py",
-      "bytes": 3469,
-      "sha256": "5b5ae3b66e4ed4a57d077ab58beb092040e95e895b151af7809e321648610ac9"
+      "bytes": 3461,
+      "sha256": "ff37d36406138190953c6b42fb0c7a6f5a6322bf4aa4263b785a911cbd0e0186"
     },
     {
       "path": "setup/omnibloom_setup/cli.py",
@@ -18124,12 +18134,12 @@
     {
       "path": "setup/omnibloom_setup/config.py",
       "bytes": 13428,
-      "sha256": "a55fccdc45476fc6306439302bce74abb83e095f59767e98a216549cf5e3a373"
+      "sha256": "846046178b13fb9496550359823a6900a9e0ec80dd744b0b1e0d0421fb98a57e"
     },
     {
       "path": "setup/omnibloom_setup/diagnostics.py",
-      "bytes": 12254,
-      "sha256": "ee07eb0c1d1f3488ab12c6dfc4a7f76e22f420d583fc8656fac0501ee39ad7a2"
+      "bytes": 12462,
+      "sha256": "2ff26887a32ab99ed9fd797bf1ba10861558270ae431e9ea0d0f003ed66ce6a4"
     },
     {
       "path": "setup/omnibloom_setup/flavor.py",
@@ -18138,13 +18148,13 @@
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
-      "bytes": 49806,
-      "sha256": "997a702da9929dd5533eb3efaf67ea9b8fd9d276455356e6118cc805197103d3"
+      "bytes": 49853,
+      "sha256": "6ec9e9c3993f6a3a6fb592388620f9a167fcd5fea108e35c4a4aca5ff461ec63"
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
-      "bytes": 39075,
-      "sha256": "672448d4a790d4652382205f91fa66af7ce8067d75bc3ee1dd2ae4e12cd1fe17"
+      "bytes": 40592,
+      "sha256": "b1017e6a011d65ecbcd35461513d2fbc7aa1b31688de8f78936b2c93973319b2"
     },
     {
       "path": "setup/omnibloom_setup/jd.py",
@@ -18153,8 +18163,8 @@
     },
     {
       "path": "setup/omnibloom_setup/oneclick.py",
-      "bytes": 46207,
-      "sha256": "5a1afeaf1026dfb17440c844e1c59e89444b537d31bc1b7cb2becf6cc26a77fc"
+      "bytes": 46205,
+      "sha256": "0cc91f0c9161369ed5941ff97914d1280c163ddc8e41818412a1bd41c6cffcdc"
     },
     {
       "path": "setup/omnibloom_setup/ports.py",
@@ -18178,8 +18188,8 @@
     },
     {
       "path": "setup/README.md",
-      "bytes": 3562,
-      "sha256": "9f8c365d88375f13fb9aec466fd7f208c4ee910928e5d70054eeff2bc0cc4dd3"
+      "bytes": 3517,
+      "sha256": "754f74718a88b6caad124054e385dbc7560a89f2c75d628f58e6246d8026359a"
     },
     {
       "path": "setup/REPORT.md",
@@ -18288,8 +18298,8 @@
     },
     {
       "path": "setup/tests/test_diagnostics.py",
-      "bytes": 5289,
-      "sha256": "df7a65673f0c6123abc0eca27846bb56c667f84777dbfdf463ddbde7d7600adb"
+      "bytes": 5778,
+      "sha256": "51845c92d5e587fb334df09e3c36a87502e51de1445496cd9912cd711b82a2d8"
     },
     {
       "path": "setup/tests/test_discovery.py",
@@ -18333,8 +18343,8 @@
     },
     {
       "path": "setup/tests/test_ublock_files.py",
-      "bytes": 8385,
-      "sha256": "c986d5e03baeba15f83c51622d8a10f2f1298590c4b84b8696f8047ab713f7ce"
+      "bytes": 9764,
+      "sha256": "469e1312e2b50f1c72242c8fe6b2aad6d8f08cdd74f52bf74783a5b9dadaa746"
     },
     {
       "path": "setup/tools/frozen_check.py",
@@ -18353,8 +18363,8 @@
     },
     {
       "path": "tools/build_release.py",
-      "bytes": 9379,
-      "sha256": "df764f4cceb2f2ba58f11123fcff157fb7cb04bd03bb51d342ded85b75a44ceb"
+      "bytes": 9789,
+      "sha256": "d26d3879835e57cb7673597d7b62a65726fddbb8228d75fe9876585189e6f703"
     },
     {
       "path": "ui/accessibility/tv-accessibility.css",
