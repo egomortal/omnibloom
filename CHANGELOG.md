@@ -2,6 +2,36 @@
 
 ## v0.5.2 (November 15, 2026)
 
+### New in Omni
+- **Controller shortcuts, hold L2** (`OMNI_L2_CHORDS_V1`): L2 + Square copies (selected text, else the link under the
+  pointer, else the page's address), L2 + Triangle pastes into the focused text box, L2 + Cross opens the Quick bar,
+  L2 + Circle opens Browser settings. A tap of L2 still opens saved links (it now fires on release). Only while
+  browsing: not in the keyboard, settings, a panel or fullscreen video.
+- **Dark mode: Off / Natural / Forced** (`OMNI_DARK_CHOICE_V1`, `/data/omni/dark-style.txt`). Natural asks every
+  site for dark (`prefers-color-scheme`); Forced also darkens pages that stay light. The old "Dark pages (all sites)"
+  setting carries over.
+- **Quick access row:** choose its buttons and their order, up to 6 (`OMNI_QA_CUSTOM_V1`, `/data/omni/quick-access.txt`).
+- **Hide the bars:** the quick-access row and the bottom button bar can each be hidden (`OMNI_BARS_HIDE_V1`,
+  `/data/omni/ui-bars.txt`); the page gets the space.
+- **Create button** opens Browser settings (`OMNI_SETTINGS_CREATE_V1`).
+- **11 add-ons built in** (Dark Reader, SponsorBlock, ClearURLs, video speed, YouTube comfort, subtitle style, link
+  hints, image zoom, audio tools, cookie-banner reject, auto theme); Omni loads up to 40 add-ons, was 24
+  (`OMNI_ADDON_CAP_40_V1`).
+- **Starts on a fresh install** (`OMNI_FIRST_RUN_V1`): the title no longer needs `/data/omni/omni-engine.elf` and
+  `browser-mode.flag`.
+
+### YouTube
+- **Video buffer 64 MiB per stream, was 32 MiB** (`OMNI_MSE_QUOTA_V1`, on by default). 4K HDR filled 32 MiB in
+  about 10 s; YouTube's player then stopped asking for media ("freeze at ~11 s") and Omni's guard reloaded the page.
+  `/data/omni/mse-quota-mb.txt` (4-512) changes it.
+- The desktop user agent can be set in `/data/omni/ua-desktop.txt` (`OMNI_UA_OVERRIDE_V1`).
+
+### Media downloads
+- The shortcut switches to the Media downloads tab even when YouTube rewrote the page's address meanwhile
+  (`OMNI_MEDIA_SWITCH_V1`).
+- Its requests to the worker fall back to a blocking socket when the non-blocking one fails at once, as it did on
+  the console (`OMNI_MEDIA_HTTP_V3`); every step is logged to `/data/omni/media-downloads.log` (`OMNI_MEDIA_DIAG_V1`).
+
 ### Fixed: every page failed with "Filtering failed ... (error 1)" after a fresh install
 - **What happened:** Setup switched on Omni's built-in ad blocker (`ublock-native.flag`) but never installed its rule
   files. Omni's ad blocker refuses to let anything through when it can't start, so on a fresh console every site failed.
@@ -28,8 +58,9 @@
 - Design notes: `omni/native-title/patches/experimental/gpu-pages/`.
 
 ### Known issue: the console can restart after many Omni launches
-- The console's kernel reports memory that isn't returned each time Omni closes (18-66 MB per exit). After many
-  launches in one session the console can run out and restart, and other games can crash. We are working on it.
+- The console's free memory gets very low each time Omni starts a page (its engine processes and the payload loader
+  use most of it), and after many launches in one session the console can restart, or another game can crash. The
+  exact trigger is still being investigated; using less memory at launch is the work in progress.
 - **Workaround:** fully restart the console (not rest mode) now and then if you open and close Omni a lot.
 
 ## v0.5.1 (November 13, 2026)
