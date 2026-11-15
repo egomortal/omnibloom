@@ -14,7 +14,7 @@ set -u
 O='/path/to/workspace/outputs'; P="$O/omni-gpupages-ls1b"
 S1="$O/omni-gpu-pages/stage1"; L="$O/omni-launch"
 W=/home/builder/ogp; MB="$W/build-ps5-zink"; CP2="$W/cp2"; SRCM="$W/mesa-1ba9874f478657ccf6da72ce55f0260164cc0bd0-ogp"; PSDK=/opt/ps5-payload-sdk
-UPV='/path/to/PS5_Vulkan'   # a checkout of PS5_Vulkan (Mihawk-99), for tooling/gpu-broker
+UPV='/path/to/workspace/nxe-ps5/bigapp/private/av2/upstream/PS5_Vulkan'
 T=/home/builder/s1; B=$T/build; LK=/home/builder/ogp-ls1b-link4; LL=/usr/lib/llvm-21/bin
 UP=/home/builder/ogp-ls1b-up-0; WK=/home/builder/ogp-ls1b-work-0; NC=/home/builder/ogp-ls1b-cws-relink
 BASE="$P/out-rc6-43593684/child/omni-engine-child-unstripped.elf"
@@ -33,6 +33,10 @@ for f in ogp-s1-surface.inc ogp-s1-drawingarea.inc ogp-s1-policy.h ogp-s1-tcprob
   [ -f "$S1/src/$f" ] && [ -f "$T/$CG/$f" ] || continue
   cmp -s "$S1/src/$f" "$T/$CG/$f" || { cp "$S1/src/$f" "$T/$CG/$f" && chown builder:builder "$T/$CG/$f" && CHANGED="$CHANGED $f"; }
 done
+# OMNI_UBLOCK_MISSING_V1 (2026-11-15): the network filter loads pages when its rule files are missing (engine/entry/OmniUBlock.cpp)
+if ! grep -q OMNI_UBLOCK_MISSING_V1 "$T/engine/entry/OmniUBlock.cpp"; then
+  python3 "$S1/tools/apply_ublock_missing.py" --ublock "$T/engine/entry/OmniUBlock.cpp" >> "$L4/apply_ublock_missing.log" 2>&1 && chown builder:builder "$T/engine/entry/OmniUBlock.cpp" && CHANGED="$CHANGED OmniUBlock.cpp" || { st "ublock missing patch FAILED: $(tail -1 "$L4/apply_ublock_missing.log")"; exit 1; }
+fi
 st "start: tree A state C (child #4's); changed stage-1 files:${CHANGED:- none}"
 [ -n "$CHANGED" ] || [ "${FORCE:-0}" = 1 ] || { st "nothing changed: no build"; exit 0; }   # FORCE=1: rebuild anyway (e.g. ogp-s1-child.c changed, or A came back to state C with the file)
 # 3. link-driver workspace from the rc3-era copy
@@ -80,7 +84,10 @@ changed = sorted(k for k in a.keys() & b.keys() if a[k] != b[k])
 gone, added = sorted(a.keys() - b.keys()), sorted(b.keys() - a.keys())
 dem = lambda names: subprocess.run(['/usr/lib/llvm-21/bin/llvm-cxxfilt'], input='\n'.join(names), capture_output=True, text=True).stdout.splitlines() if names else []
 ok_word = ('OmniGpuPagesS1Surface', 'AcceleratedSurface::', 's_asyncBroken', 'omniGl', 'PlatformDisplay::eglDisplay',
-           'glFenceSync', 'glClientWaitSync', 'glDeleteSync', 'glFlush', 'glMapBufferRange', 'glUnmapBuffer')
+           'glFenceSync', 'glClientWaitSync', 'glDeleteSync', 'glFlush', 'glMapBufferRange', 'glUnmapBuffer',
+           # OMNI_UBLOCK_MISSING_V1 (OmniUBlock.cpp): exactly the four functions the patch changes or adds
+           '(anonymous namespace)::readAsset(char const*)', 'omniUBlockShouldBlock', '(anonymous namespace)::filesMissing()',
+           '(anonymous namespace)::initialize((anonymous namespace)::Engine&)')
 bad = [n for n in dem(changed) + dem(added) + dem(gone) if not any(w in n for w in ok_word)]
 with open(sys.argv[3], 'w') as f:
     f.write('unique names %d; size-changed %d; added %d; gone %d\n' % (len(a.keys() & b.keys()), len(changed), len(added), len(gone)))

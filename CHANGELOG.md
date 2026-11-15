@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.5.2 (November 15, 2026)
+
+### Fixed: every page failed with "Filtering failed ... (error 1)" after a fresh install
+- **What happened:** Setup switched on Omni's built-in ad blocker (`ublock-native.flag`) but never installed its rule
+  files. Omni's ad blocker refuses to let anything through when it can't start, so on a fresh console every site failed.
+- **Setup:** Install, Repair and the one-button install now copy the rule files (`ublock-engine.js`,
+  `ublock-compiled.txt`, `public-suffix-list.dat`, `ublock-popup-rules.txt`) to `/data/omni/`. A working set is never
+  replaced; old files are moved aside, never deleted. They are written with Unix line endings: with Windows ones Omni
+  loaded the rules but blocked nothing.
+- **Omni (`OMNI_UBLOCK_MISSING_V1`):** if the rule files are missing, pages load without ad blocking, the shield turns
+  red and Omni says "Ad block is off: its rule files are missing. Run Omnibloom Setup > Repair." Any other ad blocker
+  failure still blocks everything, as before.
+
+### Lower memory use while a page loads
+- Omni keeps one engine process ready for the next tab. That spare used to start right after the first page started
+  loading, at the moment the console's memory is fullest. It now starts 30 seconds later (`OMNI_SPARE_DEFER_V1`;
+  old behaviour: `/data/omni/spare-defer-off.flag`).
+
+### Experimental: faster GPU page scrolling (off by default)
+- Building on v0.5.1's opt-in GPU page drawing ("layers"), three more opt-in steps. On the YouTube home page with
+  all of them on, scrolling went from 8 fps to about 52 fps (median).
+  - `gpu-pages-async.flag`: scrolling on its own thread.
+  - `gpu-pages-asyncread.flag`: the GPU copies each frame without making the page wait.
+  - `gpu-pages-zerocopy.flag`: the frame goes straight from the page's GPU memory to the screen (HDR, no video yet).
+- Each needs `gpu-pages-stage1.flag` too. Known: parts of a page can show blank for the first seconds of a scroll.
+- Design notes: `omni/native-title/patches/experimental/gpu-pages/`.
+
+### Known issue: the console can restart after many Omni launches
+- The console's kernel reports memory that isn't returned each time Omni closes (18-66 MB per exit). After many
+  launches in one session the console can run out and restart, and other games can crash. We are working on it.
+- **Workaround:** fully restart the console (not rest mode) now and then if you open and close Omni a lot.
+
 ## v0.5.1 (November 13, 2026)
 
 ### JavaScript JIT on by default (launch build rc6, proven on the console)

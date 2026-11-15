@@ -94,6 +94,12 @@ st "OMNI_BARS_HIDE_V1: $(paste -sd' ' "$LT_/apply_bars_hide.log")"
 # OMNI_GPUPAGES_ZEROCOPY_V1 (outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md): the shell side (inert without /data/omni/gpu-pages-zerocopy.flag)
 python3 "$S1/tools/apply_zerocopy_shell.py" "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_zerocopy_shell.log" 2>&1 || { st "zero-copy shell FAILED: $(tail -1 "$LT_/apply_zerocopy_shell.log")"; exit 1; }
 st "OMNI_GPUPAGES_ZEROCOPY_V1 shell: $(tail -1 "$LT_/apply_zerocopy_shell.log")"
+# OMNI_SPARE_DEFER_V1 (2026-11-15, reboot investigation): the reserve spare engine 30 s after a launch (off: spare-defer-off.flag)
+python3 "$S1/tools/apply_spare_defer.py" "$TT" > "$LT_/apply_spare_defer.log" 2>&1 || { st "spare defer FAILED: $(tail -1 "$LT_/apply_spare_defer.log")"; exit 1; }
+st "OMNI_SPARE_DEFER_V1: $(tail -1 "$LT_/apply_spare_defer.log")"
+# OMNI_UBLOCK_MISSING_V1 (2026-11-15): missing uBlock rule files -> pages load + a notice, not "Filtering failed (error 1)" on every page
+python3 "$S1/tools/apply_ublock_missing.py" --ublock "$TT/engine/entry/OmniUBlock.cpp" --blocker "$TT/engine/entry/OmniBlocker.cpp" --browser "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_ublock_missing.log" 2>&1 || { st "ublock missing FAILED: $(tail -1 "$LT_/apply_ublock_missing.log")"; exit 1; }
+st "OMNI_UBLOCK_MISSING_V1: $(paste -sd' ' "$LT_/apply_ublock_missing.log")"
 CGT=$TT/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics; CGB=$TB/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics
 for f in ogp-s1-drawingarea.inc ogp-s1-surface.inc ogp-s1-policy.h ogp-s1b-async.inc; do
   cmp -s "$CGT/$f" "$CGB/$f" && echo "same-as-child $f $(sha256sum "$CGT/$f" | cut -c1-8)" || echo "DIFF-from-child $f T $(sha256sum "$CGT/$f" | cut -c1-8) C $(sha256sum "$CGB/$f" | cut -c1-8)"
