@@ -97,6 +97,9 @@ st "OMNI_GPUPAGES_ZEROCOPY_V1 shell: $(tail -1 "$LT_/apply_zerocopy_shell.log")"
 # OMNI_SPARE_DEFER_V1 (2026-11-15, reboot investigation): the reserve spare engine 30 s after a launch (off: spare-defer-off.flag)
 python3 "$S1/tools/apply_spare_defer.py" "$TT" > "$LT_/apply_spare_defer.log" 2>&1 || { st "spare defer FAILED: $(tail -1 "$LT_/apply_spare_defer.log")"; exit 1; }
 st "OMNI_SPARE_DEFER_V1: $(tail -1 "$LT_/apply_spare_defer.log")"
+# OMNI_SPARE_LAZY_V1 (2026-11-15): no reserve spare engine unless /data/omni/spare-reserve.flag (the idle 244 MB spare sat on every launch peak)
+python3 "$S1/tools/apply_spare_lazy.py" "$TT" > "$LT_/apply_spare_lazy.log" 2>&1 || { st "spare lazy FAILED: $(tail -1 "$LT_/apply_spare_lazy.log")"; exit 1; }
+st "OMNI_SPARE_LAZY_V1: $(tail -1 "$LT_/apply_spare_lazy.log")"
 # OMNI_UBLOCK_MISSING_V1 (2026-11-15): missing uBlock rule files -> pages load + a notice, not "Filtering failed (error 1)" on every page
 python3 "$S1/tools/apply_ublock_missing.py" --ublock "$TT/engine/entry/OmniUBlock.cpp" --blocker "$TT/engine/entry/OmniBlocker.cpp" --browser "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_ublock_missing.log" 2>&1 || { st "ublock missing FAILED: $(tail -1 "$LT_/apply_ublock_missing.log")"; exit 1; }
 st "OMNI_UBLOCK_MISSING_V1: $(paste -sd' ' "$LT_/apply_ublock_missing.log")"
