@@ -69,6 +69,16 @@ class Diagnostics(unittest.TestCase):
         self.z = zipfile.ZipFile(self.path)
         self.text = "\n".join(self.z.read(n).decode("utf-8", "replace") for n in self.z.namelist())
 
+    def test_log_times_survive_and_ipv6_is_still_removed(self):
+        text, counts = diagnostics.redact("2026-11-15 12:34:56 started fe80::1 and 2001:db8:0:0:1:2:3:4")
+        self.assertIn("12:34:56", text)
+        self.assertNotIn("fe80::1", text)
+        self.assertNotIn("2001:db8", text)
+        self.assertEqual(counts.get("IPv6 addresses"), 2)
+
+    def test_quick_access_buttons_are_not_read(self):
+        self.assertNotIn("/data/omni/quick-access.txt", self.c.reads)
+
     def test_no_personal_details_survive(self):
         for p in PERSONAL:
             self.assertNotIn(p, self.text, p)

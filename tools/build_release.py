@@ -95,6 +95,9 @@ def release_assets(root, folder, tag, commit=None):
 def setup_plan(root, out):
     for rel in ('run_setup.py','omnibloom-setup.spec','assets/omnibloom-256.png','assets/omnibloom.ico'):
         if not (root/'setup'/rel).is_file(): raise ValueError('Missing Setup input: '+rel)
+    # The spec bundles Omni's ad block rule files (installer.ensure_omni_ublock_files): a setup-only checkout fails here, not inside PyInstaller.
+    for name in ('ublock-engine.js','ublock-compiled.txt','public-suffix-list.dat','ublock-popup-rules.txt','ublock-rules.json'):
+        if not (root/'omni/engine/resources'/name).is_file(): raise ValueError('Missing Setup input: omni/engine/resources/'+name)
     return [sys.executable,'-m','PyInstaller','--noconfirm','--distpath',str(out/'dist'),'--workpath',str(out/'work'),'omnibloom-setup.spec']
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)

@@ -677,6 +677,7 @@ elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, char** argv,
   EV_SET(&evt, pid, EVFILT_PROC, EV_ADD, NOTE_EXEC, 0, 0);
   if(kevent(kq, &evt, 1, &evt, 1, 0) < 0) {
     perror("kevent");
+    kill(pid, SIGKILL);  // Omni V3: don't leave the new process behind
     free(stack);
     close(kq);
     return -1;
@@ -684,6 +685,7 @@ elfldr_spawn(const char* cwd, int stdio, uint8_t* elf, char** argv,
 
   if(waitpid(pid, 0, 0) < 0) {
     perror("waitpid");
+    kill(pid, SIGKILL);  // Omni V3
     free(stack);
     close(kq);
     return -1;

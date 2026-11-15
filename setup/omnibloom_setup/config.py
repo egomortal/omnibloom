@@ -103,9 +103,6 @@ SETUP_LOCK_MINUTES = 30
 # Omni's HDR setting (`<revision>TAB<off|auto|on>` and a newline; Omni treats a missing file as Off). The one-button install
 # sets Auto when there's no setting yet and keeps the user's choice otherwise.
 OMNI_HDR_PREF = "/data/omni/video-hdr-preference.txt"
-# Omni titles up to v0.5.1 only start the browser when the first two of these exist (KNOWN-ISSUES: "upload omni-engine.elf to
-# /data/omni first"). The title never runs the .elf: it starts its engine from /data/omni/native/omni-engine-child.elf.
-# Setup creates them when missing and never replaces an existing file (an older Omni may own a real engine there).
 # uBlock Origin's rule files. Omni's network filter reads them from /data/omni/ when ublock-native.flag (below) is on. Up to
 # v0.5.1 nothing installed them, and Omni then blocked every page ("Filtering failed ... (error 1)", 2026-11-15).
 # Setup carries them (omni/engine/resources) and writes the set when any of the first three is missing, empty or too big
@@ -116,6 +113,9 @@ OMNI_UBLOCK_MANIFEST = "ublock-rules.json"   # name, version and file hashes of 
 OMNI_UBLOCK_CORE = ("ublock-engine.js", "ublock-compiled.txt", "public-suffix-list.dat")
 OMNI_UBLOCK_EXTRA = ("ublock-popup-rules.txt",)
 OMNI_UBLOCK_MAX = 8 * 1024 * 1024   # OmniUBlock.cpp readAsset() treats a bigger file as missing
+# Omni titles up to v0.5.1 only start the browser when the first two of these exist (KNOWN-ISSUES: "upload omni-engine.elf to
+# /data/omni first"). The title never runs the .elf: it starts its engine from /data/omni/native/omni-engine-child.elf.
+# Setup creates them when missing and never replaces an existing file (an older Omni may own a real engine there).
 OMNI_FIRST_RUN_FILES = (
     ("/data/omni/omni-engine.elf", b"Omnibloom: placeholder. Omni starts its engine from /data/omni/native/omni-engine-child.elf.\n"),
     ("/data/omni/browser-mode.flag", b"1\n"),

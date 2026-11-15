@@ -4,6 +4,7 @@
 #include <JavaScriptCore/JavaScript.h>
 #include <JavaScriptCore/JSTypedArray.h>
 #include <wtf/text/WTFString.h>
+#include <cerrno>   // OMNI_UBLOCK_REFINE_V1
 #include <cstdio>
 #include <cstring>
 #include <mutex>
@@ -34,6 +35,15 @@ bool filterFailure() {
     if (FILE* file = fopen("/data/omni/ublock-error.flag", "w")) { fputs("1\n", file); fclose(file); }
     return true; // Do not silently allow requests while filtering is enabled.
 }
+// OMNI_UBLOCK_REFINE_V1: a request the matcher can't judge is blocked on its own; only 8 in a row mean the engine is
+// broken (then every request is blocked for the session, as before). One odd URL used to switch filtering to
+// "block everything" until Omni restarted.
+int failedInARow = 0;
+bool matchFailure() {
+    if (++failedInARow >= 8) return filterFailure();
+    fprintf(stderr, "ublock engine: a request could not be judged; blocked it (%d in a row)\n", failedInARow);
+    return true;
+}
 // OMNI_UBLOCK_MISSING_V1: no rule files (an install without them) -> pages load unfiltered and Omni says so, once.
 bool filesMissing() {
     static bool said = false;
@@ -41,21 +51,24 @@ bool filesMissing() {
         said = true;
         unlink("/data/omni/ublock-ready.flag");
         if (FILE* file = fopen("/data/omni/ublock-missing.flag", "w")) { fputs("1\n", file); fclose(file); }
-        fprintf(stderr, "ublock engine: rule files missing; pages load unfiltered (Omnibloom Setup > Repair installs them)\n");
+        fprintf(stderr, "ublock engine: rule files missing; uBlock filtering off, basic host blocking only (Omnibloom Setup > Repair installs them)\n");
     }
     return false;
 }
 bool filteringOff() {
     return access("/data/omni/ublock-native.flag", F_OK) || !access("/data/omni/ublock-disabled.flag", F_OK);
 }
+// OMNI_UBLOCK_REFINE_V1: set when a rule file is there but can't be read (or is over 8 MB). That is a failure,
+// not "missing": only a missing or empty file loads pages without uBlock.
+bool assetBroken = false;
 std::string readAsset(const char* name) {
     std::string result;
     std::string path = std::string("/data/omni/") + name;
     FILE* file = fopen(path.c_str(), "rb");
-    if (!file) return result;
+    if (!file) { if (errno != ENOENT) assetBroken = true; return result; }   // OMNI_UBLOCK_REFINE_V1
     char chunk[4096]; size_t count;
     while ((count = fread(chunk, 1, sizeof(chunk), file)) && result.size() <= 8 * 1024 * 1024) result.append(chunk, count);
-    if (ferror(file) || result.size() > 8 * 1024 * 1024) result.clear();
+    if (ferror(file) || result.size() > 8 * 1024 * 1024) { result.clear(); assetBroken = true; }   // OMNI_UBLOCK_REFINE_V1
     fclose(file);
     size_t kept = 0;   // OMNI_UBLOCK_MISSING_V1: drop CR (a file with Windows line endings loaded but blocked nothing)
     for (char c : result) if (c != '\r') result[kept++] = c;
@@ -99,11 +112,12 @@ JSValueRef decode(JSContextRef ctx, JSObjectRef, JSObjectRef, size_t count, cons
 bool initialize(Engine& engine) {
     if (engine.attempted) return engine.matcher;
     engine.attempted = true;
+    assetBroken = false;   // OMNI_UBLOCK_REFINE_V1
     auto bundle = readAsset("ublock-engine.js");
     bool testRules = engine.testCompiledName && !access("/data/omni/ublock-test.flag", F_OK);
     auto compiled = readAsset(testRules ? engine.testCompiledName : engine.compiledName);
     auto suffixes = readAsset("public-suffix-list.dat");
-    if (bundle.empty() || compiled.empty() || suffixes.empty()) { engine.missing = true; fprintf(stderr,"ublock engine: missing assets (%s)\n", engine.compiledName); return false; }
+    if (bundle.empty() || compiled.empty() || suffixes.empty()) { engine.missing = !assetBroken; fprintf(stderr,"ublock engine: %s assets (%s)\n", assetBroken ? "unreadable" : "missing", engine.compiledName); return false; }
     auto ctx = JSGlobalContextCreate(nullptr);
     engine.context = ctx;
     auto name = JSStringCreateWithUTF8CString("omniDecodeUTF8");
@@ -141,10 +155,11 @@ extern "C" bool omniUBlockShouldBlock(const char* url, const char* origin, const
     JSValueRef arguments[] = { stringValue(ctx, url), stringValue(ctx, origin), stringValue(ctx, type) };
     JSValueRef exception = nullptr;
     auto result = JSObjectCallAsFunction(ctx, network.matcher, nullptr, 3, arguments, &exception);
-    if (exception) { report(ctx, exception); return filterFailure(); }
-    if (!result || !JSValueIsNumber(ctx, result)) return filterFailure();
+    if (exception) { report(ctx, exception); return matchFailure(); }   // OMNI_UBLOCK_REFINE_V1
+    if (!result || !JSValueIsNumber(ctx, result)) return matchFailure();
     double decision = JSValueToNumber(ctx, result, nullptr);
-    if (decision != 0 && decision != 1 && decision != 2) return filterFailure();
+    if (decision != 0 && decision != 1 && decision != 2) return matchFailure();
+    failedInARow = 0;
     return decision == 1;
 }
 
@@ -411,27 +426,33 @@ bool isSeparator(char c) {
     return !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.' || c == '%');
 }
 char lower(char c) { return c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c; }
-// Wildcard match of p[pi..] against s[si..]; `*` any run, `^` separator or end.
-bool globAt(const std::string& p, size_t pi, const std::string& s, size_t si, bool endAnchor, bool matchCase, int depth) {
-    if (depth > 64) return false;
-    while (pi < p.size()) {
-        char c = p[pi];
-        if (c == '*') {
+// Wildcard match of p[pi..] against s[si..]; `*` any run, `^` separator or end, `|` at the end = end of s.
+// OMNI_UBLOCK_REFINE_V1: iterative last-star backtracking, O(|s| x |p|). The recursive version (one recursion per
+// '*', inside a scan over every start position) took ~n^3 steps on long crafted popup URLs, on the UI thread.
+// `floating`: the match may start anywhere at or after si (an implicit leading '*'), which replaces that scan.
+bool globAt(const std::string& p, size_t pi, const std::string& s, size_t si, bool matchCase, bool floating) {
+    if (floating && si >= s.size()) return false;   // as the old scan: a start position inside the URL
+    size_t starP = floating ? pi : std::string::npos, starS = si;
+    bool realStar = !floating;
+    for (;;) {
+        if (pi < p.size() && p[pi] == '*') {
             while (pi < p.size() && p[pi] == '*') ++pi;
             if (pi == p.size()) return true;
-            for (size_t k = si; k <= s.size(); ++k) if (globAt(p, pi, s, k, endAnchor, matchCase, depth + 1)) return true;
-            return false;
+            starP = pi; starS = si; realStar = true; continue;
         }
-        if (c == '^') {
+        if (pi == p.size()) return true;   // the rest of the URL is free (as before: no implicit end anchor)
+        if (p[pi] == '|' && pi + 1 == p.size()) {
+            if (si == s.size()) return true;
+        } else if (p[pi] == '^') {
             if (si == s.size()) { ++pi; continue; }
-            if (!isSeparator(s[si])) return false;
+            if (isSeparator(s[si])) { ++si; ++pi; continue; }
+        } else if (si < s.size() && (matchCase ? s[si] : lower(s[si])) == p[pi]) {
             ++si; ++pi; continue;
         }
-        if (c == '|' && pi + 1 == p.size()) { endAnchor = true; ++pi; continue; }
-        if (si >= s.size() || (matchCase ? s[si] : lower(s[si])) != c) return false;
-        ++si; ++pi;
+        // mismatch: let the last '*' take one more character, or fail
+        if (starP == std::string::npos || starS >= s.size() || (!realStar && starS + 1 >= s.size())) return false;
+        pi = starP; si = ++starS;
     }
-    return !endAnchor || si == s.size();
 }
 bool patternMatches(const std::string& pattern, const std::string& url, const std::string& host, bool matchCase) {
     if (pattern == "*") return true;
@@ -441,12 +462,11 @@ bool patternMatches(const std::string& pattern, const std::string& url, const st
         size_t hostStart = scheme + 3, hostEnd = hostStart + host.size();
         if (auto at = url.find('@', hostStart); at != std::string::npos && at < url.find_first_of("/?#", hostStart)) hostStart = at + 1, hostEnd = hostStart + host.size();
         for (size_t i = hostStart; i <= hostEnd && i < url.size(); ++i)
-            if ((i == hostStart || url[i - 1] == '.') && globAt(pattern, 2, url, i, false, matchCase, 0)) return true;
+            if ((i == hostStart || url[i - 1] == '.') && globAt(pattern, 2, url, i, matchCase, false)) return true;
         return false;
     }
-    if (pattern[0] == '|') return globAt(pattern, 1, url, 0, false, matchCase, 0);
-    for (size_t i = 0; i < url.size(); ++i) if (globAt(pattern, 0, url, i, false, matchCase, 0)) return true;
-    return false;
+    if (pattern[0] == '|') return globAt(pattern, 1, url, 0, matchCase, false);
+    return globAt(pattern, 0, url, 0, matchCase, true);   // OMNI_UBLOCK_REFINE_V1: anywhere in the URL
 }
 struct PopupContext { const std::string& url; const std::string& lowerUrl; const std::string& host; const std::string& openerHost; bool thirdParty; bool strictThirdParty; };
 // Everything except the regular expression itself.
@@ -576,10 +596,21 @@ bool pnaPrivate(const std::string& h)
     if (h == "localhost" || (h.size() > 10 && !h.compare(h.size() - 10, 10, ".localhost")) || (h.size() > 6 && !h.compare(h.size() - 6, 6, ".local"))) return true;
     in_addr a4; if (inet_pton(AF_INET, h.c_str(), &a4) == 1) {
         uint32_t x = ntohl(a4.s_addr);
-        return (x >> 24) == 10 || (x >> 24) == 127 || (x >> 20) == 0xAC1 || (x >> 16) == 0xC0A8 || (x >> 16) == 0xA9FE || x == 0 || (x >> 22) == (100u << 2 | 1);
+        return (x >> 24) == 10 || (x >> 24) == 127 || (x >> 20) == 0xAC1 || (x >> 16) == 0xC0A8 || (x >> 16) == 0xA9FE || (x >> 24) == 0 || (x >> 22) == (100u << 2 | 1);
     }
-    // IPv6 by text (no in6_addr needed): loopback, unique-local fc00::/7, link-local fe80::/10, IPv4-mapped ::ffff:a.b.c.d
+    // OMNI_UBLOCK_REFINE_V1: IPv6 by its bytes. WebKit writes IPv4-mapped addresses in hex ("::ffff:7f00:1"), which
+    // the text check below missed, and "::" was not covered. Text check only for what inet_pton refuses (zone ids).
     if (h.find(':') != std::string::npos) {
+        unsigned char b[16];
+        if (inet_pton(AF_INET6, h.c_str(), b) == 1) {
+            static const unsigned char zero[10] = {};
+            if (!memcmp(b, zero, 10) && ((b[10] == 0xff && b[11] == 0xff) || (!b[10] && !b[11]))) {   // ::ffff:a.b.c.d, ::a.b.c.d
+                if (!b[10] && !b[12] && !b[13] && !b[14] && b[15] <= 1) return true;                    // ::, ::1
+                char v4[16]; snprintf(v4, sizeof v4, "%u.%u.%u.%u", b[12], b[13], b[14], b[15]);
+                return pnaPrivate(v4);
+            }
+            return (b[0] & 0xfe) == 0xfc || (b[0] == 0xfe && (b[1] & 0x80) == 0x80);   // fc00::/7; fe80::/10 + fec0::/10
+        }
         if (h == "::1" || h == "0:0:0:0:0:0:0:1") return true;
         if (h.rfind("::ffff:", 0) == 0 && h.find('.') != std::string::npos) return pnaPrivate(h.substr(7));
         return h.size() > 2 && ((h[0] == 'f' && (h[1] == 'c' || h[1] == 'd')) || (h[0] == 'f' && h[1] == 'e' && h.size() > 3 && h[2] >= '8' && h[2] <= 'b'));

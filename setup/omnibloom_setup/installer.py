@@ -84,7 +84,10 @@ def _park(console, path, suffix, stamp=None):
 
 
 def _replace(console, path, data, park_suffix):
-    """Write a Setup-owned file (card, receipt, payload json) safely: verified temp, park old, move in."""
+    """Write a Setup-owned file (card, receipt, payload json) safely: verified temp, park old, move in. Nothing happens
+    when the file already holds exactly these bytes (each install/repair used to add a parked copy anyway)."""
+    if console.exists(path) and _sha(console.read(path)) == _sha(data):
+        return
     console.makedirs(posixpath.dirname(path))
     temp = console.put_verified(path, data)
     if console.exists(path):
@@ -367,6 +370,11 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
         console.makedirs(posixpath.dirname(dest))
         old = prev_files.get(dest)
         backup = old.get("backup") if old else journal["backups"].get(dest)
+        pending = None
+        if not old and backup and not console.exists(backup):
+            # Journaled but never moved (Setup stopped between writing the journal and the rename): the file at dest is
+            # still the user's original, so it goes to that same journaled place, as "not ours".
+            pending, backup = backup, None
         if console.exists(dest):
             if old and old.get("sha256") == row["sha256"]:
                 same = decoded or _sha(console.read(dest)) == row["sha256"]
@@ -382,7 +390,7 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
             if old or backup:  # ours (older version or an interrupted try): the original backup stays the restore point
                 parked = _park(console, dest, ".omnibloom-old-" + str((previous or {}).get("version", "prev")), stamp)
             else:  # not ours: journal the backup before the file moves
-                parked = _park_target(console, dest, ".before-omnibloom-" + version, stamp)
+                parked = pending or _park_target(console, dest, ".before-omnibloom-" + version, stamp)
                 journal["backups"][dest] = parked
                 _write_journal(console, journal)
                 console.rename(dest, parked)
@@ -398,8 +406,8 @@ def install_app(console, catalog, app_id, picker, autoload_opt=False, start=Fals
             if _jd_tree(dest) and console.exists(dest):   # the engine's folders must hold exactly the new file set
                 log("Moved the old engine file %s to %s" % (dest, _park(console, dest, ".omnibloom-old", stamp)))
                 continue
-            # A payload that moved folders (item 7): autoload lists bare names, so the old copy and its Payload
-            # Manager entry must not stay where the Payload Manager would still find them. Parked, never deleted;
+            # A payload that moved folders (item 7): Payload Manager could still find the old copy and its .json in
+            # its payloads folder (older Setups also wrote bare autoload names), so they must not stay there. Parked, never deleted;
             # the entry stays so uninstall can still put back what was there before Omnibloom.
             if dest.startswith(config.PLDMGR_DIR + "payloads/") and dest != (new_elf or "") + ".json" \
                     and (dest.endswith(".elf") or dest.endswith(".elf.json")) and console.exists(dest):
@@ -477,7 +485,8 @@ def install(console, catalog, app_ids, autoload=(), start=(), log=print, progres
 
 
 def ensure_omni_first_run(console, log):
-    """Create the two files older Omni titles need before they start the browser (config.OMNI_FIRST_RUN_FILES).
+    """Create the files Omni needs on a fresh console (config.OMNI_FIRST_RUN_FILES: the two older titles need before they
+    start the browser, plus the feature switches v0.5.1 was tested with).
     Existing files are left exactly as they are. Returns the paths it created."""
     made = []
     for path, data in config.OMNI_FIRST_RUN_FILES:
@@ -532,15 +541,20 @@ def _ublock_plan(console, bundled):
     if not bundled:
         return "keep"
     current = _ublock_console_manifest(console)
-    if current:
-        return "update" if version_key(str(current["version"])) < version_key(str(bundled["version"])) else "keep"
     shas = {n: _sha(console.read(config.OMNI_UBLOCK_DIR + n).replace(b"\r\n", b"\n")) for n in config.OMNI_UBLOCK_CORE}
+    # Every set Setup ever shipped: this one, the ones it replaces, and the one the console's version file names.
+    known = [bundled["files"]] + [s for s in bundled.get("replaces") or [] if isinstance(s, dict)]
+    if current and isinstance(current.get("files"), dict):
+        known.append(current["files"])
+    # Judged file by file, so a set left half-updated by an interrupted Setup still counts as Setup's own. A file that is
+    # in no known set means someone put it there by hand: the whole set is kept, version file or not.
+    if not all(any(shas[n] == s.get(n) for s in known) for n in config.OMNI_UBLOCK_CORE):
+        return "keep"
+    newer_on_console = current and version_key(str(current["version"])) > version_key(str(bundled["version"]))
     if all(shas[n] == bundled["files"].get(n) for n in config.OMNI_UBLOCK_CORE):
-        return "adopt"
-    for older in bundled.get("replaces") or []:
-        if isinstance(older, dict) and all(shas[n] == older.get(n) for n in config.OMNI_UBLOCK_CORE):
-            return "update"
-    return "keep"
+        same_stamp = current and str(current["version"]) == str(bundled["version"])
+        return "keep" if same_stamp or newer_on_console else "adopt"
+    return "keep" if newer_on_console else "update"
 
 
 def ensure_omni_ublock_files(console, log, source=None):
@@ -701,8 +715,10 @@ def uninstall_app(console, app_id, log=print):
     for f in files:
         dest = f["dest"]
         if console.exists(dest):
-            if f.get("journal_only") and _sha(console.read(dest)) != f["sha256"]:
-                continue   # not the file Setup was putting there: leave it exactly as it is
+            # Not the file Setup was putting there: leave it exactly as it is. eboot.bin/.prx read back decoded, so their hash
+            # never matches; those are parked anyway (never deleted, and the original, if any, is restored just below).
+            if f.get("journal_only") and not _decoded_on_readback(dest) and _sha(console.read(dest)) != f["sha256"]:
+                continue
             _park(console, dest, ".omnibloom-removed-" + stamp, stamp)
         if f.get("backup") and console.exists(f["backup"]):
             console.rename(f["backup"], dest)

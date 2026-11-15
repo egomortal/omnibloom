@@ -956,7 +956,10 @@ static void omniShortcutsSave()
         std::string t = title; for (auto& c : t) if (c == '\t' || c == '\n' || c == '\r') c = ' ';
         fprintf(f, "%s\t%s\n", url.c_str(), t.c_str());
     }
-    fclose(f);
+    // OMNI_UBLOCK_REFINE_V1 (refinement): replace the list only when the new file was written in full. A full disk
+    // used to leave a cut-off file that then replaced the saved shortcuts.
+    bool written = !ferror(f);
+    if (fclose(f) || !written) { unlink("/data/omni/shortcuts.tmp"); notice("Couldn't save shortcuts"); return; }
     rename("/data/omni/shortcuts.tmp", "/data/omni/shortcuts.txt");
 }
 static void omniShortcutAddCurrent()
@@ -6133,7 +6136,7 @@ void tick(void*)
     static unsigned profileReports = 0;
     static bool firstFrame = true;
     static uint32_t lastBlockerPoll = 0;
-    if (SDL_GetTicks() - lastBlockerPoll > 500) { OmniMedia::Hw::holePunchShellPhase(2); omniBlockerPoll(); { static bool omniUbMissingTold = false; if (!omniUbMissingTold && !access("/data/omni/ublock-missing.flag", F_OK)) { omniUbMissingTold = true; notice("Ad block is off: its rule files are missing. Run Omnibloom Setup > Repair."); } } /* OMNI_UBLOCK_MISSING_V1 */ OmniMedia::Hw::holePunchShellPhase(1); lastBlockerPoll = SDL_GetTicks(); } // OMNI_HOLEPUNCH_V7_STALLTRACE: uBlock
+    if (SDL_GetTicks() - lastBlockerPoll > 500) { OmniMedia::Hw::holePunchShellPhase(2); omniBlockerPoll(); { static bool omniUbMissingTold = false; if (!omniUbMissingTold && !access("/data/omni/ublock-missing.flag", F_OK)) { omniUbMissingTold = true; notice("Ad block rules are missing, so most ads aren't blocked. Run Omnibloom Setup > Repair."); /* OMNI_UBLOCK_REFINE_V1 */ } } /* OMNI_UBLOCK_MISSING_V1 */ OmniMedia::Hw::holePunchShellPhase(1); lastBlockerPoll = SDL_GetTicks(); } // OMNI_HOLEPUNCH_V7_STALLTRACE: uBlock
     for (auto& tab : tabs) {
         if (tab->pendingURL.empty()) continue;
         auto url = adoptWK(WKURLCreateWithUTF8CString(tab->pendingURL.c_str()));

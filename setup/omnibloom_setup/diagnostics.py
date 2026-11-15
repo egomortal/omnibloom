@@ -26,7 +26,6 @@ FILES = (
     ("omni/close-events.log", "/data/omni/native/close-events.log"),
     ("omni/media-downloads.log", "/data/omni/media-downloads.log"),
     ("omni/dark-style.txt", "/data/omni/dark-style.txt"),
-    ("omni/quick-access.txt", "/data/omni/quick-access.txt"),
     ("omni/video-hdr-preference.txt", config.OMNI_HDR_PREF),
     ("bloom-core/status.json", "/data/hub/status.json"),
     ("payload-manager/autoload.txt", config.AUTOLOAD_PATH),
@@ -48,7 +47,10 @@ _KEEP_HOSTS = {"127.0.0.1", "localhost"}
 _URL = re.compile(r"\b([a-zA-Z][a-zA-Z0-9+.-]{1,15})://[^\s\"'<>()\]]+")
 _EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 _IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
-_IPV6 = re.compile(r"\b(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\b")
+# An IPv6 address (also shortened with "::") has a hex letter or at least 3 colons. Without that rule every log time
+# ("12:34:56") was redacted and counted as an address.
+_IPV6 = re.compile(r"(?<![\w:])(?:(?=[0-9a-fA-F:]*[a-fA-F])|(?=(?:[0-9a-fA-F]{0,4}:){3}))"
+                   r"[0-9a-fA-F]{0,4}(?::[0-9a-fA-F]{0,4}){2,7}(?![\w:])")
 _MEDIA_ID = re.compile(r"\b(vid|videoId|video_id|v|list|playlist)=([A-Za-z0-9_-]{6,})")   # what someone watched
 _MAC = re.compile(r"\b(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\b")
 _SECRET = re.compile(r"(?i)\b(token|key|secret|password|passwd|pass|cookie|auth|session|sid|signature|sig)(\s*[=:]\s*|\"\s*:\s*\")([^\s\",;&]+)")

@@ -619,7 +619,7 @@ class OneClick:
         receipt = installer.install_app(console, self.catalog, app_id, picker,
                                         autoload_opt=(app_id == "master-control" and self.autoload_mc),
                                         start=False, log=self.detail, progress=self.progress)
-        if app_id == "omni":   # the two files Omni v0.5.1 needs before it starts the browser (installer.ensure_omni_first_run)
+        if app_id == "omni":   # Omni's first-run files and switches (installer.ensure_omni_first_run) and its ad block rules
             installer.ensure_omni_first_run(console, self.detail)
             installer.ensure_omni_ublock_files(console, self.detail)   # uBlock's rule files (Omni blocks every page without them)
         changed = console.recorder.ops[before:] if console.recorder else []

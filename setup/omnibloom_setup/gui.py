@@ -758,7 +758,7 @@ class SetupApp:
                     release.load_engine(self.catalog, log=self._log)
                     out = jd.setup_jdownloader(c, self.catalog, job["jd_folder"], log=self._log, progress=self._progress)
                     receipts["_jd"] = {"ok": True, "install_id": out["acceptance"]["install_id"]}
-                except (jd.CheckFailed, release.ReleaseError, ValueError, IOError) as e:
+                except Exception as e:   # FTP errors (ftplib.error_perm/error_reply) aren't IOError: the apps are installed either way
                     self._log("JDownloader 2 wasn't switched on: %s" % e)
                     self._log("Everything else is installed. yt-dlp downloads work right away.")
                     receipts["_jd"] = {"ok": False, "why": str(e)}

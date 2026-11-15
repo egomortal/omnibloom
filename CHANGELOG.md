@@ -1,5 +1,40 @@
 # Changelog
 
+## Unreleased (v0.5.3, in testing)
+
+### Less memory while a page loads
+- **Omni's own engine starter** (`omni/native-title/starter/`, `/data/omni/native/omni-starter.elf`, 127.0.0.1:9031)
+  starts the engine processes instead of the payload loader, which kept ~240 MB (up to ~420 MB) after every start.
+  It maps the engine file and relocates it in 16 MB pieces. Falls back to the payload loader when it isn't there.
+- **No idle spare engine** by default (`OMNI_SPARE_LAZY_V1`); `/data/omni/spare-reserve.flag` brings it back.
+- Low-memory warnings in our launch tests: 15 of 16 launches before, 0 of 15 after.
+
+### Refinement pass (code review of every part)
+- **Engine starter V3:** never listens anywhere but 127.0.0.1 (if it can't take its port it now exits; before, it
+  could end up listening on every network interface); checks each engine file before loading it (a cut-off or
+  damaged file is refused instead of crashing the starter); answers a `version` request, so Omni replaces an older
+  starter that is still running; tells Omni when a request is refused or fails; never leaves a half-started process.
+- **Omni only sends its own engine files to the starter**; anything else goes to the payload loader as before.
+- **Ad block** (`OMNI_UBLOCK_REFINE_V1`): one request the uBlock engine can't judge is blocked on its own, instead of
+  switching every page to "Filtering failed" until Omni restarts; the popup filter's wildcard matcher is linear (a
+  crafted popup address could freeze the UI for seconds); the private-network guard reads IPv6 addresses by their
+  bytes (IPv4-mapped addresses in hex, like `[::ffff:7f00:1]`, and `[::]` got through to the console and LAN); a
+  damaged or unreadable rule file counts as a failure, not as "not installed"; the missing-rules notice says what is
+  still on.
+- **Shortcuts:** a failed save (full disk) no longer replaces the saved shortcuts with a cut-off file.
+- **Setup:** ad block rule sets are judged file by file against every set Setup knows (a set replaced by hand after
+  a Setup install is kept; a half-finished update is finished); resuming an interrupted install finds the original
+  file even when its backup was never made; undoing an interrupted first install also removes the title files;
+  files already identical are not rewritten (no more `.prev-*` pile-up); diagnostics keep log times (an IPv6 pattern
+  wiped every `12:34:56`) and no longer read the Quick access buttons; a JDownloader step error no longer aborts a
+  finished install; CI runs every Setup test.
+- **Downloads worker** (ships with the next Downloads version): a JDownloader fallback no longer reports a finished
+  download as failed; one failed connection accept no longer stops every later download until a restart; a progress
+  report without a byte count no longer aborts the download.
+
+### Ad block rules can be updated
+- Rule sets are versioned (`omni/engine/resources/ublock-rules.json`) and built by `omni/engine/tools/ublock-lists/`.
+
 ## v0.5.2 (November 15, 2026)
 
 ### New in Omni

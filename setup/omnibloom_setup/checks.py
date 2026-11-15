@@ -30,7 +30,7 @@ def shadowmount_active(console, wait=18.0, sleep=time.sleep):
 
 
 def run_checks(console, quick=False, sleep=time.sleep):
-    """Returns (items, summary). summary = {"can_install": bool, "installed_version": str|None,
+    """Returns (items, summary). summary = {"can_install": bool, "installed": str|None,
     "autoload": [...]|None}."""
     items = []
     items.append(_item("ftp", "File transfer (FTP)", OK, "Connected to the PS5's FTP server."))

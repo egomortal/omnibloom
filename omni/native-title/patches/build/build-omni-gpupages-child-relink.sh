@@ -37,6 +37,10 @@ done
 if ! grep -q OMNI_UBLOCK_MISSING_V1 "$T/engine/entry/OmniUBlock.cpp"; then
   python3 "$S1/tools/apply_ublock_missing.py" --ublock "$T/engine/entry/OmniUBlock.cpp" >> "$L4/apply_ublock_missing.log" 2>&1 && chown builder:builder "$T/engine/entry/OmniUBlock.cpp" && CHANGED="$CHANGED OmniUBlock.cpp" || { st "ublock missing patch FAILED: $(tail -1 "$L4/apply_ublock_missing.log")"; exit 1; }
 fi
+# OMNI_UBLOCK_REFINE_V1 (2026-11-15 refinement): see omni-gpu-pages/stage1/tools/apply_ublock_refine.py
+if ! grep -q OMNI_UBLOCK_REFINE_V1 "$T/engine/entry/OmniUBlock.cpp"; then
+  python3 "$S1/tools/apply_ublock_refine.py" --ublock "$T/engine/entry/OmniUBlock.cpp" >> "$L4/apply_ublock_refine.log" 2>&1 && chown builder:builder "$T/engine/entry/OmniUBlock.cpp" && CHANGED="$CHANGED OmniUBlock.cpp(refine)" || { st "ublock refine patch FAILED: $(tail -1 "$L4/apply_ublock_refine.log")"; exit 1; }
+fi
 st "start: tree A state C (child #4's); changed stage-1 files:${CHANGED:- none}"
 [ -n "$CHANGED" ] || [ "${FORCE:-0}" = 1 ] || { st "nothing changed: no build"; exit 0; }   # FORCE=1: rebuild anyway (e.g. ogp-s1-child.c changed, or A came back to state C with the file)
 # 3. link-driver workspace from the rc3-era copy
@@ -87,7 +91,11 @@ ok_word = ('OmniGpuPagesS1Surface', 'AcceleratedSurface::', 's_asyncBroken', 'om
            'glFenceSync', 'glClientWaitSync', 'glDeleteSync', 'glFlush', 'glMapBufferRange', 'glUnmapBuffer',
            # OMNI_UBLOCK_MISSING_V1 (OmniUBlock.cpp): exactly the four functions the patch changes or adds
            '(anonymous namespace)::readAsset(char const*)', 'omniUBlockShouldBlock', '(anonymous namespace)::filesMissing()',
-           '(anonymous namespace)::initialize((anonymous namespace)::Engine&)')
+           '(anonymous namespace)::initialize((anonymous namespace)::Engine&)',
+           # OMNI_UBLOCK_REFINE_V1 (OmniUBlock.cpp): the functions and two counters the refine patch changes or adds
+           '(anonymous namespace)::matchFailure()', '(anonymous namespace)::failedInARow', '(anonymous namespace)::assetBroken',
+           '(anonymous namespace)::globAt(', '(anonymous namespace)::patternMatches(', '(anonymous namespace)::pnaPrivate(',
+           'omniPrivateNetworkBlocked')
 bad = [n for n in dem(changed) + dem(added) + dem(gone) if not any(w in n for w in ok_word)]
 with open(sys.argv[3], 'w') as f:
     f.write('unique names %d; size-changed %d; added %d; gone %d\n' % (len(a.keys() & b.keys()), len(changed), len(added), len(gone)))

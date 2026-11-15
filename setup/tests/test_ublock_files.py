@@ -99,14 +99,37 @@ class UBlockFiles(unittest.TestCase):
         self.run_it(c)
         self.assertEqual(json.loads(c.files[MANIFEST])["version"], "2026-11-20.1")
 
+    def old_manifest(self, version, body=b"old"):
+        return json.dumps({"version": version, "files": {n: installer._sha(body) for n in config.OMNI_UBLOCK_CORE}}).encode()
+
     def test_an_older_setup_set_is_updated(self):
         self.bundle("2026-11-20.1")
         old = {p: b"old" for p in CORE + [POPUP]}
-        old[MANIFEST] = json.dumps({"version": "2026-11-13.1"}).encode()
+        old[MANIFEST] = self.old_manifest("2026-11-13.1")
         c = Console(old)
         self.assertEqual(sorted(self.run_it(c)), sorted(CORE + [POPUP]))
         self.assertEqual(json.loads(c.files[MANIFEST])["version"], "2026-11-20.1")
         self.assertTrue(all(c.files[p].startswith(b"new ") for p in CORE))
+
+    def test_a_set_replaced_by_hand_after_a_setup_install_is_kept(self):
+        # The version file says Setup installed an older set, but the files are no longer that set (the owner put the full
+        # lists there by hand): kept, not "updated" over the owner's files.
+        self.bundle("2026-11-20.1")
+        old = {p: b"hand-full-lists" for p in CORE + [POPUP]}
+        old[MANIFEST] = self.old_manifest("2026-11-13.1")
+        c = Console(old)
+        self.assertEqual(self.run_it(c), [])
+        self.assertEqual(c.files, old)
+
+    def test_a_half_finished_update_is_finished(self):
+        # Setup stopped mid-update: some core files are the new set, some the old one, and the version file is the old one.
+        self.bundle("2026-11-20.1")
+        mixed = {CORE[0]: b"new " + config.OMNI_UBLOCK_CORE[0].encode(), CORE[1]: b"old", CORE[2]: b"old", POPUP: b"old"}
+        mixed[MANIFEST] = self.old_manifest("2026-11-13.1")
+        c = Console(mixed)
+        self.assertEqual(sorted(self.run_it(c)), sorted(CORE + [POPUP]))
+        self.assertTrue(all(c.files[p].startswith(b"new ") for p in CORE))
+        self.assertEqual(json.loads(c.files[MANIFEST])["version"], "2026-11-20.1")
 
     def test_the_same_or_a_newer_set_is_kept(self):
         for have in ("2026-11-20.1", "2026-12-01.1"):

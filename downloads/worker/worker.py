@@ -280,7 +280,10 @@ class Jobs:
         for index, engine in enumerate(order):
             if self.cancelled(key):
                 raise InterruptedError('Cancelled')
-            target = destination if index == 0 else destination / ('via-' + engine)
+            # A fallback engine gets its own sub-folder, except JDownloader: its Java bridge always writes to
+            # <downloads>/<job id> (this job's folder), so checking its file against via-jdownloader/ refused every
+            # finished JD-fallback download and reported it as failed.
+            target = destination if index == 0 or engine == 'jdownloader' else destination / ('via-' + engine)
             if index:
                 previous = ENGINE_NAMES[order[index - 1]]
                 note = f'{previous} could not take this link ({redact_urls(reasons[-1][1], 160)}). {ENGINE_NAMES[engine]} took over automatically.'
@@ -355,7 +358,7 @@ class Jobs:
             limiter.charge(count if count < before else count - before, lambda: self.cancelled(key))
             downloaded[name] = count
             total = data.get('total_bytes') or data.get('total_bytes_estimate') or 0
-            progress = min(100, int(100 * data.get('downloaded_bytes', 0) / total)) if total else None
+            progress = min(100, int(100 * count / total)) if total else None   # count: None-safe (yt-dlp may send None)
             self.update(key, state='downloading' if data['status'] == 'downloading' else 'processing', progress=progress)
         if importlib.util.find_spec('yt_dlp') is None:
             raise EngineUnavailable('yt-dlp is not installed in this runtime')

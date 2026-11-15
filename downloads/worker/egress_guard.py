@@ -14,8 +14,10 @@ the check and the connect cannot redirect it.
 One request per client connection (``Connection: close``), so a kept-alive
 proxy connection can never be reused for a different, unchecked host.
 """
+import errno
 import socket
 import threading
+import time
 import urllib.parse
 
 HEAD_LIMIT = 64 * 1024
@@ -101,15 +103,27 @@ class EgressGuard:
         while not self._closed:
             try:
                 client, peer = self._sock.accept()
-            except OSError:
-                return
+            except OSError as error:
+                # One failed accept (out of file descriptors, a connection reset before it was taken) must not end
+                # the guard: shared_guard() keeps handing this guard out, so every later download would fail until
+                # the worker restarts. Only a closed or broken listening socket ends it, and marks it closed so
+                # shared_guard() starts a new one.
+                if self._closed or error.errno in (errno.EBADF, errno.ENOTSOCK, errno.EINVAL):
+                    self._closed = True
+                    return
+                time.sleep(0.1)
+                continue
             if peer[0] != '127.0.0.1':
                 client.close()
                 continue
             if not self.slots.acquire(blocking=False):
                 self._reply(client, 503, 'Busy')
                 continue
-            threading.Thread(target=self._serve, args=(client,), name='omni-egress', daemon=True).start()
+            try:
+                threading.Thread(target=self._serve, args=(client,), name='omni-egress', daemon=True).start()
+            except RuntimeError:   # no thread could be started: give the slot back
+                self.slots.release()
+                self._reply(client, 503, 'Busy')
 
     @staticmethod
     def _reply(client, code, text):

@@ -34,8 +34,9 @@ int main(void)
     setvbuf(stdout, 0, _IONBF, 0);
     FILE* f = fopen("/data/omni/native/starter-stop.pid", "r");
     int pid = 0;
-    if (!f || fscanf(f, "%d", &pid) != 1 || pid <= 1) { printf("omni-starter-stop: no pid file\n"); return 1; }
-    fclose(f);
+    int got = f && fscanf(f, "%d", &pid) == 1 && pid > 1;
+    if (f) fclose(f);
+    if (!got) { printf("omni-starter-stop: no pid file\n"); return 1; }
     unlink("/data/omni/native/starter-stop.pid");
     if (!port_open()) { printf("omni-starter-stop: nothing on 9031; nothing to do\n"); return 0; }
     int r = kill(pid, SIGKILL);
