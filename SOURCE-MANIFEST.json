@@ -4843,8 +4843,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-child-relink.sh",
-      "bytes": 10966,
-      "sha256": "7291fd70163f012faa0a5410bac113b34ccd122b259fe6f4b2dd3ff89bdda37e"
+      "bytes": 11185,
+      "sha256": "ae5ff3c68ad1b2d48449538653a02bcadb48e8f513bc6cf5ce03fd70900ce2de"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-launch-s1b-rc4.sh",
@@ -4863,8 +4863,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
-      "bytes": 22463,
-      "sha256": "4baaa123dcbbc276ed75ca3ee745067b3d01d54a26596a7524e0c1c4a1da2a3e"
+      "bytes": 22952,
+      "sha256": "38c9ece64e168a44ff5efd0e4119307a977d3f3d5cb79a8b915709d7639f3ee7"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-launch-child-fallback.sh",
@@ -6738,8 +6738,8 @@
     },
     {
       "path": "omni/native-title/starter/README.md",
-      "bytes": 1553,
-      "sha256": "85e76b20e4769a3767d1a00bc075e5e35572f758907d8ae30cbd1b8483e22d9b"
+      "bytes": 2729,
+      "sha256": "40759b77038dd8c9594fd4abfe52be21e1d01febe383c1318f9ab5ae61d4f51c"
     },
     {
       "path": "omni/native-title/starter/stop/main.c",
