@@ -1522,6 +1522,11 @@
       "sha256": "6641cab92886f8ca4bbdca98ec10d73a15b196a36b828f80db9fc1b414ff958d"
     },
     {
+      "path": "docs/STORY.md",
+      "bytes": 2787,
+      "sha256": "9b24bb5bbc20147263e5de90851a277cb49f427fd5a4ec19280fc242aca0bfc3"
+    },
+    {
       "path": "docs/tutorials/downloading/de.vtt",
       "bytes": 1776,
       "sha256": "a4192e9cdb22ac3ce8c5fee278942fdbbd20223c898616d6460b39d22596f81f"
@@ -17973,8 +17978,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 10457,
-      "sha256": "a05dab7d4e58a2566744c2bbf51767518bf764ee4b1dfa20cf1509ec4e6665ad"
+      "bytes": 10549,
+      "sha256": "37f230247f0f8ee67594289f25af3af1f73180901e1fb0c3bb76150f8a26a327"
     },
     {
       "path": "ROADMAP.md",
