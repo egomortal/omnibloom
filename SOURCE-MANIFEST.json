@@ -5247,6 +5247,11 @@
       "sha256": "79c2ca25ad37f5b733bcb3331fbb55560305a546e5ff98f7e50035bb400be6ac"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_spare_lazy.py",
+      "bytes": 2092,
+      "sha256": "097dd29acde84dff14edb82ad980011bcd57efb474899ed8f9e601a37415584b"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_starter.py",
       "bytes": 5278,
       "sha256": "319a648132b60809a1e0316b758a1e9e8638f5b6175282290e873491598ad16e"
@@ -6678,8 +6683,8 @@
     },
     {
       "path": "omni/native-title/starter/main.c",
-      "bytes": 5636,
-      "sha256": "27d244f0ec9ebe11d03ee8eaef66503a20926733ef3b5d085dc621d6d15e4b95"
+      "bytes": 6749,
+      "sha256": "fa670913ab7cb2b99f7846e978881a5ba0295420d4a4c7181bed9f860d6ceff1"
     },
     {
       "path": "omni/native-title/starter/Makefile",
@@ -6690,6 +6695,11 @@
       "path": "omni/native-title/starter/README.md",
       "bytes": 1553,
       "sha256": "85e76b20e4769a3767d1a00bc075e5e35572f758907d8ae30cbd1b8483e22d9b"
+    },
+    {
+      "path": "omni/native-title/starter/stop/main.c",
+      "bytes": 1954,
+      "sha256": "c1890245af5788be6d99edc9939271990742602faa9b72fdf369c5f336161ffb"
     },
     {
       "path": "omni/native-title/stubs/libSceVideodec2_stub.c",
