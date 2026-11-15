@@ -29,6 +29,8 @@ there, the title falls back to elfldr as before. Log: /data/omni/native/starter.
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/wait.h>
+#include <poll.h>
 
 #include "gpl/elfldr.h"
 
@@ -102,13 +104,27 @@ int main(void)
     sa.sin_family = AF_INET;
     sa.sin_port = htons(STARTER_PORT);
     sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    if (bind(server, (struct sockaddr*)&sa, sizeof sa) || listen(server, 16)) {
-        say("bind/listen 127.0.0.1:%d: errno %d (already running?)", STARTER_PORT, errno);
+    if (bind(server, (struct sockaddr*)&sa, sizeof sa)) {
+        // An older starter holds the port: ask it to quit (V2+ understands "quit"), then try again.
+        int q = socket(AF_INET, SOCK_STREAM, 0);
+        static const char quit[] = { 'q', 'u', 'i', 't', 10 };
+        if (q >= 0 && !connect(q, (struct sockaddr*)&sa, sizeof sa)) { (void)!write(q, quit, sizeof quit); }
+        if (q >= 0) close(q);
+        for (int i = 0; i < 20 && bind(server, (struct sockaddr*)&sa, sizeof sa); ++i) usleep(100000);
+    }
+    if (listen(server, 16)) {
+        say("bind/listen 127.0.0.1:%d: errno %d (another starter running?)", STARTER_PORT, errno);
         return 1;
     }
-    say("ready on 127.0.0.1:%d (OMNI_STARTER_V1, pid %d)", STARTER_PORT, (int)getpid());
+    say("ready on 127.0.0.1:%d (OMNI_STARTER_V2, pid %d)", STARTER_PORT, (int)getpid());
 
     for (;;) {
+        // V2 (2026-11-15): reap the engine processes we started once they end. V1 never did, so every finished
+        // engine stayed behind as a zombie (listed at 0 MB), and the console never looked idle. Reaping happens
+        // here, between requests, so it can't take the stop events elfldr_spawn() waits for.
+        while (waitpid(-1, 0, WNOHANG) > 0) { }
+        struct pollfd pf = { server, POLLIN, 0 };
+        if (poll(&pf, 1, 1000) <= 0) continue;
         int c = accept(server, 0, 0);
         if (c < 0) { if (errno != EINTR) usleep(100000); continue; }
         struct timeval tv = { 5, 0 };
@@ -122,6 +138,7 @@ int main(void)
         }
         line[got] = 0;
         if (!got) { close(c); continue; }   // a probe (the title checks that we answer)
+        if (!strcmp(line, "quit")) { say("quit requested (a newer starter is taking over)"); close(c); return 0; }
         if (strncmp(line, "file:", 5) || !allowed(line + 5)) {
             say("refused request \"%.80s\"", line);
             close(c);
