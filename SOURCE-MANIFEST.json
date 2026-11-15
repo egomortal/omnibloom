@@ -4823,8 +4823,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
-      "bytes": 21737,
-      "sha256": "b96c75ef63ac8430ca53d938f1476c73c03371b6301b00462d2104594e31b960"
+      "bytes": 22091,
+      "sha256": "f5fff2eb07af97f7b8a720f8751092b4e5f4441a3c8c63d48897fa18741f3e34"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-launch-child-fallback.sh",
@@ -5245,6 +5245,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_spare_defer.py",
       "bytes": 2888,
       "sha256": "79c2ca25ad37f5b733bcb3331fbb55560305a546e5ff98f7e50035bb400be6ac"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_starter.py",
+      "bytes": 5278,
+      "sha256": "319a648132b60809a1e0316b758a1e9e8638f5b6175282290e873491598ad16e"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_ua_override.py",
@@ -6645,6 +6650,46 @@
       "path": "omni/native-title/src/OmniNativeTitle.cpp",
       "bytes": 32239,
       "sha256": "bd3f0dc9ae873ce1ee185146a4322b0a6e7d57a249e232b1f3c10bd471704708"
+    },
+    {
+      "path": "omni/native-title/starter/COPYING",
+      "bytes": 35823,
+      "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809"
+    },
+    {
+      "path": "omni/native-title/starter/gpl/elfldr.c",
+      "bytes": 19079,
+      "sha256": "43f26c79d31643afaf7b4f24fa057010c5bdda42d296405bf83f8c8c684aef11"
+    },
+    {
+      "path": "omni/native-title/starter/gpl/elfldr.h",
+      "bytes": 1652,
+      "sha256": "df25e3f7ff1aa055a0930a001bc9a6cd91112cca100f0641097c580ed61ef845"
+    },
+    {
+      "path": "omni/native-title/starter/gpl/pt.c",
+      "bytes": 9715,
+      "sha256": "d053a6fc0aa49823bb648e6bf441cdd2084f9c0175b860c993492a90ca8fa5d5"
+    },
+    {
+      "path": "omni/native-title/starter/gpl/pt.h",
+      "bytes": 2640,
+      "sha256": "f2a0f33b188f4965559de6d1047cbfff018fd0d1551639e86fac62c62ddf69fb"
+    },
+    {
+      "path": "omni/native-title/starter/main.c",
+      "bytes": 5636,
+      "sha256": "27d244f0ec9ebe11d03ee8eaef66503a20926733ef3b5d085dc621d6d15e4b95"
+    },
+    {
+      "path": "omni/native-title/starter/Makefile",
+      "bytes": 528,
+      "sha256": "4a5acae58211b6d080374fd6ce3ebf47ad755e909b403624305bb8ed9f93ef03"
+    },
+    {
+      "path": "omni/native-title/starter/README.md",
+      "bytes": 1553,
+      "sha256": "85e76b20e4769a3767d1a00bc075e5e35572f758907d8ae30cbd1b8483e22d9b"
     },
     {
       "path": "omni/native-title/stubs/libSceVideodec2_stub.c",
@@ -18253,13 +18298,13 @@
     },
     {
       "path": "setup/tools/make_package.py",
-      "bytes": 12017,
-      "sha256": "6d6704d0afe77443796f579785819df7dda9844b2b4a85e841e629e7b45ec8c2"
+      "bytes": 12173,
+      "sha256": "05fd760e6f94971878909b557d1e079bf91e2ba6911bf537c6e354135ee41fc3"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
-      "bytes": 11007,
-      "sha256": "c6406c981fc27a1feab7bdd697750ebc09770642f98bac13374871d361a12d35"
+      "bytes": 11489,
+      "sha256": "422095ba46e53128cc35280bc3387e761c4f742481ca9fe5a7871597c9828885"
     },
     {
       "path": "tools/build_release.py",
