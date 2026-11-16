@@ -874,18 +874,29 @@ def site_probe(url, adapter_options=None):
     duration = info.get('duration')
     audio_only = [f for f in formats if f.get('vcodec') in (None, 'none') and f.get('acodec') not in (None, 'none') and not f.get('has_drm')]
     best_audio = max(audio_only, key=lambda f: f.get('abr') or f.get('tbr') or 0) if audio_only else None
+    # OMNI_DL_SAVE_V1: the best audio's size, exact when the site gives it, else bitrate x duration. It is added to
+    # every video-only size (exact or estimated) and shown on "Audio only".
+    audio_size = None
+    if best_audio:
+        audio_size = best_audio.get('filesize') or best_audio.get('filesize_approx')
+        rate = best_audio.get('abr') or best_audio.get('tbr')
+        if not audio_size and rate and duration:
+            audio_size = rate * 1000 * duration / 8
+        audio_size = int(audio_size) if audio_size else None
     seen = {}
     for f in formats:
         if f.get('has_drm') or f.get('vcodec') in (None, 'none') or not f.get('height'):
             continue
         key = (f.get('height'), round(f.get('fps') or 0) or None)
         size = f.get('filesize') or f.get('filesize_approx')
-        if size and f.get('acodec') in (None, 'none') and best_audio:
-            size += best_audio.get('filesize') or best_audio.get('filesize_approx') or 0
         tbr = f.get('tbr') or 0
+        if not size and tbr and duration:
+            size = tbr * 1000 * duration / 8
+        if size and f.get('acodec') in (None, 'none') and audio_size:
+            size += audio_size
         candidate = dict(width=f.get('width'), height=f.get('height'), fps=key[1], vcodec=codec_name(f.get('vcodec')),
                          acodec=codec_name(f.get('acodec')) if f.get('acodec') not in (None, 'none') else (codec_name(best_audio.get('acodec')) if best_audio else ''),
-                         bandwidth=int(tbr * 1000) if tbr else None, size=int(size) if size else (int(tbr * 1000 * duration / 8) if tbr and duration else None),
+                         bandwidth=int(tbr * 1000) if tbr else None, size=int(size) if size else None,
                          audio_group=None)
         if key not in seen or (candidate['bandwidth'] or 0) > (seen[key]['bandwidth'] or 0):
             seen[key] = candidate
@@ -901,7 +912,8 @@ def site_probe(url, adapter_options=None):
     best = variants[0] if variants else None
     value = result('ok', '', kind='page', container=(info.get('extractor_key') or 'Site')[:24], source='yt-dlp',
                    duration=duration, variants=variants, audio_tracks=tracks[:12], subtitles=subs,
-                   size=best['size'] if best else None, size_estimated=True, title=str(info.get('title') or '')[:200] or None)
+                   size=best['size'] if best else None, size_estimated=True, title=str(info.get('title') or '')[:200] or None,
+                   audio_size=audio_size)
     if best:
         value['video'] = {k: best[k] for k in ('width', 'height', 'fps', 'vcodec')}
         value['audio'] = {'codec': best['acodec']} if best['acodec'] else None

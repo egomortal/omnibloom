@@ -25,6 +25,7 @@ from jd_adapter import JDownloaderAdapter
 from schedule_policy import Policy, RateLimiter
 from presets import preset_options
 from probe import Prober, quality_format, site_probe  # OMNI_DOWNLOADS_PROBE_V5
+import save_places  # OMNI_DL_SAVE_V1
 
 ROOT = Path(__file__).resolve().parent
 MAX_HTTP_REQUESTS = 16
@@ -67,7 +68,8 @@ class Jobs:
         self.jd_adapter = jd_adapter or JDownloaderAdapter.from_environment()
         self.jd_lifecycle = jd_lifecycle
 
-    def create(self, url, demo, audio=False, request_id=None, engine='ytdlp', auto_fallback=True, quality=None, referer=None, preset=None, subtitle_lang=None):
+    def create(self, url, demo, audio=False, request_id=None, engine='ytdlp', auto_fallback=True, quality=None, referer=None, preset=None, subtitle_lang=None,
+               container=None, save_place=None, save_folder=None, save_name=None):
         if not isinstance(url, str) or len(url) > 4096 or type(demo) is not bool or type(audio) is not bool:
             raise ValueError('URL must be text (up to 4096 characters); demo and audio must be booleans.')
         validate_http_url(url)
@@ -86,9 +88,25 @@ class Jobs:
             audio = preset in ('audio-m4a', 'audio-opus')
             auto_fallback = False  # Never bypass a preset by falling back to another engine.
         fmt = options.get('format') or (quality_format(quality) if engine == 'ytdlp' else None)
+        # OMNI_DL_SAVE_V1: the file type and where the finished file goes. Checked here; the GUI sends ids and plain
+        # names, never paths. A job without save_place keeps the old behaviour (the file stays in its job folder).
+        audio_job = audio or bool(isinstance(quality, dict) and quality.get('audio_only'))
+        if container is not None:
+            if container not in (('m4a', 'webm') if audio_job else ('mp4', 'mkv')):
+                raise ValueError('File type must be ' + ('m4a or webm' if audio_job else 'mp4 or mkv') + ' for this download.')
+            if audio_job and engine == 'ytdlp' and preset is None:
+                fmt = 'bestaudio[ext=%s]/%s' % (container, fmt or 'bestaudio')
+        if save_place is not None:
+            save_places.base_for(save_places.check_place(save_place), self.folder)   # refuses a USB drive that is not there
+        save_folder = save_places.clean_name(save_folder, 'The folder name')
+        save_name = save_places.clean_name(save_name, 'The file name')
+        if (save_folder or save_name) and save_place is None:
+            raise ValueError('Choose where to save before naming a folder or file.')
         if referer is not None:
             validate_http_url(referer)
         choice = json.dumps({'quality':quality,'preset':preset,'subtitle_lang':subtitle_lang},sort_keys=True) if quality is not None or preset is not None else ''
+        if container or save_place:
+            choice += json.dumps({'container':container,'save':[save_place,save_folder,save_name]},sort_keys=True)
         if request_id is not None and (not isinstance(request_id, str) or len(request_id) != 32
                                        or any(c not in '0123456789abcdef' for c in request_id)):
             raise ValueError('request_id must contain 32 lowercase hexadecimal characters.')
@@ -117,7 +135,9 @@ class Jobs:
             self.jobs[key] = dict(id=key, url=url, demo=demo, audio=audio, state='queued', progress=0,
                                  title='Waiting', error='', cancel=False, request_id=request_id, engine=engine,
                                  engine_requested=engine, auto_fallback=auto_fallback, note='',
-                                 format=fmt, quality_key=choice, referer=referer, preset=preset, subtitle_lang=subtitle_lang)
+                                 format=fmt, quality_key=choice, referer=referer, preset=preset, subtitle_lang=subtitle_lang,
+                                 container=container, save_place=save_place, save_folder=save_folder, save_name=save_name,
+                                 downloaded_bytes=None, total_bytes=None, speed_bps=None, eta_seconds=None)
             self.pending.append(key)
             self.history.save(self.jobs)
             if self.dispatcher is None:
@@ -260,7 +280,7 @@ class Jobs:
                     time.sleep(.035)
                 self.update(key, state='completed', title='Demo complete • no file was downloaded')
                 return
-            destination = self.folder / key
+            destination = save_places.work_folder(job.get('save_place') or 'internal', self.folder, key)
             destination.mkdir(parents=True, exist_ok=True)
             self._route(key, job, destination)
         except Exception as error:
@@ -315,7 +335,13 @@ class Jobs:
                 note = f'Downloaded by {how} after {ENGINE_NAMES[order[0]]} could not take it ({redact_urls(reasons[0][1], 160)}).'
             else:
                 note = f'Downloaded by {how}.'
-            self.update(key, state='completed', progress=100, filepath=result.get('filepath', ''), note=note[:400])
+            filepath = result.get('filepath', '')
+            if job.get('save_place') and filepath:
+                # OMNI_DL_SAVE_V1: move the finished file to the chosen place under a free name.
+                self.update(key, state='processing', progress=100, title='Saving the file')
+                filepath = str(save_places.publish(filepath, job['save_place'], self.folder, job.get('save_folder'), job.get('save_name')))
+                note += ' Saved to ' + filepath + '.'
+            self.update(key, state='completed', progress=100, filepath=filepath, note=note[:400])
             return
         summary = ' | '.join(f'{ENGINE_NAMES[name]}: {redact_urls(message, 300)}' for name, message in reasons)
         if len(order) == 1:
@@ -348,28 +374,52 @@ class Jobs:
 
     def _run_ytdlp(self, key, job, destination):
         limiter = RateLimiter(self.policy.rate)
-        downloaded = {}
+        downloaded, totals, expected = {}, {}, {}
+        place = job.get('save_place') or 'internal'
         def hook(data):
             if self.cancelled(key):
                 raise InterruptedError('Cancelled')
+            if not save_places.still_there(place):
+                raise NoFallback('The USB drive was disconnected during the download.')
             name = str(data.get('filename') or 'stream')
             count = max(0, int(data.get('downloaded_bytes') or 0))
             before = downloaded.get(name, 0)
             limiter.charge(count if count < before else count - before, lambda: self.cancelled(key))
             downloaded[name] = count
             total = data.get('total_bytes') or data.get('total_bytes_estimate') or 0
-            progress = min(100, int(100 * count / total)) if total else None   # count: None-safe (yt-dlp may send None)
-            self.update(key, state='downloading' if data['status'] == 'downloading' else 'processing', progress=progress)
+            if total:
+                totals[name] = int(total)
+            # OMNI_DL_SAVE_V1: one count over all the streams of the job (video + audio), not a percent that
+            # restarts when the audio stream begins. The expected total comes from the chosen formats when known.
+            done = sum(downloaded.values())
+            whole = max(expected.get('size') or 0, sum(totals.values())) or None
+            speed = data.get('speed')
+            speed = int(speed) if isinstance(speed, (int, float)) and speed > 0 else None
+            eta = int((whole - done) / speed) if whole and speed and whole > done else None
+            progress = min(100, int(100 * done / whole)) if whole else None
+            self.update(key, state='downloading' if data['status'] == 'downloading' else 'processing', progress=progress,
+                        downloaded_bytes=done, total_bytes=whole, speed_bps=speed, eta_seconds=eta)
+        def metadata(info):
+            self.update(key, title=str(info.get('title') or 'Media')[:300])
+            size = expected_size(info)
+            if size:
+                expected['size'] = size
+                self.update(key, total_bytes=size)
+                free = save_places.usage(destination)[0]
+                if free is not None and free < size + save_places.MARGIN:
+                    raise NoFallback('Not enough free space: this download needs about %s and the drive has %s free.'
+                                     % (human_bytes(size), human_bytes(free)))
         if importlib.util.find_spec('yt_dlp') is None:
             raise EngineUnavailable('yt-dlp is not installed in this runtime')
         self.update(key, state='extracting', title='Inspecting link')
         destination.mkdir(parents=True, exist_ok=True)
         try:
             result = self.ytdlp_adapter()().download(job['url'], destination, job['audio'], hook,
-                lambda info: self.update(key, title=str(info.get('title') or 'Media')[:300]),
+                metadata,
                 lambda: self.cancelled(key),
                 lambda data: self.update(key, state='processing', progress=None),
-                fmt=job.get('format'), referer=job.get('referer'), preset=job.get('preset'), subtitle_lang=job.get('subtitle_lang'))
+                fmt=job.get('format'), referer=job.get('referer'), preset=job.get('preset'), subtitle_lang=job.get('subtitle_lang'),
+                container=job.get('container'))
         except (InterruptedError, NoFallback):
             raise
         except Exception as error:
@@ -395,6 +445,24 @@ class Jobs:
         protocols = result.get('protocols') or [entry.get('protocol') for entry in result.get('requested_downloads', [])] or []
         kind = ' (HLS)' if any(str(p).startswith('m3u8') for p in protocols) else ' (DASH)' if any('dash' in str(p) for p in protocols) else ''
         return dict(filepath=filepath, via='yt-dlp' + kind)
+
+
+def expected_size(info):
+    """Bytes of the chosen formats (video + audio), when yt-dlp knows them; else None."""
+    if not isinstance(info, dict):
+        return None
+    chosen = info.get('requested_formats') or [info]
+    sizes = [f.get('filesize') or f.get('filesize_approx') for f in chosen if isinstance(f, dict)]
+    if not sizes or not all(isinstance(n, (int, float)) and n > 0 for n in sizes):
+        return None
+    return int(sum(sizes))
+
+
+def human_bytes(n):
+    for unit in ('bytes', 'KB', 'MB', 'GB', 'TB'):
+        if n < 1024 or unit == 'TB':
+            return ('%d %s' % (n, unit)) if unit == 'bytes' else ('%.1f %s' % (n, unit))
+        n /= 1024
 
 
 class WorkerHTTPServer(ThreadingHTTPServer):
@@ -638,6 +706,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
             self.server.runtime['jd_lifecycle'] = lifecycle
             return self.reply(200, dict(api_version=1, presets_v1=True, service='omni-media-worker', jobs=jobs.snapshot(),
                                        **self.server.runtime, folder=str(jobs.folder),
+                                       places=save_places.places(jobs.folder), save_v1=True,
                                        history_error=jobs.history.error, max_pending=MAX_PENDING,
                                        queue_paused=jobs.queue_paused))
         self.reply(404, {'error': 'Not found'})
@@ -670,7 +739,8 @@ class WorkerHandler(BaseHTTPRequestHandler):
             if self.path == '/api/jobs':
                 key = self.server.jobs.create(body['url'], body.get('demo', True), body.get('audio', False), body.get('request_id'),
                                               body.get('engine', 'ytdlp'), body.get('auto_fallback', True),
-                                              body.get('quality'), body.get('referer'), body.get('preset'), body.get('subtitle_lang'))
+                                              body.get('quality'), body.get('referer'), body.get('preset'), body.get('subtitle_lang'),
+                                              body.get('container'), body.get('save_place'), body.get('save_folder'), body.get('save_name'))
                 return self.reply(201, {'id': key})
             if self.path == '/api/probe':
                 # OMNI_DOWNLOADS_PROBE_V5: read-only check of one grabbed link (public hosts only).

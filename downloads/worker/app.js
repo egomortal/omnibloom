@@ -375,7 +375,7 @@
       const fill=$('.job-progress span',node),scale=`scaleX(${progress/100})`;
       if (fill.style.transform !== scale) fill.style.transform = scale;
       setText($('.job-mode-label',node), job.demo?'Demo · no file':'Real job');
-      setText($('.job-byte-label',node), job.error|| (job.demo?'Simulation · no media saved':job.filepath?'Worker output: '+job.filepath:'Transferred size unavailable'));
+      setText($('.job-byte-label',node), job.error|| (job.demo?'Simulation · no media saved':job.filepath?(job.status==='completed'?'Saved to ':'Worker output: ')+job.filepath:byteLine(job)));
       setText($('.job-percent',node), job.progress===null?'Progress unavailable':Math.round(progress)+'%');
       if (statusChanged) {
         const controls=$('.job-controls',node),hadFocus=controls.contains(document.activeElement);
@@ -451,9 +451,76 @@
     // internal ID shared with Omni. Keep that boundary explicit in both ways.
     state.jobs = state.jobs.map(job => ({...job,engine:job.engine==='yt-dlp'?'ytdlp':job.engine}));
     window.dispatchEvent(new CustomEvent('omni:state',{detail:{jobs:state.jobs,saved_links:state.saved_links}}));
+    renderPlaces();
     refreshContent();
     if (!online) { online = true; toast('You’re connected again. Right where you left off.'); }
   }
+
+  // OMNI_DL_SAVE_V1 ----------------------------------------------------------------------------------
+  // "312 MB of 1.4 GB · 4.2 MB/s · 3 min left" while a job runs (counted over video + audio together).
+  function byteLine(job){
+    if(job.downloaded_bytes==null)return job.total_bytes?'Size: about '+fmtBytes(job.total_bytes):'Transferred size unavailable';
+    const parts=[fmtBytes(job.downloaded_bytes)+(job.total_bytes?' of '+fmtBytes(job.total_bytes):'')];
+    if(job.speed_bps)parts.push(fmtBytes(job.speed_bps)+'/s');
+    if(job.eta_seconds!=null&&job.status==='downloading')parts.push(timeLeft(job.eta_seconds));
+    return parts.join(' · ');
+  }
+  function timeLeft(s){return s<60?'under a minute left':s<3600?Math.round(s/60)+' min left':Math.floor(s/3600)+' h '+Math.round(s%3600/60)+' min left';}
+  function placeText(p){return p.label+(p.free_bytes!=null?' · '+fmtBytes(p.free_bytes)+' free':'');}
+  function renderPlaces(){
+    const select=$('#download-place');if(!select)return;
+    const places=state.places&&state.places.length?state.places:[{id:'internal',label:'Console storage',free_bytes:null}];
+    const keep=select.value||rememberedPlace();
+    const wanted=places.map(p=>p.id+'|'+placeText(p)).join(';');
+    if(select.dataset.places!==wanted){
+      select.replaceChildren(...places.map(p=>Object.assign(document.createElement('option'),{value:p.id,textContent:placeText(p)})));
+      select.dataset.places=wanted;
+      select.value=places.some(p=>p.id===keep)?keep:'internal';
+    }
+    renderTypes();
+  }
+  function rememberedPlace(){try{return localStorage.getItem('omni.downloads.place')||'internal';}catch(_){return 'internal';}}
+  // The file-type list follows "What to save": MP4/MKV for video, M4A/WebM for audio, nothing for original files.
+  function renderTypes(){
+    const kind=$('#download-kind')?.value,engine=$('#download-engine')?.value,box=$('#download-type-box'),select=$('#download-type');if(!box||!select)return;
+    const audio=kind==='audio'||qualityChoices.get($('#download-url')?.value.trim()||'')?.quality?.audio_only===true;
+    const list=engine==='jdownloader'||kind==='file'?[]:audio?[['m4a','M4A · plays almost anywhere'],['webm','WebM (Opus)']]:[['mp4','MP4 · plays almost anywhere'],['mkv','MKV']];
+    box.hidden=!list.length;
+    const wanted=list.map(x=>x[0]).join(',');
+    if(select.dataset.types!==wanted){select.replaceChildren(...list.map(([v,t])=>Object.assign(document.createElement('option'),{value:v,textContent:t})));select.dataset.types=wanted;}
+    renderSpace();
+  }
+  // "Needs about 1.4 GB · 312 GB free" under the form, and a warning when it won't fit.
+  function renderSpace(){
+    const line=$('#download-space');if(!line)return;
+    const url=$('#download-url')?.value.trim()||'',place=(state.places||[]).find(p=>p.id===$('#download-place')?.value);
+    const result=probeOn()?probeResult(url):null,choice=qualityChoices.get(url);
+    let need=null;
+    if(result&&result.ok){
+      if(choice?.quality?.audio_only)need=result.audio_size;
+      else if(choice?.quality?.height){const v=result.variants.find(x=>x.height===choice.quality.height&&(!choice.quality.fps||x.fps===choice.quality.fps));need=v?.size;}
+      else need=result.variants[0]?.size||result.size;
+    }
+    const text=need?'Needs about '+fmtBytes(need)+(place?.free_bytes!=null?' · '+fmtBytes(place.free_bytes)+' free on '+place.label:''):'';
+    const tooBig=need&&place?.free_bytes!=null&&need+64e6>place.free_bytes;
+    setText(line,tooBig?text+'. Not enough space: pick another place or a lower quality.':text);
+    line.classList.toggle('form-error',!!tooBig);
+  }
+  // What addDownload sends: the add form's choices, or the remembered place and the usual types for quick adds.
+  function saveChoice(engine,kind){
+    const formOpen=!!document.querySelector('#add-dialog[open]');
+    const place=formOpen?$('#download-place')?.value||'internal':rememberedPlace();
+    try{localStorage.setItem('omni.downloads.place',place);}catch(_){}
+    const out={save_place:place};
+    if(engine==='ytdlp'&&kind!=='file'){
+      const typeBox=$('#download-type-box');
+      out.container=formOpen&&typeBox&&!typeBox.hidden?$('#download-type').value:(kind==='audio'?'m4a':'mp4');
+    }
+    if(formOpen){const folder=$('#download-folder')?.value.trim(),name=$('#download-name')?.value.trim();if(folder)out.save_folder=folder;if(name)out.save_name=name;}
+    return out;
+  }
+  document.addEventListener('change',event=>{if(['download-kind','download-engine'].includes(event.target.id))renderTypes();else if(event.target.id==='download-place')renderSpace();});
+  document.addEventListener('input',event=>{if(event.target.id==='download-url')renderSpace();});
 
   async function addDownload(url,selectedEngine,kind,title,demo=false){
     if(!validLink(url))throw new Error('Use a complete HTTP(S) source without credentials or whitespace.');
@@ -464,7 +531,8 @@
     const choice=selectedEngine==='ytdlp'?qualityChoices.get(url)?.quality||null:null;
     if(choice?.audio_only)kind='audio';
     const referer=probeOn()&&pickRows().some(row=>row.url===url)?pageOrigin():null;
-    const result=await client.createJob({url,engine:selectedEngine,demo,audio:selectedEngine==='ytdlp'&&kind==='audio',quality:choice,referer},{confirmNewAfterRestart:confirmation?.checked===true});
+    const save=saveChoice(selectedEngine,kind);
+    const result=await client.createJob({url,engine:selectedEngine,demo,audio:selectedEngine==='ytdlp'&&kind==='audio',quality:choice,referer,...save},{confirmNewAfterRestart:confirmation?.checked===true});
     $$('.uncertain-submission').forEach(node=>{node.hidden=true;$('input',node).checked=false;});
     try{await loadState();}catch(_){toast('Submission accepted. Reconnect to check its status; do not resubmit.');}
     await navigate('queue');
@@ -712,7 +780,9 @@
   }
   function fmtBytes(value){if(!value)return '';const units=['B','KB','MB','GB','TB'];let n=value,i=0;while(n>=1000&&i<4){n/=1000;i++;}return (n>=100||i===0?Math.round(n):n.toFixed(1))+' '+units[i];}
   function fmtTime(seconds){if(!seconds)return '';const s=Math.round(seconds),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`:`${m}:${String(x).padStart(2,'0')}`;}
-  function qualityName(v){if(!v)return '';if(v.height)return v.height+'p'+(v.fps&&v.fps>30?v.fps:'');return '';}
+  // OMNI_DL_SAVE_V1: the names other downloaders use (4K, 1080p Full HD, ...); the frame rate when above 30.
+  function qualityName(v){if(!v||!v.height)return '';const h=v.height,fps=v.fps&&v.fps>30?' '+v.fps+'fps':'';
+    const name=h>=4320?'8K':h>=2160?'4K':h>=1440?'1440p (2K)':h>=1080?'1080p Full HD':h>=720?'720p HD':h+'p';return name+fps;}
   function sizeText(value,estimated){return value?(estimated?'~':'')+fmtBytes(value):'';}
   function probeBadge(result){
     if(!result)return '';
@@ -827,7 +897,7 @@
     const best=result.variants[0];
     const options=[{key:'best',label:'Best available',detail:[qualityName(best||result.video),[best?.vcodec,best?.acodec].filter(Boolean).join('/'),sizeText(best?.size||result.size,true)].filter(Boolean).join(' · '),quality:null}];
     for(const v of result.variants){if(v.height)options.push({key:`h${v.height}f${v.fps||0}`,label:qualityName(v),detail:[[v.vcodec,v.acodec].filter(Boolean).join('/'),sizeText(v.size,true)].filter(Boolean).join(' · '),quality:{height:v.height,...(v.fps?{fps:v.fps}:{})}});}
-    if(result.audio_tracks.length)options.push({key:'audio',label:'Audio only',detail:result.audio_tracks[0].codec||result.audio?.codec||'',quality:{audio_only:true}});
+    if(result.audio_tracks.length)options.push({key:'audio',label:'Audio only',detail:[result.audio_tracks[0].codec||result.audio?.codec||'',sizeText(result.audio_size,true)].filter(Boolean).join(' · '),quality:{audio_only:true}});
     return options;
   }
   function openQuality(url){
@@ -853,7 +923,7 @@
     const label=option.label+(option.detail?' ('+option.detail+')':'')+(validLang?' · audio '+validLang:'');
     if(option.key==='best'&&!validLang)qualityChoices.delete(qualityUrl);else qualityChoices.set(qualityUrl,{key:option.key,lang:validLang,quality,label});
     $('#quality-dialog').close();
-    renderQualityNote($('#form-candidates'));renderQualityNote($('#launch-candidates'));
+    renderQualityNote($('#form-candidates'));renderQualityNote($('#launch-candidates'));renderTypes();
     toast('Quality: '+label,2200);
   }
   // Start on the marked row (or the first): the D-pad then walks the list; Cross picks.

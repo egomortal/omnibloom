@@ -58,6 +58,9 @@ class H(BaseHTTPRequestHandler):
         return dict(api_version=1, service='omni-media-worker', jobs=STATE['jobs'], ytdlp=True, jdownloader=True,
                     jdownloader_status='Stub JD ready', backend='stub', ffmpeg=True, quickjs=True, folder='/data/omni-downloader/downloads',
                     history_error='', max_pending=8, queue_paused=STATE['paused'], jd_lifecycle=dict(can_start=True, status='stub'),
+                    # OMNI_DL_SAVE_V1: places to save (console storage + one USB drive) for the save form tests
+                    places=[dict(id='internal', label='Console storage', free_bytes=312_400_000_000, total_bytes=825_000_000_000),
+                            dict(id='usb0', label='USB drive 1', free_bytes=900_000_000, total_bytes=64_000_000_000)], save_v1=True,
                     **({'probe': True} if PROBE else {}))
     def do_GET(self):
         if self.path in ('/', '/downloads'):
@@ -109,7 +112,10 @@ def tick():
             for j in STATE['jobs']:
                 if j['state'] in ('queued', 'downloading'):
                     j['state'] = 'downloading'; j['progress'] = min(100, (j['progress'] or 0) + 10)
-                    if j['progress'] >= 100: j['state'] = 'completed'
+                    # OMNI_DL_SAVE_V1: byte counts as the real worker reports them (video + audio counted together)
+                    j['total_bytes'] = 1_400_000_000; j['downloaded_bytes'] = j['total_bytes'] * j['progress'] // 100
+                    j['speed_bps'] = 4_200_000; j['eta_seconds'] = (j['total_bytes'] - j['downloaded_bytes']) // j['speed_bps']
+                    if j['progress'] >= 100: j['state'] = 'completed'; j['filepath'] = '/data/omni/downloads/media-worker/Saved/' + (j['url'].rsplit('/', 1)[-1] or 'file')
 threading.Thread(target=tick, daemon=True).start()
 print('ready', PORT, flush=True)
 ThreadingHTTPServer(('127.0.0.1', PORT), H).serve_forever()

@@ -49,11 +49,13 @@
     var subs=value.subtitles.filter(Boolean).map(function(t){return {lang:text(t.lang,20),name:text(t.name,60)};});
     var video=value.video&&typeof value.video==='object'?{width:num(value.video.width,20000)?value.video.width||null:null,height:num(value.video.height,10000)?value.video.height||null:null,fps:num(value.video.fps,1000)?value.video.fps||null:null,vcodec:text(value.video.vcodec,24)}:null;
     var audio=value.audio&&typeof value.audio==='object'?{codec:text(value.audio.codec,24)}:null;
-    return {status:value.status,ok:value.status==='ok',message:text(value.message,300),kind:text(value.kind,8),container:text(value.container,24),duration:value.duration||null,size:value.size||null,size_estimated:value.size_estimated===true,video:video,audio:audio,variants:variants,audio_tracks:tracks,subtitles:subs,encrypted:['none','aes-128','drm'].includes(value.encrypted)?value.encrypted:'none',source:value.source==='yt-dlp'?'yt-dlp':'parse',title:text(value.title,200)||null};
+    return {status:value.status,ok:value.status==='ok',message:text(value.message,300),kind:text(value.kind,8),container:text(value.container,24),duration:value.duration||null,size:value.size||null,size_estimated:value.size_estimated===true,video:video,audio:audio,variants:variants,audio_tracks:tracks,subtitles:subs,encrypted:['none','aes-128','drm'].includes(value.encrypted)?value.encrypted:'none',source:value.source==='yt-dlp'?'yt-dlp':'parse',title:text(value.title,200)||null,audio_size:num(value.audio_size,1e15)?value.audio_size||null:null};
   }
   function normalizeJob(job){
     var result={id:job.id,url:job.url,title:job.title||'Worker job',engine:job.engine,kind:job.engine==='jdownloader'?'file':job.audio?'audio':'video',status:job.state,progress:job.progress,demo:job.demo,audio:job.audio,error:job.error||'',filepath:job.demo?'':job.filepath||'',restored:job.restored===true,note:job.demo?'':job.note||'',engine_requested:job.engine_requested||job.engine};
-    // Canonical status has no bytes/speed/ETA/timestamps: leave them absent.
+    // OMNI_DL_SAVE_V1: live byte counts, speed and time left (numbers or null), and the chosen file type.
+    ['downloaded_bytes','total_bytes','speed_bps','eta_seconds'].forEach(function(key){var v=job[key];result[key]=typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=1e15?v:null;});
+    result.container=['mp4','mkv','m4a','webm'].includes(job.container)?job.container:null;
     return result;
   }
   function create(options){
@@ -80,7 +82,8 @@
       if(statusFlight)return statusFlight;statusFlight=(async function(){var status=validateStatus(await request('/api/status'));var savedError=savedFailure;
         if(!lastSaved||config?.saved===true&&now()-savedAt>=1500){try{var candidate=validateSaved(await request('/api/saved-links'));if(candidate.error)throw fail('SAVED_STORAGE',candidate.error);lastSaved=candidate;savedAt=now();savedFailure='';savedError='';}catch(error){savedError=error.message;savedFailure=savedError;if(!lastSaved)lastSaved={links:[],max_links:64,writable:false,persistent:false,error:savedError};}}
         var saved=lastSaved;var capabilities={presets:status.presets_v1===true,ytdlp:status.ytdlp===true,jdownloader:status.jdownloader===true||status.jd_lifecycle?.can_start===true,jdownloader_ready:status.jdownloader===true,jdownloader_status:status.jdownloader_status||status.jd_lifecycle?.status||'Unavailable',backend:status.backend||'Unknown',ffmpeg:status.ffmpeg===true,quickjs:status.quickjs===true,probe:status.probe===true};
-        return {jobs:status.jobs.map(normalizeJob).reverse(),saved_links:saved.links.map(function(link){return {id:link.id,url:link.url,title:new root.URL(link.url).hostname,created_at:link.created_at};}),preferences:Object.assign({},preferences),capabilities:capabilities,queue_paused:status.queue_paused,folder:status.folder,history_error:status.history_error,saved_writable:saved.writable&&!savedError,saved_persistent:saved.persistent,saved_error:savedError||saved.error||'',raw:status};
+        var places=Array.isArray(status.places)?status.places.filter(function(p){return p&&/^(internal|usb[0-7])$/.test(p.id)&&string(p.label,40)&&num(p.free_bytes,1e16)&&num(p.total_bytes,1e16);}).slice(0,9).map(function(p){return {id:p.id,label:p.label,free_bytes:p.free_bytes==null?null:p.free_bytes,total_bytes:p.total_bytes==null?null:p.total_bytes};}):[];
+        return {places:places,save_v1:status.save_v1===true,jobs:status.jobs.map(normalizeJob).reverse(),saved_links:saved.links.map(function(link){return {id:link.id,url:link.url,title:new root.URL(link.url).hostname,created_at:link.created_at};}),preferences:Object.assign({},preferences),capabilities:capabilities,queue_paused:status.queue_paused,folder:status.folder,history_error:status.history_error,saved_writable:saved.writable&&!savedError,saved_persistent:saved.persistent,saved_error:savedError||saved.error||'',raw:status};
       })();try{return await statusFlight;}finally{statusFlight=null;}
     }
     async function createJob(parameters,config){
@@ -94,9 +97,15 @@
       if(parameters.preset&&parameters.quality)throw fail('INVALID_JOB','Choose either a preset or a quality, not both.');
       if(parameters.preset&&parameters.engine!=='ytdlp')throw fail('INVALID_JOB','Presets use yt-dlp.');
       if(parameters.subtitle_lang!==undefined&&parameters.subtitle_lang!==null&&!(parameters.preset==='subtitles'&&typeof parameters.subtitle_lang==='string'&&/^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8}){0,2}$/.test(parameters.subtitle_lang)))throw fail('INVALID_JOB','Choose a valid subtitle language.');
+      // OMNI_DL_SAVE_V1: file type, where to save (an id, never a path) and optional plain folder/file names.
+      var NAME=/^[A-Za-z0-9][A-Za-z0-9 ._()\-]{0,79}$/;
+      if(parameters.container!=null&&!['mp4','mkv','m4a','webm'].includes(parameters.container))throw fail('INVALID_JOB','Choose a valid file type.');
+      if(parameters.save_place!=null&&!/^(internal|usb[0-7])$/.test(parameters.save_place))throw fail('INVALID_JOB','Choose a valid place to save.');
+      ['save_folder','save_name'].forEach(function(key){var v=parameters[key];if(v!=null&&v!==''&&!(typeof v==='string'&&NAME.test(v)&&!v.includes('..')&&!/[. ]$/.test(v)))throw fail('INVALID_JOB',(key==='save_folder'?'Folder':'File')+' names may use letters, digits, spaces and . _ - ( ), up to 80 characters.');});
       var extra={};if(parameters.quality)extra.quality=parameters.quality;if(parameters.referer)extra.referer=parameters.referer;if(parameters.preset)extra.preset=parameters.preset;if(parameters.subtitle_lang)extra.subtitle_lang=parameters.subtitle_lang;
+      ['container','save_place','save_folder','save_name'].forEach(function(key){if(parameters[key])extra[key]=parameters[key];});
       parameters={url:parameters.url,engine:parameters.engine,demo:parameters.demo,audio:parameters.audio};
-      var signature=JSON.stringify([parameters.url,parameters.engine,parameters.demo,parameters.audio,extra.quality||null,extra.referer||null,extra.preset||null,extra.subtitle_lang||null]);if(!pendingJob||pendingJob.signature!==signature)pendingJob={signature:signature,id:requestId(),token:token,ambiguous:false};
+      var signature=JSON.stringify([parameters.url,parameters.engine,parameters.demo,parameters.audio,extra.quality||null,extra.referer||null,extra.preset||null,extra.subtitle_lang||null,extra.container||null,extra.save_place||null,extra.save_folder||null,extra.save_name||null]);if(!pendingJob||pendingJob.signature!==signature)pendingJob={signature:signature,id:requestId(),token:token,ambiguous:false};
       if(pendingJob.ambiguous&&pendingJob.token!==token){if(config?.confirmNewAfterRestart!==true)throw fail('AMBIGUOUS_RESTART','A previous submission may have been accepted before restart. Check history. A new submission can duplicate it.',{requiresNewSubmissionConfirmation:true});pendingJob={signature:signature,id:requestId(),token:token,ambiguous:false};}
       var attempt=pendingJob;try{var result=await request('/api/jobs',Object.assign({},parameters,extra,{request_id:attempt.id}));if(!result||(typeof result.id!=='string'||!HEX16.test(result.id)))throw fail('INVALID_RESPONSE','Worker returned an invalid job receipt. Check the queue before retrying.',{ambiguous:true});if(pendingJob===attempt)pendingJob=null;return {id:result.id,demo:parameters.demo,request_id:attempt.id};}catch(error){if(error.ambiguous)attempt.ambiguous=true;if(error.code==='SESSION_RESTARTED'&&!attempt.ambiguous)attempt.token=token;throw error;}
     }

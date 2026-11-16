@@ -16,7 +16,7 @@ const enc = encodeURIComponent;
 const log = []; let failures = 0;
 const check = (name, ok, data = {}) => { if (!ok) failures++; log.push({ check: name, pass: !!ok, ...data }); console.log((ok ? 'PASS ' : 'FAIL ') + name, ok ? '' : JSON.stringify(data)); };
 (async () => {
-  const b = await pw[ENGINE].launch(ENGINE === 'chromium' ? { args: ['--no-proxy-server'] } : {});
+  const b = await pw[ENGINE].launch(ENGINE === 'chromium' ? { args: ['--no-proxy-server'], ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}) } : {});
   const ctx = await b.newContext({ viewport: { width: 1920, height: 1080 } });
   const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(String(e))); p.on('console', m => { if (m.type() === 'error' && !/404|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text()); });

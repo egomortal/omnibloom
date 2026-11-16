@@ -19,7 +19,7 @@ const enc = encodeURIComponent;
 const log = []; let failures = 0;
 const check = (name, ok, data = {}) => { if (!ok) failures++; log.push({ check: name, pass: !!ok, ...data }); console.log((ok ? 'PASS ' : 'FAIL ') + name, ok ? '' : JSON.stringify(data)); };
 (async () => {
-  const b = await pw[ENGINE].launch(ENGINE === 'chromium' ? { args: ['--no-proxy-server'] } : {});
+  const b = await pw[ENGINE].launch(ENGINE === 'chromium' ? { args: ['--no-proxy-server'], ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}) } : {});
   const ctx = await b.newContext({ viewport: { width: 1920, height: 1080 } });
   const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(String(e))); p.on('console', m => { if (m.type() === 'error' && !/404|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text()); });
@@ -62,14 +62,15 @@ const check = (name, ok, data = {}) => { if (!ok) failures++; log.push({ check: 
   check('A2 every row checked (title says checked)', s.title === 'checked' && r.every(x => x.probe && x.probe !== 'checking'), { s, r });
   check('A3 best first: 1080p60 HLS, then the page (1080p via site check)', r[0].url === TOP && r[1].url === PAGE, r.map(x => x.url));
   check('A4 failures sorted last', ['protected', 'dead'].includes(r[3].probe) && ['protected', 'dead'].includes(r[4].probe), r.map(x => x.probe));
-  check('A5 HLS badge shows type, quality, codecs, duration and size', /^HLS · 1080p60 · H\.264\/AAC · 10:35 · ~\d/.test(r[0].head), r[0]);
+  check('A5 HLS badge shows type, quality, codecs, duration and size', /^HLS · 1080p Full HD 60fps · H\.264\/AAC · 10:35 · ~\d/.test(r[0].head), r[0]);
   check('A6 HLS detail lists qualities, audio and subtitles', /3 qualities/.test(r[0].small) && /English, Español/.test(r[0].small) && /subtitles: en/.test(r[0].small), r[0]);
-  check('A7 page row verified by the site check after a slow first answer', /^Page link · Generic · 1080p · H\.264\/AAC/.test(r[1].head) && /Big Buck Bunny/.test(r[1].small), r[1]);
+  check('A7 page row verified by the site check after a slow first answer', /^Page link · Generic · 1080p Full HD · H\.264\/AAC/.test(r[1].head) && /Big Buck Bunny/.test(r[1].small), r[1]);
   check('A8 DRM row says protected, dead row says dead', r.some(x => x.probe === 'protected' && /DRM/.test(x.head)) && r.some(x => x.probe === 'dead' && /Dead link/.test(x.head)), r);
   check('A9 no unverified / evidence-hint wording left', !/unverified|evidence hint/i.test(s.formText), s.formText.slice(0, 300));
   check('A10 field still holds the shared link and its row is marked', s.downloadUrl === TOP && r[0].pressed === 'true', { s, r });
   await shot('d5-01-checked-rows');
 
+  // OMNI_DL_SAVE_V1: quality names now read like other downloaders ("1080p Full HD 60fps", "720p HD").
   // B. Quality picker by controller: Cross on the HLS row opens it; pick 720p + Spanish; Done.
   await p.evaluate(u => document.querySelector(`#form-candidates .candidate-pick[data-pick-url="${u}"]`).focus(), TOP);
   await p.keyboard.press('Shift');
@@ -78,7 +79,7 @@ const check = (name, ok, data = {}) => { if (!ok) failures++; log.push({ check: 
   check('B2 options: Best, 1080p60, 720p, 480p, Audio only', s.options.join() === 'best,h1080f60,h720f30,h480f0,audio', s.options);
   check('B3 audio languages offered', s.langs.join() === 'en,es', s.langs);
   check('B4 focus starts on the chosen option (Best)', s.focus === 'q:video:best', s);
-  check('B5 summary repeats the checked badge', /^HLS · 1080p60/.test(s.summary), s.summary);
+  check('B5 summary repeats the checked badge', /^HLS · 1080p Full HD 60fps/.test(s.summary), s.summary);
   await shot('d5-02-quality-picker');
   await pad('down'); s = await snap();
   if (s.focus === 'q:video:best') { await pad('down'); s = await snap(); }
@@ -94,14 +95,14 @@ const check = (name, ok, data = {}) => { if (!ok) failures++; log.push({ check: 
   await pad('cross'); s = await snap();
   check('B10 Done closes the picker, add dialog stays', !s.open.includes('quality-dialog') && s.open.includes('add-dialog'), s);
   check('B11 focus returns to the row', s.focus === 'pick:' + TOP, s);
-  check('B12 quality note shows the choice', /^Quality: 720p .*audio es/.test(s.note), s.note);
+  check('B12 quality note shows the choice', /^Quality: 720p HD .*audio es/.test(s.note), s.note);
   await shot('d5-03-quality-chosen');
 
   // C. Circle in the picker keeps the earlier choice.
   await p.click('#form-candidates .quality-change'); await p.waitForTimeout(120); s = await snap();
   check('C1 Change quality reopens the picker on 720p', s.open.includes('quality-dialog') && s.focus === 'q:video:h720f30', s);
   await pad('circle'); s = await snap();
-  check('C2 Circle closes the picker only', !s.open.includes('quality-dialog') && s.open.includes('add-dialog') && /^Quality: 720p/.test(s.note), s);
+  check('C2 Circle closes the picker only', !s.open.includes('quality-dialog') && s.open.includes('add-dialog') && /^Quality: 720p HD/.test(s.note), s);
 
   // D. Submit sends the checked choice and the page origin (never a raw format string).
   await p.check('#download-demo');
@@ -124,12 +125,12 @@ const check = (name, ok, data = {}) => { if (!ok) failures++; log.push({ check: 
   await open('#candidate=' + enc(PAGE) + '&detected=0&candidates=' + enc(wire));
   await settled('#launch-candidates');
   r = await rows('#launch-candidates');
-  check('F1 Launch rows checked and sorted', r[0].url === TOP && /^HLS · 1080p60/.test(r[0].head), r.map(x => x.head));
+  check('F1 Launch rows checked and sorted', r[0].url === TOP && /^HLS · 1080p Full HD 60fps/.test(r[0].head), r.map(x => x.head));
   await shot('d5-04-launch');
   await open('#view=saved&candidate=' + enc(PAGE) + '&detected=0&candidates=' + enc(wire));
-  await p.waitForFunction(() => [...document.querySelectorAll('#candidate-rows .candidate-row strong')].some(n => /^HLS · 1080p60/.test(n.textContent)), null, { timeout: 15000 });
+  await p.waitForFunction(() => [...document.querySelectorAll('#candidate-rows .candidate-row strong')].some(n => /^HLS · 1080p Full HD 60fps/.test(n.textContent)), null, { timeout: 15000 });
   const saved = await p.evaluate(() => [...document.querySelectorAll('#candidate-rows .candidate-row')].map(c => c.textContent));
-  check('F2 Saved view shows checked badges, no Unverified wording', saved.some(t => /HLS · 1080p60/.test(t)) && !saved.some(t => /Unverified|evidence hint/.test(t)), saved);
+  check('F2 Saved view shows checked badges, no Unverified wording', saved.some(t => /HLS · 1080p Full HD 60fps/.test(t)) && !saved.some(t => /Unverified|evidence hint/.test(t)), saved);
   await shot('d5-05-saved');
 
   check('no page errors', errs.length === 0, { errs });

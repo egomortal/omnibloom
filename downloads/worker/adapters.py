@@ -232,7 +232,7 @@ def install_challenge_provider():
 
 
 class PythonYtdlpAdapter:
-    def options(self, folder, audio, hook, postprocess_hook=lambda _: None, fmt=None, referer=None, preset=None, subtitle_lang=None):
+    def options(self, folder, audio, hook, postprocess_hook=lambda _: None, fmt=None, referer=None, preset=None, subtitle_lang=None, container=None):
         global _provider
         import yt_dlp
         install_challenge_provider()
@@ -244,6 +244,8 @@ class PythonYtdlpAdapter:
                     format=fmt or ('bestaudio' if audio else 'bestvideo+bestaudio/best'),
                     ffmpeg_location=ffmpeg.executable, js_runtimes={})
         options.update(preset_options(preset, subtitle_lang))
+        if container in ('mp4', 'mkv') and not audio:
+            options['merge_output_format'] = container   # OMNI_DL_SAVE_V1: the file type the user chose
         if referer:
             # OMNI_DOWNLOADS_PROBE_V5: the grabbing page's origin, as the browser itself sends it.
             options['http_headers'] = {'Referer': referer}
@@ -284,10 +286,11 @@ class PythonYtdlpAdapter:
                 'Site extractor: ' + redact_urls(first, 240) + ' | generic: ' + redact_urls(error, 240)) from error
 
     def download(self, url, folder, audio=False, hook=lambda _: None, metadata=lambda _: None, cancelled=lambda: False, postprocess_hook=lambda _: None,
-                 fmt=None, referer=None, preset=None, subtitle_lang=None):
+                 fmt=None, referer=None, preset=None, subtitle_lang=None, container=None):
         import yt_dlp
         check_public_link(url)
-        options = self.options(folder, audio, hook, postprocess_hook, fmt=fmt, referer=referer, preset=preset, subtitle_lang=subtitle_lang)
+        options = self.options(folder, audio, hook, postprocess_hook, fmt=fmt, referer=referer, preset=preset, subtitle_lang=subtitle_lang,
+                               container=container)
         with yt_dlp.YoutubeDL(options) as ydl:
             info = self.extract(ydl, url, cancelled)
             if cancelled():
@@ -306,7 +309,8 @@ class NativePythonYtdlpAdapter(PythonYtdlpAdapter):
     ALLOWED_PROTOCOLS = frozenset(('http', 'https', 'http_dash_segments',
                                    'http_dash_segments_generator', 'm3u8_native', 'm3u8'))
     def download(self, url, folder, audio=False, hook=lambda _: None, metadata=lambda _: None,
-                 cancelled=lambda: False, postprocess_hook=lambda _: None, fmt=None, referer=None, preset=None, subtitle_lang=None):
+                 cancelled=lambda: False, postprocess_hook=lambda _: None, fmt=None, referer=None, preset=None, subtitle_lang=None,
+                 container=None):
         if importlib.util.find_spec('_omni_native') is None:
             raise RuntimeError('Native CPython binding is required')
         import yt_dlp
@@ -366,10 +370,29 @@ class NativePythonYtdlpAdapter(PythonYtdlpAdapter):
                 video_index = next((i for i, stream in enumerate(streams) if stream.get('vcodec') not in (None, 'none')), None)
                 if video_index is None:
                     raise ValueError('Selection has no video stream')
-                output = files[video_index].with_suffix('.merged.mkv')
+                # OMNI_DL_SAVE_V1: join into the file type the user chose (MP4 or MKV). The console's built-in
+                # joiner picks the format from the extension. If MP4 can't take these streams, the file is
+                # joined into MKV instead (it takes every codec) and the job says so.
+                kind = container if container in ('mp4', 'mkv') else 'mkv'
+                output = files[video_index].with_suffix('.merged.' + kind)
                 postprocess_hook({'status': 'started', 'postprocessor': 'OmniNativeMerger'})
-                FFmpegAdapter().merge(files[video_index], files[1 - video_index], output, cancelled)
+                try:
+                    FFmpegAdapter().merge(files[video_index], files[1 - video_index], output, cancelled)
+                except InterruptedError:
+                    raise
+                except Exception:
+                    if kind != 'mp4':
+                        raise
+                    if output.exists():
+                        output.unlink()
+                    output = files[video_index].with_suffix('.merged.mkv')
+                    FFmpegAdapter().merge(files[video_index], files[1 - video_index], output, cancelled)
                 postprocess_hook({'status': 'finished', 'postprocessor': 'OmniNativeMerger'})
+                for part in files:   # the two streams are inside the joined file now
+                    try:
+                        part.unlink()
+                    except OSError:
+                        pass
             else:
                 output = _name_unknown_extension(files[0], url)
             return dict(id=info.get('id'), title=info.get('title'), filepath=str(output), native=True,
