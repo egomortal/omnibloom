@@ -2048,8 +2048,8 @@
     },
     {
       "path": "downloads/tests/stub_worker.py",
-      "bytes": 8762,
-      "sha256": "bb19638a44a74c37f8c84131802234a1a52e3d22f94de5f3823ccb150d6ad424"
+      "bytes": 9608,
+      "sha256": "e389cf7b41e2465c61f3ef113a475e40afaca0004776c9b0c66c258313575921"
     },
     {
       "path": "downloads/tests/test-client-presets.cjs",
@@ -2063,13 +2063,18 @@
     },
     {
       "path": "downloads/tests/test-pick.cjs",
-      "bytes": 13149,
-      "sha256": "589dc3eb44ec93479265e09c6761a5cf85963a6bcd537dac97fa0cdac65000e7"
+      "bytes": 13221,
+      "sha256": "8c0772f7560d03cafcc4d0fee33a5ae3da42b746652e2d584470d26981c952af"
     },
     {
       "path": "downloads/tests/test-probe.cjs",
-      "bytes": 11721,
-      "sha256": "1af7da39d8b48140b17336cbc8a66067e122580bd93ec28537c92cd3524f6756"
+      "bytes": 11972,
+      "sha256": "c493bfb4e5bde50b04110914689bae07e4484c454ee10d382c8fa709171a00e9"
+    },
+    {
+      "path": "downloads/tests/test-save.cjs",
+      "bytes": 6073,
+      "sha256": "a5989f5de0d309a7284bcc42e752e2098c50d59a41d04a434e2185bc2c7eb409"
     },
     {
       "path": "downloads/tests/test-tools.cjs",
@@ -2127,14 +2132,19 @@
       "sha256": "f4b5546e608ca64b91402048905b368e148cc6f7085c6bf6609e93a2c8994f61"
     },
     {
+      "path": "downloads/tests/test_save_v1.py",
+      "bytes": 10520,
+      "sha256": "a531e361fc6b1a63132b598118517bb033e2e0e177c622444235796a554918cd"
+    },
+    {
       "path": "downloads/worker/adapters.py",
-      "bytes": 28953,
-      "sha256": "6e42fd654b0f57a25c249638ed16de4697ad77fd11413f4fef9fbf1dca238074"
+      "bytes": 30303,
+      "sha256": "d46f53c356f36c67fc895902c5b86b44afde5250b96c6585b84105cd55ba5c9a"
     },
     {
       "path": "downloads/worker/app.js",
-      "bytes": 95848,
-      "sha256": "f04b5ed327eca7bf4291951bfa08b387412712f17f6d89a16be1c455a9d677b1"
+      "bytes": 101040,
+      "sha256": "a72a98d7b199dc1e9dfb4561fe30345bc63e28f294b427cde7e7faf3eeb5cdd2"
     },
     {
       "path": "downloads/worker/assets/art/abyss.webp",
@@ -2283,8 +2293,8 @@
     },
     {
       "path": "downloads/worker/assets/production-api.js",
-      "bytes": 20017,
-      "sha256": "d24b509ad2b91af389b3f937a450f34460c216dca25ddd46d49414aa9851a44d"
+      "bytes": 21806,
+      "sha256": "b9ebeb950148512a263fc472aeca54ec5c1007cb25f181be17750d55dc5d624a"
     },
     {
       "path": "downloads/worker/assets/soundwave.svg",
@@ -2328,8 +2338,8 @@
     },
     {
       "path": "downloads/worker/index.html",
-      "bytes": 8738,
-      "sha256": "292712e9985a807778803619f9ca1dbec9f0721d393decde7f84fc41220dcbba"
+      "bytes": 9745,
+      "sha256": "781ade4b7c760e1a9d72af8f9bc183cc6d6db76b962938bf65ce8772535c3ea5"
     },
     {
       "path": "downloads/worker/jd_adapter.py",
@@ -2348,8 +2358,8 @@
     },
     {
       "path": "downloads/worker/probe.py",
-      "bytes": 51026,
-      "sha256": "4b76cb8f7d2118ada1581d16f3be7a17965aefdb1e2f5586b47f4e1c79b757dc"
+      "bytes": 51593,
+      "sha256": "4ca387761162cfc629c342da3ef5e613203eba6a8b06f433a6bdc8119150ff5e"
     },
     {
       "path": "downloads/worker/production-api.js",
@@ -2360,6 +2370,11 @@
       "path": "downloads/worker/ready_adapter.py",
       "bytes": 4891,
       "sha256": "1b317550eac9c50b4a91a21f11c7425747368e686d51338ba6388e54cde2c2e4"
+    },
+    {
+      "path": "downloads/worker/save_places.py",
+      "bytes": 6514,
+      "sha256": "47dba38cf8cdaaef26d055a3039bd3929151b1c9224d5c0f7be7ee211abed1a6"
     },
     {
       "path": "downloads/worker/saved_links.py",
@@ -2503,8 +2518,8 @@
     },
     {
       "path": "downloads/worker/worker.py",
-      "bytes": 41093,
-      "sha256": "fcdc8f651921efa9a6947af47c8f218043da43897ced52ee95beeb82790b7828"
+      "bytes": 45734,
+      "sha256": "d1650847f106c9cba262b19f6ec5a14820899db074d58a988b86e7ce2c243f2d"
     },
     {
       "path": "FEATURES.md",
