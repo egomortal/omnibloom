@@ -812,6 +812,9 @@
     let rows=(candidateSnapshot?.rows||[]).map(row=>({url:row.url,kind:row.kind,confidence:row.confidence,evidence:row.evidence}));
     if(candidateLink&&!rows.some(row=>row.url===candidateLink))rows.push({url:candidateLink,kind:'source-page',confidence:'Low',evidence:['shared page']});
     if(probeOn()){requestProbes(rows);rows=probeSort(rows);}
+    // OMNI_GRABBER_SUSPECTS_V1: Omni passes "maybe a playlist" rows (a playlist kind at low confidence: a generic or
+    // oddly named response). Show one only after the link check read it and found a stream; hide it otherwise.
+    rows=rows.filter(row=>!(row.kind==='manifest'&&row.confidence==='Low')||probeResult(row.url)?.status==='ok');
     return rows;
   }
   function renderPickList(panel){
