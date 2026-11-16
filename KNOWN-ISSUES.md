@@ -29,9 +29,9 @@ never read.
   - `ublock-native.flag`: uBlock Origin's built-in blocker;
   - `hdr-auto.flag`: HDR;
   - `media-downloads-enabled.flag`: Media downloads.
-- **Fix:** download Omnibloom Setup again from the [v0.5.1 release](https://github.com/egomortal/omnibloom/releases/tag/v0.5.1), open **Installed apps…** and press **Repair** next to Omni (or install again). Setup creates any missing switch and never changes one you already have. Then restart Omni.
+- **Fix:** download Omnibloom Setup again from the [latest release](https://github.com/egomortal/omnibloom/releases/latest), open **Installed apps…** and press **Repair** next to Omni (or install again). Setup creates any missing switch and never changes one you already have. Then restart Omni.
 - **By hand (FTP):** create each file above in `/data/omni/`, containing `1`, and restart Omni.
-- **Status:** fixed in the current Setup; the next Omni version turns these on by default.
+- **Status:** fixed: Setup (Install or Repair) creates any missing switch.
 
 ### Omni won't start: "Omni Engine: upload omni-engine.elf to /data/omni first"
 - **What happens:** after a fresh install, opening Omni shows that notification and nothing else.
@@ -41,7 +41,7 @@ never read.
   2. Create a small text file `/data/omni/browser-mode.flag` containing `1`. Without it, Omni starts its engine self-test, not the browser.
 
   Then open Omni again.
-- **Status:** fixed in the current Setup: download it again from the [v0.5.1 release](https://github.com/egomortal/omnibloom/releases/tag/v0.5.1) and press **Repair** (or Install). It creates both files when they're missing and never replaces existing ones. The next Omni version won't need them at all.
+- **Status:** fixed in Omni v0.5.2 and later: Omni no longer needs these files (`OMNI_FIRST_RUN_V1`). On an older Omni, Setup from the [latest release](https://github.com/egomortal/omnibloom/releases/latest) creates both with **Repair** (or Install) and never replaces existing ones.
 
 ### YouTube sometimes doesn't start playing
 - **What happens:** the video page opens but the video never starts, or Omni reloads the page a few times first.
@@ -56,7 +56,7 @@ never read.
 - **Why:** Omni finds the downloads worker through **Bloom Core**. If Bloom Core isn't running, Omni can't find it.
   - Before v0.5.1's Setup update, Setup added Bloom Core and Master Control to Payload Manager's start list as bare file names (`hub.elf`).
   - Payload Manager v0.6.3 doesn't start bare names, so after a reboot Bloom Core never came up.
-- **Workaround:** download the current **Omnibloom Setup** from the [v0.5.1 release](https://github.com/egomortal/omnibloom/releases/tag/v0.5.1) and press **Repair**. It rewrites the start list with full paths.
+- **Workaround:** download the current **Omnibloom Setup** from the [latest release](https://github.com/egomortal/omnibloom/releases/latest) and press **Repair**. It rewrites the start list with full paths.
   - Or edit `/data/pldmgr/autoload.txt` yourself and change the lines to:
     ```
     /data/pldmgr/payloads/BloomCore/hub.elf
@@ -74,6 +74,7 @@ never read.
 ### GPU page drawing ("layers") is experimental
 - **What happens:** with layers turned on, the first full page takes about 1.5 to 3 seconds of shader compiling. Mesa's shader cache can't work in this build.
 - **The console can freeze when Omni starts with layers on.** In our overnight tests (November 15) the console stopped responding twice, each time about 15 seconds after Omni opened with layers on, and needed a power cycle. We haven't seen it with layers off. If you use layers and this happens, turn it off (below).
+- **A video can stop with layers on** even though it has enough data buffered: the picture and time stop moving, and Omni's YouTube guard reloads the page. Seen in 3 of 23 test runs with layers on, none with layers off.
 - **Workaround:** layers is **off by default**. If you turned it on and something looks wrong, delete `/data/omni/gpu-pages-stage1.flag` or create `/data/omni/gpu-pages-stage1-off.flag`, then restart Omni.
 - **Status:** video plays at full speed with layers on. The speed-up is expected to come from drawing the page content itself on the GPU, which is the next stage.
 

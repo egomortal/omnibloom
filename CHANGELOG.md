@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased (v0.5.3, in testing)
+## v0.5.3
+
+Console package: Omni 0.5.3 (title f16ff5d6, engine a5083735, engine starter a3853c3a); Bloom Core, Downloads
+(downloader-9) and USB Files unchanged. Tested: 4 + 4 console launches plus a 20-launch soak with layers off and Master Control 0.4.5.
 
 ### Less memory while a page loads
 - **Omni's own engine starter** (`omni/native-title/starter/`, `/data/omni/native/omni-starter.elf`, 127.0.0.1:9031)
@@ -28,12 +31,17 @@
   files already identical are not rewritten (no more `.prev-*` pile-up); diagnostics keep log times (an IPv6 pattern
   wiped every `12:34:56`) and no longer read the Quick access buttons; a JDownloader step error no longer aborts a
   finished install; CI runs every Setup test.
-- **Downloads worker** (ships with the next Downloads version): a JDownloader fallback no longer reports a finished
+- **Downloads worker** (in the source; the console package still carries downloader-9, so these reach the console with the
+  next Downloads build): a JDownloader fallback no longer reports a finished
   download as failed; one failed connection accept no longer stops every later download until a restart; a progress
   report without a byte count no longer aborts the download.
 
 ### Ad block rules can be updated
 - Rule sets are versioned (`omni/engine/resources/ublock-rules.json`) and built by `omni/engine/tools/ublock-lists/`.
+
+### Known issues
+- With the experimental GPU page drawing ("layers") on, a video can stop with data buffered (3 of 23 test runs; none
+  with layers off). Layers stays off by default.
 
 ## v0.5.2 (November 15, 2026)
 
