@@ -17,8 +17,9 @@
    wrappers and overlay are not installed on the TV app.
 2. Honest user agent: " Omni/<version>" after the built-in Safari-compatible desktop UA and the mobile-site UA (as Edge
    adds "Edg/<version>" after Chrome's), version OMNI_UA_VERSION (OmniYoutubeTv.h, default "0.5.3", -D overrides).
-   On by default; Browser settings "Tell sites this is Omni" turns it off (/data/omni/ua-omni-off.flag) for a site that
-   breaks. /data/omni/ua-desktop.txt (OMNI_UA_OVERRIDE_V1) still wins and is used exactly as written.
+   OFF by default (review 2026-11-16: the UA/identity mismatch is a BotGuard suspect and some sites sniff the UA; keep
+   it out of YouTube tests until it is an explicit arm); Browser settings "Tell sites this is Omni" turns it on
+   (/data/omni/ua-omni-on.flag). /data/omni/ua-desktop.txt (OMNI_UA_OVERRIDE_V1) still wins and is used exactly as written.
 
 Pure logic (URL mapping, UA strings, key table) in engine/entry/OmniYoutubeTv.h (no SDL, no WebKit), tested by
 test_youtube_tv.cpp (g++ -std=c++17 -Wall -Wextra -Werror -I <tree>/engine/entry test_youtube_tv.cpp).
@@ -37,7 +38,7 @@ HEADER = r'''// OMNI_YOUTUBE_TV_V1: the pure part (no SDL, no WebKit) of two fea
 //     pages open YouTube's TV app (https://www.youtube.com/tv, the "Leanback" app smart TVs and consoles run) with a TV
 //     user agent on that app only; the D-pad, Cross and Circle become the arrow keys, Enter and Escape (Back) there.
 //  2. Honest user agent: " Omni/<version>" after the Safari-compatible user agent (as Edge adds "Edg/<version>" after
-//     Chrome's), on unless /data/omni/ua-omni-off.flag (Browser settings "Tell sites this is Omni").
+//     Chrome's), off unless /data/omni/ua-omni-on.flag (Browser settings "Tell sites this is Omni").
 // Unit-tested on the host by test_youtube_tv.cpp (written next to apply_youtube_tv.py).
 #pragma once
 #include <cstddef>
@@ -238,7 +239,7 @@ inline Key keyFor(Pad p)
 GLUE = r'''// OMNI_YOUTUBE_TV_V1 -------------------------------------------------------------------------------
 // YouTube TV mode and the " Omni/<version>" user-agent token (pure parts: OmniYoutubeTv.h; apply_youtube_tv.py).
 static int omniYtTvMode = -1;      // -1: /data/omni/youtube-mode.txt not read yet
-static int omniUaOmniState = -1;   // -1: /data/omni/ua-omni-off.flag not checked yet
+static int omniUaOmniState = -1;   // -1: /data/omni/ua-omni-on.flag not checked yet (off by default)
 static bool omniYtTvOn()
 {
     if (omniYtTvMode < 0) {
@@ -251,7 +252,7 @@ static bool omniYtTvOn()
 }
 static bool omniUaOmniOn()
 {
-    if (omniUaOmniState < 0) omniUaOmniState = access("/data/omni/ua-omni-off.flag", F_OK) ? 1 : 0;
+    if (omniUaOmniState < 0) omniUaOmniState = access("/data/omni/ua-omni-on.flag", F_OK) ? 0 : 1;
     return omniUaOmniState == 1;
 }
 // The TV app's user agent: /data/omni/ua-youtube-tv.txt (first line) or the built-in living-room one. Read once.
@@ -312,7 +313,7 @@ static void omniYtTvSameDocument(Tab& tab, WKPageRef page)
 static bool omniYtTvSettingsInput(int id, int b)
 {
     if (b != SDL_CONTROLLER_BUTTON_DPAD_LEFT && b != SDL_CONTROLLER_BUTTON_DPAD_RIGHT && b != SDL_CONTROLLER_BUTTON_A) return false;
-    if (id == omniYtTvRowId) {
+    if (id == 860) {   // omniYtTvRowId: defined later in OmniBrowserSettings.h (review fix: used before its definition)
         const bool on = !omniYtTvOn();
         if (FILE* f = fopen("/data/omni/youtube-mode.txt", "w")) { fputs(on ? "tv\n" : "normal\n", f); fclose(f); }
         omniYtTvMode = on ? 1 : 0;
@@ -326,8 +327,8 @@ static bool omniYtTvSettingsInput(int id, int b)
         return true;
     }
     const bool on = !omniUaOmniOn();
-    if (on) unlink("/data/omni/ua-omni-off.flag");
-    else if (FILE* f = fopen("/data/omni/ua-omni-off.flag", "w")) { fputs("1\n", f); fclose(f); }
+    if (!on) unlink("/data/omni/ua-omni-on.flag");
+    else if (FILE* f = fopen("/data/omni/ua-omni-on.flag", "w")) { fputs("1\n", f); fclose(f); }
     omniUaOmniState = on ? 1 : 0;
     for (auto& t : tabs) if (t->omniUaKind != 2) omniUaSet(t.get(), t->omniUaKind);
     fprintf(stderr, "OMNI UA: Omni token %s; desktop user agent now: %s\n", on ? "on" : "off", omniUaFor(0).c_str());

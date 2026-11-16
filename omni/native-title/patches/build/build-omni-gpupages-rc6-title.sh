@@ -123,6 +123,22 @@ python3 "$S1/tools/apply_youtube_tv.py" "$TT" > "$LT_/apply_youtube_tv.log" 2>&1
 st "OMNI_YOUTUBE_TV_V1: $(paste -sd' ' "$LT_/apply_youtube_tv.log")"
 python3 "$S1/tools/apply_reading_list.py" "$TT" > "$LT_/apply_reading_list.log" 2>&1 || { st "OMNI_READING_LIST_V1 FAILED: $(tail -1 "$LT_/apply_reading_list.log")"; exit 1; }
 st "OMNI_READING_LIST_V1: $(paste -sd' ' "$LT_/apply_reading_list.log")"
+python3 "$S1/tools/apply_tab_audio.py" "$TT" > "$LT_/apply_tab_audio.log" 2>&1 || { st "OMNI_TAB_AUDIO_V1 FAILED: $(tail -1 "$LT_/apply_tab_audio.log")"; exit 1; }
+st "OMNI_TAB_AUDIO_V1: $(paste -sd' ' "$LT_/apply_tab_audio.log")"
+python3 "$S1/tools/apply_history_plus.py" "$TT" > "$LT_/apply_history_plus.log" 2>&1 || { st "OMNI_HISTORY_PLUS_V1 FAILED: $(tail -1 "$LT_/apply_history_plus.log")"; exit 1; }
+st "OMNI_HISTORY_PLUS_V1: $(paste -sd' ' "$LT_/apply_history_plus.log")"
+python3 "$S1/tools/apply_yt_attest_log.py" "$TT" > "$LT_/apply_yt_attest_log.log" 2>&1 || { st "OMNI_YT_ATTEST_LOG_V1 FAILED: $(tail -1 "$LT_/apply_yt_attest_log.log")"; exit 1; }
+st "OMNI_YT_ATTEST_LOG_V1: $(paste -sd' ' "$LT_/apply_yt_attest_log.log")"
+python3 "$S1/tools/apply_tab_sessions.py" "$TT" > "$LT_/apply_tab_sessions.log" 2>&1 || { st "OMNI_TAB_SESSIONS_V1 FAILED: $(tail -1 "$LT_/apply_tab_sessions.log")"; exit 1; }
+st "OMNI_TAB_SESSIONS_V1: $(paste -sd' ' "$LT_/apply_tab_sessions.log")"
+python3 "$S1/tools/apply_kb_words.py" "$TT" > "$LT_/apply_kb_words.log" 2>&1 || { st "OMNI_KB_WORDS_V1 FAILED: $(tail -1 "$LT_/apply_kb_words.log")"; exit 1; }
+st "OMNI_KB_WORDS_V1: $(paste -sd' ' "$LT_/apply_kb_words.log")"
+python3 "$S1/tools/apply_continue_watching.py" "$TT" > "$LT_/apply_continue_watching.log" 2>&1 || { st "OMNI_CONTINUE_WATCHING_V1 FAILED: $(tail -1 "$LT_/apply_continue_watching.log")"; exit 1; }
+st "OMNI_CONTINUE_WATCHING_V1: $(paste -sd' ' "$LT_/apply_continue_watching.log")"
+python3 "$S1/tools/apply_autoplay.py" "$TT" > "$LT_/apply_autoplay.log" 2>&1 || { st "OMNI_AUTOPLAY_V1 FAILED: $(tail -1 "$LT_/apply_autoplay.log")"; exit 1; }
+st "OMNI_AUTOPLAY_V1: $(paste -sd' ' "$LT_/apply_autoplay.log")"
+python3 "$S1/tools/apply_https_only.py" "$TT" > "$LT_/apply_https_only.log" 2>&1 || { st "OMNI_HTTPS_ONLY_V1 FAILED: $(tail -1 "$LT_/apply_https_only.log")"; exit 1; }
+st "OMNI_HTTPS_ONLY_V1: $(paste -sd' ' "$LT_/apply_https_only.log")"
 # OMNI_GPUPAGES_ZEROCOPY_V1 (outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md): the shell side (inert without /data/omni/gpu-pages-zerocopy.flag)
 python3 "$S1/tools/apply_zerocopy_shell.py" "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_zerocopy_shell.log" 2>&1 || { st "zero-copy shell FAILED: $(tail -1 "$LT_/apply_zerocopy_shell.log")"; exit 1; }
 st "OMNI_GPUPAGES_ZEROCOPY_V1 shell: $(tail -1 "$LT_/apply_zerocopy_shell.log")"
