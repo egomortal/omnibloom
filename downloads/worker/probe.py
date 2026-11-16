@@ -39,6 +39,9 @@ CACHE_SECONDS = 300
 CACHE_SIZE = 256
 PARALLEL = 3
 SITE_TIMEOUT = 20.0
+# OMNI_PROBE_GIVEUP_V1 (Downloads 0.5.4): a page check still running after this long is given up: the GUI gets an
+# answer instead of "Still checking" forever, and the next page can be checked (the stuck thread no longer counts).
+SITE_GIVE_UP = 60.0
 DRM_KEYFORMATS = ('com.apple.streamingkeydelivery', 'com.widevine', 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
                   'com.microsoft.playready', 'urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95')
 SHARED = ipaddress.ip_network('100.64.0.0/10')
@@ -980,16 +983,25 @@ class Prober:
             return result(problem.status, problem.message, kind='page')
         with self.lock:
             running = self.site_running.get(key)
+            if running is not None and not running['done'].is_set() and self.clock() - running['started'] >= SITE_GIVE_UP:
+                # OMNI_PROBE_GIVEUP_V1: give the slot back now; the thread may finish later and is then ignored.
+                running['abandoned'] = True
+                self.site_running.pop(key, None)
+                self.site_slot.release()
+                value = result('error', "The site check took too long, so it was stopped. You can still try the download.",
+                               kind='page', source='yt-dlp')
+                self.cache[key] = (self.clock(), value)
+                return value
             if running is None:
                 if not self.site_slot.acquire(blocking=False):
                     return result('busy', 'The site check is busy with another page. Try again shortly.', kind='page')
-                running = dict(done=threading.Event(), value=None)
+                running = dict(done=threading.Event(), value=None, started=self.clock(), abandoned=False)
                 self.site_running[key] = running
 
                 def work():
                     try:
                         running['value'] = self.site(url)
-                    except Exception as error:
+                    except BaseException as error:   # OMNI_PROBE_GIVEUP_V1: was Exception: a SystemExit left it "checking" forever
                         message = str(error)
                         if 'drm' in message.lower():
                             running['value'] = result('protected', "Protected video (DRM). It can't be downloaded.", kind='page', source='yt-dlp')
@@ -998,10 +1010,16 @@ class Prober:
                         else:
                             running['value'] = result('error', 'The site check failed.', kind='page', source='yt-dlp')
                     finally:
-                        self.site_slot.release()
-                        self._store(key, running['value'])
+                        if not isinstance(running['value'], dict):
+                            running['value'] = result('error', 'The site check failed.', kind='page', source='yt-dlp')
                         with self.lock:
-                            self.site_running.pop(key, None)
+                            abandoned = running['abandoned']
+                            if not abandoned:
+                                self.site_slot.release()
+                                if self.site_running.get(key) is running:
+                                    self.site_running.pop(key, None)
+                        if not abandoned:
+                            self._store(key, running['value'])
                         running['done'].set()
                 threading.Thread(target=work, name='omni-site-probe', daemon=True).start()
         if running['done'].wait(min(SITE_TIMEOUT, 6.0)):

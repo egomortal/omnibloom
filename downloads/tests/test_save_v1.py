@@ -215,5 +215,43 @@ class ExpectedSize(unittest.TestCase):
         self.assertEqual(worker.human_bytes(1536), '1.5 KB')
 
 
+class PageCheckGivesUp(unittest.TestCase):
+    """OMNI_PROBE_GIVEUP_V1: a page check that hangs or dies never leaves the GUI spinning forever."""
+    def setUp(self):
+        import probe, socket, threading
+        self.probe, self.threading = probe, threading
+        self.now = [1000.0]
+        self.resolver = lambda host, port: (socket.AF_INET, '93.184.215.14', port)
+
+    def prober(self, site):
+        return self.probe.Prober(resolver=self.resolver, site=site, clock=lambda: self.now[0])
+
+    def test_a_hanging_check_is_given_up_and_frees_the_slot(self):
+        release = self.threading.Event()
+        def hang(url):
+            release.wait(5)
+            return self.probe.result('ok', kind='page', source='yt-dlp')
+        p = self.prober(hang)
+        with mock.patch.object(self.probe, 'SITE_TIMEOUT', 0.05):
+            self.assertEqual(p.probe('https://slow.test/watch', deep=True)['status'], 'slow')
+            self.now[0] += 61
+            gave_up = p.probe('https://slow.test/watch', deep=True)
+            self.assertEqual(gave_up['status'], 'error')
+            self.assertIn('took too long', gave_up['message'])
+            # the slot is free again: another page is checked, not "busy"
+            other = p.probe('https://other.test/watch', deep=True)
+            self.assertNotEqual(other['status'], 'busy')
+        release.set()
+
+    def test_a_check_that_dies_answers_instead_of_spinning(self):
+        def die(url):
+            raise SystemExit('extractor exit')
+        p = self.prober(die)
+        with mock.patch.object(self.probe, 'SITE_TIMEOUT', 2.0):
+            r = p.probe('https://dies.test/watch', deep=True)
+        self.assertEqual(r['status'], 'error')
+        self.assertEqual(p.probe('https://dies.test/watch', deep=True)['status'], 'error')   # cached, not "slow"
+
+
 if __name__ == '__main__':
     unittest.main()
