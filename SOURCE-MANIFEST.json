@@ -18583,8 +18583,8 @@
     },
     {
       "path": "setup/omnibloom_setup/bookmarks.py",
-      "bytes": 13758,
-      "sha256": "43db14f38b75016ae2e44b6851da4864f9f75318b4254cf729d22e7cd26f01da"
+      "bytes": 24771,
+      "sha256": "3d3805e0ba1bcaa3519da522e3d7024da3007df65af40a43c1862e6932df748e"
     },
     {
       "path": "setup/omnibloom_setup/checks.py",
@@ -18598,13 +18598,13 @@
     },
     {
       "path": "setup/omnibloom_setup/config.py",
-      "bytes": 13837,
-      "sha256": "5a9a5630d2f219d03a8010857fd9d5bfffacdfcc2aca192b911b5ca213912348"
+      "bytes": 14077,
+      "sha256": "a28e7ee87771e5a9e12cec7a65dd81052099ec2d9e9a51a349a1919582b8a9bf"
     },
     {
       "path": "setup/omnibloom_setup/diagnostics.py",
-      "bytes": 12462,
-      "sha256": "2ff26887a32ab99ed9fd797bf1ba10861558270ae431e9ea0d0f003ed66ce6a4"
+      "bytes": 17764,
+      "sha256": "d255d47e6928c79d62085594263ceb4397d2323b48013146068df0e90a0779dc"
     },
     {
       "path": "setup/omnibloom_setup/flavor.py",
@@ -18613,8 +18613,8 @@
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
-      "bytes": 63367,
-      "sha256": "3b22af3d5be24a007a2d5e8e321162ce074d1760b31275015373ee2ec2431887"
+      "bytes": 78939,
+      "sha256": "e8eb13e07f8f761326902f70af8d2509f9ad1f25e6e8d30234509c6bee79dc75"
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
@@ -18640,6 +18640,16 @@
       "path": "setup/omnibloom_setup/ps5.py",
       "bytes": 15324,
       "sha256": "76e463ebf07b90e6c3678f85cc586fb8a2a3cb6f6fe920c63774e62b5c6ceb78"
+    },
+    {
+      "path": "setup/omnibloom_setup/readinglist.py",
+      "bytes": 29065,
+      "sha256": "8cd3b44a4ac0c4ebe741a2f9f387441c919b79d10c96040bfceac569dce789cd"
+    },
+    {
+      "path": "setup/omnibloom_setup/redaction.py",
+      "bytes": 12130,
+      "sha256": "d926a69f30e2af0e947a0d99ec8dc19d632e2a12857423ba7fbeb183e780b5d0"
     },
     {
       "path": "setup/omnibloom_setup/release.py",
@@ -18768,13 +18778,13 @@
     },
     {
       "path": "setup/tests/test_bookmarks.py",
-      "bytes": 13721,
-      "sha256": "e06261d2d3562a463bd001c31670dfd59e19c2d3ffc8263c1602bc8f05617d17"
+      "bytes": 26271,
+      "sha256": "453c280b3957eea30aeb0eddf5b0da55c39f077185776e61db80d91c0f918745"
     },
     {
       "path": "setup/tests/test_diagnostics.py",
-      "bytes": 5778,
-      "sha256": "51845c92d5e587fb334df09e3c36a87502e51de1445496cd9912cd711b82a2d8"
+      "bytes": 14708,
+      "sha256": "521acc2ac4a3e25ff12fc9c59734a10c3c60ae5b2a5c73ba3be4eb844077919d"
     },
     {
       "path": "setup/tests/test_discovery.py",
@@ -18805,6 +18815,16 @@
       "path": "setup/tests/test_oneclick.py",
       "bytes": 26854,
       "sha256": "16cc94a0c0b22ae42d30319727a8f55138803c458fcc702dcbe8d576e22e6cf1"
+    },
+    {
+      "path": "setup/tests/test_readinglist.py",
+      "bytes": 17477,
+      "sha256": "2b9505e012ecd694cb210e5456172d3c4a4db6e686422ffd30193df0b51557ff"
+    },
+    {
+      "path": "setup/tests/test_redaction.py",
+      "bytes": 7973,
+      "sha256": "3934a803fece4466a6038b1ae747b345a0ee23640f3db87cc3c674f2a1bb0fd7"
     },
     {
       "path": "setup/tests/test_release_provenance.py",
