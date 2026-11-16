@@ -4,12 +4,20 @@ let enabled=false,writable=true,box=null,boxTimer=null,boxVideo=null,prior=null;
 const OPTS={capture:true,passive:true},MEDIA=['loadedmetadata','durationchange','play','playing','timeupdate','pause','ended'];
 function info(v){let s=seen.get(v);if(!s){s={src:'',offered:false,pending:false,last:0};seen.set(v,s)}const src=v.currentSrc||v.src||'';if(src!==s.src){s.src=src;s.offered=false;s.last=0}return s}
 // One key per page address and per long video on it (ads and previews are short, so they do not shift the index).
-function keyFor(v){const url=core.normalize(location.href);if(!url)return null;const long=[...document.getElementsByTagName('video')].filter(x=>core.longEnough(x.duration));const i=long.indexOf(v);return core.key(url,i<0?0:i)}
+function ident(v){const url=core.normalize(location.href);if(!url)return null;const long=[...document.getElementsByTagName('video')].filter(x=>core.longEnough(x.duration));const i=long.indexOf(v);return{url,i:i<0?0:i}}
+function keyFor(v){const id=ident(v);return id?core.key(id.url,id.i):null}
+function meta(name){const m=document.querySelector('meta[property="'+name+'"],meta[name="'+name+'"]');return m&&m.getAttribute('content')||''}
 function write(k,value){if(!writable)return Promise.resolve();return api.storage.set(k,value).catch(e=>{if(/private/.test(String(e&&e.message)))writable=false})}
 function forget(k){if(!writable||api.storage.get(k)===undefined)return Promise.resolve();return api.storage.remove(k).catch(()=>{})}
 async function prune(){const all={};for(const k of api.storage.keys())if(k.startsWith(core.PREFIX))all[k]=api.storage.get(k);for(const k of core.prune(all))await forget(k)}
-function save(v){if(!enabled||!writable)return;const s=info(v);if(s.pending)return;const action=core.saveAction(v.currentTime,v.duration,v.ended);if(action==='skip')return;
-const k=keyFor(v);if(!k)return;s.last=Date.now();if(action==='remove'){forget(k);return}
+async function pruneWatch(){const all={};for(const k of api.storage.keys())if(k.startsWith(core.WATCH_PREFIX))all[k]=api.storage.get(k);for(const k of core.pruneWatch(all))await forget(k)}
+// Continue watching on Omni's start page: page address, title, og:image, position, duration (see core.js).
+function watch(v,id,action){if(action==='skip')return;const k=core.watchKey(id.url,id.i);if(action==='remove'){forget(k);return}
+const value=core.watchEntry({url:location.href,title:document.title||meta('og:title'),image:meta('og:image'),position:v.currentTime,duration:v.duration,now:Date.now()});if(!value)return;
+const old=api.storage.get(k);if(old&&old.p===value.p&&old.d===value.d&&old.u===value.u&&old.t===value.t&&old.i===value.i)return;
+const isNew=old===undefined;write(k,value).then(()=>{if(isNew)return pruneWatch()})}
+function save(v){if(!enabled||!writable)return;const s=info(v);if(s.pending)return;const action=core.saveAction(v.currentTime,v.duration,v.ended),seen=core.watchAction(v.currentTime,v.duration,v.ended);
+if(action==='skip'&&seen==='skip')return;const id=ident(v);if(!id)return;s.last=Date.now();watch(v,id,seen);if(action==='skip')return;const k=core.key(id.url,id.i);if(action==='remove'){forget(k);return}
 const value=core.entry(v.currentTime,v.duration,Date.now()),old=api.storage.get(k);if(Array.isArray(old)&&old[0]===value[0]&&old[1]===value[1])return;
 const isNew=old===undefined;write(k,value).then(()=>{if(isNew)return prune()})}
 function saveAll(){for(const v of document.getElementsByTagName('video'))save(v)}
@@ -37,4 +45,4 @@ function onVisibility(){if(document.visibilityState==='hidden')saveAll()}
 function start(){if(enabled)return;enabled=true;for(const t of MEDIA)document.addEventListener(t,onMedia,OPTS);addEventListener('pagehide',onHide,OPTS);document.addEventListener('visibilitychange',onVisibility,OPTS);
 for(const v of document.getElementsByTagName('video'))if(v.readyState>=1)offer(v)}
 function stop(){if(!enabled)return;enabled=false;for(const t of MEDIA)document.removeEventListener(t,onMedia,OPTS);removeEventListener('pagehide',onHide,OPTS);document.removeEventListener('visibilitychange',onVisibility,OPTS);close()}
-api.onEnable(start);api.onDisable(stop);window.OmniResumeDiagnostics=()=>({enabled,writable,saved:api.storage.keys().filter(k=>k.startsWith(core.PREFIX)).length,prompt:!!box});if(api.active)start()})();
+api.onEnable(start);api.onDisable(stop);window.OmniResumeDiagnostics=()=>({enabled,writable,saved:api.storage.keys().filter(k=>k.startsWith(core.PREFIX)).length,watching:api.storage.keys().filter(k=>k.startsWith(core.WATCH_PREFIX)).length,prompt:!!box});if(api.active)start()})();

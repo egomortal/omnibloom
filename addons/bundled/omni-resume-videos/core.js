@@ -25,5 +25,25 @@ if(Math.abs(d-duration)>Math.max(5,duration*.02))return null;if(t<MIN_POSITION||
 // Keys to drop so at most max entries remain: oldest first (invalid entries count as oldest).
 function prune(entries,max=MAX_ENTRIES){const list=Object.keys(entries).filter(k=>k.startsWith(PREFIX)).map(k=>({k,at:valid(entries[k])?entries[k][2]:-1}));
 if(list.length<=max)return[];list.sort((x,y)=>x.at-y.at||(x.k<y.k?-1:1));return list.slice(0,list.length-max).map(x=>x.k)}
+// Continue watching (Omni's start page reads these): one 'w:' entry per video, same hash as its 'r:' key, holding the
+// cleaned page address, title, og:image, position, duration and time. Unlike 'r:' it keeps the address (the start page
+// must reopen it). At most 30; dropped when finished (over 95 %) and never added before 2 minutes were watched.
+const WATCH_PREFIX='w:',WATCH_MAX=30,WATCH_MIN=120,WATCH_DONE=.95,URL_MAX=2048,TITLE_MAX=160;
+function watchKey(normalized,index){return WATCH_PREFIX+hash(normalized+(index>0?'\n'+index:''))}
+// The page address to reopen: tracking and start-time parameters dropped (as normalize()), no credentials, other fragments dropped.
+function cleanHref(href){let u;try{u=new URL(String(href))}catch(_){return null}if(u.protocol!=='https:'&&u.protocol!=='http:')return null;
+u.username='';u.password='';for(const k of[...new Set(u.searchParams.keys())]){const keep=u.searchParams.getAll(k).filter(v=>!TRACKING.test(k)&&!(TIME_KEY.test(k)&&TIME_VALUE.test(v)));
+u.searchParams.delete(k);for(const v of keep)u.searchParams.append(k,v)}if(!/^#[!/]/.test(u.hash))u.hash='';const out=u.href.replace(/\?$/,'');return out.length<=URL_MAX?out:null}
+function watchAction(position,duration,ended){if(!longEnough(duration))return'skip';if(ended||position>=duration*WATCH_DONE)return'remove';if(!(position>=WATCH_MIN))return'skip';return'store'}
+function cut(text,max){const t=String(text==null?'':text).replace(/\s+/g,' ').trim();return t.length<=max?t:t.slice(0,max-1).trimEnd()+'…'}
+function imageUrl(content,base){if(!content)return'';let u;try{u=new URL(String(content).trim(),base)}catch(_){return''}return(u.protocol==='https:'||u.protocol==='http:')&&!u.username&&!u.password&&u.href.length<=1024?u.href:''}
+// The stored value: {u,t,i,p,d,a}; null when the page address can't be kept.
+function watchEntry(o){const u=cleanHref(o.url);if(!u)return null;const e={u,t:cut(o.title,TITLE_MAX),p:Math.floor(o.position),d:Math.round(o.duration),a:Math.floor(o.now/1000)};
+const i=imageUrl(o.image,u);if(i)e.i=i;return e}
+function validWatch(e){return!!e&&typeof e==='object'&&!Array.isArray(e)&&typeof e.u==='string'&&cleanHref(e.u)!==null&&[e.p,e.d,e.a].every(x=>typeof x==='number'&&Number.isFinite(x)&&x>=0)}
+// Keys to drop so at most max continue-watching entries remain: oldest first (invalid ones first of all).
+function pruneWatch(entries,max=WATCH_MAX){const list=Object.keys(entries).filter(k=>k.startsWith(WATCH_PREFIX)).map(k=>({k,at:validWatch(entries[k])?entries[k].a:-1}));
+if(list.length<=max)return[];list.sort((x,y)=>x.at-y.at||(x.k<y.k?-1:1));return list.slice(0,list.length-max).map(x=>x.k)}
 function clock(seconds){const s=Math.max(0,Math.floor(seconds)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60,p=n=>String(n).padStart(2,'0');return h?h+':'+p(m)+':'+p(r):m+':'+p(r)}
-return Object.freeze({MIN_DURATION,END_MARGIN,MIN_POSITION,NEAR_START,MAX_ENTRIES,SAVE_EVERY,PREFIX,normalize,hash,key,longEnough,saveAction,entry,decide,prune,clock})});
+return Object.freeze({MIN_DURATION,END_MARGIN,MIN_POSITION,NEAR_START,MAX_ENTRIES,SAVE_EVERY,PREFIX,WATCH_PREFIX,WATCH_MAX,WATCH_MIN,WATCH_DONE,normalize,hash,key,longEnough,saveAction,entry,decide,prune,clock,
+  watchKey,cleanHref,watchAction,watchEntry,validWatch,pruneWatch})});

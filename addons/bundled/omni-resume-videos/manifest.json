@@ -2,10 +2,10 @@
   "manifest_version": 1,
   "id": "omni-resume-videos",
   "name": "Resume videos",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "licence": "MIT",
   "source": "https://github.com/egomortal/omnibloom",
-  "description": "Remembers where you stopped in long HTML5 videos (over 3 minutes) and offers to continue. Positions stay on the console; private tabs are never recorded.",
+  "description": "Remembers where you stopped in long HTML5 videos (over 3 minutes) and offers to continue. Videos left part-way show under Continue watching on the start page. Everything stays on the console; private tabs are never recorded.",
   "matches": [
     "*://*/*"
   ],
