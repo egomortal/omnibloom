@@ -638,8 +638,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 22176,
-      "sha256": "81cae1b57bc499f872631c004a87c6dcf018d931fd4570ff85483edd57ff6aa1"
+      "bytes": 22673,
+      "sha256": "678cdeec48bc225a5172dcb98d02207b97438284e134167cee2b838a4faedfff"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2858,8 +2858,8 @@
     },
     {
       "path": "KNOWN-ISSUES.md",
-      "bytes": 10396,
-      "sha256": "4cef2a04c596d5b96e9d5f0215fa7b5300925a86344383bf1a5eef6ba080f75f"
+      "bytes": 10573,
+      "sha256": "5aac81244dac54427a7e7d8946f40ac56e8a149a168c95a39123d4efec05511a"
     },
     {
       "path": "LICENSE",
