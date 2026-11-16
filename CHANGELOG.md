@@ -2,6 +2,8 @@
 
 ## Unreleased (dev branch, not tested on a console yet unless noted)
 
+We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.
+
 ### Omni
 - **Pinned tabs:** D-pad left / right on a tab row in the Tabs panel, or "Pin this tab" in the hold-Cross menu. Up to
   6; never in private tabs; kept after a restart.

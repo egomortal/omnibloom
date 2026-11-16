@@ -22,6 +22,8 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 > from the [v0.5.1 release](https://github.com/egomortal/omnibloom/releases/tag/v0.5.1) and press Repair** next to Omni
 > (or install again). Details in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
+> **Status:** We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release. See [ROADMAP.md](ROADMAP.md) and the dev branch's [CHANGELOG.md](CHANGELOG.md).
+
 ## What's in it
 
 | Part | What it is | Folder |
