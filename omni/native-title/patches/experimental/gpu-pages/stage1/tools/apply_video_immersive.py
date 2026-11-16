@@ -11,7 +11,7 @@ theater-mode one), Omni treats the page like fullscreen for its bars:
   - Triangle (address), Options, R3, L1/R1 (tabs) and touchpad/Back still show them, as before.
 Only with Auto-hide on (the default): with it off the bars are part of the layout and stay. Real fullscreen is
 unchanged. No page script, no polling of the page: one rect read per tick from the video plane (a mutex).
-usage: apply_video_immersive.py <engine tree>   (edits engine/media/OmniHwService.{h,cpp}, engine/entry/OmniBrowser.cpp)"""
+usage: apply_video_immersive.py <engine tree> [media]   (edits engine/media/OmniHwService.{h,cpp}, engine/entry/OmniBrowser.cpp)"""
 import sys
 from pathlib import Path
 
@@ -111,4 +111,7 @@ static void omniChromeWake(bool pointerMotion)
 
 print(patch('media/OmniHwService.h', HEADER))
 print(patch('media/OmniHwService.cpp', SERVICE))
-print(patch('entry/OmniBrowser.cpp', BROWSER))
+# `media` as 2nd argument: the video service only. The title compiles its own copy of OmniHwService.cpp from the eboot
+# workspace (tools/prep_launch.py: <workspace>/engine/media), so the recipe runs this on that tree too.
+if len(sys.argv) < 3 or sys.argv[2] != 'media':
+    print(patch('entry/OmniBrowser.cpp', BROWSER))

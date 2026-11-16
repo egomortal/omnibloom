@@ -94,6 +94,35 @@ st "OMNI_BARS_HIDE_V1: $(paste -sd' ' "$LT_/apply_bars_hide.log")"
 # OMNI_BARS_CLICK_V1 (2026-11-16): top-bar clicks 52 px low with the quick-access row hidden (needs OMNI_BARS_HIDE_V1)
 python3 "$S1/tools/apply_bars_click.py" "$TT" > "$LT_/apply_bars_click.log" 2>&1 || { st "bars click FAILED: $(tail -1 "$LT_/apply_bars_click.log")"; exit 1; }
 st "OMNI_BARS_CLICK_V1: $(tail -1 "$LT_/apply_bars_click.log")"
+# OMNI_VIDEO_IMMERSIVE_V1 (2026-11-16): a site's own full-page video player keeps the bars away like fullscreen
+python3 "$S1/tools/apply_video_immersive.py" "$TT" > "$LT_/apply_video_immersive.log" 2>&1 || { st "video immersive FAILED: $(tail -1 "$LT_/apply_video_immersive.log")"; exit 1; }
+st "OMNI_VIDEO_IMMERSIVE_V1: $(paste -sd' ' "$LT_/apply_video_immersive.log")"
+# ... and the eboot workspace's copy of the video service, which the title link compiles (tools/prep_launch.py)
+python3 "$S1/tools/apply_video_immersive.py" "$NE" media > "$LT_/apply_video_immersive_ne.log" 2>&1 || { st "video immersive (eboot media) FAILED: $(tail -1 "$LT_/apply_video_immersive_ne.log")"; exit 1; }
+st "OMNI_VIDEO_IMMERSIVE_V1 eboot media: $(paste -sd' ' "$LT_/apply_video_immersive_ne.log")"
+# OMNI_GRABBER_SUSPECTS_V1 (2026-11-16): playlists found by content (Downloads confirms), 6 playlist rows
+python3 "$S1/tools/apply_grabber_suspects.py" "$TT" > "$LT_/apply_grabber_suspects.log" 2>&1 || { st "grabber suspects FAILED: $(tail -1 "$LT_/apply_grabber_suspects.log")"; exit 1; }
+st "OMNI_GRABBER_SUSPECTS_V1: $(tail -1 "$LT_/apply_grabber_suspects.log")"
+# 2026-11-16 browser batch (owner: "you can do all of it"): site zoom, file downloads, send link, quick actions, search tiles, small comforts
+python3 "$S1/tools/apply_site_zoom.py" "$TT" > "$LT_/apply_site_zoom.log" 2>&1 || { st "OMNI_SITE_ZOOM_V1 FAILED: $(tail -1 "$LT_/apply_site_zoom.log")"; exit 1; }
+st "OMNI_SITE_ZOOM_V1: $(paste -sd' ' "$LT_/apply_site_zoom.log")"
+python3 "$S1/tools/apply_file_downloads.py" "$TT" > "$LT_/apply_file_downloads.log" 2>&1 || { st "OMNI_FILE_DOWNLOADS_V1 FAILED: $(tail -1 "$LT_/apply_file_downloads.log")"; exit 1; }
+st "OMNI_FILE_DOWNLOADS_V1: $(paste -sd' ' "$LT_/apply_file_downloads.log")"
+python3 "$S1/tools/apply_send_link.py" "$TT" > "$LT_/apply_send_link.log" 2>&1 || { st "OMNI_SEND_LINK_V1 FAILED: $(tail -1 "$LT_/apply_send_link.log")"; exit 1; }
+st "OMNI_SEND_LINK_V1: $(paste -sd' ' "$LT_/apply_send_link.log")"
+python3 "$S1/tools/apply_quick_actions.py" "$TT" > "$LT_/apply_quick_actions.log" 2>&1 || { st "OMNI_QUICK_ACTIONS_V1 FAILED: $(tail -1 "$LT_/apply_quick_actions.log")"; exit 1; }
+st "OMNI_QUICK_ACTIONS_V1: $(paste -sd' ' "$LT_/apply_quick_actions.log")"
+python3 "$S1/tools/apply_search_tiles.py" "$TT" > "$LT_/apply_search_tiles.log" 2>&1 || { st "OMNI_SEARCH_TILES_V1 FAILED: $(tail -1 "$LT_/apply_search_tiles.log")"; exit 1; }
+st "OMNI_SEARCH_TILES_V1: $(paste -sd' ' "$LT_/apply_search_tiles.log")"
+python3 "$S1/tools/apply_small_comforts.py" "$TT" > "$LT_/apply_small_comforts.log" 2>&1 || { st "OMNI_SMALL_COMFORTS_V1 FAILED: $(tail -1 "$LT_/apply_small_comforts.log")"; exit 1; }
+st "OMNI_SMALL_COMFORTS_V1: $(paste -sd' ' "$LT_/apply_small_comforts.log")"
+# 2026-11-16 overnight batch 2: uBlock content in subframes, YouTube TV mode + honest UA, reading list
+python3 "$S1/tools/apply_ublock_frames.py" "$TT" > "$LT_/apply_ublock_frames.log" 2>&1 || { st "OMNI_UBLOCK_FRAMES_V1 FAILED: $(tail -1 "$LT_/apply_ublock_frames.log")"; exit 1; }
+st "OMNI_UBLOCK_FRAMES_V1: $(paste -sd' ' "$LT_/apply_ublock_frames.log")"
+python3 "$S1/tools/apply_youtube_tv.py" "$TT" > "$LT_/apply_youtube_tv.log" 2>&1 || { st "OMNI_YOUTUBE_TV_V1 FAILED: $(tail -1 "$LT_/apply_youtube_tv.log")"; exit 1; }
+st "OMNI_YOUTUBE_TV_V1: $(paste -sd' ' "$LT_/apply_youtube_tv.log")"
+python3 "$S1/tools/apply_reading_list.py" "$TT" > "$LT_/apply_reading_list.log" 2>&1 || { st "OMNI_READING_LIST_V1 FAILED: $(tail -1 "$LT_/apply_reading_list.log")"; exit 1; }
+st "OMNI_READING_LIST_V1: $(paste -sd' ' "$LT_/apply_reading_list.log")"
 # OMNI_GPUPAGES_ZEROCOPY_V1 (outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md): the shell side (inert without /data/omni/gpu-pages-zerocopy.flag)
 python3 "$S1/tools/apply_zerocopy_shell.py" "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_zerocopy_shell.log" 2>&1 || { st "zero-copy shell FAILED: $(tail -1 "$LT_/apply_zerocopy_shell.log")"; exit 1; }
 st "OMNI_GPUPAGES_ZEROCOPY_V1 shell: $(tail -1 "$LT_/apply_zerocopy_shell.log")"

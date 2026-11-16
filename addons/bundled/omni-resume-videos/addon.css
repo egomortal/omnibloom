@@ -1,0 +1,8 @@
+.omni-resume{all:initial!important;position:fixed!important;left:50%!important;bottom:9vh!important;transform:translateX(-50%)!important;z-index:2147483646!important;display:block!important;box-sizing:border-box!important;max-width:min(90vw,30em)!important;padding:.8em 1em!important;border:2px solid #6ccbff!important;border-radius:.7rem!important;background:rgba(14,24,33,.96)!important;color:#e6edf3!important;font:clamp(24px,1.5vw,48px)/1.35 Arial,sans-serif!important;box-shadow:0 .4em 1.6em rgba(0,0,0,.55)!important;text-align:left!important}
+.omni-resume-q{all:initial!important;display:block!important;font:inherit!important;color:inherit!important;font-weight:700!important;margin:0 0 .5em!important}
+.omni-resume-row{all:initial!important;display:flex!important;align-items:center!important;gap:.6em!important;font:inherit!important;color:inherit!important}
+.omni-resume button{all:initial!important;font:inherit!important;cursor:pointer!important;color:#e6edf3!important;background:#193246!important;border:2px solid #6ccbff!important;border-radius:.4em!important;padding:.35em .9em!important;min-height:2.2em!important;box-sizing:border-box!important}
+.omni-resume button.omni-resume-yes{background:#2a6f97!important}
+.omni-resume button:focus{outline:4px solid #fff!important;outline-offset:3px!important}
+.omni-resume-left{all:initial!important;font:inherit!important;font-size:.8em!important;color:#b1c5d3!important;margin-left:auto!important}
+@media(prefers-reduced-motion:reduce){.omni-resume,.omni-resume *{animation:none!important;transition:none!important}}

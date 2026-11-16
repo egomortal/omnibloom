@@ -103,6 +103,13 @@ SETUP_LOCK_MINUTES = 30
 # Omni's HDR setting (`<revision>TAB<off|auto|on>` and a newline; Omni treats a missing file as Off). The one-button install
 # sets Auto when there's no setting yet and keeps the user's choice otherwise.
 OMNI_HDR_PREF = "/data/omni/video-hdr-preference.txt"
+# Omni's bookmarks (OmniBookmarks.h): one `url TAB title` per line, UTF-8, read with a 2400-byte fgets buffer; Omni loads the
+# first 500, and saves URLs cut to 2048 bytes and titles to 300. Only http:// and https:// pages can be bookmarked.
+OMNI_BOOKMARKS = "/data/omni/bookmarks.txt"
+OMNI_BOOKMARK_MAX = 500
+OMNI_BOOKMARK_URL_MAX = 2048
+OMNI_BOOKMARK_TITLE_MAX = 300
+OMNI_BOOKMARK_LINE_BUFFER = 2400
 # uBlock Origin's rule files. Omni's network filter reads them from /data/omni/ when ublock-native.flag (below) is on. Up to
 # v0.5.1 nothing installed them, and Omni then blocked every page ("Filtering failed ... (error 1)", 2026-11-15).
 # Setup carries them (omni/engine/resources) and writes the set when any of the first three is missing, empty or too big

@@ -17,7 +17,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
 
-from . import checks, config, diagnostics, installer, jd, oneclick, ps5, release, shortcuts
+from . import bookmarks, checks, config, diagnostics, installer, jd, oneclick, ps5, release, shortcuts
 
 C = config.COLORS
 STATUS_MARK = {"ok": ("✓", C["ok"]), "warn": ("!", C["warn"]), "bad": ("✕", C["bad"]), "info": ("i", C["accent"])}
@@ -520,6 +520,9 @@ class SetupApp:
         # Technical logs only, personal data removed, saved to Downloads: for bug reports (nothing is uploaded)
         ttk.Button(actions, text="Collect diagnostics…", style="Ghost.TButton",
                    command=lambda: self._start_job({"mode": "diagnostics"})).pack(side="left", padx=8)
+        more = tk.Frame(self.check_box, bg=C["ground"])
+        more.pack(fill="x")
+        ttk.Button(more, text="Import bookmarks from this PC…", style="Ghost.TButton", command=self.page_bookmarks).pack(side="left")
         if self.summary["can_install"]:
             self.next_btn.configure(state="normal")
 
@@ -577,6 +580,80 @@ class SetupApp:
     def _start_job(self, job):
         self.job = job
         self.show(5)
+
+    # -- bookmarks from this PC (from the check page) -------------------------------
+    def page_bookmarks(self):
+        self._clear()
+        self.next_btn.configure(text="Import", state="disabled", command=self._bm_import)
+        self.back_btn.configure(state="normal", command=lambda: self.show(self.step))
+        self.label(self.body, "Import bookmarks", "title").pack(anchor="w")
+        self.bm_note = self.label(self.body, "Looking for bookmarks on this PC…", "muted")
+        self.bm_note.pack(anchor="w", pady=(2, 12))
+        self.bm_box = tk.Frame(self.body, bg=C["ground"])
+        self.bm_box.pack(fill="both", expand=True)
+        self.bm_sources, self.bm_pick = [], []
+        self.run_bg(bookmarks.find_sources, self._bm_found)
+
+    def _bm_found(self, sources, err):
+        if not self.bm_box.winfo_exists():
+            return
+        sources = [s for s in sources or [] if s.count or s.error]
+        if err or not sources:
+            self.bm_note.configure(text="No Chrome, Edge, Brave or Firefox bookmarks found on this PC.")
+            return
+        self.bm_sources = sources
+        self.bm_note.configure(text="Pick the ones to add to Omni:")
+        p = self.panel(self.bm_box)
+        p.pack(fill="x")
+        for s in sources:
+            var = tk.BooleanVar(value=bool(s.count))
+            self.bm_pick.append(var)
+            if s.error:
+                text = "%s  (couldn't read it; close that browser and try again)" % s.label
+            else:
+                text = "%s  (%d bookmark%s)" % (s.label, s.count, "" if s.count == 1 else "s")
+            ttk.Checkbutton(p, text=text, variable=var, style="Panel.TCheckbutton",
+                            state="disabled" if s.error or not s.count else "normal").pack(anchor="w", pady=2)
+        self.label(self.bm_box, "They're added after the bookmarks already in Omni; none are removed or changed. Omni keeps "
+                                "up to %d, bookmarks-bar ones first. Only web pages are added. If Omni is open on the PS5, "
+                                "close it first." % config.OMNI_BOOKMARK_MAX, "small", wrap=640).pack(anchor="w", pady=(10, 0))
+        self.next_btn.configure(state="normal")
+
+    def _bm_import(self):
+        chosen = [s for s, v in zip(self.bm_sources, self.bm_pick) if v.get()]
+        if not chosen:
+            messagebox.showinfo(config.APP_NAME, "Tick at least one browser.")
+            return
+        self.next_btn.configure(state="disabled")
+        self.back_btn.configure(state="disabled")
+        for w in self.bm_box.winfo_children():
+            w.destroy()
+        self.bm_note.configure(text="Adding them to Omni…")
+        host = self.host.get().strip()
+        self.run_bg(lambda: self._do_bm_import(host, chosen), self._bm_done)
+
+    def _do_bm_import(self, host, chosen):
+        marks = bookmarks.collect(chosen)    # read on this PC; sent only to the PS5
+        with self.console(host) as c:
+            return bookmarks.import_to_console(c, marks)
+
+    def _bm_done(self, r, err):
+        if not self.bm_box.winfo_exists():
+            return
+        self.back_btn.configure(state="normal")
+        self.next_btn.configure(text="Done", state="normal", command=lambda: self.show(self.step))
+        if err:
+            self.bm_note.configure(text="Couldn't add the bookmarks: %s\nYour earlier bookmarks are still on the PS5." % err, fg=C["bad"])
+            return
+        lines = ["Added %d bookmark%s to Omni." % (r["added"], "" if r["added"] == 1 else "s")]
+        if r["already"]:
+            lines.append("%d %s already there." % (r["already"], "was" if r["already"] == 1 else "were"))
+        if r["no_room"]:
+            lines.append("%d left out: Omni keeps up to %d bookmarks." % (r["no_room"], config.OMNI_BOOKMARK_MAX))
+        self.bm_note.configure(text="\n".join(lines), fg=C["text"])
+        if r["added"]:
+            self.label(self.bm_box, "Find them in Omni's quick menu (Options), Bookmarks. The earlier bookmarks file was "
+                                    "kept on the PS5 as a backup.", "small", wrap=640).pack(anchor="w")
 
     # -- 4. choose ---------------------------------------------------------------
     def page_choose(self):

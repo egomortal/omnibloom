@@ -101,12 +101,13 @@ H	-	getfinefile.com	-	-
 H	-	annoyingnightmareedit.com	-	-
 H	-	baggyrepackingrocky.com	-	-
 H	-	narilyhukelpfulin.com	-	-
-P	t	*	1cloudfile.com|akirabox.com|akirabox.to|bowfile.com|buzzheavier.com|bzzhr.co|bzzhr.to|cg-gamespc.net|datavaults.co|devuploads.com|dodi-repacks.site|file-me.top|file-upload.org|filemirage.com|fuckingfast.*|game-repack.site|gamedrive.*|getfreegames.net|go.zovo.ink|koramaup.com|mirrored.to|multiup.io|nathanmichaelphoto.com|ranoz.gg|repack-games.com|reloadedsteam.com|rootz.so|steam-repacks.net|steamgg.net|steamunderground.net|swiftuploads.com|torupload.com|up-4ever.net|uploadrar.*|usersdrive.com|vik1ngfile.site|worldofpcgames.com|zeilink.net|zovo2.top|zpaste.net|fileq.net	~com|~io|~net|~org|~to|~co|~mixdrop.ag|~vik1ngfile.site
+P	t	*	1cloudfile.com|akirabox.com|akirabox.to|bowfile.com|buzzheavier.com|bzzhr.co|bzzhr.to|cg-gamespc.net|datavaults.co|devuploads.com|dodi-repacks.site|file-me.top|file-upload.org|filemirage.com|fuckingfast.*|game-repack.site|gamedrive.*|getfreegames.net|go.zovo.ink|koramaup.com|mirrored.to|multiup.io|nathanmichaelphoto.com|ranoz.gg|repack-games.com|reloadedsteam.com|rootz.so|steam-repacks.net|steamgg.net|steamunderground.net|swiftuploads.com|torupload.com|up-4ever.net|uploadrar.*|usersdrive.com|vik1ngfile.site|worldofpcgames.com|zeilink.net|zovo2.top|zpaste.net|fileq.net|zovo.ink|zovo.to	~com|~io|~net|~org|~to|~co|~mixdrop.ag|~vik1ngfile.site|~filecrypt.cc
 R	t	^https:\/\/[a-z0-9]+\.[a-z0-9]+\.[a-z][a-z][a-z]+\/\?&?[a-z]+=[a-zA-Z0-9+\/%=:_-]+[$&]	gg|ink|site|so|to|top	-	https:// /?
 R	ct	^https:\/\/[a-z0-9]+\.[a-z0-9]+\.[a-z][a-z][a-z]+\/\?&?[a-z]+=[a-zA-Z0-9+\/%=:_-]+[$&]	-	cfd|cyou|sbs|shop|space|website	https:// /?
 R	ct	^https:\/\/link[0-9]+\.[a-z0-9]+\.[a-z][a-z][a-z]+\/\?&?data=[a-zA-Z0-9+\/%=:_-]+[$&]	-	~com|~edu|~gov|~net|~org	https://link /? data=
 H	-	yewfjsdi.it.com	-	-
 H	-	wimsedas.xyz	-	-
+H	-	uplcm.com	-	-
 P	x	||track.adtraction.com/*^url=https://www.gog.com/	-	-
 P	x	||track.adtraction.com/*^url=http://www.gog.com/	-	-
 P	-	/apop/redirect/zone/*	-	-
@@ -180,6 +181,7 @@ P	-	/adstream_sx.ads/*	-	-
 P	-	/adx.php?source=	-	-
 P	-	/aff_ad?	-	-
 P	-	/afu.php?	-	-
+P	-	/api/direct/*?s1=	-	-
 P	-	/api/users?token=	-	-
 P	-	/click?adv=	-	-
 P	-	/fb_hilltopads.php	-	-
@@ -503,6 +505,7 @@ H	-	asdasdad.net	-	-
 H	-	asensoithecb.com	-	-
 H	-	asgclickpp.com	-	-
 H	-	ashoupsu.com	-	-
+H	-	asiafilm.org	-	-
 H	-	aslnk.link	-	-
 H	-	aso1.net	-	-
 H	-	asqconn.com	-	-
@@ -1963,6 +1966,7 @@ H	-	qwikln.com	-	-
 H	-	qxdownload.com	-	-
 H	-	qz496amxfh87mst.com	-	-
 H	-	r3f.technology	-	-
+H	-	rabon.org	-	-
 H	-	rallantynethebra.com	-	-
 H	-	rankpeers.com	-	-
 H	-	raordukinarilyhuk.com	-	-
@@ -1990,6 +1994,7 @@ H	-	record.royalreelspartners.com	-	-
 H	-	recyclingbees.com	-	-
 H	-	red-direct-n.com	-	-
 H	-	redaffil.com	-	-
+H	-	redcapsfillip.com	-	-
 H	-	redirect-ads.com	-	-
 H	-	redirect-path1.com	-	-
 H	-	redirecting.online	-	-
@@ -2164,6 +2169,7 @@ H	-	souszhi.com	-	-
 H	-	sowve.com	-	-
 H	-	spacecatholicpalmful.com	-	-
 H	-	spacetraff.com	-	-
+H	-	spanish-speakingsecularisemethod.com	-	-
 H	-	sparkstudios.com	-	-
 H	-	sparta-tracking.xyz	-	-
 H	-	spdate.com	-	-
@@ -2466,6 +2472,7 @@ H	-	utm-campaign.com	-	-
 H	-	utopicmobile.com	-	-
 H	-	v6rxv5coo5.com	-	-
 H	-	vaatmetu.net	-	-
+H	-	vacuumintendedinhale.com	-	-
 H	-	vague-key.com	-	-
 H	-	vaitotoo.net	-	-
 H	-	vasstycom.com	-	-
@@ -3031,6 +3038,7 @@ H	-	routeumber.com	hltv.org	-
 H	-	rx.link	uploadgig.com	-
 H	-	s.click.aliexpress.com	dzapk.com|up-4ever.net	-
 P	-	||sendspace.com/defaults/sendspace-pop.html	-	-
+H	-	shockvpn.com	turtlecute.org	-
 H	-	short.bitchute.com	-	-
 H	-	skycheats.com	elitepvpers.com	-
 H	-	t.co	hltv.org	-
@@ -3046,6 +3054,7 @@ R	-	^https?:\/\/.*\.(club|xyz|top|casa)\/	databasegdriveplayer.co|dood.la|dood.s
 P	-	.com./	pornhub.com	-
 P	t	|http*://*?	forums.socialmediagirls.com|pornhub.com|redtube.com|tube8.com|youporn.com|youporngay.com	-
 P	-	||boyfriend.tv/out/bg-	-	-
+P	-	||boyfriendtv.com/o7x/	-	-
 P	-	||boyfriendtv.com/out/bg-	-	-
 H	-	chaturbate.com	xxxbios.com	-
 P	-	||clicknplay.to/api/	-	-
