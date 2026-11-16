@@ -258,13 +258,13 @@
     },
     {
       "path": "addons/bundled/omni-reader-view/addon.css",
-      "bytes": 5883,
-      "sha256": "93e3bbcd053f2eb3a7136d69d853369c88484c26247c71261c723ee543d3ebb7"
+      "bytes": 9326,
+      "sha256": "1ae02411e9b90afbad62fe0d0674ab9192164d8835058f4cc6161f3dc83ee4df"
     },
     {
       "path": "addons/bundled/omni-reader-view/core.js",
-      "bytes": 11274,
-      "sha256": "e53db70d55a3394398b9e6398d5f3d3190162373bdbdc5941a98f6721ad60a5d"
+      "bytes": 11305,
+      "sha256": "d89bd618c16d69bd003e0365361f8052e81127638452af7eda15cefbba4dadf2"
     },
     {
       "path": "addons/bundled/omni-reader-view/LICENSE",
@@ -273,18 +273,23 @@
     },
     {
       "path": "addons/bundled/omni-reader-view/manifest.json",
-      "bytes": 1479,
-      "sha256": "c8f3449522503294a9b32282fff2fc1bfda370332f0095c9de7cebe96694eb99"
+      "bytes": 1686,
+      "sha256": "30e25bc9e6969570c89067629e73850f926718bdd081807d8bf9ec4bc33905ba"
+    },
+    {
+      "path": "addons/bundled/omni-reader-view/prefs.js",
+      "bytes": 4591,
+      "sha256": "4d3f33efaf665c7f4975b7b0b6fe4ef8d4c1385bc50abc7c6190022ed8130e37"
     },
     {
       "path": "addons/bundled/omni-reader-view/runtime.js",
-      "bytes": 6870,
-      "sha256": "330b0a0f3cea34b300b32a7f60c86e95300cf0599b8a929d67507179fd1d2ee3"
+      "bytes": 13051,
+      "sha256": "68572f16bffc46240dc19d7ffac2313ad8d827536bb6ba492baf64e0e95b2b97"
     },
     {
       "path": "addons/bundled/omni-reader-view/SOURCES.md",
-      "bytes": 609,
-      "sha256": "b2bf257d5d718da546b4131636418671a8164745fc41a0810b297384e1e98db9"
+      "bytes": 2038,
+      "sha256": "36cbf431c54ba1f4562307289e68cd9dc12ff35308da581bf9d2dcfe4b9009c3"
     },
     {
       "path": "addons/bundled/omni-resume-videos/addon.css",
@@ -468,8 +473,8 @@
     },
     {
       "path": "addons/tests/reader-view.test.cjs",
-      "bytes": 3998,
-      "sha256": "c03cee810620f976d91f923b762592b910fcd4f373b8a48f1fbc11ebe50f12e7"
+      "bytes": 19622,
+      "sha256": "8dfa4b8539575b40b456625eede7e9b8b8845da590d19bd23602366e7efb97d5"
     },
     {
       "path": "addons/tests/resume-videos.test.cjs",
@@ -753,8 +758,8 @@
     },
     {
       "path": "DEVELOPERS.md",
-      "bytes": 2724,
-      "sha256": "7b6d223a156ad7e808e56a61bead3549073651601289bfab20ac2b02e7a8e248"
+      "bytes": 10265,
+      "sha256": "3b1c3e62694a782ead46cee351cfb69f4296ce54726ceff0865334bf25af20df"
     },
     {
       "path": "docs/brand/feature-grid.png",
@@ -2202,6 +2207,11 @@
       "sha256": "0a01e66b27dc1c749b1e57a9db2be42cfad72a9e9f695339d2f4c637fe75eaff"
     },
     {
+      "path": "downloads/tests/test_active.py",
+      "bytes": 6785,
+      "sha256": "a95ac9dca5af92ab73cc04bc9c0c1445da3edca5f045689e24caec097d2864e6"
+    },
+    {
       "path": "downloads/tests/test_deep_probe_redirect.py",
       "bytes": 2997,
       "sha256": "338ae40111d8a0f4d56cab79ebc8cfa5459f2f5edc14328f7d7fe34a5de0e61e"
@@ -2683,8 +2693,8 @@
     },
     {
       "path": "downloads/worker/worker.py",
-      "bytes": 63852,
-      "sha256": "1f371a1126cc246dedb15e472a646e6eb26868cb820a26ff0f8547091b0cee07"
+      "bytes": 65220,
+      "sha256": "3a8b116b7e4e124b50c6d6379814957cc686a7240cac6868e8b7924e4e0585ca"
     },
     {
       "path": "FEATURES.md",
@@ -12688,8 +12698,8 @@
     },
     {
       "path": "omni/pages/bundle-clean4/start/index.html",
-      "bytes": 5223,
-      "sha256": "209beb5dc607152615ad714558226d1507ab90180ca8003721de2dfd51e7d617"
+      "bytes": 5409,
+      "sha256": "41a201600b5058a6961ae9abdbd139fa0ab68869cf332a8107c136e1f4507438"
     },
     {
       "path": "omni/pages/bundle-clean4/start/LICENSE",
@@ -12722,9 +12732,29 @@
       "sha256": "8f5c0ad022f85f20fd3e5bf5c3cf78d866631c46f960007ea4d46681de48d587"
     },
     {
+      "path": "omni/pages/bundle-clean4/start/start-custom.css",
+      "bytes": 2242,
+      "sha256": "fd7dfbe1e753e07b4e985932cb4bcac5ea9a064f810771e50179e02186f2080b"
+    },
+    {
+      "path": "omni/pages/bundle-clean4/start/start-custom.js",
+      "bytes": 10207,
+      "sha256": "c88043f80e718b72a9129ca808f9f45c8578e378d2d0888ea2e00b2872541dbd"
+    },
+    {
       "path": "omni/pages/bundle-clean4/start/start-i18n.js",
       "bytes": 5588,
       "sha256": "c1dec03d870d7c4c6ecf9d1662dada7213f601c913cd7498a883763bf3db03c8"
+    },
+    {
+      "path": "omni/pages/bundle-clean4/start/start-webapps.css",
+      "bytes": 1483,
+      "sha256": "f823f03b1c3e91a2f35d2db1d1c87810ca96d166739c628fe054ed8d068709e9"
+    },
+    {
+      "path": "omni/pages/bundle-clean4/start/start-webapps.js",
+      "bytes": 5434,
+      "sha256": "c89bc4e4fa7a0d6222a493251ada48ac00be78fdc81e16e8a42f79289eed7671"
     },
     {
       "path": "omni/pages/bundle-clean4/start/universe-arrangement.css",
