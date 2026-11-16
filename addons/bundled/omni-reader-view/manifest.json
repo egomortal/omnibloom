@@ -2,16 +2,17 @@
   "manifest_version": 1,
   "id": "omni-reader-view",
   "name": "Reader view",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "licence": "MIT",
   "source": "https://github.com/egomortal/omnibloom",
-  "description": "Shows articles as large, clean text for reading from the sofa. A Reader view button appears on article pages; Alt+Shift+R or the quick switch also opens it.",
+  "description": "Shows articles as large, clean text for reading from the sofa, with text size, line width, font, colours and line spacing on its toolbar. A Reader view button appears on article pages; Alt+Shift+R or the quick switch also opens it.",
   "matches": [
     "*://*/*"
   ],
   "excludes": [],
   "js": [
     "core.js",
+    "prefs.js",
     "runtime.js"
   ],
   "css": [
@@ -32,14 +33,18 @@
       "label": "Text size",
       "default": "large",
       "choices": [
+        "small",
         "medium",
         "large",
-        "huge"
+        "huge",
+        "giant"
       ],
       "labels": [
+        "Small",
         "Medium",
         "Large",
-        "Huge"
+        "Huge",
+        "Giant"
       ]
     },
     {
@@ -51,13 +56,15 @@
         "auto",
         "dark",
         "light",
-        "sepia"
+        "sepia",
+        "black"
       ],
       "labels": [
         "Follow Omni dark pages",
         "Dark",
         "Light",
-        "Sepia"
+        "Sepia",
+        "Black (OLED)"
       ]
     },
     {

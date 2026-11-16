@@ -1,0 +1,24 @@
+/* OMNI_START_CUSTOM_V1: "Customise start page" (start-custom.js). Universe styling stays; this only hides, orders and adds. */
+.oscu-hidden{display:none!important}
+/* Sections Omni adds (Continue watching, Reading list, Recently closed) span the Universe grid's full width, after it. */
+body[data-ob-universe] #main>.oscu-extra{grid-column:1/-1}
+.oscu-extra{margin-top:1.1rem}
+.oscu-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin-top:.6rem}
+#oscu-closed .oscu-tiles{grid-template-columns:repeat(5,minmax(0,1fr))}
+.oscu-tile{display:flex;flex-direction:column;align-items:flex-start;gap:.25rem;min-width:0;min-height:var(--ob-target,2.75rem);padding:.8rem 1rem;text-align:start;border-radius:var(--ob-radius-small,.6rem);background:var(--ob-panel-raised,rgba(127,127,127,.16));color:var(--ob-text,inherit);border:2px solid transparent;cursor:pointer}
+.oscu-tile b,.oscu-tile small{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oscu-tile small{opacity:.75;font-size:.8rem}
+.oscu-tile:is(:hover,:focus,.pad-focus){border-color:var(--ob-focus,var(--ob-accent,#fff))}
+/* Any order other than the default: one column, in the chosen order (the Universe grid areas no longer apply). */
+body.oscu-linear #main{display:flex!important;flex-direction:column!important;gap:1.1rem}
+body.oscu-linear #main>*{grid-area:auto!important;margin-top:0}
+body.oscu-linear .ob-library-panels{display:flex!important;flex-wrap:wrap;gap:1rem}
+body.oscu-linear .ob-library-panels>.card{flex:1 1 22rem;grid-area:auto!important}
+body.oscu-linear #ob-arrange-toggle{display:none!important}
+/* Header: clock and the gear. */
+.oscu-clock{margin-inline-start:auto;font:600 1.3rem/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;color:var(--ob-text,inherit);padding:.3rem .6rem}
+.oscu-clock[hidden]{display:none}
+#ob-arrange-toggle~.oscu-clock{margin-inline-start:.6rem}
+.oscu-gear{min-height:2.5rem;padding:.3rem .8rem;margin-inline-start:.6rem}
+/* Own colours and pictures: panels keep their Universe colours; text straight on the background gets a shadow. */
+body.oscu-bg-picture .topline,body.oscu-bg-colour .topline{text-shadow:0 1px 3px rgba(0,0,0,.6)}

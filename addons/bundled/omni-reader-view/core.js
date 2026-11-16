@@ -71,12 +71,12 @@ const raw=docTitle(doc);const parts=raw.split(/\s+[|\-–—:»·]\s+/);if(parts
 function pickByline(doc,m){const a=m.author||m['article:author']||m['parsely-author']||m['sailthru.author']||'';if(a&&!/^https?:/i.test(a))return a.slice(0,120);
 const n=findAll(doc.body||doc,n=>attr(n,'rel')==='author'||attr(n,'itemprop')==='author'||/\b(byline|author)\b/i.test(attr(n,'class')+' '+attr(n,'id')),5).map(n=>squash(textOf(n)).trim()).find(s=>s&&s.length<=120);return n||''}
 function words(text){return(String(text).match(/\S+/g)||[]).length}
-// extract(document, {base}) -> {title, byline, site, lang, dir, content, length, paragraphs, minutes, isArticle} or null.
+// extract(document, {base}) -> {title, byline, site, lang, dir, content, length, paragraphs, words, minutes, isArticle} or null.
 function extract(doc,opts={}){const r=score(doc);if(!r)return null;const m=meta(doc),title=pickTitle(doc,m),nodes=contentNodes(r);
 let length=0,paragraphs=0;for(const n of nodes){const st=r.stats.get(n);if(st)length+=st.len}
 for(const n of nodes)for(const p of findAll(n,x=>{const st=r.stats.get(x);return!!st&&tag(x)!=='td'&&isParagraph(x,tag(x),st)&&st.len>=80&&density(st)<.3},2000))paragraphs++;
 const content=clean(nodes,opts.base||doc.baseURI||'',title,r.stats);const html=doc.documentElement||findAll(doc,n=>tag(n)==='html',1)[0];
 const typed=/article|blog|news/i.test(m['og:type']||'');const isArticle=paragraphs>=3&&length>=(typed?600:900);
-const text=nodes.map(textOf).join(' ');
-return{title,byline:pickByline(doc,m),site:m['og:site_name']||'',lang:html?attr(html,'lang'):'',dir:html?attr(html,'dir'):'',content,length,paragraphs,minutes:Math.max(1,Math.round(words(text)/230)),isArticle,best:r.best,score:r.score}}
+const text=nodes.map(textOf).join(' '),count=words(text);
+return{title,byline:pickByline(doc,m),site:m['og:site_name']||'',lang:html?attr(html,'lang'):'',dir:html?attr(html,'dir'):'',content,length,paragraphs,words:count,minutes:Math.max(1,Math.round(count/230)),isArticle,best:r.best,score:r.score}}
 return Object.freeze({extract,score,contentNodes,meta,pickTitle,imageSource,textOf,MAX_ELEMENTS})});

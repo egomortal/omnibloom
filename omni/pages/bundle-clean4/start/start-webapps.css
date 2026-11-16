@@ -1,0 +1,16 @@
+/* OMNI_WEB_APPS_V1: "Web apps" tiles inside "Your apps" (start-webapps.js). Big coloured tiles for a TV: 6 per row. */
+.owap{margin-top:1rem}
+.owap-head{align-items:center;gap:.6rem}
+.owap-title{margin:0;font-size:1.05rem}
+.owap-right{display:flex;align-items:center;gap:.6rem;margin-inline-start:auto}
+.owap-count{opacity:.75}
+.owap-manage{min-height:2.5rem;padding:.3rem .8rem}
+.owap-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.8rem;margin-top:.6rem}
+.owap-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:.15rem;min-width:0;aspect-ratio:16/10;padding:.7rem .8rem;text-align:start;border-radius:var(--ob-radius-small,.6rem);background:var(--owap-bg,#3a3a3a);color:var(--owap-ink,#fff);border:3px solid transparent;cursor:pointer;overflow:hidden}
+.owap-letter{position:absolute;top:.35rem;left:.7rem;font:700 2.4rem/1 Inter,system-ui,sans-serif;opacity:.9}
+.owap-name,.owap-host{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.owap-host{opacity:.8;font-size:.78rem}
+.owap-tile:is(:hover,:focus,.pad-focus){border-color:var(--ob-focus,var(--ob-accent,#fff));transform:scale(1.04);transition:transform .12s ease-out}
+.owap-empty{margin:.4rem 0 0;opacity:.8}
+@media (max-width:900px){.owap-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){.owap-tile:is(:hover,:focus,.pad-focus){transform:none}}

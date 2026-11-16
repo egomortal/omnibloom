@@ -39,6 +39,9 @@ ENGINE_NAMES = {'ytdlp': 'yt-dlp', 'jdownloader': 'JDownloader'}
 # another tab. Written only when its folder exists (the console's /data/omni); replaced atomically; best effort.
 DONE_FILE = os.environ.get('OMNI_DOWNLOADS_DONE_FILE', '/data/omni/downloads-done.txt')
 DONE_KEEP = 8
+# OMNI_DL_PROGRESS_V1: /api/active counts every job not finished except these (paused: waits for the user; pausing /
+# cancelling: about to stop).
+ACTIVE_SKIP = frozenset((PAUSED, 'pausing', 'cancelling'))
 # OMNI_DL_RESUME_V1: failed jobs are never retried automatically; Retry is the user's choice only.
 AUTO_RETRY_LIMIT = 0
 JOB_ID = frozenset('0123456789abcdef')
@@ -386,6 +389,17 @@ class Jobs:
     def snapshot(self):
         with self.lock:
             return [dict(j) for j in self.jobs.values()]
+
+    def active_summary(self):
+        """OMNI_DL_PROGRESS_V1: what Omni's top bar shows ("2 ↓ 45%"): how many jobs are working or waiting
+        their turn, and one overall percent (the mean of their known progress; a queued job counts 0, a job still
+        inspecting its link has none yet; -1 when no job has one). Counts only: no titles, links or job ids."""
+        with self.lock:
+            live = [j for j in self.jobs.values() if j.get('state') not in TERMINAL and j.get('state') not in ACTIVE_SKIP]
+            known = [min(100.0, max(0.0, float(j['progress']))) for j in live
+                     if isinstance(j.get('progress'), (int, float)) and not isinstance(j.get('progress'), bool)]
+        percent = int(sum(known) / len(known)) if known else -1
+        return dict(api_version=1, active=len(live), percent=percent)
 
     def set_paused(self, paused):
         if type(paused) is not bool:
@@ -857,6 +871,10 @@ class WorkerHandler(BaseHTTPRequestHandler):
             return self.reply(200, dict(ok=True, service='omni-media-worker', api_version=1))
         if self.path == '/healthz':
             return self.reply(200, dict(service='omni-media-worker', api_version=1))
+        if self.path == '/api/active':
+            # OMNI_DL_PROGRESS_V1: read-only, counts only (no token: Omni's shell has none; the server listens on
+            # 127.0.0.1 only and the Host check above keeps rebinding pages out).
+            return self.reply(200, self.server.jobs.active_summary())
         if self.path in self.PAGES:
             try:
                 body = self.static_bytes(self.PAGES[self.path]).decode('utf-8')
