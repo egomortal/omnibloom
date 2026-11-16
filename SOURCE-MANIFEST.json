@@ -2137,6 +2137,11 @@
       "sha256": "78e3d11c33a311f4aea63b5b1333bfdae43f966227f4955f20c01678012bc8ad"
     },
     {
+      "path": "downloads/tests/serve_library_worker.py",
+      "bytes": 2209,
+      "sha256": "f3c450b8157d5e6a743646411f375156224f8c3b30ea82ddadbee49852bb9022"
+    },
+    {
       "path": "downloads/tests/serve_real_worker.py",
       "bytes": 452,
       "sha256": "b619582e803634a2b464244b9f5b6522639182c0e870074926d0f3ab1423067d"
@@ -2150,6 +2155,11 @@
       "path": "downloads/tests/test-client-presets.cjs",
       "bytes": 2172,
       "sha256": "43193df22fda84d41e38a36452c3a2f63b9d9be4cf4e915888048e667fcdf0de"
+    },
+    {
+      "path": "downloads/tests/test-library.cjs",
+      "bytes": 10228,
+      "sha256": "4451d06508974611e5c9645b80aebcf2dee8656dcbc7cac92fdbb8960b640471"
     },
     {
       "path": "downloads/tests/test-original-art.cjs",
@@ -2222,6 +2232,11 @@
       "sha256": "749a7fe0d420a8346ebb91192c9bb59bd832784cad5df3945f8e3ec0f54afdef"
     },
     {
+      "path": "downloads/tests/test_files_library.py",
+      "bytes": 27393,
+      "sha256": "93235484c07cb067f56e887fe18dd84c2790d51b1bd52b228596041094a0a2ed"
+    },
+    {
       "path": "downloads/tests/test_ipv4_first.py",
       "bytes": 1341,
       "sha256": "4f1c9f98d57b3d526b04e9a508269b339eba9a8fd1f2ab20939f72a4e88ea0c1"
@@ -2263,8 +2278,8 @@
     },
     {
       "path": "downloads/worker/app.js",
-      "bytes": 103821,
-      "sha256": "f0bda9b7e581cba0f94b2d5cda82987c98c1c9cb01510420c84f58504ed1eaa6"
+      "bytes": 104844,
+      "sha256": "79d4a70fce2a8bc6fac3c9dc40b59f1af41c6ef19e45de74eb6be77177699205"
     },
     {
       "path": "downloads/worker/assets/art/abyss.webp",
@@ -2357,6 +2372,16 @@
       "sha256": "d152a392f9c670540c65613abeac45b20420e3ff954bb9dd6a5eede6051731df"
     },
     {
+      "path": "downloads/worker/assets/files-library.css",
+      "bytes": 714,
+      "sha256": "c73e9660dc0bb32fa34dd670fcac86d4d3ec841837dc94c3c73e0c0719646d8f"
+    },
+    {
+      "path": "downloads/worker/assets/files-library.js",
+      "bytes": 9689,
+      "sha256": "3bad805d072a1fc1d133dabc0bc4c9c6d2d4f194b5903660dae2d94dcc91a961"
+    },
+    {
       "path": "downloads/worker/assets/guide.css",
       "bytes": 3202,
       "sha256": "1a3b71035ba41ba840a0808db20d9e0fb2f19f61fdf217b0a52f7d3f40c8b4db"
@@ -2412,9 +2437,19 @@
       "sha256": "0b73e1c7874b626bb126e7368d7f94d19755bbe2b839bee08ed8d3e99f9b3d3a"
     },
     {
+      "path": "downloads/worker/assets/player.css",
+      "bytes": 2659,
+      "sha256": "e99a199aec6b4c21b3d86cbe20490bc3b13a21cca8146250115100993e798abd"
+    },
+    {
+      "path": "downloads/worker/assets/player.js",
+      "bytes": 6698,
+      "sha256": "9d303f3b183502b0c644e099e30dd818ab11b3e4cfee57d4a3b60e52d59f4c04"
+    },
+    {
       "path": "downloads/worker/assets/production-api.js",
-      "bytes": 22980,
-      "sha256": "cc905b6239ecf441f4f7ded854d458d8a9d93541c98331a47ea7348f69a0d937"
+      "bytes": 25684,
+      "sha256": "2ce30f3a21c7b037d982724b3301adf3010f090874fdc790d9d51c283b3a1d50"
     },
     {
       "path": "downloads/worker/assets/soundwave.svg",
@@ -2452,14 +2487,19 @@
       "sha256": "2705129b3f9e088e259f276b87cc3eb6eccc1a3e1847a3dd4ec1637efcb6f7f6"
     },
     {
+      "path": "downloads/worker/files_library.py",
+      "bytes": 17011,
+      "sha256": "5749e1ed98079318db8e912a2d5383e1cab457fda52a48d144b6b9ee98aa3681"
+    },
+    {
       "path": "downloads/worker/history.py",
       "bytes": 9364,
       "sha256": "a2a5eeffc69855913f0f4fb2d98aeac0c146f2e78b99f852482fa989687b2487"
     },
     {
       "path": "downloads/worker/index.html",
-      "bytes": 9871,
-      "sha256": "0f976422535a97ff3dc7850c3a9f74772d6f9561649970c4feb11dc97d7caaf6"
+      "bytes": 9989,
+      "sha256": "4b9e96ed978335a646f19402fba59c528e9359448f3a7791eef5a3bac7e17768"
     },
     {
       "path": "downloads/worker/jd_adapter.py",
@@ -2470,6 +2510,11 @@
       "path": "downloads/worker/jd_lifecycle.py",
       "bytes": 31350,
       "sha256": "39d4fb6cd88c7f2b9785cf2af5f082f8f8d632907a28d300bfc30d934379ab7a"
+    },
+    {
+      "path": "downloads/worker/player.html",
+      "bytes": 1946,
+      "sha256": "189273d8e87bc60c52f36ec724c746cfa52cb1ac8ecea3d3d8128179941272f4"
     },
     {
       "path": "downloads/worker/presets.py",
@@ -2638,8 +2683,8 @@
     },
     {
       "path": "downloads/worker/worker.py",
-      "bytes": 56984,
-      "sha256": "0e4f9d4fd8ac6d52b58b6e3c32341a46f90809aa711d3a20235313465bb7b455"
+      "bytes": 63852,
+      "sha256": "1f371a1126cc246dedb15e472a646e6eb26868cb820a26ff0f8547091b0cee07"
     },
     {
       "path": "FEATURES.md",
