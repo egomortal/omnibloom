@@ -733,8 +733,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 24546,
-      "sha256": "85b7b77f8636ce4d72359920ddae5d53636e886049019324bd8d9b4f528f3bb1"
+      "bytes": 26210,
+      "sha256": "782f446d8dfe591bd52470cec78efac0dcc4936f5532e49d030b0fd393f1c8a7"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2688,8 +2688,8 @@
     },
     {
       "path": "FEATURES.md",
-      "bytes": 12355,
-      "sha256": "ce768c12be69d1bf827a22cbb95c18a482d77fe77515ff80fa4f557f3575108a"
+      "bytes": 22203,
+      "sha256": "37add324ecef8527589d1dfd5e1884900f2b8f8fa742f3f7828c7a770053a802"
     },
     {
       "path": "jdownloader/collect_sources.py",
@@ -5043,8 +5043,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
-      "bytes": 29424,
-      "sha256": "8b56368350d5d2f22cc833e53f3029ae5e26cbbb24ec5c47e9c0e184b57262be"
+      "bytes": 29663,
+      "sha256": "8456345aa1e20fdceb0ae166faeecba33390dbfa89792daf3876ca4dc700f3ae"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-launch-child-fallback.sh",
@@ -5398,8 +5398,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_autoplay.py",
-      "bytes": 26149,
-      "sha256": "df630ef6d63120a1873c218ffe5bc9cc93d5bae0472c340dc33c367f62d554e6"
+      "bytes": 27500,
+      "sha256": "83623e37e2c2c3173fe15c4960e97bf54cba9ded2ba8273b4577b2dcce60d811"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_bars_click.py",
@@ -5468,8 +5468,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_https_only.py",
-      "bytes": 45269,
-      "sha256": "de244bd8eb47b831f0efb646f130eef86eaf788ab455552354f17e5dab4044fd"
+      "bytes": 48006,
+      "sha256": "54278629e46b1c00a6e4a63684e5e1e8d0b2f1e22cfe6920e7106ae31b1e21fe"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_kb_words.py",
@@ -5540,6 +5540,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_send_link.py",
       "bytes": 44064,
       "sha256": "1b63e3407332ad53ae620a1b228036a86d349f840e95e46af65172eab5ddac58"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_site_clear.py",
+      "bytes": 38919,
+      "sha256": "017f1ad09a3b3e9be8798782a0d6c16ebc16ad9687085c785a888136d15a6559"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_site_zoom.py",
@@ -5668,8 +5673,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_autoplay.cpp",
-      "bytes": 6020,
-      "sha256": "48f3c4afd3277abadbdd4d5df452acc2a59c6c46b1e0f4a88ad3529edb3eb31d"
+      "bytes": 7419,
+      "sha256": "4083352a50b99adcfb273085788c81a37da0d571fa7aeef77d3a6121598e0f57"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_continue_watching.cpp",
@@ -5688,8 +5693,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_https_only.cpp",
-      "bytes": 10528,
-      "sha256": "3b8a1be38601eda444d7b5351adbf595a7b3cf43fa213c2345fcef865c4232cf"
+      "bytes": 12667,
+      "sha256": "1065041a1f762913f9c946a3c07af04d74a79f2db9516d4da53808755a167c81"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_kb_words.cpp",
@@ -5725,6 +5730,16 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_search_tiles.cpp",
       "bytes": 11679,
       "sha256": "65dcbf66ec3e88469a1b915caacb93e953c921720ce07d2a4deb9c0578218d30"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_site_clear.cpp",
+      "bytes": 12452,
+      "sha256": "6ab0be5b3ac9d1c7694cbdbfcabd6644ebcd9257c1bf54ced12dbfc5b53e3ae3"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_site_clear_js.mjs",
+      "bytes": 5999,
+      "sha256": "b46e88aa7128022f4366a86f4688211aeb9008a12cac06edb23ba8679d12bac3"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_site_zoom.cpp",
@@ -18493,8 +18508,8 @@
     },
     {
       "path": "ROADMAP.md",
-      "bytes": 10635,
-      "sha256": "23382bcd517e1919f5f43d23d80e709e7fa85a945c62b319ac7ff99f40d22ce9"
+      "bytes": 12225,
+      "sha256": "b94b11760c14f82be2bb86a13266eb5fc7ec1f875e814992a710f104451799a7"
     },
     {
       "path": "SECURITY.md",
