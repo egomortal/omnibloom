@@ -4,7 +4,7 @@
 
 # What Omnibloom Can Do
 
-*Last updated: November 5, 2026 (native build s3.4d)*
+*Last updated: November 16, 2026 (release rows: native build s3.4d; plus the [dev branch](#-on-the-dev-branch-not-yet-in-a-release) section)*
 
 Omnibloom's browser, **Omni** (that's the name on the console), is a web browser for the PS5
 built on WebKit, the same engine that powers Safari. It runs as its own app and you control
@@ -30,7 +30,7 @@ Developers: see [DEVELOPERS.md](DEVELOPERS.md).
 | Its own PS5 app | ✅ | Omni runs as its own app (tile), registered with ShadowMountPlus, instead of inside the system browser. |
 | Modern website support | ✅ | Runs a full version of WebKit, Safari's engine, ported to the PS5. |
 | Smooth scrolling | ✅ | Scrolls at about 60 fps, with no noticeable hitches. |
-| Tabs | ✅ | Up to 8 tabs open, with 6 kept loaded in memory. |
+| Tabs | ✅ | Up to 8 tabs open by default, with 6 kept loaded in memory; Browser settings > Tab limit goes up to 16. |
 | Bookmarks and shortcuts | ✅ | Press **L3** to save the current site to your shortcuts grid. |
 | Translate pages | ✅ | Press the **touchpad** to translate the page. |
 | Dark mode | 🧪 | **Uses the site's own dark theme first.** Omni tells pages you prefer dark (`prefers-color-scheme: dark`), so sites that have a dark theme switch to it. Only if a page stays light does Omni darken it with a colour filter, and the filter steps aside while a large video plays so video stays smooth. Works with the Dark Reader add-on. Tip: on YouTube, choose YouTube's own **Appearance > Dark theme** once. |
@@ -160,6 +160,86 @@ navigation. If you leave the controller alone, the pointer also gets out of the 
 | --- | :---: | --- |
 | Choose a resolution | ✅ | **Settings > Resolution:** 1080p, 1440p or 4K. Takes effect after a restart. |
 | Safe fallback | ✅ | If Omni fails to start at your chosen resolution, it switches back to 1080p on its own. |
+
+---
+
+## 🌱 On the dev branch (not yet in a release)
+
+Everything in this section is on the **dev branch only, not yet in a release**. It is built and
+tested on a PC; most of it has not been tested on a PS5 yet, so it is marked 🧪. Settings named
+below are in **Browser settings** unless another place is given.
+
+### Tabs
+
+| Feature | Status | Details |
+| --- | :---: | --- |
+| Pinned tabs | 🧪 | In the **Tabs** panel, press **D-pad left / right** on a tab row to pin or unpin it. You can also hold **Cross** on a page and pick **Pin this tab**. Pinned tabs come first and show as small tiles at the start of the tab strip that never scroll away. Closing a pinned tab asks once: press **Square** (Tabs panel) or **R3** again within 4 seconds. Pinned tabs are unloaded from memory last and stay pinned after a restart. Up to 6. Private tabs can't be pinned. Tab groups are not part of this. |
+| Tab audio and mute | 🧪 | A speaker icon shows on tabs that play sound, and a crossed speaker on tabs you muted. Press **Triangle** on a tab row in the **Tabs** panel to mute or unmute it, or use **Mute this tab** in the hold-**Cross** menu or **Options > Quick toggles**. Muting lasts until you unmute or close the tab; it is not saved. |
+| Saved tab sessions | 🧪 | In the **Tabs** panel, **Save these tabs as a session...** saves the open tabs under a name you type ("Movie night"). **Sessions...** lists them: **Cross** opens (replace the open tabs, or add to them), **Triangle** renames, **Square** twice deletes. Only the tab you see loads at first; the others load when you switch to them. Up to 30 sessions of up to 16 tabs. Private tabs are never saved. |
+| Open link in background tab | 🧪 | Hold **Cross** on a link, then press **Cross**: **Open in background tab** is now the first row of that menu. The tab limit still applies. |
+
+### Pages and sites
+
+| Feature | Status | Details |
+| --- | :---: | --- |
+| Zoom per site | 🧪 | Omni remembers a zoom level for each site (50% to 200%). Hold **L2** and press **D-pad up / down** to zoom in or out while browsing, or use the **Zoom (this site)** row in **Options** (**D-pad left / right** change it, **Cross** resets). A short notice shows the new level. |
+| Save page for later (reading list) | 🧪 | Hold **Cross** on a page and pick **Save page for later**, or use **Options > Browse**. The page is saved on the console as it looks now and can be read offline: **Cross** opens the saved copy, **Triangle** the live page, **Square** deletes. Images and styles from other sites, video and fonts are not kept offline, and the page's scripts never run in the saved copy. Up to 200 pages / 500 MB (the oldest go first). Private tabs are never saved. |
+| Page screenshots | 🧪 | Hold **L2** and press **R3** while browsing to save the visible page as a PNG in the Downloads app's **Saved > Screenshots** folder. The Screenshot rows in the menus save there too. Video drawn by the video hardware comes out white. Off in private tabs. |
+| Clear data for this site | 🧪 | **Options > Site settings > Clear data for this site** deletes the site's cookies (sign-ins included, for the site and its subdomains) and the current page's own storage, then reloads the page. It asks first, and you may be signed out. Storage of the site's other addresses (for example the bare domain when you are on `www.`) is kept, and the shared web cache is not touched. |
+| Autoplay | 🧪 | **Autoplay: Allow** (default, same as before) / **Block sound** / **Block all**. **Site settings > Autoplay on this site** sets one site. With a blocking choice, YouTube, Twitch, Vimeo and Dailymotion are still allowed unless you set them yourself. Applies to pages loaded after the change. |
+| Continue watching | 🧪 | A **Continue watching** row on the start page with up to 6 videos you left part-way (after 2 minutes watched, until 95%). **Cross** opens one, **Square** on a tile removes it. Needs the Resume videos add-on 1.1.0 (built in). Private tabs are never recorded. Turn it off with **Continue watching on start page**. |
+| YouTube TV mode | 🧪 | **Off by default.** **YouTube: Normal / TV mode** opens YouTube's TV app (youtube.com/tv) instead of the desktop site for home and watch pages. On the TV app the **D-pad** moves, **Cross** selects and **Circle** goes back. Search, channel and settings pages open as usual. |
+
+### Privacy and security
+
+| Feature | Status | Details |
+| --- | :---: | --- |
+| HTTPS-only mode | 🧪 | **Off by default.** When on, an `http://` address is opened as `https://`. If the site has no secure version, Omni asks: **Cross** continues to the http site (until Omni closes), **Circle** goes back. **Site settings > HTTPS-only on this site** can always allow http for one site. Local addresses, your home network and Omni's own apps are never changed. |
+| Ask sites not to sell or share my data | 🧪 | **Off by default.** Turns on Global Privacy Control: pages see `navigator.globalPrivacyControl` and secure requests carry `Sec-GPC: 1`. |
+| Tell sites this is Omni | 🧪 | **Off by default.** Adds " Omni/<version>" to the browser's user agent. Off because some sites (YouTube among them) treat unusual user agents with suspicion. |
+| Ad blocking inside embedded frames | 🧪 | **On by default.** uBlock's page fixes and element hiding now also run inside embedded frames (for example a video player from another site), matched by the frame's own site. Network blocking already covered frames. |
+
+### Video and sound
+
+| Feature | Status | Details |
+| --- | :---: | --- |
+| Now playing | 🧪 | While a tab plays video or sound, **Options** shows a **Now playing** tile, even when that tab is in the background. It opens play / pause, previous / next track, back / forward 10 seconds, mute and go to tab. Next / previous use the site's own buttons where Omni knows them (YouTube, YouTube Music, Spotify, SoundCloud). Players inside frames from another site can't be reached. Nothing is stored. |
+| Sleep timer | 🧪 | **Options > Sleep timer**: press **Cross** to step Off / 15 / 30 / 60 / 90 minutes. A minute before the end Omni warns you, then pauses playback in every tab. Not kept after a restart. |
+
+### Typing and search
+
+| Feature | Status | Details |
+| --- | :---: | --- |
+| Word suggestions on the keyboard | 🧪 | Up to 3 word completions above the on-screen keyboard. Press **D-pad up** from the top row of keys to reach them, **left / right** to pick and **Cross** to use one. Never in password, email, address or number fields. **Word suggestions** is on by default and uses a built-in English list. **Learn words I type** is **off by default**; when on, it keeps your words on the console (never from private tabs or sign-in fields). **Clear learned words** deletes them. |
+| Search shortcuts | 🧪 | Type `yt lofi beats` in the address bar to search YouTube. Built in: `yt` YouTube, `w` Wikipedia, `r` Reddit, `g` Google, `d` DuckDuckGo, `a` Amazon, `m` Google Maps. You can set your own in `/data/omni/search-shortcuts.txt`. |
+| Most-visited tiles | 🧪 | Empty shortcut slots (the keyboard's tile page and the new-tab page) show your most visited sites from the last 30 days, dimmed and marked "Suggested". Press **Square** on one (or **L3** on the page) to keep it. |
+| Better history | 🧪 | The History panel groups visits by day (Today, Yesterday...). **Triangle** searches. **Square** deletes one visit, **R3** every visit to that site (asks first). **Clear history...** offers Last hour / Today / All time. **D-pad left / right** jump a day, **L1 / R1** a page. |
+| Send a link from your phone | 🧪 | **Off by default.** **Send links from your phone** opens a small page on your home network (the address and a 6-digit code are shown in Omni). Send a link from a phone or PC and it opens in a new tab. Only `http(s)` links; 5 wrong codes lock it for a minute. |
+
+### Small things
+
+| Feature | Status | Details |
+| --- | :---: | --- |
+| Controller battery | 🧪 | A small battery icon in the top bar for wireless controllers. Hidden when wired or unknown. |
+| Downloaded notice | 🧪 | With **Media Downloads** on, Omni shows "Downloaded: <title>" when a download finishes (not while the Downloads tab is in front). |
+
+### Downloads and Setup
+
+| Feature | Status | Details |
+| --- | :---: | --- |
+| File downloads go to Downloads | 🧪 | With **Media Downloads** on, a normal file download on a page (PDF, ZIP, image, attachment) is sent to the Downloads app and saved as the original file. Pages that show a PDF or image themselves are unchanged. Private tabs keep the browser's own download. |
+| Pause, resume, retry | 🧪 | Downloads can be paused, resumed and retried. Paused downloads survive a restart of the downloads worker. |
+| Library | 🧪 | A **Library** view in the Downloads app lists saved files. Play saved media in a controller-friendly player, open PDFs and images, and delete files (two steps, through a trash folder). |
+| Back up and restore Omni | 🧪 | Setup (on the PC) saves Omni's settings to one zip, plus bookmarks, history, reading list, add-on data, Downloads lists and pointers only if you tick them. Saved passwords, cookies and sign-ins, the open tabs, caches, logs, screenshots and downloads are never included. A restore checks the whole zip before writing anything and keeps the old files. |
+
+### New controls
+
+| Button | Action |
+| --- | --- |
+| **L2 + D-pad up / down** | Zoom this site in / out |
+| **L2 + R3** | Save a screenshot of the page |
+| **D-pad left / right** (Tabs panel) | Pin / unpin the tab |
+| **Triangle** (Tabs panel) | Mute / unmute the tab |
 
 ---
 

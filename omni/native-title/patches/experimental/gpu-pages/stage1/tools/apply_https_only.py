@@ -8,15 +8,19 @@ What the user sees
       If the secure attempt fails (certificate / TLS error, connection refused or reset, timeout, or the site sends
       Omni straight back to http), Omni shows its own panel over the page:
           "This site doesn't support a secure connection"   http://host/...
-          Cross  "Continue to the http site"   allowed for that host until Omni closes
-          Circle "Go back"                     the previous page stays (nothing was loaded)
+          Cross / Circle  "Go back"                    the previous page stays (nothing was loaded); the
+                                                       highlighted, safe default
+          Square          "Continue to the http site"  allowed for that host until Omni closes
       "Always" for a host: Site settings > "HTTPS-only on this site": Upgrade to https / Allow http.
-      In a private tab that choice lasts for this session only (as Site permissions / Autoplay do).
+      In a private tab that choice, and "Continue" pressed there, last for this session only and apply to private
+      tabs only: normal tabs keep upgrading the host and never show the private choice (r2). "Continue" from a
+      normal tab applies to every tab until Omni closes.
       Never upgraded: 127.0.0.1 / localhost / ::1 (and *.localhost), private LAN addresses (10/8, 172.16/12,
-      192.168/16, 169.254/16, fc00::/7, fe80::/10, IPv4-mapped forms of those), *.local, port 8765 (the Downloads
-      app, OmniHub::legacyDownloadsPort) on any host, omni:// / about: / data: pages (not http at all), hosts the
-      user allowed. Subresources (images, scripts, frames) are not touched. Back / Forward and Reload of an http
-      page that is already in the history, and non-GET submissions (a form POST to http), load as before: re-issuing
+      192.168/16, 169.254/16, fc00::/7, fe80::/10, IPv4-mapped forms of those), *.local (so the Downloads app on
+      127.0.0.1 / the console's LAN address is never touched), omni:// / about: / data: pages (not http at all),
+      hosts the user allowed. A port alone exempts nothing (r2: port 8765 on a public host used to). Subresources
+      (images, scripts, frames) are not touched. Back / Forward and Reload of an http page that is already in the
+      history, and non-GET submissions (a form POST to http), load as before: re-issuing
       them as a new https load would break the history entry / drop the form body.
   - Browser settings > "Ask sites not to sell or share my data": Off (default) / On. On: WebKit's Global Privacy
     Control (WKWebsitePoliciesSetGlobalPrivacyControlEnabled, present in this WebKit's C API): the page's settings
@@ -38,7 +42,9 @@ How
     (CurlErrorDomain: 7, 16, 28, 35, 51-56, 58-60, 77, 80, 83, 90-92) the panel is shown instead of the generic
     error. DNS failures (6) and everything else fall through to the normal error panel (http would fail too).
     Any failure (cancel included) ends the in-flight attempt; a commit ends it too (didCommitNavigation).
-  - The panel is the OMNI_FEATURES_V1 error panel (OmniErrorPage.h) with its own title / text / two chips:
+  - The panel is the OMNI_FEATURES_V1 error panel (OmniErrorPage.h) with its own title / text / two chips (Cross
+    "Go back" first and highlighted, Square "Continue to the http site": Square is free there, the normal error
+    panel only uses it for uBlock's "Allow this site"):
     omniFxErrorDraw / omniFxErrorButton / omniFxErrorClick hand over to omniHoError* when failDomain is
     "OmniHttpsOnly". Retry elsewhere (failURL is the http URL) goes through the upgrade again.
 
@@ -71,6 +77,9 @@ Anchors (exactly once each; MARK makes each file idempotent):
                          (all apply_autoplay.py's).
   OmniFeatures3.h        the OmniAutoplayShell.h include line.
 Apply AFTER apply_autoplay.py (its lines are anchors).
+Upgrading (r2: no port exemption, private-only session allowances, Cross = Go back): only the two headers
+changed; they are rewritten whenever they differ, so an r1 tree gets them and the result is byte-identical to a
+fresh apply (the EDITS, and so the anchors apply_media_controls.py / apply_pinned_tabs.py use, are unchanged).
 usage: apply_https_only.py <engine tree>   (keeps each file's line endings; re-run prints "already")
 """
 import sys
@@ -82,6 +91,7 @@ root = Path(sys.argv[1]) / 'engine' / 'entry'
 PURE = r'''// OMNI_HTTPS_ONLY_V1: the pure part of HTTPS-only mode and the Global Privacy Control switch (no SDL, no WebKit).
 // The shell side is OmniHttpsOnlyShell.h; the reasons are in tools/apply_https_only.py. Tested on the host with g++
 // (test_https_only.cpp).
+// OMNI_HTTPS_ONLY_V1_R2: no port exemption; Session keeps private-tab allowances apart (Nav::privateTab).
 #pragma once
 #include <cstddef>
 #include <cstdint>
@@ -96,12 +106,15 @@ constexpr long kMaxFileBytes = 64L << 10;
 constexpr const char* kFileName = "https-only.txt";
 constexpr const char* kHeader = "omni-https-only\t1";
 constexpr const char* kErrorDomain = "OmniHttpsOnly";   // OmniFxTabState::failDomain while the panel is shown
-constexpr int kDownloadsPort = 8765;                    // OmniHub::legacyDownloadsPort (the Downloads app)
 constexpr uint32_t kInFlightMs = 60000;                 // an https attempt older than this is forgotten
 constexpr int kRedirectedBack = -1;                     // failCode: the site sent Omni back to http
 
 struct Store { bool httpsOnly = false; bool gpc = false; std::set<std::string> allow; };
-using Session = std::map<std::string, bool>;            // host key -> allow http (this run only; wins over Store)
+struct Session {                                        // this run only (never written)
+    std::set<std::string> cont;                         // "Continue" pressed in a normal tab: http in every tab
+    std::map<std::string, bool> priv;                   // private tabs only: their site choices and "Continue"
+    void clear() { cont.clear(); priv.clear(); }
+};
 
 inline char lower(char c) { return c >= 'A' && c <= 'Z' ? char(c + ('a' - 'A')) : c; }
 inline bool startsWithNoCase(const std::string& s, const char* p)
@@ -292,11 +305,11 @@ inline bool privateHost(const std::string& hostIn)
     }
     return false;
 }
-// True: never upgraded (not http at all, or local / the Downloads app).
+// True: never upgraded (not http at all, or a local / private-network host: Omni's own apps live there).
 inline bool exempt(const Url& u)
 {
     if (!u.ok || !u.http) return true;
-    return privateHost(u.host) || u.port == kDownloadsPort;
+    return privateHost(u.host);
 }
 // "http://h:80/p?q#f" -> "https://h/p?q#f"; any other port is kept.
 inline std::string upgradeUrl(const std::string& url)
@@ -309,35 +322,41 @@ inline std::string upgradeUrl(const std::string& url)
 }
 
 // --- allow list --------------------------------------------------------------------------------------------------
-inline bool allowed(const Store& s, const Session& session, const std::string& host)
+// http allowed for `host` in a tab of this kind. A normal tab never reads session.priv (no private visit leaks).
+inline bool allowed(const Store& s, const Session& session, const std::string& host, bool privateTab)
 {
     const std::string key = hostKey(host);
     if (key.empty()) return false;
-    auto it = session.find(key);
-    if (it != session.end()) return it->second;
-    return s.allow.count(key) != 0;
+    if (privateTab) {
+        auto it = session.priv.find(key);
+        if (it != session.priv.end()) return it->second;
+    }
+    return session.cont.count(key) != 0 || s.allow.count(key) != 0;
 }
-// Site settings choice. privateTab: only the session changes (a session row exists only while it differs from the
-// saved choice). False: a new saved host when 500 exist.
+// Site settings choice. privateTab: only session.priv changes (a row exists only while it differs from what applies
+// without it). Normal tab: the saved choice (a "Continue" for the host is dropped). False: a new saved host when 500
+// exist.
 inline bool setSite(Store& s, Session& session, const std::string& host, bool allow, bool privateTab)
 {
     const std::string key = hostKey(host);
     if (key.empty()) return false;
     if (privateTab) {
-        if (allow == (s.allow.count(key) != 0)) session.erase(key);
-        else session[key] = allow;
+        if (allow == (session.cont.count(key) != 0 || s.allow.count(key) != 0)) session.priv.erase(key);
+        else session.priv[key] = allow;
         return true;
     }
     if (allow && !s.allow.count(key) && s.allow.size() >= kMaxAllow) return false;
-    session.erase(key);
+    session.cont.erase(key);
     if (allow) s.allow.insert(key); else s.allow.erase(key);
     return true;
 }
-// "Continue to the http site": this run only, in any tab.
-inline void allowForSession(Session& session, const std::string& host)
+// "Continue to the http site": this run only. From a normal tab: every tab. From a private tab: private tabs only.
+inline void allowForSession(Session& session, const std::string& host, bool privateTab)
 {
     const std::string key = hostKey(host);
-    if (!key.empty()) session[key] = true;
+    if (key.empty()) return;
+    if (privateTab) session.priv[key] = true;
+    else session.cont.insert(key);
 }
 
 // --- the decision ------------------------------------------------------------------------------------------------
@@ -347,13 +366,14 @@ struct Nav {
     bool get = true;                 // GET (or unknown); a POST to http keeps its body by loading as before
     bool historyOrReload = false;    // Back / Forward / Reload of an entry already in the history
     std::string inFlightHost;        // host key of this tab's https attempt still in flight ("" none)
+    bool privateTab = false;         // the navigating tab is private (session.priv applies)
 };
 inline Action decide(const Store& s, const Session& session, const Nav& n, std::string* httpsOut = nullptr)
 {
     if (!s.httpsOnly) return kLoad;
     const Url u = parseUrl(n.url);
     if (exempt(u)) return kLoad;
-    if (allowed(s, session, u.host)) return kLoad;
+    if (allowed(s, session, u.host, n.privateTab)) return kLoad;
     if (!n.inFlightHost.empty() && hostKey(u.host) == n.inFlightHost) return kInterstitial;   // https -> http loop
     if (!n.get || n.historyOrReload) return kLoad;
     if (httpsOut) *httpsOut = upgradeUrl(n.url);
@@ -460,10 +480,13 @@ inline std::string siteValue(const Store& s, const Session& session, const std::
     const Url u = parseUrl("http://" + (host.find(':') != std::string::npos ? "[" + host + "]" : host) + "/");
     if (u.ok && privateHost(u.host)) return "Not needed (local)";
     const std::string key = hostKey(host);
-    auto it = session.find(key);
-    const bool savedAllow = s.allow.count(key) != 0;
-    if (it != session.end() && it->second != savedAllow)
-        return it->second ? "Allow http (this session)" : (privateTab ? "Upgrade to https (this session)" : "Upgrade to https");
+    const bool savedAllow = s.allow.count(key) != 0, cont = session.cont.count(key) != 0;
+    if (privateTab) {
+        auto it = session.priv.find(key);
+        if (it != session.priv.end() && it->second != (savedAllow || cont))
+            return it->second ? "Allow http (this session)" : "Upgrade to https (this session)";
+    }
+    if (cont && !savedAllow) return "Allow http (this session)";
     return savedAllow ? "Allow http" : "Upgrade to https";
 }
 inline std::string siteNotice(const std::string& host, bool allow, bool privateTab, bool full, bool httpsOnlyOn)
@@ -474,10 +497,14 @@ inline std::string siteNotice(const std::string& host, bool allow, bool privateT
     if (!httpsOnlyOn) out += ". HTTPS-only mode is off in Browser settings";
     return out;
 }
-inline std::string continueNotice(const std::string& host)
+inline std::string continueNotice(const std::string& host, bool privateTab)
 {
+    if (privateTab) return "Using http for " + host + " in private tabs until Omni closes";
     return "Using http for " + host + " until Omni closes. Site settings can allow it always";
 }
+// The panel's chips, in order: the safe choice first (Cross, highlighted), then the insecure one (Square).
+inline const char* goBackLabel() { return "Go back"; }
+inline const char* continueLabel() { return "Continue to the http site"; }
 
 } // namespace OmniHttpsOnly
 '''
@@ -490,7 +517,7 @@ SHELL = r'''// OMNI_HTTPS_ONLY_V1: HTTPS-only mode + Global Privacy Control (she
 namespace OHO = OmniHttpsOnly;
 static OHO::Store omniHoStore;
 static bool omniHoLoaded = false;
-static OHO::Session omniHoSession;   // "Continue" choices and private-tab site choices: this run only
+static OHO::Session omniHoSession;   // this run only: normal-tab "Continue" (cont), private-tab choices (priv)
 
 static void omniHoLoad()
 {
@@ -543,6 +570,7 @@ static bool omniHoPolicy(Tab* tab, WKNavigationActionRef action, WKURLRequestRef
     const WKFrameNavigationType type = WKNavigationActionGetNavigationType(action);
     n.historyOrReload = type == kWKFrameNavigationTypeBackForward || type == kWKFrameNavigationTypeReload;
     if (s.hoAt && SDL_GetTicks() - s.hoAt < OHO::kInFlightMs) n.inFlightHost = s.hoHost;
+    n.privateTab = tab->omniPrivate;   // OMNI_HTTPS_ONLY_V1_R2: private allowances stay in private tabs
     std::string https;
     switch (OHO::decide(omniHoStore, omniHoSession, n, &https)) {
     case OHO::kUpgrade:
@@ -591,12 +619,13 @@ static bool omniHoErrorShown()
     Tab* t = active();
     return t && !t->crashed && omniFxErrorShown() && omniFxState(t).failDomain == OHO::kErrorDomain;
 }
+// Chip 0: Cross "Go back" (the safe default, highlighted). Chip 1: Square "Continue to the http site".
 static OmniFxErrorLayout omniHoErrorGeom()
 {
     OmniFxErrorLayout L = omniFxErrorGeom();
     L.chips = 2;
-    L.chipX[0] = L.x + 40; L.chipW[0] = 330;
-    L.chipX[1] = L.chipX[0] + L.chipW[0] + 14; L.chipW[1] = 180;
+    L.chipX[0] = L.x + 40; L.chipW[0] = 180;
+    L.chipX[1] = L.chipX[0] + L.chipW[0] + 14; L.chipW[1] = 330;
     return L;
 }
 static bool omniHoErrorDraw()
@@ -616,12 +645,13 @@ static bool omniHoErrorDraw()
     omniLabel(omniShownURL(s.failURL), L.x + 88, L.y + 70, omniSmall, T.inkDim, 0, L.w - 120);
     const auto lines = omniWrap(t->message, omniSmall, L.w - 128, 3);
     for (size_t i = 0; i < lines.size(); ++i) omniLabel(lines[i], L.x + 88, L.y + 108 + int(i) * 26, omniSmall, T.ink);
-    const char* labels[2] = { "Continue to the http site", "Go back" };
+    const char* labels[2] = { OHO::goBackLabel(), OHO::continueLabel() };
+    const int faces[2] = { SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_X };   // Cross, Square
     for (int i = 0; i < 2; ++i) {
-        const bool primary = i == 1;   // the safe choice stands out; Cross still answers chip 0 as everywhere
+        const bool primary = i == 0;   // Cross: the safe choice, highlighted as the default
         const bool hover = pointerX >= L.chipX[i] && pointerX < L.chipX[i] + L.chipW[i] && pointerY >= L.chipY && pointerY < L.chipY + 44;
         fillRounded(L.chipX[i], L.chipY, L.chipW[i], 44, omniRadius, primary ? T.accent : hover ? T.hover : T.key);
-        faceIcon(L.chipX[i] + 26, L.chipY + 22, i, playStationIcons);
+        faceIcon(L.chipX[i] + 26, L.chipY + 22, faces[i], playStationIcons);
         omniLabel(labels[i], L.chipX[i] + 48, L.chipY + 22, omniSmallBold, primary ? T.accentInk : T.ink, 0, L.chipW[i] - 56);
     }
     return true;
@@ -637,8 +667,8 @@ static void omniHoContinue()
     t->message.clear();
     if (host.empty()) { omniFxErrorDismiss(); return; }
     omniHoLoad();
-    OHO::allowForSession(omniHoSession, host);
-    notice(OHO::continueNotice(host));
+    OHO::allowForSession(omniHoSession, host, t->omniPrivate);   // private tab: private tabs only (r2)
+    notice(OHO::continueNotice(host, t->omniPrivate));
     navigate(url);
 }
 static void omniHoGoBack()
@@ -651,8 +681,9 @@ static void omniHoGoBack()
 static bool omniHoErrorButton(int b)
 {
     switch (b) {
-    case SDL_CONTROLLER_BUTTON_A: omniHoContinue(); return true;
+    case SDL_CONTROLLER_BUTTON_A: omniHoGoBack(); return true;     // Cross: the safe default
     case SDL_CONTROLLER_BUTTON_B: omniHoGoBack(); return true;
+    case SDL_CONTROLLER_BUTTON_X: omniHoContinue(); return true;   // Square: the insecure http site, deliberately
     default: return false;   // Y address, L1/R1 tabs, Options menu keep working
     }
 }
@@ -660,8 +691,8 @@ static bool omniHoErrorClick(int x, int y)
 {
     const OmniFxErrorLayout L = omniHoErrorGeom();
     if (y >= L.chipY && y < L.chipY + 44) {
-        if (x >= L.chipX[0] && x < L.chipX[0] + L.chipW[0]) { omniHoContinue(); return true; }
-        if (x >= L.chipX[1] && x < L.chipX[1] + L.chipW[1]) { omniHoGoBack(); return true; }
+        if (x >= L.chipX[0] && x < L.chipX[0] + L.chipW[0]) { omniHoGoBack(); return true; }
+        if (x >= L.chipX[1] && x < L.chipX[1] + L.chipW[1]) { omniHoContinue(); return true; }
     }
     return y >= omniPageTop() && y < omniPageBottom();
 }
@@ -717,7 +748,7 @@ static bool omniHoSiteInput(const OmniFxRow& r, int b)
     if (!r.enabled || host.empty() || !t) return true;
     omniHoLoad();
     const bool priv = t->omniPrivate;
-    const bool allow = !OHO::allowed(omniHoStore, omniHoSession, host);
+    const bool allow = !OHO::allowed(omniHoStore, omniHoSession, host, priv);
     const bool ok = OHO::setSite(omniHoStore, omniHoSession, host, allow, priv);
     if (ok && !priv) omniHoWrite();
     notice(OHO::siteNotice(host, allow, priv, !ok, omniHoStore.httpsOnly));

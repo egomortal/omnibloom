@@ -1,4 +1,4 @@
-// OMNI_HTTPS_ONLY_V1: host tests for engine/entry/OmniHttpsOnly.h (written by apply_https_only.py).
+// OMNI_HTTPS_ONLY_V1 (r2): host tests for engine/entry/OmniHttpsOnly.h (written by apply_https_only.py).
 //   g++ -std=c++20 -Wall -Wextra -I<tree>/engine/entry test_https_only.cpp -o t && ./t
 #include "OmniHttpsOnly.h"
 #include <cstdio>
@@ -19,11 +19,12 @@ static bool v6(const char* s, std::initializer_list<int> want)
     return true;
 }
 static bool v6bad(const char* s) { uint8_t b[16]; return !parseIPv6(s, b); }
-static Action act(const Store& s, const Session& sess, const char* url, bool get = true, bool hist = false, const char* inflight = "", std::string* out = nullptr)
+static Action act(const Store& s, const Session& sess, const char* url, bool get = true, bool hist = false, const char* inflight = "", std::string* out = nullptr, bool priv = false)
 {
-    Nav n; n.url = url; n.get = get; n.historyOrReload = hist; n.inFlightHost = inflight;
+    Nav n; n.url = url; n.get = get; n.historyOrReload = hist; n.inFlightHost = inflight; n.privateTab = priv;
     return decide(s, sess, n, out);
 }
+static Action actPriv(const Store& s, const Session& sess, const char* url) { return act(s, sess, url, true, false, "", nullptr, true); }
 
 int main()
 {
@@ -68,7 +69,9 @@ int main()
     CHECK(exempt(parseUrl("http://127.0.0.1:8080/fs/x")));
     CHECK(exempt(parseUrl("http://192.168.0.20:8095/")));
     CHECK(exempt(parseUrl("http://[::1]:8443/")));
-    CHECK(exempt(parseUrl("http://console.example:8765/downloads")));   // the Downloads app port, any host
+    CHECK(!exempt(parseUrl("http://anything.example:8765/")));           // r2: a port alone exempts nothing
+    CHECK(!exempt(parseUrl("http://console.example:8765/downloads")));
+    CHECK(exempt(parseUrl("http://127.0.0.1:8765/")) && exempt(parseUrl("http://localhost:8765/")) && exempt(parseUrl("http://10.0.0.2:8765/")));
     CHECK(exempt(parseUrl("https://example.com/")));                     // already secure
     CHECK(exempt(parseUrl("omni://pages/start")));
     CHECK(!exempt(parseUrl("http://example.com/")));
@@ -91,6 +94,8 @@ int main()
     CHECK(act(s, sess, "http://example.com/a", true, false, "", &https) == kUpgrade && https == "https://example.com/a");
     CHECK(act(s, sess, "https://example.com/") == kLoad);
     CHECK(act(s, sess, "http://127.0.0.1:8080/") == kLoad);
+    CHECK(act(s, sess, "http://anything.example:8765/", true, false, "", &https) == kUpgrade && https == "https://anything.example:8765/");
+    CHECK(act(s, sess, "http://127.0.0.1:8765/") == kLoad);
     CHECK(act(s, sess, "http://10.0.0.2/") == kLoad);
     CHECK(act(s, sess, "omni://pages/start") == kLoad);
     CHECK(act(s, sess, "about:blank") == kLoad);
@@ -99,27 +104,40 @@ int main()
     // in flight: the site redirected https back to http -> panel (not a loop); another host still upgrades
     CHECK(act(s, sess, "http://www.example.com/", true, false, "example.com") == kInterstitial);
     CHECK(act(s, sess, "http://other.com/", true, false, "example.com") == kUpgrade);
-    // allowed hosts
-    allowForSession(sess, "www.example.com");
-    CHECK(allowed(s, sess, "example.com") && act(s, sess, "http://example.com/") == kLoad);
+    // allowed hosts: "Continue" from a normal tab applies to every tab (private ones too)
+    allowForSession(sess, "www.example.com", false);
+    CHECK(allowed(s, sess, "example.com", false) && act(s, sess, "http://example.com/") == kLoad);
+    CHECK(allowed(s, sess, "example.com", true) && actPriv(s, sess, "http://example.com/") == kLoad);
     CHECK(act(s, sess, "http://www.example.com/", true, false, "example.com") == kLoad);
     CHECK(act(s, sess, "http://sub.example.com/") == kUpgrade);             // exact host, no subdomains
+    CHECK(siteValue(s, sess, "example.com", false) == "Allow http (this session)");
     sess.clear();
-    CHECK(setSite(s, sess, "Example.com", true, false) && s.allow.count("example.com") && sess.empty());
+    // r2: "Continue" from a private tab stays in private tabs: normal tabs still upgrade and show nothing
+    allowForSession(sess, "private.example.net", true);
+    CHECK(sess.cont.empty() && sess.priv.count("private.example.net"));
+    CHECK(actPriv(s, sess, "http://private.example.net/") == kLoad);
+    CHECK(act(s, sess, "http://private.example.net/") == kUpgrade && !allowed(s, sess, "private.example.net", false));
+    CHECK(siteValue(s, sess, "private.example.net", false) == "Upgrade to https");
+    CHECK(siteValue(s, sess, "private.example.net", true) == "Allow http (this session)");
+    sess.clear();
+    CHECK(setSite(s, sess, "Example.com", true, false) && s.allow.count("example.com") && sess.cont.empty() && sess.priv.empty());
     CHECK(act(s, sess, "http://example.com/") == kLoad);
-    // private tab: only the session changes; a session row exists only while it differs from the saved choice
-    CHECK(setSite(s, sess, "example.com", false, true) && sess.count("example.com") && !sess["example.com"] && s.allow.count("example.com"));
-    CHECK(act(s, sess, "http://example.com/") == kUpgrade);
+    // private tab: only session.priv changes; a row exists only while it differs from what applies without it
+    CHECK(setSite(s, sess, "example.com", false, true) && sess.priv.count("example.com") && !sess.priv["example.com"] && s.allow.count("example.com"));
+    CHECK(actPriv(s, sess, "http://example.com/") == kUpgrade);
+    CHECK(act(s, sess, "http://example.com/") == kLoad);                    // normal tabs keep the saved choice
     CHECK(siteValue(s, sess, "example.com", true) == "Upgrade to https (this session)");
-    CHECK(setSite(s, sess, "example.com", true, true) && sess.empty());
+    CHECK(siteValue(s, sess, "example.com", false) == "Allow http");          // and never show the private one
+    CHECK(setSite(s, sess, "example.com", true, true) && sess.priv.empty());
     CHECK(siteValue(s, sess, "example.com", false) == "Allow http");
     CHECK(setSite(s, sess, "news.org", true, true) && !s.allow.count("news.org") && siteValue(s, sess, "news.org", true) == "Allow http (this session)");
+    CHECK(siteValue(s, sess, "news.org", false) == "Upgrade to https" && act(s, sess, "http://news.org/") == kUpgrade);
     CHECK(siteValue(s, sess, "other.org", false) == "Upgrade to https");
     CHECK(siteValue(s, sess, "192.168.0.5", false) == "Not needed (local)");
     CHECK(siteValue(s, sess, "::1", false) == "Not needed (local)");
-    // a normal-tab choice clears the session row (e.g. "Continue")
-    allowForSession(sess, "x.org");
-    CHECK(setSite(s, sess, "x.org", false, false) && !sess.count("x.org") && !allowed(s, sess, "x.org"));
+    // a normal-tab choice clears that host's normal "Continue"
+    allowForSession(sess, "x.org", false);
+    CHECK(setSite(s, sess, "x.org", false, false) && !sess.cont.count("x.org") && !allowed(s, sess, "x.org", false));
     CHECK(!setSite(s, sess, "", true, false));
     // 500 limit
     Store full; Session none;
@@ -154,7 +172,9 @@ int main()
     CHECK(siteNotice("foo.com", true, true, false, true) == "HTTPS-only on foo.com: Allow http (this session only)");
     CHECK(siteNotice("foo.com", false, false, false, false).find("off in Browser settings") != std::string::npos);
     CHECK(siteNotice("foo.com", true, false, true, true).find("500") != std::string::npos);
-    CHECK(continueNotice("foo.com").find("until Omni closes") != std::string::npos);
+    CHECK(continueNotice("foo.com", false).find("until Omni closes") != std::string::npos);
+    CHECK(continueNotice("foo.com", true) == "Using http for foo.com in private tabs until Omni closes");
+    CHECK(std::string(goBackLabel()) == "Go back" && std::string(continueLabel()) == "Continue to the http site");
 
     std::printf("%s: %d checks, %d failed\n", fails ? "FAIL" : "PASS", checks, fails);
     return fails ? 1 : 0;

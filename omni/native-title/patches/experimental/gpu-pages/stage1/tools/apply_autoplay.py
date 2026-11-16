@@ -11,7 +11,8 @@ What the user sees
       Block all    nothing starts until pressed, and media is not preloaded (less memory and data on the console).
   - Site settings (Options > Site settings, or hold Cross > Site settings) > "Autoplay on this site":
     Default (<global>) / Allow / Block sound / Block all. Changing it reloads the page so it takes effect.
-    Choices made in a private tab last for this session only (as Site permissions do).
+    Choices made in a private tab last for this session only (as Site permissions do) and apply to private tabs
+    only: a normal tab follows, shows and changes the saved choice, never the private one (r2).
   - With a blocking global choice, a few video sites are allowed by default so opening a video from the address bar,
     Continue watching or a link still plays: youtube.com, twitch.tv, vimeo.com, dailymotion.com (and Omni's own
     127.0.0.1 / localhost apps). A per-site choice overrides that. The site row shows "Allow (video site)" for them.
@@ -50,6 +51,9 @@ Anchors (exactly once each; MARK makes each file idempotent):
                          disabled-row and >= 300 checks).
   OmniFeatures3.h        the OmniTabSessionsShell.h include line.
 Apply AFTER apply_tab_sessions.py and apply_continue_watching.py (their lines are anchors).
+Upgrading (r2: private-tab choices no longer reach normal tabs): only the two headers changed; they are rewritten
+whenever they differ, so an r1 tree gets them and the result is byte-identical to a fresh apply. Rewriting
+OmniAutoplayShell.h drops apply_https_only.py's GPC edits in it: run apply_https_only.py after this (as always).
 usage: apply_autoplay.py <engine tree>   (keeps each file's line endings; re-run prints "already")
 """
 import sys
@@ -60,6 +64,7 @@ root = Path(sys.argv[1]) / 'engine' / 'entry'
 
 PURE = r'''// OMNI_AUTOPLAY_V1: the pure part of the autoplay setting (no SDL, no WebKit). The shell side is OmniAutoplayShell.h;
 // the reasons are in tools/apply_autoplay.py. Tested on the host with g++ (test_autoplay.cpp).
+// OMNI_AUTOPLAY_V1_R2: decide() / siteValue() take the tab's private flag (private choices stay in private tabs).
 #pragma once
 #include <cstddef>
 #include <map>
@@ -140,9 +145,11 @@ inline bool builtInAllowed(const std::string& host)
     return eachDomain(host, [](const std::string& d) { for (const char* v : kVideoSites) if (d == v) return true; return false; });
 }
 
-// session: rules made in private tabs (this run only); they win over the saved ones, and a session kDefault row
-// means "this site follows the global choice" even when a saved rule exists.
-inline Decision decide(const Store& store, const std::map<std::string, Mode>& session, const std::string& url)
+// session: rules made in private tabs (this run only). privateTab: the navigating tab is private; only then is the
+// session consulted (it wins over the saved rules there, and a session kDefault row means "this site follows the
+// global choice" even when a saved rule exists). A normal tab sees the saved rules only, so it never reveals or
+// follows what was chosen in a private tab. (OMNI_AUTOPLAY_V1_R2)
+inline Decision decide(const Store& store, const std::map<std::string, Mode>& session, const std::string& url, bool privateTab)
 {
     Decision d;
     const std::string host = siteKey(url);
@@ -157,7 +164,7 @@ inline Decision decide(const Store& store, const std::map<std::string, Mode>& se
             return true;
         });
     };
-    if (find(session, true)) { if (!explicitDefault) return d; }
+    if (privateTab && find(session, true)) { if (!explicitDefault) return d; }
     else if (find(store.sites, false)) return d;
     if (store.global != kAllow && builtInAllowed(host)) { d.mode = kAllow; d.source = kBuiltIn; return d; }
     d.mode = store.global == kDefault ? kAllow : store.global; d.source = kGlobal;
@@ -240,12 +247,13 @@ inline std::string globalDetail(Mode m)
         : m == kBlock ? "Nothing plays until you press play; media is not preloaded"
         : "Pages may start video and sound by themselves";
 }
-// The site row's value: the site's own rule, or what applies without one.
-inline std::string siteValue(const Store& store, const std::map<std::string, Mode>& session, const std::string& host)
+// The site row's value: the site's own rule, or what applies without one. privateTab: as in decide() (a normal tab
+// never shows a private-tab choice).
+inline std::string siteValue(const Store& store, const std::map<std::string, Mode>& session, const std::string& host, bool privateTab)
 {
-    const Mode own = session.count(host) ? siteRule(session, host) : siteRule(store.sites, host);
+    const Mode own = privateTab && session.count(host) ? siteRule(session, host) : siteRule(store.sites, host);
     if (own != kDefault) return name(own);
-    const Decision d = decide(store, session, "https://" + host + "/");
+    const Decision d = decide(store, session, "https://" + host + "/", privateTab);
     if (d.source == kSite) return std::string(name(d.mode)) + " (from " + d.rule + ")";
     if (d.source == kBuiltIn) return "Allow (video site)";
     return std::string("Default (") + name(store.global == kDefault ? kAllow : store.global) + ")";
@@ -273,7 +281,7 @@ SHELL = r'''// OMNI_AUTOPLAY_V1: autoplay setting (shell side). Included from Om
 namespace OAP = OmniAutoplay;
 static OAP::Store omniApStore;
 static bool omniApLoaded = false;
-static std::map<std::string, OAP::Mode> omniApSession;   // choices made in private tabs: this run only
+static std::map<std::string, OAP::Mode> omniApSession;   // choices made in private tabs: this run, private tabs only
 
 static void omniApLoad()
 {
@@ -311,7 +319,10 @@ static void omniApUse(WKNavigationActionRef action, WKFramePolicyListenerRef lis
         auto request = adoptWK(WKNavigationActionCopyRequest(action));
         auto url = request ? adoptWK(WKURLRequestCopyURL(request.get())) : WKRetainPtr<WKURLRef>();
         const std::string u = url ? OmniTest::toStd(adoptWK(WKURLCopyString(url.get())).get()) : std::string();
-        const OAP::Decision d = OAP::decide(omniApStore, omniApSession, u);
+        // OMNI_AUTOPLAY_V1_R2: private-tab choices only for private tabs (an unknown tab counts as normal)
+        WKPageRef page = WKFrameInfoGetPage(target.get());
+        Tab* tab = page ? omniTabForPage(page) : nullptr;
+        const OAP::Decision d = OAP::decide(omniApStore, omniApSession, u, tab && tab->omniPrivate);
         if (OAP::needsPolicy(d)) {
             auto policies = adoptWK(WKWebsitePoliciesCreate());
             WKWebsitePoliciesSetAutoplayPolicy(policies.get(), omniApWk(d.mode));
@@ -348,7 +359,7 @@ static void omniApSiteRow(OmniFxPanel& p, const std::string&)
     omniApLoad();
     const std::string host = omniApSiteHost();
     OmniFxRow r; r.id = omniApSiteRowId; r.label = "Autoplay on this site"; r.stepper = true; r.enabled = !host.empty();
-    r.value = host.empty() ? std::string("-") : OAP::siteValue(omniApStore, omniApSession, host);
+    r.value = host.empty() ? std::string("-") : OAP::siteValue(omniApStore, omniApSession, host, active() && active()->omniPrivate);
     p.rows.push_back(r);
 }
 static bool omniApSiteInput(const OmniFxRow& r, int b)
@@ -364,6 +375,7 @@ static bool omniApSiteInput(const OmniFxRow& r, int b)
     const OAP::Mode next = OAP::cycleSite(before, left ? -1 : 1);
     bool ok = true;
     if (priv) {   // a session row (kDefault included) exists only while the private choice differs from the saved one
+                  // (a normal tab reads and changes the saved rule only: it never sees this row)
         if (next == saved) omniApSession.erase(host);
         else omniApSession[host] = next;
     } else {

@@ -21,26 +21,26 @@ Prioritize trusted app metadata and the shared SDK, Setup diagnostics, crash/log
 
 ## Everyday browsing
 
-- **On-screen keyboard v2** (R3-001): Integrate and validate the reviewed implementation on the target platform.
-- **Address bar suggestions** (R3-002): Integrate and validate the reviewed implementation on the target platform.
-- **New-tab speed dial** (R3-003): Integrate and validate the reviewed implementation on the target platform.
-- **Tab groups and pinned tabs** (R3-004): Integrate and validate the reviewed implementation on the target platform.
-- **Session restore UI** (R3-005): Integrate and validate the reviewed implementation on the target platform.
+- **On-screen keyboard v2** (R3-001): **In dev (dev branch, not yet in a release):** word suggestions above the keys (learning off by default). Remaining: integrate and validate the reviewed implementation on the target platform.
+- **Address bar suggestions** (R3-002): **In dev (dev branch, not yet in a release):** search shortcuts ("yt ...") as the first suggestion. Remaining: integrate and validate the reviewed implementation on the target platform.
+- **New-tab speed dial** (R3-003): **In dev (dev branch, not yet in a release):** most-visited tiles fill empty shortcut slots. Remaining: integrate and validate the reviewed implementation on the target platform.
+- **Tab groups and pinned tabs** (R3-004): **In dev (dev branch, not yet in a release):** pinned tabs. Remaining: validate pinned tabs on the target platform; tab groups are not started.
+- **Session restore UI** (R3-005): **In dev (dev branch, not yet in a release):** named saved tab sessions in the Tabs panel. Remaining: integrate and validate the reviewed implementation on the target platform.
 - **Context menu for links, images and video** (R3-006): Integrate and validate the reviewed implementation on the target platform.
 - **QR code page** (R3-007): Integrate and validate the reviewed implementation on the target platform.
 - **Scroll and pointer polish** (R3-008): Integrate and validate the reviewed implementation on the target platform.
 - **Clean video player for direct media files** (R3-009): Integrate and validate the reviewed implementation on the target platform.
 - **PDF viewer** (R3-010): Integrate and validate the reviewed implementation on the target platform.
 - **Image viewer** (R3-011): Integrate and validate the reviewed implementation on the target platform.
-- **Media Session controls** (R3-012): Integrate and validate the reviewed implementation on the target platform.
+- **Media Session controls** (R3-012): **In dev (dev branch, not yet in a release):** "Now playing" controls in Options for the tab playing sound. This WebKit is built without the Media Session API, so pages' own media handlers are not called. Remaining: integrate and validate the reviewed implementation on the target platform.
 - **Site-fix library** (R3-013): Integrate and validate the reviewed implementation on the target platform.
 - **Polyfill audit** (R3-014): Integrate and validate the reviewed implementation on the target platform.
-- **Desktop/TV site toggle per site** (R3-015): Integrate and validate the reviewed implementation on the target platform.
+- **Desktop/TV site toggle per site** (R3-015): **In dev (dev branch, not yet in a release):** YouTube TV mode (off by default), YouTube only. Remaining: integrate and validate the reviewed implementation on the target platform.
 - **Login helpers** (R3-016): Integrate and validate the reviewed implementation on the target platform.
-- **Reading list / Watch later** (R3-030): Integrate and validate the reviewed implementation on the target platform.
+- **Reading list / Watch later** (R3-030): **In dev (dev branch, not yet in a release):** Save page for later (offline copies) and the start page's Continue watching row. Remaining: integrate and validate the reviewed implementation on the target platform.
 - **Private browsing mode** (R3-031): Integrate and validate the reviewed implementation on the target platform.
-- **Cookie and site-data manager** (R3-032): Integrate and validate the reviewed implementation on the target platform.
-- **HTTPS-only mode** (R3-033): Integrate and validate the reviewed implementation on the target platform.
+- **Cookie and site-data manager** (R3-032): **In dev (dev branch, not yet in a release):** Clear data for this site (Site settings). A full per-site list is not built. Remaining: integrate and validate the reviewed implementation on the target platform.
+- **HTTPS-only mode** (R3-033): **In dev (dev branch, not yet in a release):** HTTPS-only mode (off by default) with a per-site allow list, plus a Global Privacy Control switch (off by default). Remaining: validate on the target platform.
 - **Tracker-blocking list manager** (R3-034): Integrate and validate the reviewed implementation on the target platform.
 - **Permission prompts** (R3-035): Integrate and validate the reviewed implementation on the target platform.
 - **Built-in TOTP 2FA code generator** (R3-036): Implement a reviewed encrypted vault before enabling enrollment or storing secrets.
@@ -60,12 +60,12 @@ Prioritize trusted app metadata and the shared SDK, Setup diagnostics, crash/log
 - **Download presets** (R3-043): Integrate and validate the reviewed implementation on the target platform.
 - **Playlist and channel downloads UI,** (R3-044): Integrate and validate the reviewed implementation on the target platform.
 - **Scheduler and bandwidth limit UI** (R3-045): Integrate and validate the reviewed implementation on the target platform.
-- **Library with metadata from the files themselves** (R3-046): Integrate and validate the reviewed implementation on the target platform.
+- **Library with metadata from the files themselves** (R3-046): **In dev (dev branch, not yet in a release):** a Library view in Downloads (play, open, delete saved files). Remaining: integrate and validate the reviewed implementation on the target platform.
 - **Send-to-USB with progress,** (R3-047): Integrate and validate the reviewed implementation on the target platform.
 - **Subtitle tools** (R3-048): Integrate and validate the reviewed implementation on the target platform.
 - **Music** (R3-072): Validate actual USB audio and queue behavior; measure gapless feasibility separately.
 - **Podcasts / RSS reader** (R3-073): Integrate and validate the reviewed implementation on the target platform.
-- **Screenshot and clip gallery** (R3-078): Validate lawful capture access and viewer behavior without assuming internal paths.
+- **Screenshot and clip gallery** (R3-078): **In dev (dev branch, not yet in a release):** Omni page screenshots (L2 + R3) saved to Downloads > Saved > Screenshots. Remaining: validate lawful capture access and viewer behavior without assuming internal paths.
 
 ## Controller tools
 
@@ -106,7 +106,7 @@ Prioritize trusted app metadata and the shared SDK, Setup diagnostics, crash/log
 - **GPU rendering** (R3-081): qualify the host-tested offscreen EGL/GLES probe on the native RADV stack, then integrate GPU raster, compositing and WebGL.
 - **AV1 software decoding** (R3-083): collect comparable measurements, then validate full playback rather than decoder throughput alone.
 - **Extensions** (R3-085): ship bounded reviewed site fixes first; decide whether a larger extension model is justified.
-- **Local transfer** (R3-086): begin with reviewed file export/import; encrypted exports or LAN pairing need a separate complete design.
+- **Local transfer** (R3-086): **In dev (dev branch, not yet in a release):** Setup backs up and restores Omni's settings and chosen personal data as a zip on the PC. Remaining: encrypted exports or LAN pairing need a separate complete design.
 
 ## How work moves forward
 

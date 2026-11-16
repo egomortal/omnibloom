@@ -3,25 +3,43 @@
 ## Unreleased (dev branch, not tested on a console yet unless noted)
 
 ### Omni
+- **Pinned tabs:** D-pad left / right on a tab row in the Tabs panel, or "Pin this tab" in the hold-Cross menu. Up to
+  6; never in private tabs; kept after a restart.
+- **Tab audio:** speaker icons on tabs that play sound; Triangle in the Tabs panel mutes / unmutes a tab.
+- **Saved tab sessions:** save the open tabs under a name and open them later (Tabs panel).
+- **Open in background tab** is now the first row of the hold-Cross link menu.
+- **Zoom per site** (50-200%, remembered per site): L2 + D-pad up / down, or "Zoom (this site)" in Options.
+- **Save page for later:** a reading list of offline copies (hold Cross, or Options > Browse); never in private tabs.
+- **Page screenshots:** L2 + R3 saves the visible page to Downloads > Saved > Screenshots; never in private tabs.
+- **Clear data for this site** (Site settings): deletes the site's cookies and the page's storage after asking, then
+  reloads.
+- **Autoplay** setting: Allow (default) / Block sound / Block all, also per site.
+- **Continue watching** row on the start page (needs the Resume videos add-on 1.1.0, which now keeps the page address
+  and title of up to 30 unfinished videos; private tabs never record).
+- **YouTube TV mode** (off by default): opens YouTube's TV app, driven with the D-pad.
+- **HTTPS-only mode** and **"Ask sites not to sell or share my data"** (Global Privacy Control): both off by default.
+- The " Omni/<version>" user-agent token is off by default ("Tell sites this is Omni" turns it on).
+- **Ad block in embedded frames:** uBlock's site fixes and element hiding also run inside frames from other sites (on
+  by default).
+- **"Now playing"** controls in the Options menu for whichever tab plays sound.
+- **Sleep timer** (Options): pauses playback after 15 / 30 / 60 / 90 minutes.
 - **Keyboard word suggestions:** up to 3 word chips above the on-screen keyboard (D-pad up to reach them). Built-in
   word list only by default. "Learn words I type" is **off by default**; when on, words are kept in
   `/data/omni/kb-words.txt` on the console, and never from password, login/username, email, one-time-code, card or
   number fields, any field in a form with a password, or private tabs. "Clear learned words" deletes them; "Word
   suggestions" turns the chips off.
-- **Continue watching** row on the start page (needs the Resume videos add-on 1.1.0, which now keeps the page address
-  and title of up to 30 unfinished videos; private tabs never record).
-- **Saved tab sessions**, **tab audio/mute**, **history search and day groups**, **reading list**, **YouTube TV mode**.
-- **Autoplay** setting (Allow / Block sound / Block all, per site).
-- **HTTPS-only mode** and **"Ask sites not to sell or share my data"** (Global Privacy Control): both off by default.
-- **"Now playing"** controls in the Options menu for whichever tab plays sound.
-- The " Omni/<version>" user-agent token is off by default ("Tell sites this is Omni" turns it on).
+- **Search shortcuts** in the address bar ("yt lofi beats") and **most-visited tiles** in empty shortcut slots.
+- **History:** search, day groups, delete a whole site, clear the last hour / today / everything.
+- **Send a link from your phone** to Omni over the home network, with a 6-digit code (off by default).
+- **Controller battery** icon in the top bar, and a **"Downloaded: <title>"** notice when a download finishes.
+- **File downloads** on pages (PDF, ZIP, attachments) go to the Downloads app when Media Downloads is on.
 
 ### Setup
 - **Back up / restore Omni** settings to a zip on the PC; personal data (bookmarks, history, reading list...) only if
   ticked; cookies, passwords and sessions are never included.
 
 ### Downloads
-- Library view (play, open, delete saved files), file downloads from Omni, pause/resume/retry.
+- **Library** view (play, open, delete saved files), files handed over from Omni, pause / resume / retry.
 
 ## v0.5.3
 

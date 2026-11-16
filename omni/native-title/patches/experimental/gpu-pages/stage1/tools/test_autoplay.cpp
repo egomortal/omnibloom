@@ -25,48 +25,61 @@ int main()
 
     // defaults: Allow everywhere, no policy at all (today's behaviour)
     Store s; std::map<std::string, Mode> sess;
-    Decision d = decide(s, sess, "https://news.example.com/");
+    Decision d = decide(s, sess, "https://news.example.com/", false);
     CHECK(d.mode == kAllow && d.source == kGlobal && !needsPolicy(d));
-    CHECK(!needsPolicy(decide(s, sess, "https://www.youtube.com/watch?v=x")));
-    CHECK(decide(s, sess, "about:blank").source == kNotWeb && !needsPolicy(decide(s, sess, "about:blank")));
+    CHECK(!needsPolicy(decide(s, sess, "https://www.youtube.com/watch?v=x", false)));
+    CHECK(decide(s, sess, "about:blank", false).source == kNotWeb && !needsPolicy(decide(s, sess, "about:blank", false)));
 
     // global Block sound: policy everywhere except the video sites and Omni's own apps
     s.global = kNoSound;
-    d = decide(s, sess, "https://news.example.com/");
+    d = decide(s, sess, "https://news.example.com/", false);
     CHECK(d.mode == kNoSound && d.source == kGlobal && needsPolicy(d));
-    d = decide(s, sess, "https://m.youtube.com/watch?v=x");
+    d = decide(s, sess, "https://m.youtube.com/watch?v=x", false);
     CHECK(d.mode == kAllow && d.source == kBuiltIn && needsPolicy(d));
-    CHECK(decide(s, sess, "https://www.twitch.tv/x").source == kBuiltIn);
-    CHECK(decide(s, sess, "http://127.0.0.1:8080/").source == kBuiltIn);
-    CHECK(decide(s, sess, "https://notyoutube.com/").source == kGlobal);
-    CHECK(decide(s, sess, "https://youtube.com.evil.net/").source == kGlobal);
+    CHECK(decide(s, sess, "https://www.twitch.tv/x", false).source == kBuiltIn);
+    CHECK(decide(s, sess, "http://127.0.0.1:8080/", false).source == kBuiltIn);
+    CHECK(decide(s, sess, "https://notyoutube.com/", false).source == kGlobal);
+    CHECK(decide(s, sess, "https://youtube.com.evil.net/", false).source == kGlobal);
 
     // site rules cover subdomains, most specific wins, and beat the built-in list
     CHECK(setSite(s.sites, "example.com", kBlock));
     CHECK(setSite(s.sites, "video.example.com", kAllow));
     CHECK(setSite(s.sites, "youtube.com", kNoSound));
-    d = decide(s, sess, "https://news.example.com/");
+    d = decide(s, sess, "https://news.example.com/", false);
     CHECK(d.mode == kBlock && d.source == kSite && d.rule == "example.com");
-    CHECK(decide(s, sess, "https://a.video.example.com/").mode == kAllow);
-    CHECK(decide(s, sess, "https://www.youtube.com/").mode == kNoSound);
-    CHECK(decide(s, sess, "https://example.org/").mode == kNoSound);
+    CHECK(decide(s, sess, "https://a.video.example.com/", false).mode == kAllow);
+    CHECK(decide(s, sess, "https://www.youtube.com/", false).mode == kNoSound);
+    CHECK(decide(s, sess, "https://example.org/", false).mode == kNoSound);
     // a rule never matches through a bare TLD
     CHECK(setSite(s.sites, "com", kAllow));
-    CHECK(decide(s, sess, "https://other.com/").source == kGlobal);
+    CHECK(decide(s, sess, "https://other.com/", false).source == kGlobal);
     CHECK(setSite(s.sites, "com", kDefault) && !s.sites.count("com"));
 
-    // private session rules win; a session Default means "global" even over a saved rule
+    // private session rules win in private tabs; a session Default means "global" even over a saved rule
     sess["example.com"] = kAllow;
-    CHECK(decide(s, sess, "https://news.example.com/").mode == kAllow);
+    CHECK(decide(s, sess, "https://news.example.com/", true).mode == kAllow);
+    // r2: a normal tab never follows or shows a private-tab choice (that would reveal the private visit)
+    d = decide(s, sess, "https://news.example.com/", false);
+    CHECK(d.mode == kBlock && d.source == kSite && d.rule == "example.com");
+    CHECK(siteValue(s, sess, "example.com", true) == "Allow" && siteValue(s, sess, "example.com", false) == "Block all");
     sess["example.com"] = kDefault;
-    d = decide(s, sess, "https://example.com/");
+    d = decide(s, sess, "https://example.com/", true);
     CHECK(d.mode == kNoSound && d.source == kGlobal);
-    CHECK(siteValue(s, sess, "example.com") == "Default (Block sound)");
+    CHECK(siteValue(s, sess, "example.com", true) == "Default (Block sound)");
+    CHECK(decide(s, sess, "https://example.com/", false).mode == kBlock && siteValue(s, sess, "example.com", false) == "Block all");
+    sess["private-only.example.org"] = kBlock;   // a site only visited privately
+    CHECK(decide(s, sess, "https://private-only.example.org/", true).mode == kBlock);
+    CHECK(decide(s, sess, "https://private-only.example.org/", false).source == kGlobal);
+    CHECK(siteValue(s, sess, "private-only.example.org", false) == "Default (Block sound)");
+    // a normal-tab change works on the saved rule only and leaves the private row alone
+    CHECK(setSite(s.sites, "private-only.example.org", kAllow));
+    CHECK(siteValue(s, sess, "private-only.example.org", false) == "Allow" && siteValue(s, sess, "private-only.example.org", true) == "Block all");
+    CHECK(setSite(s.sites, "private-only.example.org", kDefault));
     sess.clear();
-    CHECK(siteValue(s, sess, "example.com") == "Block all");
-    CHECK(siteValue(s, sess, "news.example.com") == "Block all (from example.com)");
-    CHECK(siteValue(s, sess, "twitch.tv") == "Allow (video site)");
-    CHECK(siteValue(s, sess, "example.org") == "Default (Block sound)");
+    CHECK(siteValue(s, sess, "example.com", false) == "Block all");
+    CHECK(siteValue(s, sess, "news.example.com", false) == "Block all (from example.com)");
+    CHECK(siteValue(s, sess, "twitch.tv", false) == "Allow (video site)");
+    CHECK(siteValue(s, sess, "example.org", false) == "Default (Block sound)");
 
     // file round trip, tolerant parse
     const std::string text = serialize(s);
