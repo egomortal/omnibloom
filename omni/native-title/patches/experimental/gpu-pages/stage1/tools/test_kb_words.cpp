@@ -66,6 +66,35 @@ int main(int argc, char** argv)
     CHECK(W::completion("Hello", "Hel", ".") == "lo");
     CHECK(W::completion("Hello", "Hel", "x") == "lo ");
     CHECK(W::completion("He", "He", "") == "");
+    // login fields (never learned from) ----------------------------------------------------------------------------
+    CHECK(!W::isLoginField("", "q", "search", "search", false));
+    CHECK(!W::isLoginField("off", "comment", "", "text", false));
+    CHECK(W::isLoginField("", "q", "", "text", true));                 // a password field in the same form
+    CHECK(W::isLoginField("username", "", "", "text", false));
+    CHECK(W::isLoginField("section-a shipping Email", "", "", "text", false));
+    CHECK(W::isLoginField("one-time-code", "", "", "text", false));
+    CHECK(W::isLoginField("cc-number", "", "", "text", false) && W::isLoginField("cc-name", "", "", "text", false));
+    CHECK(W::isLoginField("tel-national", "", "", "text", false) && W::isLoginField("billing address-line1", "", "", "text", false));
+    CHECK(W::isLoginField("street-address", "", "", "text", false) && W::isLoginField("postal-code", "", "", "text", false));
+    CHECK(!W::isLoginField("name", "fullname", "", "text", false) && !W::isLoginField("on", "", "", "text", false));
+    CHECK(W::isLoginField("", "UserName", "", "text", false) && W::isLoginField("", "", "loginBox", "text", false));
+    CHECK(W::isLoginField("", "", "account-id", "text", false) && W::isLoginField("", "otp", "", "text", false));
+    CHECK(W::isLoginField("", "verify_code", "", "text", false) && W::isLoginField("", "", "cardholder", "text", false));
+    CHECK(W::isLoginField("", "e", "", "EMAIL", false) && W::isLoginField("", "", "", "tel", false));
+    {
+        const char U = '\x1f';
+        auto probe = [U](const char* ac, const char* name, const char* id, const char* type, const char* pw, const char* tag) {
+            return std::string("ok") + U + ac + U + name + U + id + U + type + U + pw + U + tag; };
+        CHECK(!W::fieldProbeSaysLogin(probe("", "q", "", "search", "0", "INPUT")));
+        CHECK(!W::fieldProbeSaysLogin(probe("", "", "editor", "", "0", "DIV")));          // contenteditable
+        CHECK(W::fieldProbeSaysLogin(probe("", "q", "", "text", "1", "INPUT")));
+        CHECK(W::fieldProbeSaysLogin(probe("username", "q", "", "text", "0", "INPUT")));
+        CHECK(W::fieldProbeSaysLogin(probe("", "", "", "", "0", "IFRAME")));            // a cross-origin frame
+        CHECK(W::fieldProbeSaysLogin(probe("", "q", "", "text", "0", "")));
+        CHECK(W::fieldProbeSaysLogin("") && W::fieldProbeSaysLogin("none") && W::fieldProbeSaysLogin("ok"));
+        CHECK(W::fieldProbeSaysLogin(probe("", "q", "", "text", "0", "INPUT") + U));   // a stray separator
+        CHECK(W::fieldProbeSaysLogin("no" + probe("", "q", "", "text", "0", "INPUT").substr(2)));
+    }
     // clean ------------------------------------------------------------------------------------------------------
     std::string c;
     CHECK(W::clean("Hello", c) && c == "hello");
@@ -102,6 +131,7 @@ int main(int argc, char** argv)
         const size_t the = dict.lowerBound("the");
         CHECK(the < dict.size() && dict.word(the) == "the" && dict.rank[the] == 0);
         CHECK(dict.contains("hello") && dict.contains("thanks") && dict.contains("weather") && dict.contains("don't"));
+        CHECK(!dict.contains("astra") && !dict.contains("claude"));   // removed from the list (2026-11-16)
         if (argc > 1) {   // apply_kb_words.py's bytes == this encoder over the same list
             std::ifstream f(argv[1]);
             std::vector<std::string> words;

@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased (dev branch, not tested on a console yet unless noted)
+
+### Omni
+- **Keyboard word suggestions:** up to 3 word chips above the on-screen keyboard (D-pad up to reach them). Built-in
+  word list only by default. "Learn words I type" is **off by default**; when on, words are kept in
+  `/data/omni/kb-words.txt` on the console, and never from password, login/username, email, one-time-code, card or
+  number fields, any field in a form with a password, or private tabs. "Clear learned words" deletes them; "Word
+  suggestions" turns the chips off.
+- **Continue watching** row on the start page (needs the Resume videos add-on 1.1.0, which now keeps the page address
+  and title of up to 30 unfinished videos; private tabs never record).
+- **Saved tab sessions**, **tab audio/mute**, **history search and day groups**, **reading list**, **YouTube TV mode**.
+- **Autoplay** setting (Allow / Block sound / Block all, per site).
+- **HTTPS-only mode** and **"Ask sites not to sell or share my data"** (Global Privacy Control): both off by default.
+- **"Now playing"** controls in the Options menu for whichever tab plays sound.
+- The " Omni/<version>" user-agent token is off by default ("Tell sites this is Omni" turns it on).
+
+### Setup
+- **Back up / restore Omni** settings to a zip on the PC; personal data (bookmarks, history, reading list...) only if
+  ticked; cookies, passwords and sessions are never included.
+
+### Downloads
+- Library view (play, open, delete saved files), file downloads from Omni, pause/resume/retry.
+
 ## v0.5.3
 
 Console package: Omni 0.5.3 (title f16ff5d6, engine a5083735, engine starter a3853c3a); Bloom Core, Downloads

@@ -14,14 +14,23 @@ row, directly above the keys), in place of the field name. The typed case is kep
   - The hint bar says "Use word" for Cross while the chips have the focus.
   - Never for password, e-mail, URL or number fields, dialog fields (Find on page, passwords...), the number pad,
     while selecting, in test modes, or when the address bar holds an address.
-Words: a built-in list of 8000 English words (OmniKbWordsData.h, generated from kb_words_en.txt beside this script by
+Words: a built-in list of ~8000 English words (OmniKbWordsData.h, generated from kb_words_en.txt beside this script by
 gen_kb_words.py: a short everyday list written for this project, then the words of this project's own Markdown
 prose ranked by count; no third-party list, so no outside licence), plus learned words in /data/omni/kb-words.txt
-("omni-kb-words\t1" then "word\tcount\tstamp"; at most 2000, the least used/oldest go first). A word is learned when a
-separator (space . , ! ? ; : ) " - newline) ends a word the user was typing, when Go/Enter ends it, or when a chip is
-used; never from password fields (no chips there at all), private tabs or test modes. Learned words are written once
-the keyboard closes, as one full rewrite on the background writer (omniIoQueue); the only UI-thread file I/O is the one
-read of kb-words.txt the first time the keyboard shows chips.
+("omni-kb-words\t1" then "word\tcount\tstamp"; at most 2000, the least used/oldest go first).
+Privacy (r2, shared consoles): learning is OPT-IN. Browser settings (after "Search suggestions"):
+  - "Word suggestions" On/Off (default On; Off = /data/omni/kb-words-off.flag): no chips, nothing learned.
+  - "Learn words I type" Off/On (default Off; On = /data/omni/kb-words-learn.flag). While Off, learned words are neither
+    learned nor shown (the built-in list still is); switching it Off writes pending words and drops them from memory.
+  - "Clear learned words" (asks once): deletes /data/omni/kb-words.txt and empties memory.
+With learning on, a word is learned when a separator (space . , ! ? ; : ) " - newline) ends a word the user was
+typing, when Go/Enter ends it, or when a chip is used; never in private tabs or test modes, never from password /
+e-mail / URL / number fields (no chips there), and never from login-ish fields: a once-per-field probe reads the
+focused element's autocomplete, name, id, type, tag and whether its form (or, outside a form, its document) has a
+password field (OmniKbWords::isLoginField: autocomplete username/email/one-time-code/*-password/tel*/cc-*/address-*/
+street-address/postal-code; name or id containing user/login/email/account/otp/code/card). Until that probe answers,
+or when the field is in a cross-origin frame (the probe cannot see it), nothing is learned. Learned words are written
+once the keyboard closes, as one full rewrite on the background writer (omniIoQueue).
 Cost: a 64-byte FNV hash of the text before the caret per frame (no allocation); the prefix search (binary search in
 the sorted table + a scan of that prefix's range, learned words scanned linearly) runs only when that text changes.
 Webpage fields: the chips use the existing mirror probe (omniKbProbe); while a probe is on its way the chips stay as
@@ -38,7 +47,12 @@ Anchors in OmniBrowser.cpp (exactly once each, in this order; checked before any
   8. the '// OMNI_STYLE_V1 / OMNI_KEYBOARD_V2: on-screen keyboard' heading (the draw goes before it)
   9. omniDrawKeyboard's nameW line and 10. its keysFocused line
   11. 'static void omniKbTick()' + '{' (saves learned words once the keyboard is closed)
-  12. '#include "OmniFeatures2.h" // OMNI_FEATURES_V2' (omniKwOtherFocus after it: autofill strip focus)
+  12. '#include "OmniFeatures2.h" // OMNI_FEATURES_V2' (omniKwOtherFocus + the settings rows after it)
+Anchors in OmniBrowserSettings.h (none is an anchor of apply_continue_watching / autoplay / https_only):
+  'static std::string omniFxHomeEdit;' (declarations before it), the 'omniF3SettingsRows(p);' line (rows after it),
+  the 'if (r.id >= 900) return omniF2SettingsInput(r, b);' line (input routing before it).
+Upgrade: a tree that already has the first OMNI_KB_WORDS_V1 (no REV marker) gets its shell block (from its heading to
+the hold-to-repeat comment) and its omniKwOtherFocus line replaced, the settings added; a fresh tree gets everything.
 Apply after apply_history_plus.py (and the rest of the current chain).
 usage: apply_kb_words.py <engine tree>   (keeps the file's line endings; re-run prints "already")
 """
@@ -46,6 +60,7 @@ import sys
 from pathlib import Path
 
 MARK = 'OMNI_KB_WORDS_V1'
+REV = 'OMNI_KB_WORDS_V1_R2'   # r2: opt-in learning, login-field exclusion, settings rows, Clear learned words
 here = Path(__file__).resolve().parent
 root = Path(sys.argv[1]) / 'engine' / 'entry'
 
@@ -130,6 +145,50 @@ inline bool isSearchText(std::string_view t)
     if (t.empty() || t.find("://") != std::string_view::npos) return false;
     if (t.find(' ') != std::string_view::npos) return true;
     return t.find_first_of("./:@") == std::string_view::npos;
+}
+
+// Login / account fields: words typed there are never learned, even with "Learn words I type" on. A field is one
+// when its form (or, for a field outside any form, its document) has a password field; its type is email / tel /
+// password / number; an autocomplete token is username, email, one-time-code, current-/new-password, tel*, cc-*,
+// address-*, street-address or postal-code; or its name or id contains user, login, email, account, otp, code or card.
+inline std::string lowerAll(std::string_view s) { std::string o(s); for (auto& c : o) c = lowerChar(c); return o; }
+inline bool isLoginField(std::string_view autocomplete, std::string_view name, std::string_view id, std::string_view type, bool passwordNearby)
+{
+    if (passwordNearby) return true;
+    const std::string t = lowerAll(type);
+    if (t == "email" || t == "tel" || t == "password" || t == "number") return true;
+    const std::string ac = lowerAll(autocomplete);
+    for (size_t i = 0; i < ac.size();) {
+        while (i < ac.size() && (ac[i] == ' ' || ac[i] == '\t' || ac[i] == '\n')) ++i;
+        size_t j = i;
+        while (j < ac.size() && ac[j] != ' ' && ac[j] != '\t' && ac[j] != '\n') ++j;
+        const std::string_view tok(ac.data() + i, j - i);
+        if (tok == "username" || tok == "email" || tok == "one-time-code" || tok == "current-password" || tok == "new-password"
+            || tok == "street-address" || tok == "postal-code" || tok.substr(0, 3) == "tel" || tok.substr(0, 3) == "cc-"
+            || tok.substr(0, 8) == "address-") return true;
+        i = j;
+    }
+    static const char* const parts[] = { "user", "login", "email", "account", "otp", "code", "card" };
+    for (const std::string& v : { lowerAll(name), lowerAll(id) })
+        for (const char* p : parts) if (v.find(p) != std::string::npos) return true;
+    return false;
+}
+// The field probe's answer: "ok" US autocomplete US name US id US type US password-nearby ("1"/"0") US tagName.
+// Anything else (no field, a script error) or a frame / plug-in element counts as a login field: nothing is learned.
+inline bool fieldProbeSaysLogin(std::string_view s)
+{
+    if (std::count(s.begin(), s.end(), '\x1f') != 6) return true;
+    std::string_view part[7];
+    size_t from = 0;
+    for (int n = 0; n < 7; ++n) {
+        const size_t at = s.find('\x1f', from);
+        part[n] = s.substr(from, at == std::string_view::npos ? std::string_view::npos : at - from);
+        from = at == std::string_view::npos ? s.size() : at + 1;
+    }
+    if (part[0] != "ok") return true;
+    const std::string tag = lowerAll(part[6]);
+    if (tag.empty() || tag == "iframe" || tag == "frame" || tag == "object" || tag == "embed") return true;
+    return isLoginField(part[1], part[2], part[3], part[4], part[5] == "1");
 }
 
 // `word` (lower case, starts with lower(typed)) shown in the typed prefix's case: the typed letters kept as typed,
@@ -384,13 +443,20 @@ BLOCK = r'''// OMNI_KB_WORDS_V1 ------------------------------------------------
 // D-pad up from the top row of keys moves onto them; left/right pick; Cross uses one; down goes back to the keys; up
 // goes on to the strips above (autofill, address suggestions) or wraps to the action row. Recomputed only when the
 // text before the caret changes (a hash per frame, no allocation). Learned words: /data/omni/kb-words.txt.
+// OMNI_KB_WORDS_V1_R2: learning is opt-in (kb-words-learn.flag), the chips can be turned off (kb-words-off.flag), and
+// login-ish fields (OmniKbWords::isLoginField, read by a once-per-field probe) never teach words.
 static std::string omniData(const char* name);
 static void omniIoQueue(const std::string& path, std::string data, bool append);
 static bool omniKwOtherFocus();   // the address suggestions or the autofill strip have the focus (after OmniFeatures2.h)
+static int omniKwLearnFlag = -1, omniKwOffFlag = -1;   // -1: not read yet (read once, then kept by the settings rows)
+static bool omniKwLearnOn() { if (omniKwLearnFlag < 0) omniKwLearnFlag = access(omniData("kb-words-learn.flag").c_str(), F_OK) == 0 ? 1 : 0; return omniKwLearnFlag == 1; }
+static bool omniKwChipsOn() { if (omniKwOffFlag < 0) omniKwOffFlag = access(omniData("kb-words-off.flag").c_str(), F_OK) == 0 ? 1 : 0; return omniKwOffFlag != 1; }
 struct OmniKwState {
     OmniKbWords::Dict dict;
     OmniKbWords::Learned learned;
     bool dictReady = false, learnedLoaded = false, dirty = false;
+    int fieldAsked = -1, fieldSession = -1;   // the webpage-field probe: asked for / answered for this omniKb.session
+    bool fieldSafe = false;                   // the answered field is not a login field (words may be learned there)
     bool hashValid = false;
     uint64_t hash = 0;
     uint32_t gen = 0;                 // bumped when the learned words change
@@ -402,12 +468,8 @@ struct OmniKwState {
     int chipX[3] = {}, chipW[3] = {}, chipY = 0, chipH = 0;   // layout coordinates of the drawn chips (clicks)
 };
 static OmniKwState omniKw;
-static void omniKwLoad()
+static void omniKwLoadLearned()
 {
-    if (!omniKw.dictReady) {
-        omniKw.dictReady = true;
-        if (!omniKw.dict.decode(OmniKbWords::builtinData)) { omniKw.dict = OmniKbWords::Dict(); fprintf(stderr, "OMNI_KB_WORDS_V1: built-in word list did not decode\n"); }
-    }
     if (omniKw.learnedLoaded) return;
     omniKw.learnedLoaded = true;
     std::string text;
@@ -419,16 +481,46 @@ static void omniKwLoad()
     }
     omniKw.learned.parse(text);
 }
+static void omniKwLoad()
+{
+    if (!omniKw.dictReady) {
+        omniKw.dictReady = true;
+        if (!omniKw.dict.decode(OmniKbWords::builtinData)) { omniKw.dict = OmniKbWords::Dict(); fprintf(stderr, "OMNI_KB_WORDS_V1: built-in word list did not decode\n"); }
+    }
+    if (omniKwLearnOn()) omniKwLoadLearned();   // learned words are read (and shown) only while learning is on
+}
 static void omniKwLearn(std::string_view word)
 {
+    if (!omniKwLearnOn()) return;
     omniKwLoad();
     if (omniKw.learned.add(word)) { omniKw.dirty = true; ++omniKw.gen; }
+}
+// Once per webpage field (keyboard session): is it a login / account field? Until the answer, nothing is learned.
+static const char* const omniKwFieldScript = R"JS((function(){try{var d=document,e=d.activeElement,n=0,S=String.fromCharCode(31);
+while(e&&e.tagName==='IFRAME'&&n<4){try{var cd=e.contentDocument;if(!cd)break;d=cd;e=d.activeElement;n++;}catch(x){break;}}
+if(!e)return 'none';
+var g=function(a){return String((e.getAttribute&&e.getAttribute(a))||'').split(S).join(' ');};
+var f=e.form||(e.closest?e.closest('form'):null),pw=(f||d).querySelector('input[type=password]')?'1':'0';
+return ['ok',g('autocomplete'),g('name'),g('id'),String(e.type||''),pw,String(e.tagName||'')].join(S);
+}catch(x){return 'none';}})())JS";
+static void omniKwFieldProbe()
+{
+    if (!omniKwLearnOn() || omniKb.kind != 1 || !active() || omniKw.fieldAsked == omniKb.session) return;
+    omniKw.fieldAsked = omniKb.session;
+    auto script = adoptWK(WKStringCreateWithUTF8CString(omniKwFieldScript));
+    WKPageEvaluateJavaScriptInMainFrame(active()->page, script.get(), reinterpret_cast<void*>(intptr_t(omniKb.session)), [](WKTypeRef result, WKErrorRef error, void* context) {
+        const std::string value = !error && result && WKGetTypeID(result) == WKStringGetTypeID() ? OmniTest::toStd(static_cast<WKStringRef>(result)) : "none";
+        if (intptr_t(context) != omniKb.session) return;   // the keyboard moved on to another field
+        omniKw.fieldSession = int(intptr_t(context));
+        omniKw.fieldSafe = !OmniKbWords::fieldProbeSaysLogin(value);
+    });
 }
 // The text around the caret, or false when this field gets no chips. `learn`: words typed here may be learned.
 static bool omniKwContext(std::string_view& before, std::string_view& after, bool& learn)
 {
-    if (!editing || omniKbPage != 0 || omniKb.select || omniKb.layer == omniKbNumpad || omniTestMode()) return false;
-    learn = !(active() && active()->omniPrivate);
+    if (!editing || omniKbPage != 0 || omniKb.select || omniKb.layer == omniKbNumpad || omniTestMode() || !omniKwChipsOn()) return false;
+    learn = omniKwLearnOn() && !(active() && active()->omniPrivate)   // OMNI_KB_WORDS_V1_R2: opt-in, never private tabs
+        && (omniKb.kind == 0 || (omniKw.fieldSession == omniKb.session && omniKw.fieldSafe));   // nor login fields
     if (omniKb.kind == 0) {
         omniKbClamp();
         if (omniKb.caret != omniKb.anchor || !OmniKbWords::isSearchText(address)) return false;
@@ -446,7 +538,7 @@ static uint64_t omniKwHash(std::string_view before, std::string_view after)
 {
     uint64_t h = 1469598103934665603ull;
     auto mix = [&h](uint64_t v) { h ^= v; h *= 1099511628211ull; };
-    mix(uint64_t(omniKb.kind + 2)); mix(uint64_t(omniKb.field)); mix(uint64_t(uint32_t(omniKb.session))); mix(omniKw.gen);
+    mix(uint64_t(omniKb.kind + 2)); mix(uint64_t(omniKb.field)); mix(uint64_t(uint32_t(omniKb.session))); mix(omniKw.gen); mix(omniKwLearnOn());
     for (size_t i = before.size() > 64 ? before.size() - 64 : 0; i < before.size(); ++i) mix(static_cast<unsigned char>(before[i]));
     mix(0x1ff);
     mix(after.empty() ? 0x100 : static_cast<unsigned char>(after[0]));
@@ -472,6 +564,7 @@ static void omniKwRefresh()
         omniKw.lastTyped.clear();
         return;
     }
+    if (omniKb.kind == 1) omniKwFieldProbe();   // once per field, only while learning is on
     const uint64_t h = omniKwHash(before, after);
     if (omniKw.hashValid && h == omniKw.hash) return;
     omniKw.hash = h;
@@ -491,7 +584,7 @@ static void omniKwRefresh()
     omniKw.after.assign(after.substr(0, 1));
     const int focus = omniKw.focus;
     omniKwClear();
-    if (!typed.empty()) omniKw.items = OmniKbWords::suggest(&omniKw.dict, &omniKw.learned, typed);
+    if (!typed.empty()) omniKw.items = OmniKbWords::suggest(&omniKw.dict, omniKwLearnOn() ? &omniKw.learned : nullptr, typed);
     omniKw.focus = omniKw.items.empty() ? -1 : std::min(focus, int(omniKw.items.size()) - 1);
     omniShellDirty = true;
 }
@@ -611,6 +704,82 @@ KEYSF_NEW = ('    const bool keysFocused = omniSuggestSelected() < 0 && !omniKwF
 F2_AT = '#include "OmniFeatures2.h" // OMNI_FEATURES_V2\n'
 F2 = ('static bool omniKwOtherFocus() { return omniSuggestSelected() >= 0 || omniF2FillSel >= 0; } '
       '// OMNI_KB_WORDS_V1: a strip above the keyboard has the focus\n')
+F2_SETTINGS = r'''// OMNI_KB_WORDS_V1_R2: Browser settings rows (after "Search suggestions"; ids in OmniBrowserSettings.h).
+static void omniKwSetFlag(const char* name, bool present)
+{
+    const std::string path = omniData(name);
+    if (!present) unlink(path.c_str());
+    else if (FILE* f = fopen(path.c_str(), "w")) { fputs("1\n", f); fclose(f); }
+}
+static void omniKwSettingsRows(OmniFxPanel& p)
+{
+    auto add = [&](int id, const char* label, std::string value, bool stepper) { OmniFxRow r; r.id = id; r.label = label; r.value = std::move(value); r.stepper = stepper; p.rows.push_back(r); };
+    add(omniKwRowChips, "Word suggestions", omniKwChipsOn() ? "On" : "Off", true);
+    add(omniKwRowLearn, "Learn words I type", omniKwLearnOn() ? "On" : "Off", true);
+    add(omniKwRowClear, "Clear learned words", "", false);
+}
+static bool omniKwSettingsInput(int id, int b)
+{
+    const bool step = b == SDL_CONTROLLER_BUTTON_DPAD_LEFT || b == SDL_CONTROLLER_BUTTON_DPAD_RIGHT || b == SDL_CONTROLLER_BUTTON_A;
+    if (id == omniKwRowChips) {
+        if (!step) return false;
+        omniKwOffFlag = omniKwChipsOn() ? 1 : 0;
+        omniKwSetFlag("kb-words-off.flag", omniKwOffFlag == 1);
+        omniKwClear();
+        omniKw.hashValid = false;
+        omniFxRefresh();
+        return true;
+    }
+    if (id == omniKwRowLearn) {
+        if (!step) return false;
+        const bool on = !omniKwLearnOn();
+        if (!on) {   // write what was learned so far, then forget it here (Clear learned words deletes the file)
+            if (omniKw.dirty) omniIoQueue(omniData("kb-words.txt"), omniKw.learned.serialize(), false);
+            omniKw.dirty = false;
+            omniKw.learned = OmniKbWords::Learned();
+            omniKw.learnedLoaded = false;
+        }
+        omniKwLearnFlag = on ? 1 : 0;
+        omniKwSetFlag("kb-words-learn.flag", on);
+        ++omniKw.gen;
+        omniKw.hashValid = false;
+        notice(on ? "Omni will learn words you type (never passwords, logins or private tabs)" : "Omni no longer learns words. Clear learned words deletes the saved ones");
+        omniFxRefresh();
+        return true;
+    }
+    if (id == omniKwRowClear) {
+        if (b != SDL_CONTROLLER_BUTTON_A) return false;
+        omniAsk("Clear learned words?", "The words Omni learned from your typing will be deleted from this console.", "Clear", [](bool ok) {
+            if (!ok) return;
+            omniKw.learned = OmniKbWords::Learned();
+            omniKw.learnedLoaded = true;   // empty; the file is gone
+            omniKw.dirty = false;
+            ++omniKw.gen;
+            omniKw.hashValid = false;
+            const std::string path = omniData("kb-words.txt");
+            omniIoQueue(path, "", false);   // drops any queued write of the file ...
+            omniIoFlush();                  // ... and waits (at most 0.8 s) for the writer
+            unlink(path.c_str());
+            unlink((path + ".tmp").c_str());
+            notice("Learned words cleared");
+        });
+        return true;
+    }
+    return false;
+}
+'''
+F2_NEW = F2 + F2_SETTINGS
+
+SET_DECL_AT = 'static std::string omniFxHomeEdit;\n'
+SET_DECL = ('constexpr int omniKwRowChips = 845, omniKwRowLearn = 846, omniKwRowClear = 847; // OMNI_KB_WORDS_V1_R2 (OmniBrowser.cpp)\n'
+            'static void omniKwSettingsRows(OmniFxPanel& p);\n'
+            'static bool omniKwSettingsInput(int id, int b);\n')
+SET_ROWS_AT = '    omniF3SettingsRows(p); // OMNI_FEATURES_V3: dark pages, suggestions, tab limit, tabs kept loaded, tab memory\n'
+SET_ROWS = '    omniKwSettingsRows(p); // OMNI_KB_WORDS_V1_R2: Word suggestions, Learn words I type, Clear learned words\n'
+SET_INPUT_AT = '    if (r.id >= 900) return omniF2SettingsInput(r, b); // OMNI_FEATURES_V2\n'
+SET_INPUT = ('    if (r.id >= omniKwRowChips && r.id <= omniKwRowClear) return omniKwSettingsInput(r.id, b); '
+             '// OMNI_KB_WORDS_V1_R2 (before the >= 300 rows)\n')
+OLD_BLOCK_START = '// OMNI_KB_WORDS_V1 ---------------------------------------------------------------------------------------------\n'
 
 TICK_OLD = 'static void omniKbTick()\n{\n'
 TICK_NEW = TICK_OLD + '    omniKwTick(); // OMNI_KB_WORDS_V1: saves learned words once the keyboard is closed\n'
@@ -668,17 +837,39 @@ def write_if(path, data, msgs):
         msgs.append('%s: written' % path.name)
 
 
-def main():
-    p = root / 'OmniBrowser.cpp'
-    raw = p.read_bytes()
+def read(path):
+    raw = path.read_bytes()
     s = raw.decode('utf-8')
     crlf = raw.count(b'\r\n') * 2 > raw.count(b'\n')
-    e = '\r\n' if crlf else '\n'
-    msgs = []
-    if MARK in s:
-        msgs.append('OmniBrowser.cpp: already')
-    else:
-        t = s.replace('\r\n', '\n') if crlf else s
+    return (s.replace('\r\n', '\n') if crlf else s), crlf
+
+
+def settings_text(t):
+    """OmniBrowserSettings.h with the r2 rows (None: already there)."""
+    if REV in t:
+        return None
+    at = [unique(t, SET_DECL_AT, 'OmniBrowserSettings.h omniFxHomeEdit'), unique(t, SET_ROWS_AT, 'OmniBrowserSettings.h omniF3SettingsRows'),
+          unique(t, SET_INPUT_AT, 'OmniBrowserSettings.h >= 900 input line')]
+    if at != sorted(at):
+        sys.exit('OmniBrowserSettings.h: anchors out of order: %r' % at)
+    t = t.replace(SET_DECL_AT, SET_DECL + SET_DECL_AT, 1)
+    t = t.replace(SET_ROWS_AT, SET_ROWS_AT + SET_ROWS, 1)
+    return t.replace(SET_INPUT_AT, SET_INPUT + SET_INPUT_AT, 1)
+
+
+def browser_text(t):
+    """OmniBrowser.cpp with OMNI_KB_WORDS_V1 r2: (text, 'applied' / 'upgraded'), or (None, 'already')."""
+    if REV in t:
+        return None, 'already'
+    if MARK in t:   # the first OMNI_KB_WORDS_V1: new shell block, new omniKwOtherFocus line + settings
+        a = unique(t, OLD_BLOCK_START, 'old OMNI_KB_WORDS_V1 block heading')
+        b = unique(t, BLOCK_AT, 'hold-to-repeat comment')
+        unique(t, F2_AT + F2, 'old omniKwOtherFocus line')
+        if not a < b:
+            sys.exit('OmniBrowser.cpp: old OMNI_KB_WORDS_V1 block not before the hold-to-repeat comment')
+        t = t[:a] + BLOCK + t[b:]
+        return t.replace(F2_AT + F2, F2_AT + F2_NEW, 1), 'upgraded'
+    if True:
         if 'OMNI_KEYBOARD_V2' not in t or 'OMNI_HISTORY_PLUS_V1' not in t:
             sys.exit('OmniBrowser.cpp: needs the OMNI_KEYBOARD_V2 tree with apply_history_plus.py applied')
         # every anchor is checked before anything is written
@@ -699,16 +890,30 @@ def main():
         t = t.replace(BLOCK_AT, BLOCK + BLOCK_AT, 1).replace(KBBUTTON_OLD, KBBUTTON_NEW, 1)
         t = t.replace(KBCLICK_OLD, KBCLICK_NEW, 1).replace(HINTS_OLD, HINTS_NEW, 1)
         t = t.replace(DRAW_AT, DRAW + DRAW_AT, 1).replace(NAMEW_OLD, NAMEW_NEW, 1).replace(KEYSF_OLD, KEYSF_NEW, 1)
-        t = t.replace(F2_AT, F2_AT + F2, 1).replace(TICK_OLD, TICK_NEW, 1)
-        p.write_bytes((t.replace('\n', e) if crlf else t).encode('utf-8'))
-        msgs.append('OmniBrowser.cpp: applied')
+        t = t.replace(F2_AT, F2_AT + F2_NEW, 1).replace(TICK_OLD, TICK_NEW, 1)
+        return t, 'applied'
+
+
+def main():
+    msgs = []
+    pb, ps = root / 'OmniBrowser.cpp', root / 'OmniBrowserSettings.h'
+    tb, crlf_b = read(pb)
+    ts, crlf_s = read(ps)
+    new_b, how = browser_text(tb)      # every anchor in both files is checked before anything is written
+    new_s = settings_text(ts)
+    if new_b is not None:
+        pb.write_bytes((new_b.replace('\n', '\r\n') if crlf_b else new_b).encode('utf-8'))
+    msgs.append('OmniBrowser.cpp: ' + how)
+    if new_s is not None:
+        ps.write_bytes((new_s.replace('\n', '\r\n') if crlf_s else new_s).encode('utf-8'))
+    msgs.append('OmniBrowserSettings.h: ' + ('already' if new_s is None else 'applied'))
     like = (root / 'OmniSearchTiles.h').read_bytes()
     nl = '\r\n' if like.count(b'\r\n') * 2 > like.count(b'\n') else '\n'
     write_if(root / 'OmniKbWords.h', PURE.replace('\n', nl).encode('utf-8'), msgs)
     write_if(root / 'OmniKbWordsData.h', data_header(nl), msgs)
     for m in msgs:
         print(m)
-    print(('already ' if all(m.endswith(': already') for m in msgs) else 'applied ') + MARK)
+    print(('already ' if all(m.endswith(': already') for m in msgs) else 'applied ') + MARK + ' (r2)')
 
 
 main()

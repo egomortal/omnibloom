@@ -139,6 +139,10 @@ python3 "$S1/tools/apply_autoplay.py" "$TT" > "$LT_/apply_autoplay.log" 2>&1 || 
 st "OMNI_AUTOPLAY_V1: $(paste -sd' ' "$LT_/apply_autoplay.log")"
 python3 "$S1/tools/apply_https_only.py" "$TT" > "$LT_/apply_https_only.log" 2>&1 || { st "OMNI_HTTPS_ONLY_V1 FAILED: $(tail -1 "$LT_/apply_https_only.log")"; exit 1; }
 st "OMNI_HTTPS_ONLY_V1: $(paste -sd' ' "$LT_/apply_https_only.log")"
+python3 "$S1/tools/apply_media_controls.py" "$TT" > "$LT_/apply_media_controls.log" 2>&1 || { st "OMNI_MEDIA_CONTROLS_V1 FAILED: $(tail -1 "$LT_/apply_media_controls.log")"; exit 1; }
+st "OMNI_MEDIA_CONTROLS_V1: $(paste -sd' ' "$LT_/apply_media_controls.log")"
+python3 "$S1/tools/apply_pinned_tabs.py" "$TT" > "$LT_/apply_pinned_tabs.log" 2>&1 || { st "OMNI_PINNED_TABS_V1 FAILED: $(tail -1 "$LT_/apply_pinned_tabs.log")"; exit 1; }
+st "OMNI_PINNED_TABS_V1: $(paste -sd' ' "$LT_/apply_pinned_tabs.log")"
 # OMNI_GPUPAGES_ZEROCOPY_V1 (outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md): the shell side (inert without /data/omni/gpu-pages-zerocopy.flag)
 python3 "$S1/tools/apply_zerocopy_shell.py" "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_zerocopy_shell.log" 2>&1 || { st "zero-copy shell FAILED: $(tail -1 "$LT_/apply_zerocopy_shell.log")"; exit 1; }
 st "OMNI_GPUPAGES_ZEROCOPY_V1 shell: $(tail -1 "$LT_/apply_zerocopy_shell.log")"

@@ -73,7 +73,7 @@ tricks cheat cheats boss level levels character characters weapon weapons build 
 quests multiplayer online offline release date trailer gameplay review'''.split()
 # Technical leftovers that are words only in this project (file names, tools, units): kept out of everyday typing.
 STOP = set('''omni exbox ps webkit wpe sdl gpu cpu ui wsl cpp py json js html css png jpg exe dll elf sprx prx bin dir
-tmp src md txt ok ui id ids url urls api apis sdk sdks ms px kb mb gb fps hz usb ip os vm'''.split())
+tmp src md txt ok ui id ids url urls api apis sdk sdks ms px kb mb gb fps hz usb ip os vm astra claude'''.split())
 # Words made only of the letters a-f (2..5 long) are usually hex fragments; these are real words.
 COMMON_HEX = set('ad add added be bed bee beef cab cafe dad dead deaf deed face faced fade faded fed fee feed'.split())
 
