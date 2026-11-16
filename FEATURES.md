@@ -32,7 +32,7 @@ Developers: see [DEVELOPERS.md](DEVELOPERS.md).
 | Smooth scrolling | ✅ | Scrolls at about 60 fps, with no noticeable hitches. |
 | Tabs | ✅ | Up to 8 tabs open by default, with 6 kept loaded in memory; Browser settings > Tab limit goes up to 16. |
 | Bookmarks and shortcuts | ✅ | Press **L3** to save the current site to your shortcuts grid. |
-| Translate pages | ✅ | Press the **touchpad** to translate the page. |
+| Translate pages | ✅ | Press the **touchpad** to translate the page. Uses Google Translate's website proxy: the page's address (including its query string) is sent to Google, which loads and translates the page; nothing is sent until you press. On the dev branch it asks first, never sends addresses with passwords or local-network hosts, and has per-site Offer / Always / Never. |
 | Dark mode | 🧪 | **Uses the site's own dark theme first.** Omni tells pages you prefer dark (`prefers-color-scheme: dark`), so sites that have a dark theme switch to it. Only if a page stays light does Omni darken it with a colour filter, and the filter steps aside while a large video plays so video stays smooth. Works with the Dark Reader add-on. Tip: on YouTube, choose YouTube's own **Appearance > Dark theme** once. |
 | Quick bar and Options menu | 🧪 | Redesigned: a quick bar of the things you use most, a grouped **Options** menu, and an **Apps** row with tiles and status for the suite's apps. |
 | Stay logged in | ✅ | Your logins are remembered after you close Omni. |
