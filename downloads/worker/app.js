@@ -39,7 +39,10 @@
   ];
   const routeIds = routes.map(route => route.id);
   let state = {jobs:[], saved_links:[], preferences:{theme:'bloom',reduced_motion:false}, summary:{}};
-  let currentRoute = new URLSearchParams(location.hash.slice(1)).get('view')==='saved'?'library':'launch';
+  // OMNI_DL_LIBRARY_V1: #view=files (the player's Back) opens the Queue page on its Library panel.
+  const startView=new URLSearchParams(location.hash.slice(1)).get('view');
+  let openFilesOnce=startView==='files';
+  let currentRoute = startView==='saved'?'library':startView==='files'?'queue':'launch';
   let theme = 'bloom';
   let previewIndex = routeIds.indexOf(currentRoute);
   let transformationTimer;
@@ -266,7 +269,7 @@
   }
 
   function queuePage() {
-    return `${pageHeader(routes[1],`<button type="button" class="primary-button" id="add-link">${icon('plus')} Add a link</button>`)}<div class="stat-grid"><div class="stat-card">${icon('download')}<strong id="stat-active">0</strong><span>On their way</span></div><div class="stat-card">${icon('clock')}<strong id="stat-queued">0</strong><span>Next in line</span></div><div class="stat-card">${icon('check')}<strong id="stat-completed">0</strong><span>All yours</span></div></div><section class="panel"><div class="panel-heading"><h2>Your collection in motion</h2><button type="button" id="queue-hold" class="secondary-button">Hold waiting queue</button></div><div class="filter-tabs" role="group" aria-label="Filter downloads">${[['all','Everything'],['active','In progress'],['completed','Completed']].map(([value,label])=>`<button type="button" data-filter="${value}" aria-pressed="${jobFilter===value}">${label}</button>`).join('')}</div><div id="job-list" class="job-list"></div><div id="empty-queue" class="view-empty"><div class="empty-illustration">${icon('download')}</div><h2>A fresh start. A world of possibilities.</h2><p>Add something you found, or explore a Demo simulation to see how everything works.</p><button type="button" class="primary-button" data-sample="landscape">Run a Demo ${icon('arrow-right')}</button></div><p class="simulation-note"><span class="status-dot"></span> Holding the queue affects waiting jobs only. Active downloads continue. Demo jobs are marked explicitly.</p></section>`;
+    return `${pageHeader(routes[1],`<button type="button" class="primary-button" id="add-link">${icon('plus')} Add a link</button>`)}<div class="stat-grid"><div class="stat-card">${icon('download')}<strong id="stat-active">0</strong><span>On their way</span></div><div class="stat-card">${icon('clock')}<strong id="stat-queued">0</strong><span>Next in line</span></div><div class="stat-card">${icon('check')}<strong id="stat-completed">0</strong><span>All yours</span></div></div><section class="panel"><div class="panel-heading"><h2>Your collection in motion</h2><button type="button" id="queue-hold" class="secondary-button">Hold waiting queue</button></div><div class="filter-tabs" role="group" aria-label="Filter downloads">${[['all','Everything'],['active','In progress'],['completed','Completed']].map(([value,label])=>`<button type="button" data-filter="${value}" aria-pressed="${jobFilter===value}">${label}</button>`).join('')}</div><div id="job-list" class="job-list"></div><div id="empty-queue" class="view-empty"><div class="empty-illustration">${icon('download')}</div><h2>A fresh start. A world of possibilities.</h2><p>Add something you found, or explore a Demo simulation to see how everything works.</p><button type="button" class="primary-button" data-sample="landscape">Run a Demo ${icon('arrow-right')}</button></div><p class="simulation-note"><span class="status-dot"></span> Holding the queue affects waiting jobs only. Active downloads continue. Demo jobs are marked explicitly.</p></section><section id="files-library" class="panel" aria-label="Library of saved files"></section>`;
   }
 
   function libraryPage() {
@@ -292,6 +295,7 @@
     renderNavigation();
     $('#main-content').innerHTML = ({launch:launchPage,queue:queuePage,library:libraryPage,activity:activityPage,settings:settingsPage})[id]();
     refreshContent();
+    if (id==='queue') { window.OmniFilesLibrary?.mount($('#files-library'),client,{toast,focus:openFilesOnce}); openFilesOnce=false; }
     if (focus) { $('h1').tabIndex=-1; $('h1').focus({preventScroll:true}); }
     // A slider moved with the D-pad keeps focus after the page it selected renders.
     if (padRestoreId) { const again=document.getElementById(padRestoreId); padRestoreId=''; if(again&&inputMode==='pad')again.focus({preventScroll:true}); }
@@ -337,9 +341,11 @@
     if(job.status==='pausing')return `<span class="badge">Pausing</span>`+cancel;
     if(job.status==='paused'||job.status==='interrupted'&&job.resumable)return jobButton('resume','play','Resume',job)+cancel;
     if(job.status==='failed'&&job.retryable)return jobButton('retry','refresh','Retry',job);
-    return `<span class="badge">${job.status==='completed'?(job.demo?'Demo complete':'Worker complete'):esc(names[job.status]||job.status)}</span>`;
+    // OMNI_DL_LIBRARY_V1: a finished real download can be played or opened right from its row.
+    const open=job.status==='completed'&&!job.demo&&job.filepath?`<button type="button" class="icon-button" data-file-job="${esc(job.id)}" aria-label="Play or open ${esc(job.title)}" title="Play or open">${icon('play')}</button>`:'';
+    return open+`<span class="badge">${job.status==='completed'?(job.demo?'Demo complete':'Worker complete'):esc(names[job.status]||job.status)}</span>`;
   }
-  const controlsKey=job=>job.status+(job.resumable?'+r':'')+(job.retryable?'+t':'')+job.engine;
+  const controlsKey=job=>job.status+(job.resumable?'+r':'')+(job.retryable?'+t':'')+(job.filepath?'+f':'')+job.engine;
 
   function newJobNode(job) {
     const node = document.createElement('article');
@@ -422,7 +428,7 @@
   }
 
   function refreshContent() {
-    refreshJobs(); refreshSaved(); refreshActivity();
+    refreshJobs(); refreshSaved(); refreshActivity(); window.OmniFilesLibrary?.notify(state.jobs);
     const stats = {active:state.jobs.filter(job=>['extracting','downloading','processing','cancelling'].includes(job.status)).length, queued:state.jobs.filter(job=>job.status==='queued').length,completed:state.jobs.filter(job=>job.status==='completed').length,total:state.jobs.length,saved:state.saved_links.length};
     Object.entries(stats).forEach(([name,value])=>{ const node = $('#stat-'+name); if(node)setText(node,value); });
     $$('.engine-choice').forEach(node=>setAttr(node,'aria-pressed',node.dataset.engine===engine));
@@ -589,6 +595,7 @@
       catch(error){toast(error.message);} finally{if(target.isConnected)target.disabled=false;}
       return;
     }
+    if (target.dataset.fileJob) return window.OmniFilesLibrary?.openJob(target.dataset.fileJob,client,{toast});
     if (target.dataset.action) {
       const node=target.closest('[data-job-id]'),id=node.dataset.jobId;
       // Disabling the focused control blurs it in Edge. Remember intent first,
@@ -998,7 +1005,7 @@
     const raw=location.hash;
     const bounded=raw.length<=32768;
     const p=new URLSearchParams(bounded?raw.slice(1):'');
-    const view=p.get('view')==='saved'?'library':'launch';
+    const view=p.get('view')==='saved'?'library':p.get('view')==='files'?'queue':'launch';  // OMNI_DL_LIBRARY_V1: files = Queue + Library
     // Source-bearing data is removed synchronously, before parsing or network I/O.
     history.replaceState({omniRoute:view},'',location.pathname+location.search+(view==='library'?'#view=saved':''));
     if(!bounded){clearCandidates();candidateWireError='The media suggestion exceeded its safety limit.';commitNavigation(view);return;}

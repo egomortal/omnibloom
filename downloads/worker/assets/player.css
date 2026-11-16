@@ -1,0 +1,28 @@
+/* OMNI_DL_LIBRARY_V1: the controller-friendly player page. */
+*{box-sizing:border-box}
+:root{--bg:#0b0e0b;--panel:#191d18;--line:#30372d;--ink:#f0f2e9;--muted:#929a8e;--accent:#b9f879;--accent-ink:#19230d;font-family:"Segoe UI",Inter,system-ui,sans-serif;color-scheme:dark}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink)}
+.player{display:flex;flex-direction:column;height:100vh;padding:20px 32px 16px;gap:14px}
+.player-top{display:flex;align-items:center;gap:18px;min-width:0}
+.player-top h1{margin:0;font-size:22px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage{flex:1;min-height:0;display:grid;place-items:center;background:#000;border-radius:18px;overflow:hidden}
+.stage video{width:100%;height:100%;object-fit:contain;background:#000}
+.stage.audio{background:radial-gradient(circle at 50% 40%,#22301b,#000 70%)}
+.stage.audio .disc{width:min(36vh,280px);height:min(36vh,280px);border-radius:50%;border:2px solid var(--accent);display:grid;place-items:center;color:var(--accent);font-size:64px}
+.stage.audio.playing .disc{animation:spin 6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.stage.audio.playing .disc{animation:none}}
+.bar{display:flex;align-items:center;gap:14px;font-size:16px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar input{flex:1;accent-color:var(--accent);height:28px}
+.controls{display:flex;justify-content:center;align-items:center;gap:22px}
+.pbtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:64px;min-width:120px;padding:0 22px;border-radius:16px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 18px/1 inherit;cursor:pointer}
+.pbtn.big{min-width:120px;min-height:96px;border-radius:50%;width:96px;background:var(--accent);color:var(--accent-ink);border:0}
+.pbtn .icon{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pbtn.big .icon{width:42px;height:42px}
+.player-top .pbtn{min-height:48px;min-width:0;font-size:15px}
+.pbtn:focus-visible,.bar input:focus-visible{outline:4px solid var(--accent);outline-offset:4px}
+kbd{font:inherit;font-size:12px;background:#20251f;border:1px solid var(--line);padding:2px 7px;border-radius:5px;color:var(--muted)}
+.hint{margin:0;text-align:center;color:var(--muted);font-size:14px}
+.message{margin:0;text-align:center;color:#ffb4a9;font-size:15px;min-height:1em}
+.message:empty{display:none}
+@media(max-width:520px){.player{padding:12px 16px}.pbtn{min-width:84px;font-size:15px}.player-top h1{font-size:17px}}

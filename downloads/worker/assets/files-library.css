@@ -1,0 +1,8 @@
+/* OMNI_DL_LIBRARY_V1: Library panel on the Queue page (reuses the saved-link row look). */
+#files-library .filter-tabs{margin-bottom:6px}
+#files-library .lib-status{margin:10px 0 4px}
+#files-library .lib-row .saved-actions .secondary-button{white-space:nowrap}
+#files-library .lib-job{opacity:.8}
+#files-library .lib-danger.armed{background:#5b1f1a;border-color:#ffb4a9;color:#ffd9d3;width:auto;padding:0 10px;gap:6px;display:inline-flex;align-items:center;font-size:10px}
+#files-library .lib-pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;font-size:11px;color:var(--muted)}
+@media(pointer:coarse){#files-library .saved-actions .icon-button{width:44px;height:44px}}

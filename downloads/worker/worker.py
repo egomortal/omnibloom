@@ -26,6 +26,8 @@ from schedule_policy import Policy, RateLimiter
 from presets import preset_options
 from probe import Prober, quality_format, site_probe  # OMNI_DOWNLOADS_PROBE_V5
 import save_places  # OMNI_DL_SAVE_V1
+import files_library  # OMNI_DL_LIBRARY_V1
+from urllib.parse import urlsplit, parse_qs
 
 ROOT = Path(__file__).resolve().parent
 MAX_HTTP_REQUESTS = 16
@@ -660,6 +662,7 @@ class WorkerHTTPServer(ThreadingHTTPServer):
         self.runtime['probe'] = True  # OMNI_DOWNLOADS_PROBE_V5: the GUI checks links only when the worker can
         self.prober = Prober(site=_site_probe)
         self.request_slots = threading.BoundedSemaphore(MAX_HTTP_REQUESTS)
+        self.library = files_library.Library(jobs.folder, self.token)  # OMNI_DL_LIBRARY_V1
         super().__init__(('127.0.0.1', port), WorkerHandler)
 
     def process_request(self, request, client_address):
@@ -748,6 +751,8 @@ class WorkerHandler(BaseHTTPRequestHandler):
      '/assets/brand-icon.png': ('assets/brand-icon.png', 'image/png'),
      '/assets/candidate-wire.js': ('assets/candidate-wire.js', 'text/javascript; charset=utf-8'),
      '/assets/favicon.svg': ('assets/favicon.svg', 'image/svg+xml'),
+     '/assets/files-library.css': ('assets/files-library.css', 'text/css; charset=utf-8'),
+     '/assets/files-library.js': ('assets/files-library.js', 'text/javascript; charset=utf-8'),
      '/assets/guide.css': ('assets/guide.css', 'text/css; charset=utf-8'),
      '/assets/guide.js': ('assets/guide.js', 'text/javascript; charset=utf-8'),
      '/assets/icons.svg': ('assets/icons.svg', 'image/svg+xml'),
@@ -759,12 +764,15 @@ class WorkerHandler(BaseHTTPRequestHandler):
      '/assets/navigator.css': ('assets/navigator.css', 'text/css; charset=utf-8'),
      '/assets/navigator.js': ('assets/navigator.js', 'text/javascript; charset=utf-8'),
      '/assets/orbital.svg': ('assets/orbital.svg', 'image/svg+xml'),
+     '/assets/player.css': ('assets/player.css', 'text/css; charset=utf-8'),
+     '/assets/player.js': ('assets/player.js', 'text/javascript; charset=utf-8'),
      '/assets/production-api.js': ('assets/production-api.js', 'text/javascript; charset=utf-8'),
      '/assets/soundwave.svg': ('assets/soundwave.svg', 'image/svg+xml'),
      '/assets/styles.css': ('styles.css', 'text/css; charset=utf-8'),
      '/assets/universe-symbols.svg': ('assets/universe-symbols.svg', 'image/svg+xml'),
      '/assets/universes.css': ('assets/universes.css', 'text/css; charset=utf-8')}
-    PAGES = {'/': 'index.html', '/downloads': 'index.html', '/integration-preview': 'integration/preview.html'}
+    PAGES = {'/': 'index.html', '/downloads': 'index.html', '/integration-preview': 'integration/preview.html',
+             '/player': 'player.html'}  # OMNI_DL_LIBRARY_V1: the player page (file id in the #fragment, never sent)
     # OMNIBLOOM_DL6_TOOLS (R3-043 presets, R3-046 library, R3-048 subtitle tools): exact allowlisted routes only.
     PAGES = dict(PAGES, **{'/tools/presets/': 'tools/presets/index.html', '/tools/subtitles/': 'tools/subtitles/index.html', '/tools/library/': 'tools/library/index.html'})
     ASSETS = dict(ASSETS, **{'/tools/library/app.js': ('tools/library/app.js', 'text/javascript; charset=utf-8'), '/tools/library/metadata.js': ('tools/library/metadata.js', 'text/javascript; charset=utf-8'), '/tools/library/style.css': ('tools/library/style.css', 'text/css; charset=utf-8'), '/tools/library/tv-controls.js': ('tools/library/tv-controls.js', 'text/javascript; charset=utf-8'), '/tools/presets/app.js': ('tools/presets/app.js', 'text/javascript; charset=utf-8'), '/tools/presets/host.js': ('tools/presets/host.js', 'text/javascript; charset=utf-8'), '/tools/presets/model.js': ('tools/presets/model.js', 'text/javascript; charset=utf-8'), '/tools/presets/style.css': ('tools/presets/style.css', 'text/css; charset=utf-8'), '/tools/presets/tv-controls.js': ('tools/presets/tv-controls.js', 'text/javascript; charset=utf-8'), '/tools/shared/components.css': ('tools/shared/components.css', 'text/css; charset=utf-8'), '/tools/shared/controller.js': ('tools/shared/controller.js', 'text/javascript; charset=utf-8'), '/tools/shared/fonts/OFL-Inter.txt': ('tools/shared/fonts/OFL-Inter.txt', 'text/plain; charset=utf-8'), '/tools/shared/fonts/OFL-Rajdhani.txt': ('tools/shared/fonts/OFL-Rajdhani.txt', 'text/plain; charset=utf-8'), '/tools/shared/fonts/inter-latin-400-normal.woff2': ('tools/shared/fonts/inter-latin-400-normal.woff2', 'font/woff2'), '/tools/shared/fonts/inter-latin-600-normal.woff2': ('tools/shared/fonts/inter-latin-600-normal.woff2', 'font/woff2'), '/tools/shared/fonts/rajdhani-latin-700-normal.woff2': ('tools/shared/fonts/rajdhani-latin-700-normal.woff2', 'font/woff2'), '/tools/shared/tokens.css': ('tools/shared/tokens.css', 'text/css; charset=utf-8'), '/tools/subtitles/app.js': ('tools/subtitles/app.js', 'text/javascript; charset=utf-8'), '/tools/subtitles/style.css': ('tools/subtitles/style.css', 'text/css; charset=utf-8'), '/tools/subtitles/subtitles.js': ('tools/subtitles/subtitles.js', 'text/javascript; charset=utf-8'), '/tools/subtitles/tv-controls.js': ('tools/subtitles/tv-controls.js', 'text/javascript; charset=utf-8')})
@@ -864,8 +872,13 @@ class WorkerHandler(BaseHTTPRequestHandler):
             return self.send_body(200, body, content_type)
         if self.path == '/favicon.ico':
             return self.send_body(204, b'', 'image/x-icon')
+        split = urlsplit(self.path)
+        if split.path == '/api/files/stream':
+            return self.files_stream(split.query)
         if not self.trusted():
             return self.reply(403, {'error': 'Forbidden'})
+        if split.path == '/api/files':
+            return self.files_list(split.query)
         if self.path == '/api/saved-links':
             try:
                 return self.reply(200, self.server.saved_links.snapshot())
@@ -892,6 +905,108 @@ class WorkerHandler(BaseHTTPRequestHandler):
                                        history_error=jobs.history.error, max_pending=MAX_PENDING,
                                        queue_paused=jobs.queue_paused))
         self.reply(404, {'error': 'Not found'})
+
+    # ---- OMNI_DL_LIBRARY_V1: the library of saved files --------------------------------------------------------
+    def files_list(self, query):
+        try:
+            params = parse_qs(query, keep_blank_values=True, max_num_fields=8)
+            if not set(params) <= {'kind', 'area', 'offset', 'limit'} or any(len(v) != 1 for v in params.values()):
+                raise ValueError('Library listing takes kind, area, offset and limit once each.')
+            one = {key: value[0] for key, value in params.items()}
+            for key in ('offset', 'limit'):
+                if key in one and not (one[key].isdigit() and len(one[key]) <= 7):
+                    raise ValueError('Invalid page.')
+            result = self.server.library.listing(one.get('kind', 'all'), one.get('area', 'files'),
+                                                 int(one.get('offset', 0)), int(one.get('limit', 50)),
+                                                 self.server.jobs.snapshot())
+        except ValueError as error:
+            return self.reply(400, {'error': str(error)})
+        return self.reply(200, result)
+
+    def files_stream(self, query, head=False):
+        """A file from a save root, with Range support. Token header, or a signed link (a <video src> sends no headers)."""
+        library = self.server.library
+        try:
+            params = parse_qs(query, keep_blank_values=True, max_num_fields=4)
+        except ValueError:
+            params = {}
+        one = {key: value[0] for key, value in params.items() if len(value) == 1}
+        fid = one.get('id')
+        signed = set(params) == {'id', 'exp', 'sig'} and library.check_link(fid, one.get('exp'), one.get('sig'))
+        if not signed and not (set(params) == {'id'} and self.trusted()):
+            return self.reply(403, {'error': 'Forbidden'})
+        try:
+            handle, size, kind, mime, name = library.open(fid)
+        except files_library.NotFound as error:
+            return self.reply(404, {'error': str(error)})
+        with handle:
+            try:
+                byte_range = files_library.parse_range(self.headers.get('Range'), size)
+            except files_library.Unsatisfiable:
+                self.send_response(416)
+                self.send_header('Content-Range', 'bytes */%d' % size)
+                self.send_header('Content-Length', '0')
+                self.send_header('Cache-Control', 'no-store')
+                self.end_headers()
+                return
+            start, end = byte_range if byte_range else (0, size - 1)
+            length = end - start + 1 if size else 0
+            self.send_response(206 if byte_range else 200)
+            self.send_header('Content-Type', mime)
+            self.send_header('Content-Length', str(length))
+            self.send_header('Accept-Ranges', 'bytes')
+            if byte_range:
+                self.send_header('Content-Range', 'bytes %d-%d/%d' % (start, end, size))
+            self.send_header('Cache-Control', 'private, no-store')
+            self.send_header('X-Content-Type-Options', 'nosniff')
+            self.send_header('Referrer-Policy', 'no-referrer')
+            disposition = 'attachment' if kind == 'other' else 'inline'
+            self.send_header('Content-Disposition', disposition + "; filename*=UTF-8''" + files_library.quote_name(name))
+            if kind != 'pdf':
+                # Chromium's PDF viewer does not run in a sandboxed document; every other type gets no script at all.
+                self.send_header('Content-Security-Policy', "default-src 'none'; img-src 'self'; media-src 'self'; "
+                                 "style-src 'unsafe-inline'; sandbox")
+            try:
+                self.end_headers()
+                if head or not length:
+                    return
+                self.connection.settimeout(30)
+                handle.seek(start)
+                remaining = length
+                while remaining > 0:
+                    data = handle.read(min(files_library.CHUNK, remaining))
+                    if not data:
+                        break  # truncated while serving: the short body tells the browser
+                    self.wfile.write(data)
+                    remaining -= len(data)
+            except (ConnectionError, TimeoutError, OSError):
+                self.close_connection = True
+
+    def do_HEAD(self):
+        split = urlsplit(self.path)
+        if not self.trusted_host() or split.path != '/api/files/stream':
+            self.send_response(404)
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
+        return self.files_stream(split.query, head=True)
+
+    def files_post(self, path, body):
+        library = self.server.library
+        if path == '/api/files/link':
+            if set(body) == {'job'}:
+                job = next((j for j in self.server.jobs.snapshot() if j.get('id') == body['job']), None)
+                fid = library.id_for_job(job)
+            elif set(body) == {'id'}:
+                fid = body['id']
+            else:
+                raise ValueError('A link needs only id or job.')
+            info = library.describe(fid)
+            url, exp = library.link(fid)
+            return dict(info, url=url, expires=exp)
+        if set(body) != {'id'}:
+            raise ValueError('This request requires only id.')
+        return getattr(library, path.rsplit('/', 1)[1])(body['id'])
 
     def do_POST(self):
         if not self.trusted():
@@ -947,6 +1062,13 @@ class WorkerHandler(BaseHTTPRequestHandler):
                 action = self.path.rsplit('/', 1)[1]
                 state = getattr(self.server.jobs, action)(body['id'])
                 return self.reply(200, {'ok': True, 'id': body['id'], 'state': state})
+            if self.path in ('/api/files/link', '/api/files/trash', '/api/files/restore', '/api/files/delete'):
+                try:
+                    return self.reply(200, self.files_post(self.path, body))
+                except files_library.NotFound as error:
+                    return self.reply(404, {'error': str(error)})
+                except OSError:
+                    return self.reply(409, {'error': 'The file could not be changed. Check the drive and try again.'})
             if self.path == '/api/queue':
                 self.server.jobs.set_paused(body['paused'])
                 return self.reply(200, {'queue_paused': self.server.jobs.queue_paused})

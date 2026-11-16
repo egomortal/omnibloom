@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="omni-session-token" content="__TOKEN__">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Omni player</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/player.css">
+</head>
+<body>
+  <!-- OMNI_DL_LIBRARY_V1: the file id travels in the #fragment; the page asks the worker for a signed stream link. -->
+  <main class="player" id="player">
+    <header class="player-top"><button type="button" id="back" class="pbtn"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#arrow-left"></use></svg><span>Back</span> <kbd data-glyph="circle">B</kbd></button><h1 id="title">Loading…</h1></header>
+    <div class="stage" id="stage"></div>
+    <div class="bar"><span id="now">0:00</span><input id="seek" type="range" min="0" max="0" step="1" value="0" aria-label="Position"><span id="total">0:00</span></div>
+    <div class="controls">
+      <button type="button" id="back10" class="pbtn" aria-label="Back 10 seconds"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#arrow-left"></use></svg>10 s</button>
+      <button type="button" id="toggle" class="pbtn big" aria-label="Play"><svg class="icon" aria-hidden="true"><use id="toggle-icon" href="/assets/icons.svg#play"></use></svg></button>
+      <button type="button" id="fwd10" class="pbtn" aria-label="Forward 10 seconds">10 s<svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#arrow-right"></use></svg></button>
+    </div>
+    <p class="hint" id="hint"><kbd data-glyph="cross">A</kbd> play / pause · <kbd>◀</kbd> <kbd>▶</kbd> 10 s · <kbd data-glyph="circle">B</kbd> back</p>
+    <p class="message" id="message" role="status"></p>
+  </main>
+  <script src="/assets/player.js" defer></script>
+</body>
+</html>
