@@ -17,7 +17,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
 
-from . import bookmarks, checks, config, diagnostics, installer, jd, oneclick, ps5, release, shortcuts
+from . import backup, bookmarks, checks, config, diagnostics, installer, jd, oneclick, ps5, release, shortcuts
 
 C = config.COLORS
 STATUS_MARK = {"ok": ("✓", C["ok"]), "warn": ("!", C["warn"]), "bad": ("✕", C["bad"]), "info": ("i", C["accent"])}
@@ -523,6 +523,8 @@ class SetupApp:
         more = tk.Frame(self.check_box, bg=C["ground"])
         more.pack(fill="x")
         ttk.Button(more, text="Import bookmarks from this PC…", style="Ghost.TButton", command=self.page_bookmarks).pack(side="left")
+        ttk.Button(more, text="Back up Omni…", style="Ghost.TButton", command=self.page_backup).pack(side="left", padx=8)
+        ttk.Button(more, text="Restore Omni backup…", style="Ghost.TButton", command=self.page_restore).pack(side="left")
         if self.summary["can_install"]:
             self.next_btn.configure(state="normal")
 
@@ -654,6 +656,170 @@ class SetupApp:
         if r["added"]:
             self.label(self.bm_box, "Find them in Omni's quick menu (Options), Bookmarks. The earlier bookmarks file was "
                                     "kept on the PS5 as a backup.", "small", wrap=640).pack(anchor="w")
+
+    # -- Omni backup and restore (from the check page) --------------------------------
+    @staticmethod
+    def _size_text(n):
+        return "%.1f MB" % (n / 1048576.0) if n >= 1048576 else "%d KB" % ((n + 1023) // 1024)
+
+    def _sub_page(self, title, note):
+        self._clear()
+        self.back_btn.configure(state="normal", command=lambda: self.show(self.step))
+        self.label(self.body, title, "title").pack(anchor="w")
+        note_label = self.label(self.body, note, "muted")
+        note_label.pack(anchor="w", pady=(2, 12))
+        box = tk.Frame(self.body, bg=C["ground"])
+        box.pack(fill="both", expand=True)
+        return note_label, box
+
+    def page_backup(self):
+        self.bk_note, self.bk_box = self._sub_page(
+            "Back up Omni", "Saves Omni's settings from the PS5 to one zip on this PC. Tick any personal data to save too.")
+        self.next_btn.configure(text="Back up", state="normal", command=self._bk_start)
+        p = self.panel(self.bk_box)
+        p.pack(fill="x")
+        self.bk_pick = {}
+        for g in backup.GROUPS:
+            var = tk.BooleanVar(value=bool(g.get("always")))
+            self.bk_pick[g["id"]] = var
+            ttk.Checkbutton(p, text="%s  (%s)" % (g["name"], g["detail"]), variable=var, style="Panel.TCheckbutton",
+                            state="disabled" if g.get("always") else "normal").pack(anchor="w", pady=2)
+        row = tk.Frame(self.bk_box, bg=C["ground"])
+        row.pack(fill="x", pady=(10, 0))
+        self.label(row, "Save in:", "small").pack(side="left")
+        self.bk_folder = tk.StringVar(value=backup.default_folder())
+        ttk.Entry(row, textvariable=self.bk_folder, width=56).pack(side="left", padx=8, fill="x", expand=True)
+        ttk.Button(row, text="Browse…", style="Small.TButton", command=self._bk_browse).pack(side="left")
+        self.label(self.bk_box, "Saved passwords, cookies, sign-ins and open tabs are never included. The zip holds what "
+                                "you tick in plain form: keep it somewhere private.", "small", wrap=640).pack(anchor="w", pady=(10, 0))
+
+    def _bk_browse(self):
+        d = filedialog.askdirectory(title="Where to save the Omni backup", initialdir=self.bk_folder.get() or None)
+        if d:
+            self.bk_folder.set(d)
+
+    def _bk_start(self):
+        groups = [g for g, v in self.bk_pick.items() if v.get()]
+        folder = self.bk_folder.get().strip() or backup.default_folder()
+        try:
+            os.makedirs(folder, exist_ok=True)
+        except OSError as e:
+            messagebox.showerror(config.APP_NAME, "Can't save in that folder: %s" % e)
+            return
+        dest = backup.default_path(folder)
+        self.next_btn.configure(state="disabled")
+        self.back_btn.configure(state="disabled")
+        for w in self.bk_box.winfo_children():
+            w.destroy()
+        self.bk_note.configure(text="Reading Omni's files from the PS5…")
+        host = self.host.get().strip()
+        self.run_bg(lambda: self._do_backup(host, groups, dest), self._bk_done)
+
+    def _do_backup(self, host, groups, dest):
+        with self.console(host) as c:
+            return backup.backup(c, groups, dest)
+
+    def _bk_done(self, r, err):
+        if not self.bk_box.winfo_exists():
+            return
+        self.back_btn.configure(state="normal")
+        self.next_btn.configure(text="Done", state="normal", command=lambda: self.show(self.step))
+        if err:
+            self.bk_note.configure(text="Couldn't back up Omni: %s\nNothing on the PS5 was changed." % err, fg=C["bad"])
+            return
+        lines = ["Saved %d file%s (%s) to:" % (r["files"], "" if r["files"] == 1 else "s", self._size_text(r["bytes"])),
+                 r["path"]]
+        if r["left_out"]:
+            lines.append("%d file%s left out: bigger than Omni uses." % (r["left_out"], "" if r["left_out"] == 1 else "s"))
+        self.bk_note.configure(text="\n".join(lines), fg=C["text"])
+        folder = os.path.dirname(r["path"])
+        ttk.Button(self.bk_box, text="Open folder", style="Ghost.TButton",
+                   command=lambda: self._open_folder(folder)).pack(anchor="w", pady=(8, 0))
+
+    @staticmethod
+    def _open_folder(folder):
+        if hasattr(os, "startfile"):
+            os.startfile(folder)    # noqa: S606 (a folder Setup just wrote to)
+        else:
+            webbrowser.open("file://" + folder)
+
+    def page_restore(self):
+        start = backup.default_folder()
+        path = filedialog.askopenfilename(title="Open an Omni backup", filetypes=[("Omni backup", "*.zip")],
+                                          initialdir=start if os.path.isdir(start) else None)
+        if not path:
+            return
+        self.rs_note, self.rs_box = self._sub_page("Restore Omni backup", "Checking the backup…")
+        self.next_btn.configure(text="Restore", state="disabled", command=self._rs_start)
+        self.rs_path = path
+        self.run_bg(lambda: backup.read_backup(path), self._rs_loaded)
+
+    def _rs_loaded(self, manifest, err):
+        if not self.rs_box.winfo_exists():
+            return
+        if err:
+            self.rs_note.configure(text="Can't use this backup: %s" % err, fg=C["bad"])
+            return
+        self.rs_note.configure(text="Made %s (Omni %s, Setup %s). Tick what to put back on the PS5:" % (
+            str(manifest.get("created") or "?").replace("T", " ").rstrip("Z"), manifest.get("omni_version") or "?",
+            manifest.get("setup_version") or "?"), fg=C["muted"])
+        names = {g["id"]: g["name"] for g in backup.GROUPS}
+        p = self.panel(self.rs_box)
+        p.pack(fill="x")
+        self.rs_pick = {}
+        for g, s in manifest["summary"].items():
+            var = tk.BooleanVar(value=True)
+            self.rs_pick[g] = var
+            ttk.Checkbutton(p, text="%s  (%d file%s, %s)" % (names[g], s["files"], "" if s["files"] == 1 else "s",
+                            self._size_text(s["bytes"])), variable=var, style="Panel.TCheckbutton").pack(anchor="w", pady=2)
+        if not self.rs_pick:
+            self.rs_note.configure(text="This backup is empty.")
+            return
+        self.label(self.rs_box, "Close Omni on the PS5 first: Omni keeps these files in memory and saves its own copy over "
+                                "them when it closes. The files they replace stay on the PS5 beside them as backups "
+                                "(.before-setup-…).", "small", wrap=640).pack(anchor="w", pady=(10, 4))
+        self.rs_closed = tk.BooleanVar(value=False)
+        ttk.Checkbutton(self.rs_box, text="Omni is closed on the PS5", variable=self.rs_closed,
+                        command=lambda: self.next_btn.configure(state="normal" if self.rs_closed.get() else "disabled")
+                        ).pack(anchor="w")
+
+    def _rs_start(self):
+        groups = [g for g, v in self.rs_pick.items() if v.get()]
+        if not groups:
+            messagebox.showinfo(config.APP_NAME, "Tick at least one thing to restore.")
+            return
+        if not self.rs_closed.get():
+            return
+        self.next_btn.configure(state="disabled")
+        self.back_btn.configure(state="disabled")
+        for w in self.rs_box.winfo_children():
+            w.destroy()
+        self.rs_note.configure(text="Putting the backup on the PS5…", fg=C["muted"])
+        host, path = self.host.get().strip(), self.rs_path
+        self.run_bg(lambda: self._do_restore(host, path, groups), self._rs_done)
+
+    def _do_restore(self, host, path, groups):
+        with self.console(host) as c:
+            return backup.restore(c, path, groups)
+
+    def _rs_done(self, r, err):
+        if not self.rs_box.winfo_exists():
+            return
+        self.back_btn.configure(state="normal")
+        self.next_btn.configure(text="Done", state="normal", command=lambda: self.show(self.step))
+        if err:
+            self.rs_note.configure(text="Couldn't restore the backup: %s" % err, fg=C["bad"])
+            return
+        lines = ["Restored %d file%s." % (r["written"], "" if r["written"] == 1 else "s")]
+        if r["same"]:
+            lines.append("%d %s already the same." % (r["same"], "was" if r["same"] == 1 else "were"))
+        self.rs_note.configure(text="\n".join(lines), fg=C["text"])
+        tip = "Start Omni to use them."
+        if "downloads" in r["groups"]:
+            tip += " The Downloads list comes back the next time the Downloads app starts (restart the PS5)."
+        if r["written"]:
+            tip += " The files they replaced were kept on the PS5 beside them (%s)." % r["parked_suffix"].lstrip(".")
+        self.label(self.rs_box, tip, "small", wrap=640).pack(anchor="w")
 
     # -- 4. choose ---------------------------------------------------------------
     def page_choose(self):
