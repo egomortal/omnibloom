@@ -1,257 +1,384 @@
-"""Collect a diagnostics report from the PS5 for bug reports, with personal data removed.
+"""Collect a diagnostics bundle from the PS5 for bug reports, with personal data redacted.
 
-Setup reads only technical files over FTP (Omni's start and crash logs, the Media downloads log, app versions and status,
-setting flags), removes anything that could identify the user or what they browsed (web addresses, site names, IP
-addresses, e-mail addresses, tokens and passwords), and saves one zip on this computer, by default in the Downloads
-folder. Nothing is uploaded anywhere: the user looks at the zip and attaches it to a GitHub issue themselves.
+Setup reads only technical files over FTP (Omni's title, starter, crash and video logs, the Media downloads log,
+Bloom Core's logs, status and app receipts, the downloader engine's trace), keeps the newest 2 MB of each log, runs
+everything through redaction.Redactor (web addresses, IP/MAC/e-mail addresses, tokens, home folders and user names),
+and saves one zip on this computer. Nothing is uploaded: the user looks at the preview, saves the zip and attaches it
+to a GitHub issue themselves.
 
-Never read: browsing history, bookmarks, cookies, saved passwords, form data, downloads, the browser profile, or any
-file the user saved.
+Two steps so the window can show what will be saved first:
+    bundle = gather(console)          # reads the PS5, redacts, keeps everything in memory
+    preview(bundle), file_list(bundle)
+    save(bundle, path)                # writes path.part, then renames it (no half zip is ever left)
+collect() does both (the CLI and the older one-click job use it).
+
+Never read (enforced by content_allowed() on every read, and tested): bookmarks, history, passwords, cookies, the
+browser profile, the reading list, keyboard words, sessions, apps.json, screenshots, downloads, uploads, autofill,
+the downloader's saved state, and the content of any *.txt settings file (only its name is listed).
 """
 import datetime
-import io
+import fnmatch
 import json
 import os
 import posixpath
-import re
 import zipfile
 
 from . import config
+from .redaction import RULES, Redactor, pc_user_names
 
-# Files and folders read from the PS5. Each file is capped (the newest part of a log is kept).
-FILE_CAP = 512 * 1024
-FILES = (
-    ("omni/boot.log", "/data/omni/native/boot.log"),
-    ("omni/crash.log", "/data/omni/native/crash.log"),
-    ("omni/close-events.log", "/data/omni/native/close-events.log"),
+FORMAT = "omnibloom-diagnostics"
+FORMAT_VERSION = 2
+LOG_CAP = 2 * 1024 * 1024           # newest 2 MB of each log
+JSON_CAP = 256 * 1024               # status / receipt files are small; anything bigger is skipped
+TOTAL_CAP = 32 * 1024 * 1024        # the whole bundle, before compression
+FOLDER_MAX_FILES = 16
+MANIFEST_NAME = "manifest.json"
+
+NATIVE = "/data/omni/native/"
+DL_NATIVE = "/data/omni-downloader/jdownloader/native/"
+
+# Logs: (name in the zip, console path). Found by grepping the Omni sources (OmniNativeTitle.cpp, starter/main.c,
+# launcher-child.cpp, OmniGpuPresent.cpp, OmniGpuVideo.cpp, apply_media_diag.py, the JDownloader adaptation patch).
+LOGS = (
+    ("omni/boot.log", NATIVE + "boot.log"),                 # the title process's own log
+    ("omni/starter.log", NATIVE + "starter.log"),
+    ("omni/crash.log", NATIVE + "crash.log"),               # crash marker + details (crash-diagnostics.flag)
+    ("omni/close-events.log", NATIVE + "close-events.log"),
+    ("omni/gpu-present.log", NATIVE + "gpu-present.log"),
+    ("omni/gpu-video.log", NATIVE + "gpu-video.log"),
+    ("omni/video-fps.log", NATIVE + "video-fps.log"),
     ("omni/media-downloads.log", "/data/omni/media-downloads.log"),
-    ("omni/dark-style.txt", "/data/omni/dark-style.txt"),
-    ("omni/video-hdr-preference.txt", config.OMNI_HDR_PREF),
-    ("bloom-core/status.json", "/data/hub/status.json"),
-    ("payload-manager/autoload.txt", config.AUTOLOAD_PATH),
+    ("omni-downloader/java25-vm-trace.log", DL_NATIVE + "java25-vm-trace.log"),
 )
-FOLDERS = (   # every *.json in these (small, technical)
+# Folders of logs: (zip prefix, console folder, name patterns). Newest-named first, at most FOLDER_MAX_FILES each.
+LOG_FOLDERS = (
+    ("bloom-core/logs", config.LOGS_DIR.rstrip("/"), ("*.log",)),
+    ("bloom-core/crash", config.CRASH_DIR.rstrip("/"), ("*.log", "*.json")),
+)
+# Small technical JSON (status, which apps run on which port, install receipts with versions).
+JSON_FILES = (("bloom-core/status.json", "/data/hub/status.json"),)
+JSON_FOLDERS = (
     ("bloom-core/runtime", "/data/hub/runtime"),
-    ("bloom-core/receipts", "/data/hub/receipts"),
     ("bloom-core/apps", "/data/hub/apps"),
+    ("bloom-core/receipts", "/data/hub/receipts"),
 )
-NAMES_ONLY = (   # only the names of these folders' entries, never their contents
-    ("omni/flags.txt", "/data/omni", lambda n: n.endswith(".flag") or n in ("omni-engine.elf",)),
-    ("omni/addons.txt", "/data/homebrew/" + config.TITLE_ID + "/addons", lambda n: True),
+# The one settings-style text file whose content is read: the payload loader's list (payload paths only).
+TEXT_ALLOWED = (config.AUTOLOAD_PATH,)
+TEXT_FILES = (("payload-manager/autoload.txt", config.AUTOLOAD_PATH),)
+# Names only, never contents: (zip name, console folder, which names).
+NAMES_ONLY = (
+    ("omni/flags.txt", "/data/omni", ("*.flag",)),
+    ("omni/settings-files.txt", "/data/omni", ("*.txt",)),
+    ("omni/native-files.txt", "/data/omni/native", ("*",)),
+    ("omni/addons.txt", "/data/homebrew/" + config.TITLE_ID + "/addons", ("*",)),
 )
-NEVER = ("/data/omni/browser-profile", "/data/omni/downloads", "/data/omni/passwords", "/data/omni/vault",
-         "/data/omni/history", "/data/omni/bookmarks", "/data/mastercontrol", "/data/omni-downloader/state")
 
-# ---- redaction --------------------------------------------------------------------------------------------
-_KEEP_HOSTS = {"127.0.0.1", "localhost"}
-_URL = re.compile(r"\b([a-zA-Z][a-zA-Z0-9+.-]{1,15})://[^\s\"'<>()\]]+")
-_EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
-_IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
-# An IPv6 address (also shortened with "::") has a hex letter or at least 3 colons. Without that rule every log time
-# ("12:34:56") was redacted and counted as an address.
-_IPV6 = re.compile(r"(?<![\w:])(?:(?=[0-9a-fA-F:]*[a-fA-F])|(?=(?:[0-9a-fA-F]{0,4}:){3}))"
-                   r"[0-9a-fA-F]{0,4}(?::[0-9a-fA-F]{0,4}){2,7}(?![\w:])")
-_MEDIA_ID = re.compile(r"\b(vid|videoId|video_id|v|list|playlist)=([A-Za-z0-9_-]{6,})")   # what someone watched
-_MAC = re.compile(r"\b(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\b")
-_SECRET = re.compile(r"(?i)\b(token|key|secret|password|passwd|pass|cookie|auth|session|sid|signature|sig)(\s*[=:]\s*|\"\s*:\s*\")([^\s\",;&]+)")
-# A host name: labels of letters/digits/hyphens with a known-looking top-level label. File names (boot.log, hub.elf,
-# app.js) are left alone by requiring the last label not to be a common file extension.
-_FILE_EXT = {"log", "txt", "json", "elf", "prx", "bin", "js", "css", "html", "htm", "png", "jpg", "webp", "svg", "ttf",
-             "otf", "woff", "woff2", "flag", "cpp", "h", "inc", "py", "zip", "mp4", "webm", "conf", "pem", "so", "sprx",
-             "self", "tmp", "dat", "db", "ini", "md", "xml", "plist", "cfg", "new", "off", "bak", "lock", "map", "sh"}
-_HOST = re.compile(r"\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+([a-zA-Z]{2,24})\b")
+# Never read, never even listed by name.
+NEVER_DIRS = ("browser-profile", "downloads", "screenshots", "uploads", "reading-list", "vault", "passwords",
+              "history", "bookmarks", "cookies", "sessions")
+NEVER_NAMES = ("bookmarks*", "history*", "passwords*", "password*", "cookies*", "cookie*", "kb-words*", "session*",
+               "autofill*", "apps.json", "quick-access*", "reading-list*", "*.sqlite", "*.db", "*.png", "*.jpg",
+               "*.jpeg", "*.webp", "*.mp4", "*.webm", "*.mkv")
+NEVER_ROOTS = ("/data/omni-downloader/state", "/data/omni-downloader/downloads", "/data/mastercontrol",
+               "/user/home", "/data/omni/browser-profile")
+NEVER = ("bookmarks", "history", "passwords", "cookies", "browser-profile", "reading-list content", "kb-words",
+         "sessions", "apps.json", "contents of *.txt settings files (names only)", "screenshots", "downloads",
+         "uploads", "autofill", "the downloader's saved jobs and links")
 
 
-# Real web endings: every two-letter country code, plus the common generic ones. "download.url" or "theme.changed"
-# (Omnibloom intent names) and "file.before-s34" are not site names.
-_TLDS = {"com", "org", "net", "edu", "gov", "mil", "int", "info", "biz", "io", "app", "dev", "tv", "gg", "me", "co", "ai",
-         "xyz", "online", "site", "store", "shop", "blog", "news", "live", "video", "page", "cloud", "tech", "top", "club",
-         "art", "design", "media", "social", "games", "game", "chat", "link", "world", "today", "space", "studio", "wiki",
-         "fun", "pro", "mobi", "name", "asia", "travel", "jobs", "tel", "eu", "lol", "porn", "sex", "xxx", "adult", "cam"}
+def name_allowed(name):
+    n = name.lower()
+    return n not in NEVER_DIRS and not any(fnmatch.fnmatchcase(n, p) for p in NEVER_NAMES)
 
 
-def _host(match):
-    tld = match.group(1).lower()
-    if tld in _FILE_EXT or match.group(0).lower() in _KEEP_HOSTS:
-        return match.group(0)
-    if not (tld in _TLDS or (len(tld) == 2 and tld.isalpha())):
-        return match.group(0)
-    return "<site>"
+def path_allowed(path):
+    """May this path's name appear in the bundle? (Not about reading its content.)"""
+    p = posixpath.normpath(path).lower()
+    if any(p == r or p.startswith(r + "/") for r in NEVER_ROOTS):
+        return False
+    return all(name_allowed(part) for part in p.strip("/").split("/") if part)
 
 
-def _ip(match):
-    text = match.group(0)
-    parts = text.split(".")
-    if text in _KEEP_HOSTS or (len(parts) == 4 and parts[0] == "127"):
-        return text
-    if any(int(p) > 255 for p in parts):
-        return text   # a version number or similar, not an address
-    return "<ip>"
+def content_allowed(path):
+    """May Setup read this file's bytes? Never-list paths no; *.txt only when it's in TEXT_ALLOWED."""
+    if not path_allowed(path):
+        return False
+    if path.lower().endswith(".txt") and path not in TEXT_ALLOWED:
+        return False
+    return True
 
 
-def redact(text):
-    """Return (clean text, counts of what was removed)."""
-    counts = {}
+class _Reader:
+    """Every console read for a bundle goes through here: one listing per folder, the never-list checked first."""
 
-    def sub(pattern, repl, s, what):
-        out, n = pattern.subn(repl, s)
-        if n:
-            counts[what] = counts.get(what, 0) + n
-        return out
+    def __init__(self, console):
+        self.console = console
+        self.listings = {}
 
-    def url(m):
-        scheme = m.group(1).lower()
-        rest = m.group(0)[len(m.group(1)) + 3:]
-        host = re.split(r"[/:?#]", rest, maxsplit=1)[0].lower()
-        if host in _KEEP_HOSTS or host.startswith("127."):
-            # local Omnibloom pages: keep host, port and path, drop the query and fragment
-            return re.split(r"[?#]", m.group(0), maxsplit=1)[0]
-        return "<%s-address>" % scheme
+    def listing(self, folder):
+        if folder not in self.listings:
+            try:
+                self.listings[folder] = self.console.listing(folder) or {}
+            except Exception:
+                self.listings[folder] = {}
+        return self.listings[folder]
 
-    text = sub(_SECRET, lambda m: m.group(1) + m.group(2) + "<removed>", text, "passwords, tokens and keys")
-    text = sub(_URL, url, text, "web addresses")
-    text = sub(_MEDIA_ID, lambda m: m.group(1) + "=<removed>", text, "video and playlist IDs")
-    text = sub(_EMAIL, "<email>", text, "e-mail addresses")
-    text = sub(_MAC, "<mac>", text, "hardware addresses")
-    text = sub(_IPV6, "<ip6>", text, "IPv6 addresses")
-    def counted(fn, what):
-        def repl(m):
-            r = fn(m)
-            if r != m.group(0):
-                counts[what] = counts.get(what, 0) + 1
-            return r
-        return repl
+    def entry(self, path):
+        parent, name = posixpath.split(path)
+        return self.listing(parent).get(name)
 
-    text = _IPV4.sub(counted(_ip, "IP addresses"), text)
-    text = _HOST.sub(counted(_host, "site names"), text)
-    return text, counts
+    def read(self, path, cap, tail=True):
+        """(bytes, truncated). Logs keep their newest `cap` bytes; other files over `cap` raise ValueError."""
+        if not content_allowed(path):
+            raise PermissionError("not collected: " + path)
+        entry = self.entry(path) or {}
+        size = entry.get("size")
+        reader = getattr(self.console, "read_from", None)
+        if tail and isinstance(size, int) and size > cap and callable(reader):
+            data = reader(path, size - cap)
+        elif not tail and isinstance(size, int) and size > cap:
+            raise ValueError("too big")
+        else:
+            data = self.console.read(path)
+        if len(data) <= cap:
+            return data, bool(isinstance(size, int) and size > len(data) and tail and size > cap)
+        if not tail:
+            raise ValueError("too big")
+        cut = data[-cap:]
+        nl = cut.find(b"\n")
+        return (cut[nl + 1:] if 0 <= nl < 4096 else cut), True
 
 
-def _redact_json(raw):
-    """Redact a JSON file: values that look personal go, structure and technical values stay."""
+def _optional(console, name):
+    fn = getattr(console, name, None)
+    if not callable(fn):
+        return None
+    try:
+        return fn()
+    except Exception:
+        return None
+
+
+def _versions(console, setup_version):
+    from . import installer
+    try:
+        installed = installer.installed_apps(console)
+    except Exception:
+        installed = {}
+    apps = {}
+    for app_id, rec in sorted(installed.items()):
+        apps[app_id] = {k: rec.get(k) for k in ("name", "version", "package", "installed_at", "setup_version", "port")
+                        if rec.get(k) is not None}
+        if rec.get("history"):
+            apps[app_id]["earlier_versions"] = [h.get("version") for h in rec["history"] if isinstance(h, dict)]
+    free = _optional(console, "free_space")
+    firmware = _optional(console, "firmware")
+    return {
+        "setup_version": setup_version,
+        "installed_apps": apps,
+        "free_space_bytes": free,
+        "free_space_note": None if free is not None else "Setup's FTP connection can't measure free space.",
+        "firmware": firmware,
+        "firmware_note": None if firmware else "Setup doesn't read the firmware version (Omnibloom is tested on %s)."
+        % config.TESTED_FIRMWARE,
+    }
+
+
+def gather(console, setup_version=None, user_names=None, salt=None, log=lambda m: None):
+    """Read and redact everything; nothing is written. Returns a bundle dict for preview() and save()."""
+    setup_version = setup_version or config.SETUP_VERSION
+    users = list(user_names or ()) + pc_user_names()
+    red = Redactor(salt=salt, user_names=users)
+    rd = _Reader(console)
+    entries, skipped = [], []
+    total = [0]
+
+    def add(name, source, text, truncated=False):
+        data = text.encode("utf-8")
+        if total[0] + len(data) > TOTAL_CAP:
+            skipped.append("%s: left out (the bundle is already %d MB)" % (source, TOTAL_CAP // (1024 * 1024)))
+            return
+        total[0] += len(data)
+        entries.append({"name": name, "source": source, "bytes": len(data), "truncated": truncated, "text": text})
+
+    def take(name, source, cap, tail, json_file=False):
+        if not path_allowed(source) or not content_allowed(source):
+            return
+        entry = rd.entry(source)
+        if entry is None or entry.get("dir"):
+            skipped.append("%s: not on this PS5" % source)
+            return
+        try:
+            raw, cut = rd.read(source, cap, tail=tail)
+        except ValueError:
+            skipped.append("%s: left out (bigger than %d KB)" % (source, cap // 1024))
+            return
+        except Exception as e:     # one unreadable file never stops the bundle
+            skipped.append("%s: couldn't read (%s)" % (source, type(e).__name__))
+            return
+        text = raw.decode("utf-8", "replace")
+        if json_file:
+            text = _redact_json(text, red)
+        else:
+            text = red.redact(text)
+        add(name, source, text, cut)
+
+    for name, path in LOGS:
+        take(name, path, LOG_CAP, True)
+    for prefix, folder, patterns in LOG_FOLDERS:
+        names = sorted((n for n, e in rd.listing(folder).items()
+                        if not e.get("dir") and any(fnmatch.fnmatchcase(n.lower(), p) for p in patterns)
+                        and name_allowed(n)), reverse=True)
+        for n in names[:FOLDER_MAX_FILES]:
+            take(prefix + "/" + n, folder + "/" + n, LOG_CAP, True, json_file=n.endswith(".json"))
+        if len(names) > FOLDER_MAX_FILES:
+            skipped.append("%s: %d older files left out" % (folder, len(names) - FOLDER_MAX_FILES))
+    for name, path in JSON_FILES:
+        take(name, path, JSON_CAP, False, json_file=True)
+    for prefix, folder in JSON_FOLDERS:
+        for n, e in sorted(rd.listing(folder).items()):
+            if not e.get("dir") and n.endswith(".json") and name_allowed(n):
+                take(prefix + "/" + n, folder + "/" + n, JSON_CAP, False, json_file=True)
+    for name, path in TEXT_FILES:
+        take(name, path, JSON_CAP, False)
+    for name, folder, patterns in NAMES_ONLY:
+        found = sorted("%s%s" % (n, "/" if e.get("dir") else "") for n, e in rd.listing(folder).items()
+                       if name_allowed(n) and path_allowed(folder + "/" + n)
+                       and any(fnmatch.fnmatchcase(n.lower(), p) for p in patterns))
+        add(name, folder + " (names only)", red.redact("\n".join(found) + "\n" if found else "(none)\n"))
+    versions = _versions(console, setup_version)
+    add("versions.json", "receipts in " + config.RECEIPTS_DIR, _redact_json(json.dumps(versions), red))
+    bundle = {
+        "created": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "setup_version": setup_version,
+        "entries": entries,
+        "skipped": skipped,
+        "removed": dict(sorted(red.counts.items())),
+        "versions": versions,
+    }
+    log("Diagnostics: %d file(s) read, personal details removed: %s" % (
+        len(entries), ", ".join("%d %s" % (n, w) for w, n in bundle["removed"].items()) or "none found"))
+    return bundle
+
+
+def _redact_json(raw, red):
+    """Redact a JSON file: every string (keys that are site names too) goes through the redactor; numbers stay."""
     try:
         data = json.loads(raw)
     except ValueError:
-        return redact(raw)
-    counts = {}
+        return red.redact(raw)
 
-    def walk(v, key=""):
+    def walk(v):
         if isinstance(v, dict):
-            out = {}
-            for k, x in v.items():
-                if isinstance(k, str) and "." in k and _HOST.fullmatch(k) and _host(_HOST.fullmatch(k)) == "<site>":
-                    k = "<site>"; counts["site names"] = counts.get("site names", 0) + 1
-                out[k] = walk(x, k)
-            return out
+            return {red.redact(k) if isinstance(k, str) else k: walk(x) for k, x in v.items()}
         if isinstance(v, list):
-            return [walk(x, key) for x in v]
+            return [walk(x) for x in v]
         if isinstance(v, str):
-            clean, c = redact(v)
-            for what, n in c.items():
-                counts[what] = counts.get(what, 0) + n
-            return clean
+            return red.redact(v)
         return v
-    return json.dumps(walk(data), indent=1, ensure_ascii=False, sort_keys=True), counts
+    return json.dumps(walk(data), indent=1, ensure_ascii=False, sort_keys=True) + "\n"
 
 
-# ---- collection -------------------------------------------------------------------------------------------
+# ---- showing it -------------------------------------------------------------------------------------------
+def _size(n):
+    return "%.1f MB" % (n / 1048576.0) if n >= 1048576 else "%d KB" % ((n + 1023) // 1024)
+
+
+def file_list(bundle):
+    """One line per file that will be in the zip."""
+    lines = ["%s  (%s%s)" % (e["name"], _size(e["bytes"]), ", newest 2 MB only" if e["truncated"] else "")
+             for e in bundle["entries"]]
+    return lines + [MANIFEST_NAME, "README.txt"]
+
+
+def preview(bundle, lines=40, per_file=12):
+    """The first lines of the redacted logs, as they will be saved."""
+    out = []
+    for e in bundle["entries"]:
+        if not e["name"].endswith(".log") or not e["text"].strip():
+            continue
+        out.append("== %s ==" % e["name"])
+        out.extend(e["text"].splitlines()[:per_file])
+        if len(out) >= lines:
+            break
+    if not out:
+        out = ["(no Omni logs on this PS5 yet)"]
+    return "\n".join(out[:lines])
+
+
+# ---- saving -----------------------------------------------------------------------------------------------
 def default_folder():
     home = os.path.expanduser("~")
     downloads = os.path.join(home, "Downloads")
     return downloads if os.path.isdir(downloads) else home
 
 
-def _tail(data, cap=FILE_CAP):
-    if len(data) <= cap:
-        return data, False
-    cut = data[-cap:]
-    nl = cut.find(b"\n")
-    return (cut[nl + 1:] if 0 <= nl < 4096 else cut), True
+def default_path(folder=None, now=None):
+    stamp = (now or datetime.datetime.now()).strftime("%Y%m%d-%H%M%S")
+    return os.path.join(folder or default_folder(), "omnibloom-diagnostics-%s.zip" % stamp)
 
 
-def collect(console, out_path=None, setup_version="", log=print):
-    """Read the technical files, redact them, write a zip. Returns the zip's path."""
-    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    out_path = out_path or os.path.join(default_folder(), "omnibloom-diagnostics-%s.zip" % stamp)
-    totals, notes, included = {}, [], []
-
-    def add(z, name, text, counts, cut=False):
-        z.writestr(name, text)
-        included.append(name + (" (newest part only)" if cut else ""))
-        for what, n in counts.items():
-            totals[what] = totals.get(what, 0) + n
-
-    def safe(path):
-        return not any(path == p or path.startswith(p + "/") for p in NEVER)
-
-    with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as z:
-        for name, path in FILES:
-            if not safe(path):
-                continue
-            try:
-                if not console.exists(path):
-                    notes.append("%s: not on this PS5" % path); continue
-                raw, cut = _tail(console.read(path))
-            except Exception as e:   # one unreadable file never stops the report
-                notes.append("%s: couldn't read (%s)" % (path, type(e).__name__)); continue
-            text = raw.decode("utf-8", "replace")
-            clean, counts = _redact_json(text) if name.endswith(".json") else redact(text)
-            add(z, name, clean, counts, cut)
-        for prefix, folder in FOLDERS:
-            try:
-                entries = console.listing(folder)
-            except Exception:
-                entries = {}
-            for fname, info in sorted(entries.items()):
-                if info.get("dir") or not fname.endswith(".json") or info.get("size", 0) > FILE_CAP:
-                    continue
-                path = folder + "/" + fname
-                if not safe(path):
-                    continue
-                try:
-                    clean, counts = _redact_json(console.read(path).decode("utf-8", "replace"))
-                except Exception as e:
-                    notes.append("%s: couldn't read (%s)" % (path, type(e).__name__)); continue
-                add(z, prefix + "/" + fname, clean, counts)
-        for name, folder, keep in NAMES_ONLY:
-            try:
-                entries = console.listing(folder)
-            except Exception:
-                entries = {}
-            lines = sorted("%s%s" % (n, "/" if e.get("dir") else "") for n, e in entries.items() if keep(n))
-            add(z, name, "\n".join(lines) + "\n", {})
-        summary = {
-            "what": "Omnibloom diagnostics report. Technical logs only, with personal data removed. Nothing was uploaded.",
-            "created": datetime.datetime.now().isoformat(timespec="seconds"),
-            "setup_version": setup_version,
-            "included": included,
-            "removed": totals,
-            "skipped": notes,
-            "never_read": list(NEVER) + ["browsing history, bookmarks, cookies, saved passwords, form data, your downloads"],
-        }
-        z.writestr("README.txt", _readme(summary))
-        z.writestr("summary.json", json.dumps(summary, indent=1))
-    log("Diagnostics saved to %s" % out_path)
-    if totals:
-        log("Removed: " + ", ".join("%d %s" % (n, w) for w, n in sorted(totals.items())))
-    return out_path
+def manifest(bundle):
+    return {
+        "format": FORMAT,
+        "version": FORMAT_VERSION,
+        "created": bundle["created"],
+        "setup_version": bundle["setup_version"],
+        "what": "Omnibloom diagnostics: technical logs and versions from a PS5, personal data redacted. "
+                "Made on the user's PC; nothing was uploaded.",
+        "files": [{"name": e["name"], "source": e["source"], "bytes": e["bytes"], "newest_part_only": e["truncated"]}
+                  for e in bundle["entries"]],
+        "skipped": bundle["skipped"],
+        "redaction_rules": list(RULES),
+        "removed": bundle["removed"],
+        "never_collected": list(NEVER),
+        "caps": {"log_bytes": LOG_CAP, "json_bytes": JSON_CAP, "total_bytes": TOTAL_CAP},
+    }
 
 
-def _readme(s):
+def save(bundle, dest):
+    """Write the zip to dest (via dest.part, renamed when complete). Returns dest."""
+    os.makedirs(os.path.dirname(os.path.abspath(dest)), exist_ok=True)
+    part = dest + ".part"
+    try:
+        with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
+            for e in bundle["entries"]:
+                z.writestr(e["name"], e["text"])
+            z.writestr(MANIFEST_NAME, json.dumps(manifest(bundle), indent=1, ensure_ascii=False) + "\n")
+            z.writestr("README.txt", _readme(bundle))
+        os.replace(part, dest)
+    finally:
+        if os.path.exists(part):
+            os.remove(part)
+    return dest
+
+
+def collect(console, out_path=None, setup_version="", log=print, user_names=None):
+    """gather() + save() in one go. Returns the zip's path."""
+    bundle = gather(console, setup_version=setup_version, user_names=user_names, log=lambda m: None)
+    path = save(bundle, out_path or default_path())
+    log("Diagnostics saved to %s" % path)
+    if bundle["removed"]:
+        log("Removed: " + ", ".join("%d %s" % (n, w) for w, n in bundle["removed"].items()))
+    return path
+
+
+def _readme(b):
     lines = [
-        "Omnibloom diagnostics report",
+        "Omnibloom diagnostics bundle",
         "",
-        "This zip was made by Omnibloom Setup on your computer. Nothing was sent anywhere.",
-        "It holds technical logs and settings from your PS5, with personal details replaced:",
-        "web addresses, site names, IP addresses, e-mail addresses, passwords and tokens.",
+        "Made by Omnibloom Setup on your computer. Nothing was sent anywhere.",
+        "It holds technical logs and versions from your PS5, with personal details replaced:",
+        "web addresses, site names, IP, MAC and e-mail addresses, passwords, tokens, home folders and user names.",
         "Open the files to check before you share it. To report a bug, attach this zip to an issue at",
         "https://github.com/egomortal/omnibloom/issues",
         "",
-        "Created: %s   Setup: %s" % (s["created"], s["setup_version"] or "-"),
+        "Created: %s   Setup: %s" % (b["created"], b["setup_version"] or "-"),
         "",
         "Included:",
-    ] + ["  " + x for x in s["included"]] + ["", "Removed:"] + (
-        ["  %d %s" % (n, w) for w, n in sorted(s["removed"].items())] or ["  nothing personal was found"]) + [
-        "", "Not on this PS5 or unreadable:"] + (["  " + x for x in s["skipped"]] or ["  -"]) + [
-        "", "Never read:"] + ["  " + x for x in s["never_read"]] + [""]
+    ] + ["  " + x for x in file_list(b)[:-2]] + ["", "Removed:"] + (
+        ["  %d %s" % (n, w) for w, n in b["removed"].items()] or ["  nothing personal was found"]) + [
+        "", "Not on this PS5, left out or unreadable:"] + (["  " + x for x in b["skipped"]] or ["  -"]) + [
+        "", "Redaction rules:"] + ["  - " + r for r in RULES] + [
+        "", "Never collected:"] + ["  " + x for x in NEVER] + [""]
     return "\n".join(lines)

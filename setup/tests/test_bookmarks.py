@@ -257,5 +257,230 @@ class Console_(unittest.TestCase):
         self.assertEqual(bookmarks.omni_entries(data)[0][0], b.pop().url.encode())
 
 
+B = bookmarks.Bookmark
+
+
+class Folders(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="omnibloom-bmf-")
+
+    def tearDown(self):
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_chromium_keeps_one_folder_level(self):
+        chromium_profile(self.home, "Default",
+                         [url_node("https://top.example/", "Top"),
+                          {"type": "folder", "name": "News", "children": [
+                              url_node("https://n1.example/", "N1"),
+                              {"type": "folder", "name": "Deeper", "children": [url_node("https://n2.example/", "N2")]}]}],
+                         [{"type": "folder", "name": "x" * 60, "children": [url_node("https://o.example/", "O")]}])
+        got = bookmarks.read_chromium(os.path.join(self.home, "Default", "Bookmarks"))
+        self.assertEqual([(b.url, b.folder) for b in got],
+                         [("https://top.example/", ""), ("https://n1.example/", "News"), ("https://n2.example/", "News"),
+                          ("https://o.example/", "x" * 60)])
+        src = bookmarks.Source("Chrome", "D", os.path.join(self.home, "Default", "Bookmarks"), "chromium")
+        self.assertEqual(bookmarks.collect([src])[-1].folder, "x" * config.OMNI_BOOKMARK_FOLDER_MAX)
+
+    def test_firefox_keeps_one_folder_level(self):
+        prof = os.path.join(self.home, "ff")
+        firefox_profile(prof, [("https://t.example/", "T"),
+                               ([("https://a.example/", "A"), ([("https://b.example/", "B")], "Inner")], "Work")])
+        got = bookmarks.read_firefox(os.path.join(prof, "places.sqlite"))
+        self.assertEqual([(b.url, b.folder) for b in got],
+                         [("https://t.example/", ""), ("https://a.example/", "Work"), ("https://b.example/", "Work")])
+
+    def test_folder_names_cleaned_and_cut_on_a_character(self):
+        self.assertEqual(bookmarks.clean_folder("a\tb\nc"), "a b c")
+        f = bookmarks.clean_folder("é" * 30)
+        self.assertEqual(f, "é" * 20)
+        self.assertLessEqual(len(f.encode()), config.OMNI_BOOKMARK_FOLDER_MAX)
+
+
+class UrlKey(unittest.TestCase):
+    def test_same_page(self):
+        k = bookmarks.url_key
+        same = ["https://Example.COM/path", "https://example.com/path/", "https://example.com:443/path",
+                "https://example.com/path?utm_source=x&utm_Medium=y", "https://example.com/path/?fbclid=1",
+                b"https://EXAMPLE.com/path?gclid=2"]
+        self.assertEqual({k(u) for u in same}, {"https://example.com/path"})
+        self.assertEqual(k("https://example.com/"), k("https://example.com"))
+        self.assertEqual(k("https://a.example/p?id=3&utm_campaign=z"), "https://a.example/p?id=3")
+
+    def test_different_pages(self):
+        k = bookmarks.url_key
+        self.assertNotEqual(k("https://a.example/Path"), k("https://a.example/path"))     # paths keep their case
+        self.assertNotEqual(k("https://a.example/p?id=1"), k("https://a.example/p?id=2"))
+        self.assertNotEqual(k("http://a.example/"), k("https://a.example/"))
+        self.assertNotEqual(k("https://a.example/#x"), k("https://a.example/#y"))
+        self.assertEqual(k("not a url"), "not a url")
+
+
+def sync_console(lines):
+    return Console({PATH: lines}) if lines is not None else Console()
+
+
+class Sync(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="omnibloom-sync-")
+        self.logs = []
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def out(self, name="omni.html"):
+        return os.path.join(self.dir, name)
+
+    def sync(self, console, pc, **kw):
+        plan = bookmarks.plan_sync(pc, bookmarks.read_console_file(console))
+        return plan, bookmarks.apply_sync(console, plan, export_path=kw.pop("export_path", self.out()),
+                                          log=self.logs.append, **kw)
+
+    def test_round_trip_with_folder_column(self):
+        c = sync_console(b"https://omni.example/\tOmni page\tReading\n")
+        pc = [B("https://pc.example/", "PC page", True, "News"), B("https://loose.example/", "Loose", False)]
+        plan, r = self.sync(c, pc)
+        self.assertEqual((r["added"], r["exported"], r["no_room"]), (2, 1, 0))
+        self.assertEqual(c.files[PATH], b"https://omni.example/\tOmni page\tReading\n"
+                                        b"https://pc.example/\tPC page\tNews\nhttps://loose.example/\tLoose\n")
+        back = bookmarks.console_bookmarks(c.files[PATH])
+        self.assertEqual([(b.url, b.title, b.folder) for b in back],
+                         [("https://omni.example/", "Omni page", "Reading"), ("https://pc.example/", "PC page", "News"),
+                          ("https://loose.example/", "Loose", "")])
+        self.assertEqual(bookmarks.omni_entries(c.files[PATH])[1], (b"https://pc.example/", b"PC page"))
+        with open(self.out(), encoding="utf-8") as f:
+            page = f.read()
+        self.assertIn("<H3>Reading</H3>", page)
+        self.assertIn('<A HREF="https://omni.example/">Omni page</A>', page)
+        # A second sync (with the exported page now on the PC too) has nothing to do.
+        again = bookmarks.plan_sync(pc + [B("https://omni.example/", "Omni page", False, "Reading")], c.files[PATH])
+        self.assertEqual((again.to_console, again.to_pc, again.in_both), ([], [], 3))
+
+    def test_old_two_column_file(self):
+        old = b"https://a.example/\tA\r\nhttps://b.example/\n"
+        c = sync_console(old)
+        plan, r = self.sync(c, [B("https://c.example/", "C", False, "F")])
+        self.assertEqual([(b.url, b.title, b.folder) for b in plan.to_pc],
+                         [("https://a.example/", "A", ""), ("https://b.example/", "", "")])
+        self.assertTrue(c.files[PATH].startswith(old))
+        self.assertTrue(c.files[PATH].endswith(b"https://c.example/\tC\tF\n"))
+        parked = [p for p in c.files if p.startswith(PATH + ".before-setup-")]
+        self.assertEqual([c.files[p] for p in parked], [old])
+        with open(self.out(), encoding="utf-8") as f:
+            self.assertIn('<A HREF="https://b.example/">https://b.example/</A>', f.read())
+
+    def test_malformed_lines(self):
+        data = (b"\n\tno url\njavascript:alert(1)\tJS\nnot-a-url\nhttps://ok.example/\tOK\tFolder\textra\tcols\n"
+                b"https://nul.example/\tN\x00ignored\nhttps://bad\xff.example/\tbad bytes\n")
+        plan = bookmarks.plan_sync([], data)
+        self.assertEqual(plan.not_web, 2)          # javascript: and the bare word
+        self.assertEqual([(b.url, b.title, b.folder) for b in plan.to_pc][:2],
+                         [("https://ok.example/", "OK", "Folder"), ("https://nul.example/", "N", "")])
+        self.assertEqual(len(plan.to_pc), 3)
+        self.assertNotIn("\x00", "".join(b.url + b.title for b in plan.to_pc))
+
+    def test_duplicates(self):
+        c = sync_console(b"https://Dup.example/a/\tOne\nhttps://dup.example/a?utm_source=x\tTwo\nhttps://only.example/\tO\n"
+                         b"https://only.example\tO again\n")
+        pc = [B("https://dup.example/a", "pc", True), B("https://new.example/?utm_medium=m", "N", False),
+              B("https://NEW.example", "N2", False)]
+        plan, r = self.sync(c, pc)
+        self.assertEqual(plan.in_both, 1)
+        self.assertEqual([b.url for b in plan.to_console], ["https://new.example/?utm_medium=m"])
+        self.assertEqual([b.url for b in plan.to_pc], ["https://only.example/"])
+        self.assertEqual(r["added"], 1)
+        # The one-way import also matches by page now: nothing new to add.
+        self.assertEqual(bookmarks.import_to_console(c, [B("https://new.example", "x", False)])["added"], 0)
+
+    def test_cap_of_500(self):
+        old = b"".join(b"https://old%d.example/\tOld\n" % i for i in range(495))
+        c = sync_console(old)
+        plan, r = self.sync(c, marks(10, bar=True))
+        self.assertEqual((len(plan.to_console), plan.cap_skipped), (5, 5))
+        self.assertEqual((r["added"], r["no_room"], r["total"]), (5, 5, 500))
+        self.assertEqual(len(bookmarks.omni_entries(c.files[PATH])), 500)
+        self.assertEqual(r["exported"], 495)                # the cap is Omni's: the PC side gets them all
+        full = bookmarks.plan_sync(marks(3, 100), c.files[PATH])
+        self.assertEqual((full.to_console, full.cap_skipped), ([], 3))
+
+    def test_console_changed_after_preview(self):
+        c = sync_console(b"https://a.example/\tA\n")
+        plan = bookmarks.plan_sync([B("https://b.example/", "B", False)], c.files[PATH])
+        c.files[PATH] += b"https://b.example/\tB saved in Omni meanwhile\nhttps://z.example/\tZ\n"
+        before = c.files[PATH]
+        r = bookmarks.apply_sync(c, plan, export_path=self.out())
+        self.assertEqual((r["added"], r["already"]), (0, 1))
+        self.assertEqual(c.files[PATH], before)               # kept as it was, no duplicate added
+
+    def test_html_escaping(self):
+        nasty = [B('https://e.example/?a=1&b="2"&c=<3>', '<script>alert("x")</script> & \'q\'', False, "F<o>&\"lder"),
+                 B("https://e.example/plain", "", False)]
+        page = bookmarks.export_html(nasty).decode("utf-8")
+        self.assertNotIn("<script>", page)
+        self.assertIn("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; &#x27;q&#x27;", page)
+        self.assertIn('HREF="https://e.example/?a=1&amp;b=&quot;2&quot;&amp;c=&lt;3&gt;"', page)
+        self.assertIn("<H3>F&lt;o&gt;&amp;&quot;lder</H3>", page)
+        self.assertTrue(page.startswith("<!DOCTYPE NETSCAPE-Bookmark-file-1>"))
+        # Read back with an HTML parser: the same addresses and titles come out.
+        import html.parser
+
+        class P(html.parser.HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.links, self.cur = [], None
+
+            def handle_starttag(self, tag, attrs):
+                if tag == "a":
+                    self.cur = [dict(attrs)["href"], ""]
+
+            def handle_data(self, d):
+                if self.cur is not None:
+                    self.cur[1] += d
+
+            def handle_endtag(self, tag):
+                if tag == "a":
+                    self.links.append(tuple(self.cur))
+                    self.cur = None
+
+        p = P()
+        p.feed(page)
+        self.assertEqual(p.links, [(nasty[0].url, nasty[0].title), (nasty[1].url, nasty[1].url)])
+
+    def test_export_never_overwrites_or_touches_profiles(self):
+        first = bookmarks.default_export_path(self.dir)
+        bookmarks.write_export(first, marks(1))
+        second = bookmarks.default_export_path(self.dir)
+        self.assertNotEqual(first, second)
+        self.assertTrue(second.endswith("-2.html"))
+        with self.assertRaises(FileExistsError):
+            bookmarks.write_export(first, marks(2))
+        prof = os.path.join(self.dir, "Default")
+        os.makedirs(prof)
+        src = bookmarks.Source("Chrome", "D", os.path.join(prof, "Bookmarks"), "chromium")
+        for bad in (os.path.join(prof, "Bookmarks"), os.path.join(self.dir, "places.sqlite"), os.path.join(self.dir, "x.txt")):
+            with self.assertRaises(ValueError):
+                bookmarks.write_export(bad, marks(1))
+        with self.assertRaises(ValueError):
+            bookmarks.write_export(os.path.join(prof, "export.html"), marks(1), [src])
+        self.assertEqual(os.listdir(prof), [])
+
+    def test_logs_and_plan_hold_counts_only(self):
+        c = sync_console(b"https://secret-omni.example/\tPrivate title\tPrivate folder\n")
+        plan, r = self.sync(c, [B("https://secret-pc.example/", "My bank", False, "Money")])
+        text = " ".join(self.logs) + repr(plan)
+        for word in ("secret", "Private", "bank", "Money", "example"):
+            self.assertNotIn(word, text)
+        self.assertEqual(len(self.logs), 1)
+
+    def test_nothing_to_do_writes_nothing(self):
+        c = sync_console(b"https://a.example/\tA\n")
+        plan, r = self.sync(c, [B("https://A.example", "a", True)])
+        self.assertEqual((r["added"], r["exported"]), (0, 0))
+        self.assertEqual(c.files, {PATH: b"https://a.example/\tA\n"})
+        self.assertEqual(os.listdir(self.dir), [])
+        fresh = Console()
+        plan, r = self.sync(fresh, [])
+        self.assertEqual((fresh.files, r["total"]), ({}, 0))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -517,14 +517,18 @@ class SetupApp:
         ttk.Button(actions, text="Check again", style="Ghost.TButton", command=lambda: self.show(self.step)).pack(side="left")
         if self.installed:
             ttk.Button(actions, text="Installed apps…", style="Ghost.TButton", command=self.page_manage).pack(side="left", padx=8)
-        # Technical logs only, personal data removed, saved to Downloads: for bug reports (nothing is uploaded)
-        ttk.Button(actions, text="Collect diagnostics…", style="Ghost.TButton",
-                   command=lambda: self._start_job({"mode": "diagnostics"})).pack(side="left", padx=8)
+        # Technical logs only, personal data redacted, previewed, saved on this PC: for bug reports (nothing is uploaded)
+        ttk.Button(actions, text="Save a diagnostics bundle…", style="Ghost.TButton",
+                   command=self.page_diagnostics).pack(side="left", padx=8)
         more = tk.Frame(self.check_box, bg=C["ground"])
         more.pack(fill="x")
         ttk.Button(more, text="Import bookmarks from this PC…", style="Ghost.TButton", command=self.page_bookmarks).pack(side="left")
+        ttk.Button(more, text="Sync bookmarks…", style="Ghost.TButton",
+                   command=lambda: self.page_bookmarks(sync=True)).pack(side="left", padx=(8, 0))
         ttk.Button(more, text="Back up Omni…", style="Ghost.TButton", command=self.page_backup).pack(side="left", padx=8)
         ttk.Button(more, text="Restore Omni backup…", style="Ghost.TButton", command=self.page_restore).pack(side="left")
+        ttk.Button(more, text="Export reading list…", style="Ghost.TButton",
+                   command=self.page_reading_list).pack(side="left", padx=(8, 0))
         if self.summary["can_install"]:
             self.next_btn.configure(state="normal")
 
@@ -584,11 +588,13 @@ class SetupApp:
         self.show(5)
 
     # -- bookmarks from this PC (from the check page) -------------------------------
-    def page_bookmarks(self):
+    def page_bookmarks(self, sync=False):
         self._clear()
-        self.next_btn.configure(text="Import", state="disabled", command=self._bm_import)
+        self.bm_sync = sync
+        self.next_btn.configure(text="Preview" if sync else "Import", state="disabled",
+                                command=self._bm_preview if sync else self._bm_import)
         self.back_btn.configure(state="normal", command=lambda: self.show(self.step))
-        self.label(self.body, "Import bookmarks", "title").pack(anchor="w")
+        self.label(self.body, "Sync bookmarks" if sync else "Import bookmarks", "title").pack(anchor="w")
         self.bm_note = self.label(self.body, "Looking for bookmarks on this PC…", "muted")
         self.bm_note.pack(anchor="w", pady=(2, 12))
         self.bm_box = tk.Frame(self.body, bg=C["ground"])
@@ -604,7 +610,7 @@ class SetupApp:
             self.bm_note.configure(text="No Chrome, Edge, Brave or Firefox bookmarks found on this PC.")
             return
         self.bm_sources = sources
-        self.bm_note.configure(text="Pick the ones to add to Omni:")
+        self.bm_note.configure(text="Pick the ones to sync with Omni:" if self.bm_sync else "Pick the ones to add to Omni:")
         p = self.panel(self.bm_box)
         p.pack(fill="x")
         for s in sources:
@@ -616,10 +622,125 @@ class SetupApp:
                 text = "%s  (%d bookmark%s)" % (s.label, s.count, "" if s.count == 1 else "s")
             ttk.Checkbutton(p, text=text, variable=var, style="Panel.TCheckbutton",
                             state="disabled" if s.error or not s.count else "normal").pack(anchor="w", pady=2)
-        self.label(self.bm_box, "They're added after the bookmarks already in Omni; none are removed or changed. Omni keeps "
-                                "up to %d, bookmarks-bar ones first. Only web pages are added. If Omni is open on the PS5, "
-                                "close it first." % config.OMNI_BOOKMARK_MAX, "small", wrap=640).pack(anchor="w", pady=(10, 0))
+        if self.bm_sync:
+            text = ("Next you'll see what would change, before anything is written. Bookmarks only on this PC are added "
+                    "to Omni (up to %d in all); bookmarks only in Omni are saved to an HTML file you can import in your "
+                    "browser. Nothing is removed on either side." % config.OMNI_BOOKMARK_MAX)
+        else:
+            text = ("They're added after the bookmarks already in Omni; none are removed or changed. Omni keeps "
+                    "up to %d, bookmarks-bar ones first. Only web pages are added. If Omni is open on the PS5, "
+                    "close it first." % config.OMNI_BOOKMARK_MAX)
+        self.label(self.bm_box, text, "small", wrap=640).pack(anchor="w", pady=(10, 0))
         self.next_btn.configure(state="normal")
+
+    # -- two-way sync: preview, then confirm --
+    def _bm_chosen(self):
+        chosen = [s for s, v in zip(self.bm_sources, self.bm_pick) if v.get()]
+        if not chosen:
+            messagebox.showinfo(config.APP_NAME, "Tick at least one browser.")
+        return chosen
+
+    def _bm_busy(self, note):
+        self.next_btn.configure(state="disabled")
+        self.back_btn.configure(state="disabled")
+        for w in self.bm_box.winfo_children():
+            w.destroy()
+        self.bm_note.configure(text=note, fg=C["muted"])
+
+    def _bm_preview(self):
+        chosen = self._bm_chosen()
+        if not chosen:
+            return
+        self.bm_chosen_sources = chosen
+        self._bm_busy("Comparing this PC's bookmarks with Omni's…")
+        host = self.host.get().strip()
+
+        def work():
+            marks = bookmarks.collect(chosen)      # read on this PC; sent only to the PS5
+            with self.console(host) as c:
+                return bookmarks.plan_sync(marks, bookmarks.read_console_file(c))
+        self.run_bg(work, self._bm_previewed)
+
+    def _bm_list(self, title, marks, more_note=""):
+        p = self.panel(self.bm_box)
+        p.pack(fill="x", pady=(0, 6))
+        self.label(p, title, "head", bg=C["panel"]).pack(anchor="w")
+        show = 6
+        for b in marks[:show]:
+            text = (b.title or b.url) + ("   (%s)" % b.folder if b.folder else "")
+            self.label(p, text, "small", bg=C["panel"], wrap=620).pack(anchor="w")
+        if len(marks) > show:
+            self.label(p, "…and %d more" % (len(marks) - show), "small", bg=C["panel"]).pack(anchor="w")
+        if more_note:
+            self.label(p, more_note, "small", bg=C["panel"], wrap=620).pack(anchor="w", pady=(4, 0))
+
+    def _bm_previewed(self, plan, err):
+        if not self.bm_box.winfo_exists():
+            return
+        self.back_btn.configure(state="normal")
+        if err:
+            self.bm_note.configure(text="Couldn't read Omni's bookmarks from the PS5: %s" % err, fg=C["bad"])
+            return
+        self.bm_plan = plan
+        if not plan.to_console and not plan.to_pc:
+            text = "Nothing to sync: Omni and this PC have the same bookmarks."
+            if plan.cap_skipped:
+                text = ("Omni is full (it keeps up to %d bookmarks), so the %d only on this PC can't be added."
+                        % (config.OMNI_BOOKMARK_MAX, plan.cap_skipped))
+            self.bm_note.configure(text=text, fg=C["text"])
+            self.next_btn.configure(text="Done", state="normal", command=lambda: self.show(self.step))
+            return
+        self.bm_note.configure(text="Here's what the sync would do (nothing is removed on either side):", fg=C["text"])
+        cap = ""
+        if plan.cap_skipped:
+            cap = ("%d more can't be added: Omni keeps up to %d bookmarks. Bookmarks-bar ones go first."
+                   % (plan.cap_skipped, config.OMNI_BOOKMARK_MAX))
+        self._bm_list("Add %d to Omni on the PS5" % len(plan.to_console), plan.to_console, cap)
+        self._bm_list("Save %d from Omni for this PC's browser" % len(plan.to_pc), plan.to_pc,
+                      "They go in a new HTML file in Downloads that you import in your browser's bookmark settings. "
+                      "Setup doesn't change your browser's own files." if plan.to_pc else "")
+        self.next_btn.configure(text="Sync", state="normal", command=self._bm_sync_go)
+
+    def _bm_sync_go(self):
+        if self.bm_plan.to_console and not messagebox.askokcancel(
+                config.APP_NAME, "Close Omni on the PS5 first.\n\nOmni keeps its bookmarks in memory while it's open and "
+                                 "would save over the ones Setup adds. Press OK once Omni is closed."):
+            return
+        plan, sources = self.bm_plan, self.bm_chosen_sources
+        self._bm_busy("Syncing bookmarks…")
+        host = self.host.get().strip()
+
+        def work():
+            with self.console(host) as c:
+                return bookmarks.apply_sync(c, plan, sources=sources)
+        self.run_bg(work, self._bm_synced)
+
+    def _bm_synced(self, r, err):
+        if not self.bm_box.winfo_exists():
+            return
+        self.back_btn.configure(state="normal")
+        self.next_btn.configure(text="Done", state="normal", command=lambda: self.show(self.step))
+        if err:
+            self.bm_note.configure(text="Couldn't finish the sync: %s\nYour earlier bookmarks are still on the PS5." % err,
+                                   fg=C["bad"])
+            return
+        lines = ["Added %d bookmark%s to Omni." % (r["added"], "" if r["added"] == 1 else "s")]
+        if r["no_room"]:
+            lines.append("%d left out: Omni keeps up to %d bookmarks." % (r["no_room"], config.OMNI_BOOKMARK_MAX))
+        if r["exported"]:
+            lines += ["Saved %d bookmark%s from Omni to:" % (r["exported"], "" if r["exported"] == 1 else "s"),
+                      r["export_path"]]
+        self.bm_note.configure(text="\n".join(lines), fg=C["text"])
+        if r["exported"]:
+            self.label(self.bm_box, "To add them to your browser, open its bookmark manager, choose Import bookmarks from "
+                                    "an HTML file and pick this file. They arrive in a folder named \"%s\"."
+                       % bookmarks.EXPORT_TOP_FOLDER, "small", wrap=640).pack(anchor="w")
+            folder = os.path.dirname(r["export_path"])
+            ttk.Button(self.bm_box, text="Open folder", style="Ghost.TButton",
+                       command=lambda: self._open_folder(folder)).pack(anchor="w", pady=(8, 0))
+        if r["added"]:
+            self.label(self.bm_box, "The earlier bookmarks file was kept on the PS5 as a backup.", "small",
+                       wrap=640).pack(anchor="w", pady=(8, 0))
 
     def _bm_import(self):
         chosen = [s for s, v in zip(self.bm_sources, self.bm_pick) if v.get()]
@@ -743,6 +864,59 @@ class SetupApp:
         else:
             webbrowser.open("file://" + folder)
 
+    # -- diagnostics bundle (from the check page): read + redact, preview, then save ---------------
+    def page_diagnostics(self):
+        self.dg_note, self.dg_box = self._sub_page(
+            "Save a diagnostics bundle", "Reading Omni's logs and versions from the PS5 (nothing is changed)…")
+        self.next_btn.configure(text="Save…", state="disabled", command=lambda: self._dg_save())
+        self.dg_bundle = None
+        host = self.host.get().strip()
+
+        def work():
+            with self.console(host) as c:
+                return diagnostics.gather(c, setup_version=config.SETUP_VERSION)
+
+        def ready(bundle, err):
+            if not self.dg_box.winfo_exists():
+                return
+            if err:
+                self.dg_note.configure(text="Couldn't read the PS5: %s\nNothing was saved." % err, fg=C["bad"])
+                return
+            self.dg_bundle = bundle
+            removed = ", ".join("%d %s" % (n, w) for w, n in bundle["removed"].items()) or "nothing personal was found"
+            self.dg_note.configure(text="Check what will be saved. Personal details are already replaced (%s). "
+                                        "Nothing is uploaded: you attach the zip to a GitHub issue yourself." % removed,
+                                   fg=C["text"], wraplength=640, justify="left")
+            for title, text, height in (("Files", "\n".join(diagnostics.file_list(bundle)), 7),
+                                        ("Preview (first lines, as saved)", diagnostics.preview(bundle), 12)):
+                self.label(self.dg_box, title, "head").pack(anchor="w", pady=(6, 2))
+                box = tk.Text(self.dg_box, height=height, bg=C["panel"], fg=C["muted"], bd=0, highlightthickness=0,
+                              font=("Consolas", 9), wrap="none")
+                box.insert("1.0", text)
+                box.configure(state="disabled")
+                box.pack(fill="both", expand=True)
+            self.next_btn.configure(state="normal")
+
+        def save():
+            path = filedialog.asksaveasfilename(
+                title="Save the diagnostics bundle", defaultextension=".zip", filetypes=[("Zip", "*.zip")],
+                initialdir=diagnostics.default_folder(), initialfile=os.path.basename(diagnostics.default_path()))
+            if not path or not self.dg_bundle:
+                return
+            try:
+                diagnostics.save(self.dg_bundle, path)
+            except OSError as e:
+                messagebox.showerror(config.APP_NAME, "Couldn't save the bundle: %s" % e)
+                return
+            self.dg_note.configure(text="Saved to:\n%s\nAttach it to an issue at github.com/egomortal/omnibloom/issues."
+                                        % path, fg=C["text"])
+            self.next_btn.configure(text="Done", command=lambda: self.show(self.step))
+            ttk.Button(self.dg_box, text="Open folder", style="Ghost.TButton",
+                       command=lambda: self._open_folder(os.path.dirname(path))).pack(anchor="w", pady=(8, 0))
+
+        self._dg_save = save
+        self.run_bg(work, ready)
+
     def page_restore(self):
         start = backup.default_folder()
         path = filedialog.askopenfilename(title="Open an Omni backup", filetypes=[("Omni backup", "*.zip")],
@@ -820,6 +994,104 @@ class SetupApp:
         if r["written"]:
             tip += " The files they replaced were kept on the PS5 beside them (%s)." % r["parked_suffix"].lstrip(".")
         self.label(self.rs_box, tip, "small", wrap=640).pack(anchor="w")
+
+    # -- reading list export (from the check page): read-only copy to a PC folder, optional EPUB ----------------
+    def page_reading_list(self):
+        from . import readinglist
+        note, box = self._sub_page("Export reading list", "Reading Omni's reading list from the PS5 (nothing is changed)…")
+        self.next_btn.configure(text="Export", state="disabled")
+        host = self.host.get().strip()
+        state = {}
+
+        def work():
+            with self.console(host) as c:
+                return readinglist.plan(c)
+
+        def ready(p, err):
+            if not box.winfo_exists():
+                return
+            if err:
+                note.configure(text="Couldn't read the PS5: %s\nNothing was copied." % err, fg=C["bad"])
+                return
+            if p.get("no_index") or not p["pages"]:
+                note.configure(text="There are no saved pages in Omni's reading list on this PS5.", fg=C["text"])
+                return
+            state["plan"] = p
+            n = len(p["pages"])
+            note.configure(text="%d saved page%s (%s). They are copied to a folder on this PC with an index page you "
+                                "open in any browser." % (n, "" if n == 1 else "s", self._size_text(p["total"])),
+                           fg=C["text"], wraplength=640, justify="left")
+            if p["warn"]:
+                self.label(box, "That is more than 500 MB: the copy takes a while and needs the space on this PC.",
+                           "small", wrap=640).pack(anchor="w")
+            state["epub"] = tk.BooleanVar(value=False)
+            ttk.Checkbutton(box, text="Also make an e-book (EPUB) of the articles selected below: text and saved "
+                            "pictures only", variable=state["epub"]).pack(anchor="w", pady=(6, 2))
+            lb = tk.Listbox(box, selectmode="multiple", height=9, bg=C["panel"], fg=C["text"], bd=0,
+                            highlightthickness=0, activestyle="none", exportselection=False)
+            for pg in p["pages"]:
+                title = " ".join((pg.title or readinglist.site(pg.url) or pg.id).split())[:90]
+                extra = " · ".join(x for x in (readinglist.site(pg.url), readinglist.read_label(pg)) if x)
+                lb.insert("end", "%s  (%s)" % (title, extra) if extra else title)
+            lb.pack(fill="both", expand=True)
+            state["list"] = lb
+            row = tk.Frame(box, bg=C["ground"])
+            row.pack(fill="x", pady=(10, 0))
+            self.label(row, "Save in:", "small").pack(side="left")
+            state["folder"] = tk.StringVar(value=readinglist.default_folder())
+            ttk.Entry(row, textvariable=state["folder"], width=56).pack(side="left", padx=8, fill="x", expand=True)
+
+            def browse():
+                d = filedialog.askdirectory(title="Where to save the reading list",
+                                            initialdir=state["folder"].get() or None)
+                if d:
+                    state["folder"].set(d)
+
+            ttk.Button(row, text="Browse…", style="Small.TButton", command=browse).pack(side="left")
+            self.next_btn.configure(state="normal", command=start)
+
+        def start():
+            p = state["plan"]
+            ids = [p["pages"][i].id for i in state["list"].curselection()] if state["epub"].get() else []
+            if state["epub"].get() and not ids:
+                messagebox.showinfo(config.APP_NAME, "Select the articles to put in the e-book (or untick it).")
+                return
+            if p["warn"] and not messagebox.askyesno(config.APP_NAME, "Copy %s from the PS5?" % self._size_text(p["total"])):
+                return
+            folder = state["folder"].get().strip() or readinglist.default_folder()
+            self.next_btn.configure(state="disabled")
+            self.back_btn.configure(state="disabled")
+            for w in box.winfo_children():
+                w.destroy()
+            note.configure(text="Copying the reading list from the PS5…", fg=C["muted"])
+
+            def copy():
+                with self.console(host) as c:
+                    return readinglist.export(c, folder, epub_ids=ids, plan_result=p)
+
+            self.run_bg(copy, done)
+
+        def done(r, err):
+            if not box.winfo_exists():
+                return
+            self.back_btn.configure(state="normal")
+            self.next_btn.configure(text="Done", state="normal", command=lambda: self.show(self.step))
+            if err:
+                note.configure(text="Couldn't export the reading list: %s\nNothing on the PS5 was changed." % err,
+                               fg=C["bad"])
+                return
+            lines = ["Copied %d page%s (%s) to:" % (r["pages"], "" if r["pages"] == 1 else "s", self._size_text(r["bytes"])),
+                     r["path"], "Open index.html there to read them."]
+            if r["epub"]:
+                lines.append("E-book: %d article%s (reading-list.epub)." % (r["epub"]["chapters"],
+                             "" if r["epub"]["chapters"] == 1 else "s"))
+            if r["missing"] or r["too_big"]:
+                lines.append("%d left out (missing on the PS5 or too big)." % (r["missing"] + r["too_big"]))
+            note.configure(text="\n".join(lines), fg=C["text"])
+            ttk.Button(box, text="Open folder", style="Ghost.TButton",
+                       command=lambda: self._open_folder(r["path"])).pack(anchor="w", pady=(8, 0))
+
+        self.run_bg(work, ready)
 
     # -- 4. choose ---------------------------------------------------------------
     def page_choose(self):
