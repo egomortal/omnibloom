@@ -257,6 +257,66 @@
       "sha256": "f41cb552ceeb64edbc6cb6566435f20328969581e37cee05c38e4f3f81df872f"
     },
     {
+      "path": "addons/bundled/omni-reader-view/addon.css",
+      "bytes": 5883,
+      "sha256": "93e3bbcd053f2eb3a7136d69d853369c88484c26247c71261c723ee543d3ebb7"
+    },
+    {
+      "path": "addons/bundled/omni-reader-view/core.js",
+      "bytes": 11274,
+      "sha256": "e53db70d55a3394398b9e6398d5f3d3190162373bdbdc5941a98f6721ad60a5d"
+    },
+    {
+      "path": "addons/bundled/omni-reader-view/LICENSE",
+      "bytes": 1088,
+      "sha256": "410e3cc0d701bf9d628625df2c89c7b63dc87a321cf144c4e812923282732474"
+    },
+    {
+      "path": "addons/bundled/omni-reader-view/manifest.json",
+      "bytes": 1479,
+      "sha256": "c8f3449522503294a9b32282fff2fc1bfda370332f0095c9de7cebe96694eb99"
+    },
+    {
+      "path": "addons/bundled/omni-reader-view/runtime.js",
+      "bytes": 6870,
+      "sha256": "330b0a0f3cea34b300b32a7f60c86e95300cf0599b8a929d67507179fd1d2ee3"
+    },
+    {
+      "path": "addons/bundled/omni-reader-view/SOURCES.md",
+      "bytes": 609,
+      "sha256": "b2bf257d5d718da546b4131636418671a8164745fc41a0810b297384e1e98db9"
+    },
+    {
+      "path": "addons/bundled/omni-resume-videos/addon.css",
+      "bytes": 1587,
+      "sha256": "28bdc044d589bfa773946164123f998e2e20bbab3644d14c8b02ce36e5415c38"
+    },
+    {
+      "path": "addons/bundled/omni-resume-videos/core.js",
+      "bytes": 3941,
+      "sha256": "91a4fa0329bb4152f79a16842d1c49bb9edd429e0062bb28d956fbad8e16c09f"
+    },
+    {
+      "path": "addons/bundled/omni-resume-videos/LICENSE",
+      "bytes": 1088,
+      "sha256": "410e3cc0d701bf9d628625df2c89c7b63dc87a321cf144c4e812923282732474"
+    },
+    {
+      "path": "addons/bundled/omni-resume-videos/manifest.json",
+      "bytes": 767,
+      "sha256": "1e2b7497c3bc46984b7f9147023417edb79892183076d2b318a1ce3fb375ea0f"
+    },
+    {
+      "path": "addons/bundled/omni-resume-videos/runtime.js",
+      "bytes": 5114,
+      "sha256": "289a8ac8701b381abaf94024a7c687e26735dbfdab32f79eb601ba1975d3fc8e"
+    },
+    {
+      "path": "addons/bundled/omni-resume-videos/SOURCES.md",
+      "bytes": 672,
+      "sha256": "aa9434e864860379932f7343f88313e8860340e4317dbdcd4930762fc5151b6e"
+    },
+    {
       "path": "addons/bundled/omni-sponsorblock/adapter.js",
       "bytes": 3460,
       "sha256": "6abf35b730bf08a3e1f2f9ce4e48bc56a060b3b4cbf2dcb837b6eaf0ebe06fbb"
@@ -380,6 +440,41 @@
       "path": "addons/bundled-r45.json",
       "bytes": 2362,
       "sha256": "aa59a0135298738c07c362bc014a8aad892daa28d8e1b9efed78593f10c9c8c8"
+    },
+    {
+      "path": "addons/tests/fixtures/reader-blog-divs.html",
+      "bytes": 2006,
+      "sha256": "751c2c022bf7cd12f6d1283874c2bc38a98be9a1d5a01520d03cd6c94a1b006e"
+    },
+    {
+      "path": "addons/tests/fixtures/reader-listing.html",
+      "bytes": 1051,
+      "sha256": "10838ae40836d5ca12a0ad611e076a955fb8c73adcd85d57485556bb648f6743"
+    },
+    {
+      "path": "addons/tests/fixtures/reader-news.html",
+      "bytes": 3169,
+      "sha256": "ac7cd41b5e6f3e5dc6fc2d1d8f2fba38c06fdabc98bd9de2cde38a4ec4baf28e"
+    },
+    {
+      "path": "addons/tests/manifests.test.cjs",
+      "bytes": 2504,
+      "sha256": "f6e8e67cedd981c794a49ebe29e85fd3e4be2dd991097149a8e5d50ebac87a32"
+    },
+    {
+      "path": "addons/tests/mini-dom.cjs",
+      "bytes": 3730,
+      "sha256": "5dcb86ddcf47e578cd5816f5ef56159c267edf7be3a73d4d587dee4ec2f7ba8b"
+    },
+    {
+      "path": "addons/tests/reader-view.test.cjs",
+      "bytes": 3998,
+      "sha256": "c03cee810620f976d91f923b762592b910fcd4f373b8a48f1fbc11ebe50f12e7"
+    },
+    {
+      "path": "addons/tests/resume-videos.test.cjs",
+      "bytes": 3603,
+      "sha256": "c958e965b23ce53351bc56ce6b6f9c5451943ebc416eba95a379f550e700a7ee"
     },
     {
       "path": "assets/icon/favicon.ico",
@@ -2048,8 +2143,8 @@
     },
     {
       "path": "downloads/tests/stub_worker.py",
-      "bytes": 9608,
-      "sha256": "e389cf7b41e2465c61f3ef113a475e40afaca0004776c9b0c66c258313575921"
+      "bytes": 12262,
+      "sha256": "67a88d38c990b0d8b175333f308b203f731c929b9145d220594f547224a87349"
     },
     {
       "path": "downloads/tests/test-client-presets.cjs",
@@ -2072,9 +2167,19 @@
       "sha256": "c493bfb4e5bde50b04110914689bae07e4484c454ee10d382c8fa709171a00e9"
     },
     {
+      "path": "downloads/tests/test-resume.cjs",
+      "bytes": 6555,
+      "sha256": "5e188a007efeee3992f5f792591f0581d41f084294abdbe490683e8c135391bb"
+    },
+    {
       "path": "downloads/tests/test-save.cjs",
       "bytes": 6073,
       "sha256": "a5989f5de0d309a7284bcc42e752e2098c50d59a41d04a434e2185bc2c7eb409"
+    },
+    {
+      "path": "downloads/tests/test-suspects.cjs",
+      "bytes": 2457,
+      "sha256": "de1f239500fb14f4707fb1312b173b3058df6240d7fc942c76d9545d732a14ea"
     },
     {
       "path": "downloads/tests/test-tools.cjs",
@@ -2097,6 +2202,11 @@
       "sha256": "b8afb470bf71d0c8cc2cf8d784e55462313e5c4106b752c1020ab286db707d63"
     },
     {
+      "path": "downloads/tests/test_downloads_done.py",
+      "bytes": 5251,
+      "sha256": "2c1c3d039f6f824bc9a3a5113d1db0ddb70cf601f3ad57875733caee508bd8ff"
+    },
+    {
       "path": "downloads/tests/test_egress_guard.py",
       "bytes": 6973,
       "sha256": "9686fa070ae455c04f72f9403ea1f895d46159e3977ef8c2b3c9b9b0b892d171"
@@ -2105,6 +2215,11 @@
       "path": "downloads/tests/test_egress_guard_ytdlp.py",
       "bytes": 2969,
       "sha256": "85a9c91cb1a54c80130188fafd8837e56e1c30968c910f4bdc7536978ecf703d"
+    },
+    {
+      "path": "downloads/tests/test_file_downloads.py",
+      "bytes": 8590,
+      "sha256": "749a7fe0d420a8346ebb91192c9bb59bd832784cad5df3945f8e3ec0f54afdef"
     },
     {
       "path": "downloads/tests/test_ipv4_first.py",
@@ -2122,6 +2237,11 @@
       "sha256": "8a5aa2cd5ab686f68a94dedbf92ade2e095da9b9318dab2d872649f683c9120e"
     },
     {
+      "path": "downloads/tests/test_pause_resume.py",
+      "bytes": 23604,
+      "sha256": "d444561af5f81106c16f183d6a4bab4beb6b92a9031c27d04dfbe718aba76331"
+    },
+    {
       "path": "downloads/tests/test_probe.py",
       "bytes": 16806,
       "sha256": "247ada5321bcb96e417e3b42499320af62b100276d102046224b77007e61680e"
@@ -2133,18 +2253,18 @@
     },
     {
       "path": "downloads/tests/test_save_v1.py",
-      "bytes": 10520,
-      "sha256": "a531e361fc6b1a63132b598118517bb033e2e0e177c622444235796a554918cd"
+      "bytes": 12370,
+      "sha256": "c2139f9f5ad8742016ce70e72c061a2acb37d4e3a035b9fba1cd53c575377c49"
     },
     {
       "path": "downloads/worker/adapters.py",
-      "bytes": 30303,
-      "sha256": "d46f53c356f36c67fc895902c5b86b44afde5250b96c6585b84105cd55ba5c9a"
+      "bytes": 36765,
+      "sha256": "2f923eda31cea318ba4cc838a7d17c2a0ec77a1d6a21743ba5c27cdae40668a2"
     },
     {
       "path": "downloads/worker/app.js",
-      "bytes": 101040,
-      "sha256": "a72a98d7b199dc1e9dfb4561fe30345bc63e28f294b427cde7e7faf3eeb5cdd2"
+      "bytes": 103821,
+      "sha256": "f0bda9b7e581cba0f94b2d5cda82987c98c1c9cb01510420c84f58504ed1eaa6"
     },
     {
       "path": "downloads/worker/assets/art/abyss.webp",
@@ -2293,8 +2413,8 @@
     },
     {
       "path": "downloads/worker/assets/production-api.js",
-      "bytes": 21806,
-      "sha256": "b9ebeb950148512a263fc472aeca54ec5c1007cb25f181be17750d55dc5d624a"
+      "bytes": 22980,
+      "sha256": "cc905b6239ecf441f4f7ded854d458d8a9d93541c98331a47ea7348f69a0d937"
     },
     {
       "path": "downloads/worker/assets/soundwave.svg",
@@ -2333,13 +2453,13 @@
     },
     {
       "path": "downloads/worker/history.py",
-      "bytes": 5949,
-      "sha256": "fcf352ce35f6ba5b6af19c1317cd66cfa7c2328abfcc141f4abc1f99db155645"
+      "bytes": 9364,
+      "sha256": "a2a5eeffc69855913f0f4fb2d98aeac0c146f2e78b99f852482fa989687b2487"
     },
     {
       "path": "downloads/worker/index.html",
-      "bytes": 9745,
-      "sha256": "781ade4b7c760e1a9d72af8f9bc183cc6d6db76b962938bf65ce8772535c3ea5"
+      "bytes": 9871,
+      "sha256": "0f976422535a97ff3dc7850c3a9f74772d6f9561649970c4feb11dc97d7caaf6"
     },
     {
       "path": "downloads/worker/jd_adapter.py",
@@ -2358,8 +2478,8 @@
     },
     {
       "path": "downloads/worker/probe.py",
-      "bytes": 51593,
-      "sha256": "4ca387761162cfc629c342da3ef5e613203eba6a8b06f433a6bdc8119150ff5e"
+      "bytes": 56283,
+      "sha256": "8634183e7d2c82f8678202544fadbc9f1283359bf4d635bbd4b0ce07f264e4b0"
     },
     {
       "path": "downloads/worker/production-api.js",
@@ -2388,8 +2508,8 @@
     },
     {
       "path": "downloads/worker/styles.css",
-      "bytes": 60421,
-      "sha256": "d24c3a02b5363044b02b15961ff647327a3d874e0e09ff567105b66d0a4bc881"
+      "bytes": 60690,
+      "sha256": "7f92a3f74768833f3ddfb585bc5d07e36bd71ae581ca5ce27fdd2d06044b84aa"
     },
     {
       "path": "downloads/worker/suite_port.py",
@@ -2518,8 +2638,8 @@
     },
     {
       "path": "downloads/worker/worker.py",
-      "bytes": 45734,
-      "sha256": "d1650847f106c9cba262b19f6ec5a14820899db074d58a988b86e7ce2c243f2d"
+      "bytes": 56984,
+      "sha256": "0e4f9d4fd8ac6d52b58b6e3c32341a46f90809aa711d3a20235313465bb7b455"
     },
     {
       "path": "FEATURES.md",
@@ -3953,8 +4073,8 @@
     },
     {
       "path": "omni/engine/resources/ublock-compiled.txt",
-      "bytes": 116280,
-      "sha256": "5dee0f864cd57212f1c29677edaf7639b007bf14e0b2c1766789d897d554a306"
+      "bytes": 6316757,
+      "sha256": "8006c468288cd9a84e6917fb03799cfa2dd939d4592006b260daba1964c60429"
     },
     {
       "path": "omni/engine/resources/ublock-engine.js",
@@ -3963,18 +4083,18 @@
     },
     {
       "path": "omni/engine/resources/ublock-popup-compiled.txt",
-      "bytes": 127616,
-      "sha256": "88ea567b94a7e9e342702429cb617adc75659d0c750ddb2965277f69afc715dd"
+      "bytes": 128001,
+      "sha256": "d82dede795381a468abf7d52fb26f0afb16566583fa173cecf8da1bdce44ad20"
     },
     {
       "path": "omni/engine/resources/ublock-popup-rules.txt",
-      "bytes": 82072,
-      "sha256": "ffc2886bc305386d111bafff315050d9580626d4d42664f27283919f760d5b02"
+      "bytes": 82355,
+      "sha256": "9893c5944c89529e6db03615f26d169ad86606a5a600192b5dd4cc9bf35b4d34"
     },
     {
       "path": "omni/engine/resources/ublock-rules.json",
-      "bytes": 610,
-      "sha256": "f75558c78325c4ebf9d31a01641b499a9e34c88cdd0fbe2eec92292bebb9ee55"
+      "bytes": 906,
+      "sha256": "5527caaac3e9acbab74b039a84f598394b8430a7f0c8038858d1c62cc2ae472c"
     },
     {
       "path": "omni/engine/resources/ublock-test-compiled.txt",
@@ -4878,8 +4998,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
-      "bytes": 22952,
-      "sha256": "38c9ece64e168a44ff5efd0e4119307a977d3f3d5cb79a8b915709d7639f3ee7"
+      "bytes": 26950,
+      "sha256": "8ea6403300fbf92312def7d858e837cd3b6cf121e93b81c522a0b9fb9b974d4c"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-launch-child-fallback.sh",
@@ -5187,6 +5307,11 @@
       "sha256": "b3444621766b028701b8e0c088a6ba669784b01db765d3a9c05302862cb5afe2"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src/ogp-s1-watchdog.h",
+      "bytes": 14241,
+      "sha256": "e18ac5c509df53b4961dea2d3f61e4f19d24e3f98db8eeab266fc7e3d0d99088"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src/ogp-s1b-async.inc",
       "bytes": 1245,
       "sha256": "44ebbdc80179e33cbabc06249ea4b4ca81ca9458f7e4e5107425e24c0674aa52"
@@ -5227,6 +5352,11 @@
       "sha256": "6f389e3d8219773aae14d1010204e5d2a1551fd335561a2df13fc1d349e6a5a7"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_bars_click.py",
+      "bytes": 1847,
+      "sha256": "d300dab1c924039ae3d9ac5e7e7c184364e26188c49b03372d700ac634e999ca"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_bars_hide.py",
       "bytes": 9327,
       "sha256": "a99e3dead6d2d5dbe2855249d061d2cd5d2abdae79c5eb8e9903e37483db4d7f"
@@ -5242,9 +5372,19 @@
       "sha256": "b2f5bba18f339f8ce6d3e6d6218b975b5ce7360635dcb4e0a7de6af4ffb9dbcd"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_file_downloads.py",
+      "bytes": 6735,
+      "sha256": "7b0fe66b19e0813d09ad05fa928a59ed3ddd6226490e9a6724134169a6c1cc94"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_first_run.py",
       "bytes": 2468,
       "sha256": "9622bff59af534ec49b4e7e6517bdbb431bbdab5a9de7d89a47c79f47086abea"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_gpu_watchdog.py",
+      "bytes": 19560,
+      "sha256": "d0a6160af997c6273718a6147b13b9517f43e5e23a1b95e7d35f8a97e2bd7ce2"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_gpupages_async.py",
@@ -5260,6 +5400,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_gpupages_child.py",
       "bytes": 9432,
       "sha256": "c9ef275992cba009f6d89cf6a32a44d60c49615fb6d11d2e46bd5de1aa2679cf"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_grabber_suspects.py",
+      "bytes": 7386,
+      "sha256": "61105133289d8d3b84e88452f53e04822fac638518379eaeb174b6083fc906bc"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_l2_chords.py",
@@ -5297,6 +5442,36 @@
       "sha256": "05fedd3b7e2a7877e172a2b6e1489eb8f709108c73236b69a0232e0bfe10108a"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_quick_actions.py",
+      "bytes": 16022,
+      "sha256": "ffb72de10cb195b75342bceccc3db1cf71f7c85e1fa1b118b85a83b79beabd17"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_reading_list.py",
+      "bytes": 43830,
+      "sha256": "1730b13d6de9eff65cca9252ada6b90db5de35946b4fa866073843e2ca184209"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_search_tiles.py",
+      "bytes": 24424,
+      "sha256": "38c084a4f13e441093f98a002bda033b4041020479bd8fb7122c92faae0118dc"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_send_link.py",
+      "bytes": 44064,
+      "sha256": "1b63e3407332ad53ae620a1b228036a86d349f840e95e46af65172eab5ddac58"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_site_zoom.py",
+      "bytes": 16466,
+      "sha256": "66393e265e1798df7c5951c4210f69711025bc4dd85013f89db5aaa3e7ab51f6"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_small_comforts.py",
+      "bytes": 21802,
+      "sha256": "2ce979088530bd2c83f7a5acb0f2bc3de153c816dbfcd0c508f5ab8f7321fb60"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_spare_defer.py",
       "bytes": 2888,
       "sha256": "79c2ca25ad37f5b733bcb3331fbb55560305a546e5ff98f7e50035bb400be6ac"
@@ -5317,6 +5492,11 @@
       "sha256": "1f98f64248b24fcbd3711c10b7349f39ad5ee8c8b8a66348e852ee350d98da5d"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_ublock_frames.py",
+      "bytes": 18439,
+      "sha256": "ac238d42e5bb18d4eb2074d84562d4b15aa2f6c1a5f248b4a7721427e67a8e2f"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_ublock_missing.py",
       "bytes": 4911,
       "sha256": "edaf0f9fe0ceb769a5dc3e72c750cdb6a0a6c7dc33fe9d5c07b8118dc8f36836"
@@ -5325,6 +5505,16 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_ublock_refine.py",
       "bytes": 12386,
       "sha256": "b6cdf2df8851d0adeb9b9bbc2f2460267800c19ba7dde838a2e08baa70e067ea"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_video_immersive.py",
+      "bytes": 6023,
+      "sha256": "dbc0ada2d3ec9e26ba534ca998e15183bca65ba98585b0572d685cff6cebb8dd"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_youtube_tv.py",
+      "bytes": 29684,
+      "sha256": "07405ba0e6d65d45710e99c73a7358e0ed920e394927a3618fcf45518952b8d9"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_yttl_scroll.py",
@@ -5370,6 +5560,51 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/switch_state.py",
       "bytes": 1811,
       "sha256": "c8aca5a4293a3e99717f3fd5945756bfe97a6ab11de103c3cd7f3f70dee53118"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_gpu_watchdog.cpp",
+      "bytes": 8764,
+      "sha256": "3bbef6f90bc1b85bbad0ba8b376e647db04c90cf3c9b5447485d125688c377f4"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_quick_actions.cpp",
+      "bytes": 4100,
+      "sha256": "45cf862679ff2eb6dbc1b4236fca9d68368eebd99755dd84ddc5a2f8216ca604"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_reading_list.cpp",
+      "bytes": 10681,
+      "sha256": "39eabe033414b51a959831d9f65235241e700e3c1f05a474afcfae83b8aa1433"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_search_tiles.cpp",
+      "bytes": 11679,
+      "sha256": "65dcbf66ec3e88469a1b915caacb93e953c921720ce07d2a4deb9c0578218d30"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_site_zoom.cpp",
+      "bytes": 4619,
+      "sha256": "7b7c0999946b6035e34e66592a1c49992c3758c00391294326f92146f74feebe"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_small_comforts.cpp",
+      "bytes": 7114,
+      "sha256": "f131125f550d0bf492b35455c1bc9c777d33c6f6cdaa202d08ed3ef9e5e056aa"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_ublock_frames.cjs",
+      "bytes": 7263,
+      "sha256": "9bbccc3dac3ca52dedc2a798a4aabca0fec5d9f98e565a85f4267f668958f1b8"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_ublock_frames.cpp",
+      "bytes": 9272,
+      "sha256": "a90659eab6f78ec8a4373bcfc87a7f5e0d3669a3f5bfe6030453e4b008c4b38b"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_youtube_tv.cpp",
+      "bytes": 9975,
+      "sha256": "80fcfd908ad46bfd92c163fbe6d241f644789fbbc0f098f0bc972ac63985e902"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/ZERO-COPY-DESIGN.md",
@@ -18137,6 +18372,11 @@
       "sha256": "4b8ce02eda231c77040e72f8917d9d628639438672cb498d661a02612f906f86"
     },
     {
+      "path": "setup/omnibloom_setup/bookmarks.py",
+      "bytes": 13758,
+      "sha256": "43db14f38b75016ae2e44b6851da4864f9f75318b4254cf729d22e7cd26f01da"
+    },
+    {
       "path": "setup/omnibloom_setup/checks.py",
       "bytes": 3461,
       "sha256": "ff37d36406138190953c6b42fb0c7a6f5a6322bf4aa4263b785a911cbd0e0186"
@@ -18148,8 +18388,8 @@
     },
     {
       "path": "setup/omnibloom_setup/config.py",
-      "bytes": 13428,
-      "sha256": "846046178b13fb9496550359823a6900a9e0ec80dd744b0b1e0d0421fb98a57e"
+      "bytes": 13837,
+      "sha256": "5a9a5630d2f219d03a8010857fd9d5bfffacdfcc2aca192b911b5ca213912348"
     },
     {
       "path": "setup/omnibloom_setup/diagnostics.py",
@@ -18163,8 +18403,8 @@
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
-      "bytes": 49853,
-      "sha256": "6ec9e9c3993f6a3a6fb592388620f9a167fcd5fea108e35c4a4aca5ff461ec63"
+      "bytes": 54269,
+      "sha256": "4ab15b75e8be9772045b6f9773bc91071e22578ef948c48ba5dc11477ed36b0e"
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
@@ -18310,6 +18550,11 @@
       "path": "setup/tests/test_autoload_paths.py",
       "bytes": 2608,
       "sha256": "fee1a0a7f4b55d9737bfff8f428165db325e3464e3ab0e148f59bc97b4d1f131"
+    },
+    {
+      "path": "setup/tests/test_bookmarks.py",
+      "bytes": 13721,
+      "sha256": "e06261d2d3562a463bd001c31670dfd59e19c2d3ffc8263c1602bc8f05617d17"
     },
     {
       "path": "setup/tests/test_diagnostics.py",
