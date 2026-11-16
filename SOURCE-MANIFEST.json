@@ -2698,8 +2698,8 @@
     },
     {
       "path": "FEATURES.md",
-      "bytes": 22203,
-      "sha256": "37add324ecef8527589d1dfd5e1884900f2b8f8fa742f3f7828c7a770053a802"
+      "bytes": 22514,
+      "sha256": "2d1b8bc759330117cee51e098177fd2455da50bbfb062be2acd768c5ca0b3a8f"
     },
     {
       "path": "jdownloader/collect_sources.py",
