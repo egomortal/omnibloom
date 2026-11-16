@@ -1,5 +1,9 @@
 # Changelog
 
+## Coming next (dev branch, not released)
+
+We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release. The list grows in the `v0.5.2-dev` branch's CHANGELOG.md.
+
 ## v0.5.3
 
 Console package: Omni 0.5.3 (title f16ff5d6, engine a5083735, engine starter a3853c3a); Bloom Core, Downloads

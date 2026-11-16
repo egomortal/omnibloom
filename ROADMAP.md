@@ -2,6 +2,10 @@
 
 This roadmap describes remaining integration, validation and design decisions. It has no delivery dates or compatibility promises. Reviewed prototypes are not automatically shipping features. Each feature is released only after its native behavior, accessibility, licensing and failure handling have been verified.
 
+## Current status
+
+We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.
+
 ## Launch foundations
 
 Prioritize trusted app metadata and the shared SDK, Setup diagnostics, crash/log tools, controller text entry, session recovery and accessible controls. Keep existing working behavior available throughout integration.
