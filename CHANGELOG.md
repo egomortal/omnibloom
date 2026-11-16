@@ -12,7 +12,8 @@ to the end.
   starts the engine processes instead of the payload loader, which kept ~240 MB (up to ~420 MB) after every start.
   It maps the engine file and relocates it in 16 MB pieces. Falls back to the payload loader when it isn't there.
 - **No idle spare engine** by default (`OMNI_SPARE_LAZY_V1`); `/data/omni/spare-reserve.flag` brings it back.
-- Low-memory warnings in our launch tests: 15 of 16 launches before, 0 of 15 after.
+- In our tests with the default settings (layers off): no kernel low-memory warnings in 15 launches (starter + no spare
+  engine, measured on the build before the refinement pass). With experimental layers on, 4K video still triggers them.
 
 ### Refinement pass (code review of every part)
 - **Engine starter V3:** never listens anywhere but 127.0.0.1 (if it can't take its port it now exits; before, it
