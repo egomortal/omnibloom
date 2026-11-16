@@ -293,8 +293,8 @@
     },
     {
       "path": "addons/bundled/omni-resume-videos/core.js",
-      "bytes": 3941,
-      "sha256": "91a4fa0329bb4152f79a16842d1c49bb9edd429e0062bb28d956fbad8e16c09f"
+      "bytes": 6717,
+      "sha256": "85fd05b85ee1ebfba1611b3624209ad4b78e4b04d0cbfdb27022811114e1418c"
     },
     {
       "path": "addons/bundled/omni-resume-videos/LICENSE",
@@ -303,18 +303,18 @@
     },
     {
       "path": "addons/bundled/omni-resume-videos/manifest.json",
-      "bytes": 767,
-      "sha256": "1e2b7497c3bc46984b7f9147023417edb79892183076d2b318a1ce3fb375ea0f"
+      "bytes": 838,
+      "sha256": "ee5fb835f6a1d053eae10355e6949cc0572a0944672651cb52bd4e76f9933b56"
     },
     {
       "path": "addons/bundled/omni-resume-videos/runtime.js",
-      "bytes": 5114,
-      "sha256": "289a8ac8701b381abaf94024a7c687e26735dbfdab32f79eb601ba1975d3fc8e"
+      "bytes": 6382,
+      "sha256": "6f5f9e6a1a8ce69c39c5cc0140b7355fca346222096d957cdbfd85b92f29d9ab"
     },
     {
       "path": "addons/bundled/omni-resume-videos/SOURCES.md",
-      "bytes": 672,
-      "sha256": "aa9434e864860379932f7343f88313e8860340e4317dbdcd4930762fc5151b6e"
+      "bytes": 1152,
+      "sha256": "85cb626fbafea29c176ec951b6d715b20bd1c801d60c82a331e6103c902332e2"
     },
     {
       "path": "addons/bundled/omni-sponsorblock/adapter.js",
@@ -473,8 +473,8 @@
     },
     {
       "path": "addons/tests/resume-videos.test.cjs",
-      "bytes": 3603,
-      "sha256": "c958e965b23ce53351bc56ce6b6f9c5451943ebc416eba95a379f550e700a7ee"
+      "bytes": 10213,
+      "sha256": "aae66e17a3ffe8c96e1433d60d473f9afb8dfefb5822e0750b3e8a8be43ee113"
     },
     {
       "path": "assets/icon/favicon.ico",
