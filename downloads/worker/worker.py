@@ -8,7 +8,7 @@ cancellation and an unconfirmed Java cleanup never fall through.
 import importlib.util
 import gc
 from collections import deque
-from adapters import (PythonYtdlpAdapter, NativePythonYtdlpAdapter, DirectFileAdapter, NoFallback,
+from adapters import (PythonYtdlpAdapter, NativePythonYtdlpAdapter, DirectFileAdapter, NoFallback, Paused,
                       EngineUnavailable, capabilities, classify_failure, redact_urls)
 import json
 import io
@@ -19,7 +19,7 @@ import stat
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from history import History, TERMINAL, MAX_JOBS, MAX_PENDING
+from history import History, TERMINAL, PAUSED, MAX_JOBS, MAX_PENDING
 from saved_links import SavedLinks, SavedLinksUnavailable, validate_http_url
 from jd_adapter import JDownloaderAdapter
 from schedule_policy import Policy, RateLimiter
@@ -32,6 +32,25 @@ MAX_HTTP_REQUESTS = 16
 REQUEST_TIMEOUT = 5
 MAX_BODY_BYTES = 8192
 ENGINE_NAMES = {'ytdlp': 'yt-dlp', 'jdownloader': 'JDownloader'}
+# OMNI_SMALL_COMFORTS_V1: every finished (non-demo) download is noted here as "job id<TAB>title", newest last, at most
+# DONE_KEEP lines; Omni checks the file's stamp every 5 s and shows "Downloaded: <title>" once when the user is on
+# another tab. Written only when its folder exists (the console's /data/omni); replaced atomically; best effort.
+DONE_FILE = os.environ.get('OMNI_DOWNLOADS_DONE_FILE', '/data/omni/downloads-done.txt')
+DONE_KEEP = 8
+# OMNI_DL_RESUME_V1: failed jobs are never retried automatically; Retry is the user's choice only.
+AUTO_RETRY_LIMIT = 0
+JOB_ID = frozenset('0123456789abcdef')
+# Progress titles the worker shows while it works; the finished file's name is the better title then.
+PLACEHOLDER_TITLES = frozenset(('', 'Saving the file', 'Downloading the file', 'Inspecting link', 'Starting JDownloader',
+                                'Trying a direct file download', 'Media', 'File'))
+
+
+def done_title(job):
+    title = str(job.get('title') or '').strip()
+    if title in PLACEHOLDER_TITLES or title.startswith('Switching to '):
+        title = Path(str(job.get('filepath') or '')).name or 'a download'
+    title = ''.join(' ' if ord(c) < 32 or ord(c) == 127 else c for c in title).strip()
+    return title[:200] or 'a download'
 
 
 def _console_offset(schedule_path):
@@ -50,8 +69,11 @@ def _console_offset(schedule_path):
 
 
 class Jobs:
-    def __init__(self, folder, state_file=None, jd_adapter=None, jd_lifecycle=None, policy=None):
+    def __init__(self, folder, state_file=None, jd_adapter=None, jd_lifecycle=None, policy=None, done_file=DONE_FILE):
         self.folder = Path(folder)
+        self.done_file = Path(done_file) if done_file else None  # OMNI_SMALL_COMFORTS_V1
+        self.done_recent = deque(maxlen=DONE_KEEP)
+        self.done_lock = threading.Lock()
         _sched = Path(state_file).with_name("schedule.json") if state_file else None
         # Schedule schema 2 (R3-045 fix): console-local minutes; the offset comes from the trusted host
         # (Omni writes tz-offset.json beside the state file). Missing or invalid offset => no scheduled starts.
@@ -69,9 +91,15 @@ class Jobs:
         self.jd_lifecycle = jd_lifecycle
 
     def create(self, url, demo, audio=False, request_id=None, engine='ytdlp', auto_fallback=True, quality=None, referer=None, preset=None, subtitle_lang=None,
-               container=None, save_place=None, save_folder=None, save_name=None):
+               container=None, save_place=None, save_folder=None, save_name=None, direct=False):
         if not isinstance(url, str) or len(url) > 4096 or type(demo) is not bool or type(audio) is not bool:
             raise ValueError('URL must be text (up to 4096 characters); demo and audio must be booleans.')
+        # OMNI_FILE_DOWNLOADS_V1: an original (non-media) file, e.g. a PDF or ZIP Omni handed over from a page.
+        # The yt-dlp route skips the extractors and saves it with the direct file download; nothing to convert.
+        if type(direct) is not bool:
+            raise ValueError('direct must be a boolean.')
+        if direct and (audio or quality is not None or preset is not None or container is not None):
+            raise ValueError('An original file is saved as it is: no audio, quality, preset or file type choice.')
         validate_http_url(url)
         if engine not in ('ytdlp', 'jdownloader'):
             raise ValueError('Choose yt-dlp or JDownloader.')
@@ -107,10 +135,12 @@ class Jobs:
         choice = json.dumps({'quality':quality,'preset':preset,'subtitle_lang':subtitle_lang},sort_keys=True) if quality is not None or preset is not None else ''
         if container or save_place:
             choice += json.dumps({'container':container,'save':[save_place,save_folder,save_name]},sort_keys=True)
+        if direct:
+            choice += '{"direct":true}'
         if request_id is not None and (not isinstance(request_id, str) or len(request_id) != 32
                                        or any(c not in '0123456789abcdef' for c in request_id)):
             raise ValueError('request_id must contain 32 lowercase hexadecimal characters.')
-        if not demo and engine == 'ytdlp' and not auto_fallback and importlib.util.find_spec('yt_dlp') is None:
+        if not demo and engine == 'ytdlp' and not auto_fallback and not direct and importlib.util.find_spec('yt_dlp') is None:
             raise ValueError('yt-dlp is not installed in this Python runtime. Demo mode is available.')
         key = secrets.token_hex(8)
         with self.lock:
@@ -124,7 +154,7 @@ class Jobs:
                         if (job['url'], job['demo'], job['audio'], job.get('engine_requested', job.get('engine', 'ytdlp')), job.get('quality_key', '')) != (url, demo, audio, engine, choice):
                             raise ValueError('request_id was already used for a different download.')
                         return job['id']
-            if sum(j['state'] not in TERMINAL for j in self.jobs.values()) >= MAX_PENDING:
+            if self.waiting_count() >= MAX_PENDING:
                 raise ValueError('Queue is full (8 pending jobs). Wait or cancel a job.')
             while len(self.jobs) >= MAX_JOBS:
                 oldest = next((k for k, j in self.jobs.items()
@@ -137,21 +167,127 @@ class Jobs:
                                  engine_requested=engine, auto_fallback=auto_fallback, note='',
                                  format=fmt, quality_key=choice, referer=referer, preset=preset, subtitle_lang=subtitle_lang,
                                  container=container, save_place=save_place, save_folder=save_folder, save_name=save_name,
-                                 downloaded_bytes=None, total_bytes=None, speed_bps=None, eta_seconds=None)
+                                 direct=direct, downloaded_bytes=None, total_bytes=None, speed_bps=None, eta_seconds=None,
+                                 pause=False, attempt=1, retries=0, resumed=False)
             self.pending.append(key)
             self.history.save(self.jobs)
-            if self.dispatcher is None:
-                try:
-                    dispatcher = threading.Thread(target=self.dispatch, name='omni-download-dispatcher', daemon=True)
-                    dispatcher.start()
-                    self.dispatcher = dispatcher
-                except RuntimeError as error:
-                    self.pending.remove(key)
-                    self.jobs[key].update(state='failed', error='Could not start the download worker.')
-                    self.history.save(self.jobs)
-                    raise ValueError('Could not start the download worker.') from error
+            self._start_dispatcher(key)
             self.ready.notify_all()
         return key
+
+    def waiting_count(self):
+        """Jobs that hold a queue slot (running or waiting); paused jobs wait for the user and hold none."""
+        return sum(j['state'] not in TERMINAL and j['state'] != PAUSED for j in self.jobs.values())
+
+    def _start_dispatcher(self, key):
+        """Called with the lock held, after `key` was queued."""
+        if self.dispatcher is not None:
+            return
+        try:
+            dispatcher = threading.Thread(target=self.dispatch, name='omni-download-dispatcher', daemon=True)
+            dispatcher.start()
+            self.dispatcher = dispatcher
+        except RuntimeError as error:
+            self.pending.remove(key)
+            self.jobs[key].update(state='failed', error='Could not start the download worker.')
+            self.history.save(self.jobs)
+            raise ValueError('Could not start the download worker.') from error
+
+    # ----- pause / resume / retry (OMNI_DL_RESUME_V1) -----------------------
+    @staticmethod
+    def _job_id(key):
+        if not isinstance(key, str) or len(key) != 16 or not set(key) <= JOB_ID:
+            raise ValueError('id must contain 16 lowercase hexadecimal characters.')
+        return key
+
+    def pause(self, key):
+        """A waiting job is paused at once; a running one stops at its next progress report, keeping its partial files."""
+        self._job_id(key)
+        with self.ready:
+            job = self.jobs.get(key)
+            if job is None:
+                raise ValueError('Unknown download.')
+            if job['state'] in (PAUSED, 'pausing'):
+                return job['state']
+            if job['state'] in TERMINAL or job['state'] == 'cancelling' or job['cancel']:
+                raise ValueError('Only waiting or running downloads can be paused.')
+            if key in self.pending:
+                self.pending.remove(key)
+                job.update(state=PAUSED, pause=False, speed_bps=None, eta_seconds=None)
+                self.history.save(self.jobs)
+                self.ready.notify_all()
+                return PAUSED
+            if job.get('engine') == 'jdownloader':
+                raise ValueError('A JDownloader download cannot be paused; cancel it instead.')
+            job.update(pause=True, state='pausing')
+            self.history.save(self.jobs)
+            return 'pausing'
+
+    def resume(self, key, retry=False):
+        """Queue a paused, interrupted or failed job again with the same choices; its partial files are continued.
+        Retry (failed jobs only) is the same with a fresh attempt counter."""
+        self._job_id(key)
+        with self.lock:
+            job = self.jobs.get(key)
+            if job is None:
+                raise ValueError('Unknown download.')
+            allowed = ('failed',) if retry else (PAUSED, 'interrupted', 'failed')
+            if job['state'] not in allowed:
+                raise ValueError('Only failed downloads can be retried.' if retry else
+                                 'Only paused, interrupted or failed downloads can be resumed.')
+            if not job.get('url'):
+                raise ValueError("This download's link was not kept; submit the link again.")
+            job = dict(job)
+        # The kept choices are checked again, as a new job's are (the history file is only trusted so far).
+        validate_http_url(job['url'])
+        if job.get('referer') is not None:
+            validate_http_url(job['referer'])
+        if job.get('save_place') is not None:
+            save_places.base_for(save_places.check_place(job['save_place']), self.folder)   # the USB drive must be there
+        save_places.clean_name(job.get('save_folder'), 'The folder name')
+        save_places.clean_name(job.get('save_name'), 'The file name')
+        with self.ready:
+            if self.closed:
+                raise ValueError('Download worker is shutting down.')
+            if self.jd_adapter.poisoned:
+                raise ValueError('Java cleanup was not confirmed; restart its isolated worker before adding jobs.')
+            current = self.jobs.get(key)
+            if current is None or current['state'] != job['state']:
+                raise ValueError('The download changed meanwhile; check the queue.')
+            if self.waiting_count() >= MAX_PENDING:
+                raise ValueError('Queue is full (8 pending jobs). Wait or cancel a job.')
+            attempt = 1 if retry else int(current.get('attempt') or 1) + 1
+            retries = int(current.get('retries') or 0) + (1 if retry else 0)
+            current.update(state='queued', cancel=False, pause=False, error='', resumed=True, restored=False,
+                           attempt=attempt, retries=retries, speed_bps=None, eta_seconds=None,
+                           engine=current.get('engine_requested', current.get('engine', 'ytdlp')),
+                           note=('Retry %d started by you.' % retries) if retry else 'Resumed by you; partial files are continued.')
+            self.pending.append(key)
+            self.history.save(self.jobs)
+            self._start_dispatcher(key)
+            self.ready.notify_all()
+        return 'queued'
+
+    def retry(self, key):
+        return self.resume(key, retry=True)
+
+    def pause_requested(self, key):
+        if 'jobs' not in self.__dict__:   # a bare Jobs in unit tests
+            return False
+        with self.lock:
+            return bool(self.jobs[key].get('pause'))
+
+    def stop_reason(self, key):
+        if self.cancelled(key):
+            return 'cancel'
+        return 'pause' if self.pause_requested(key) else None
+
+    def check_stop(self, key):
+        reason = self.stop_reason(key)
+        if reason == 'cancel':
+            raise InterruptedError('Cancelled')
+        if reason == 'pause':
+            raise Paused('Paused')
 
     def dispatch(self):
         """One owned thread consumes every job, including rapid cancel/recreate."""
@@ -186,6 +322,7 @@ class Jobs:
         return dispatcher is None or not dispatcher.is_alive()
 
     def update(self, key, **values):
+        finished = None
         with self.lock:
             job = self.jobs[key]
             if job['cancel']:
@@ -193,9 +330,35 @@ class Jobs:
                     values.update(state='cancelled', error='')
                 elif values.get('state') not in TERMINAL:
                     values['state'] = 'cancelling'
+            elif job.get('pause') and 'state' in values and values['state'] not in TERMINAL and values['state'] != PAUSED:
+                values['state'] = 'pausing'   # OMNI_DL_RESUME_V1: until the job reaches its next progress report
+            if values.get('state') in TERMINAL or values.get('state') == PAUSED:
+                values['pause'] = False
             job.update(values)
-            if values.get('state') in TERMINAL:
+            if values.get('state') in TERMINAL or values.get('state') == PAUSED:
                 self.history.save(self.jobs)
+            if values.get('state') == 'completed' and not job.get('demo'):
+                finished = (str(key), done_title(job))  # OMNI_SMALL_COMFORTS_V1
+        if finished:
+            self.note_done(*finished)
+
+    def note_done(self, key, title):
+        """OMNI_SMALL_COMFORTS_V1: append "key<TAB>title" to the done file (outside the jobs lock; never raises)."""
+        if self.done_file is None:
+            return
+        with self.done_lock:
+            self.done_recent = deque((k, t) for k, t in self.done_recent if k != key)
+            self.done_recent = deque(self.done_recent, maxlen=DONE_KEEP)
+            self.done_recent.append((key, title))
+            try:
+                if not self.done_file.parent.is_dir():
+                    return
+                temp = self.done_file.with_name(self.done_file.name + '.tmp')
+                with open(temp, 'w', encoding='utf-8', newline='\n') as handle:
+                    handle.write(''.join(f'{k}\t{t}\n' for k, t in self.done_recent))
+                os.replace(temp, self.done_file)
+            except OSError:
+                pass  # A notice is a comfort; the download itself already finished.
 
     def cancelled(self, key):
         with self.lock:
@@ -204,11 +367,15 @@ class Jobs:
     def cancel(self, key):
         with self.ready:
             job = self.jobs[key]
-            if job['state'] not in TERMINAL:
+            if job['state'] == 'interrupted' and job.get('url'):
+                job.update(cancel=True, state='cancelled')   # OMNI_DL_RESUME_V1: give up a resumable job
+                self.history.save(self.jobs)
+            elif job['state'] not in TERMINAL:
                 job['cancel'] = True
-                if key in self.pending:
-                    self.pending.remove(key)
-                    job['state'] = 'cancelled'
+                if key in self.pending or key != self.active or job['state'] == PAUSED:   # waiting, or paused (nothing runs it)
+                    if key in self.pending:
+                        self.pending.remove(key)
+                    job.update(state='cancelled', pause=False)
                     self.history.save(self.jobs)
                 else:
                     job['state'] = 'cancelling'
@@ -257,9 +424,9 @@ class Jobs:
             # A library's SystemExit or a failed collection must not strand
             # the rest of the queue. The active record stays owned until this
             # failure is recorded, so concurrent pruning cannot remove it.
-            cancelled = self.cancelled(key)
-            self.update(key, state='cancelled' if cancelled else 'failed',
-                        error='' if cancelled else str(error)[:800])
+            reason = self.stop_reason(key)
+            self.update(key, state='cancelled' if reason == 'cancel' else PAUSED if reason == 'pause' else 'failed',
+                        error='' if reason else str(error)[:800])
         finally:
             with self.ready:
                 if self.jd_adapter.poisoned:
@@ -273,9 +440,9 @@ class Jobs:
         try:
             if job['demo']:
                 self.update(key, state='extracting', title='Demo media • no network request')
-                for n in range(101):
-                    if self.cancelled(key):
-                        raise InterruptedError()
+                start = int(job.get('progress') or 0) if job.get('resumed') else 0
+                for n in range(min(100, max(0, start)), 101):
+                    self.check_stop(key)
                     self.update(key, state='downloading', progress=n)
                     time.sleep(.035)
                 self.update(key, state='completed', title='Demo complete • no file was downloaded')
@@ -284,7 +451,12 @@ class Jobs:
             destination.mkdir(parents=True, exist_ok=True)
             self._route(key, job, destination)
         except Exception as error:
-            self.update(key, state='cancelled' if self.cancelled(key) else 'failed', error='' if self.cancelled(key) else str(error)[:800])
+            reason = self.stop_reason(key)
+            if reason == 'pause':
+                self.update(key, state=PAUSED, error='', speed_bps=None, eta_seconds=None)
+            else:
+                # OMNI_DL_RESUME_V1: AUTO_RETRY_LIMIT is 0, so a failed job waits for the user's Retry.
+                self.update(key, state='cancelled' if reason == 'cancel' else 'failed', error='' if reason else str(error)[:800])
 
     # ----- engine routing -------------------------------------------------
     def engine_order(self, job):
@@ -298,8 +470,7 @@ class Jobs:
         order = self.engine_order(job)
         reasons = []
         for index, engine in enumerate(order):
-            if self.cancelled(key):
-                raise InterruptedError('Cancelled')
+            self.check_stop(key)
             # A fallback engine gets its own sub-folder, except JDownloader: its Java bridge always writes to
             # <downloads>/<job id> (this job's folder), so checking its file against via-jdownloader/ refused every
             # finished JD-fallback download and reported it as failed.
@@ -323,8 +494,7 @@ class Jobs:
             except NoFallback:
                 raise
             except Exception as error:
-                if self.cancelled(key):
-                    raise InterruptedError('Cancelled') from error
+                self.check_stop(key)
                 if self.jd_adapter.poisoned:
                     raise RuntimeError('Java cleanup was not confirmed; restart its isolated worker.') from error
                 message = classify_failure(error)  # Raises NoFallback for DRM/full disk.
@@ -376,15 +546,20 @@ class Jobs:
         limiter = RateLimiter(self.policy.rate)
         downloaded, totals, expected = {}, {}, {}
         place = job.get('save_place') or 'internal'
+        resumed = bool(job.get('resumed'))
         def hook(data):
-            if self.cancelled(key):
-                raise InterruptedError('Cancelled')
+            self.check_stop(key)   # cancel, or OMNI_DL_RESUME_V1 pause: stop here, keeping partial files
             if not save_places.still_there(place):
                 raise NoFallback('The USB drive was disconnected during the download.')
             name = str(data.get('filename') or 'stream')
             count = max(0, int(data.get('downloaded_bytes') or 0))
-            before = downloaded.get(name, 0)
-            limiter.charge(count if count < before else count - before, lambda: self.cancelled(key))
+            # A resumed stream first reports the bytes it already had; those are not charged to the rate limit again.
+            before = downloaded.get(name, count if resumed else 0)
+            try:
+                limiter.charge(count if count < before else count - before, lambda: self.stop_reason(key) is not None)
+            except InterruptedError:
+                self.check_stop(key)
+                raise
             downloaded[name] = count
             total = data.get('total_bytes') or data.get('total_bytes_estimate') or 0
             if total:
@@ -409,6 +584,14 @@ class Jobs:
                 if free is not None and free < size + save_places.MARGIN:
                     raise NoFallback('Not enough free space: this download needs about %s and the drive has %s free.'
                                      % (human_bytes(size), human_bytes(free)))
+        if job.get('direct'):
+            # OMNI_FILE_DOWNLOADS_V1: an original file goes straight to the direct download (yt-dlp not needed).
+            self.update(key, state='extracting', title='Downloading the file')
+            destination.mkdir(parents=True, exist_ok=True)
+            result = DirectFileAdapter(validate=validate_http_url, referer=job.get('referer')).download(job['url'], destination, hook,
+                lambda info: self.update(key, title=str(info.get('title') or 'File')[:300]),
+                lambda: self.cancelled(key))
+            return dict(filepath=result['filepath'], via='a direct file download')
         if importlib.util.find_spec('yt_dlp') is None:
             raise EngineUnavailable('yt-dlp is not installed in this runtime')
         self.update(key, state='extracting', title='Inspecting link')
@@ -423,8 +606,7 @@ class Jobs:
         except (InterruptedError, NoFallback):
             raise
         except Exception as error:
-            if self.cancelled(key):
-                raise InterruptedError('Cancelled') from error
+            self.check_stop(key)
             classify_failure(error)
             if job['audio'] or job.get('preset') is not None:
                 raise
@@ -740,7 +922,8 @@ class WorkerHandler(BaseHTTPRequestHandler):
                 key = self.server.jobs.create(body['url'], body.get('demo', True), body.get('audio', False), body.get('request_id'),
                                               body.get('engine', 'ytdlp'), body.get('auto_fallback', True),
                                               body.get('quality'), body.get('referer'), body.get('preset'), body.get('subtitle_lang'),
-                                              body.get('container'), body.get('save_place'), body.get('save_folder'), body.get('save_name'))
+                                              body.get('container'), body.get('save_place'), body.get('save_folder'), body.get('save_name'),
+                                              body.get('direct', False))
                 return self.reply(201, {'id': key})
             if self.path == '/api/probe':
                 # OMNI_DOWNLOADS_PROBE_V5: read-only check of one grabbed link (public hosts only).
@@ -757,6 +940,13 @@ class WorkerHandler(BaseHTTPRequestHandler):
             if self.path == '/api/cancel':
                 self.server.jobs.cancel(body['id'])
                 return self.reply(200, {'ok': True})
+            if self.path in ('/api/jobs/pause', '/api/jobs/resume', '/api/jobs/retry'):
+                # OMNI_DL_RESUME_V1: {id} only; the job keeps the choices it was created with.
+                if set(body) != {'id'}:
+                    raise ValueError('This request requires only id.')
+                action = self.path.rsplit('/', 1)[1]
+                state = getattr(self.server.jobs, action)(body['id'])
+                return self.reply(200, {'ok': True, 'id': body['id'], 'state': state})
             if self.path == '/api/queue':
                 self.server.jobs.set_paused(body['paused'])
                 return self.reply(200, {'queue_paused': self.server.jobs.queue_paused})

@@ -330,7 +330,7 @@ def split_codecs(value):
 def result(status, message='', **values):
     value = dict(status=status, ok=status == 'ok', message=message, kind=None, container=None, duration=None,
                  size=None, size_estimated=False, video=None, audio=None, variants=[], audio_tracks=[],
-                 subtitles=[], encrypted='none', source='parse', title=None)
+                 subtitles=[], encrypted='none', source='parse', title=None, plain=False)
     value.update(values)
     return value
 
@@ -783,6 +783,50 @@ CONTAINERS = (('video/mp4', 'MP4'), ('audio/mp4', 'M4A'), ('video/webm', 'WebM')
               ('video/x-flv', 'FLV'))
 
 
+# OMNI_FILE_DOWNLOADS_V1: regular (non-media) files Omni hands over from a page download (PDF, ZIP, images, ...).
+# They are reported as kind 'file' with plain=True, so the GUI saves the original file straight away
+# (a direct download, no yt-dlp, no file type to convert to).
+PLAIN_TYPES = (('application/pdf', 'PDF'), ('application/zip', 'ZIP'), ('application/x-zip', 'ZIP'),
+               ('application/x-zip-compressed', 'ZIP'), ('application/x-7z-compressed', '7Z'),
+               ('application/vnd.rar', 'RAR'), ('application/x-rar', 'RAR'), ('application/gzip', 'GZ'),
+               ('application/x-gzip', 'GZ'), ('application/x-tar', 'TAR'), ('application/x-bzip2', 'BZ2'),
+               ('application/x-xz', 'XZ'), ('application/x-iso9660-image', 'ISO'),
+               ('application/vnd.android.package-archive', 'APK'), ('application/epub+zip', 'EPUB'),
+               ('application/json', 'JSON'), ('text/plain', 'TXT'), ('text/csv', 'CSV'))
+PLAIN_MAGIC = ((b'%PDF-', 'PDF'), (b'PK\x03\x04', 'ZIP'), (b'\x89PNG', 'PNG'), (b'\xff\xd8\xff', 'JPEG'),
+               (b'GIF8', 'GIF'), (b'7z\xbc\xaf\x27\x1c', '7Z'), (b'Rar!', 'RAR'), (b'\x1f\x8b', 'GZ'))
+MEDIA_EXTENSIONS = {'mp4', 'm4v', 'm4a', 'mkv', 'webm', 'mov', 'ts', 'mp3', 'aac', 'ogg', 'oga', 'opus', 'flac', 'wav',
+                    'flv', 'avi', 'wmv', 'mpg', 'mpeg', 'm3u8', 'mpd'}
+
+
+def file_name(headers, url):
+    """The file's name from Content-Disposition, else the last part of the address ('' when none)."""
+    disposition = headers.get('Content-Disposition') or ''
+    match = (re.search(r"filename\*\s*=\s*[^']*'[^']*'([^;]+)", disposition, re.I)
+             or re.search(r'filename\s*=\s*"?([^";]+)"?', disposition, re.I))
+    name = urllib.parse.unquote(match.group(1)) if match else ''
+    if not name:
+        name = urllib.parse.unquote(urllib.parse.urlsplit(url).path.rsplit('/', 1)[-1])
+    return name.replace('\\', '/').rsplit('/', 1)[-1].strip()[:200]
+
+
+def plain_file(content_type, head, headers, url):
+    """(container label, file name or None) when the answer is a regular non-media file, else None."""
+    name = file_name(headers, url)
+    extension = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
+    label = next((label for prefix, label in PLAIN_TYPES if content_type.startswith(prefix)), None)
+    if label is None and content_type.startswith('image/'):
+        label = content_type.split('/', 1)[1].split('+', 1)[0].upper()[:12] or 'Image'
+    if label is None:
+        label = next((label for magic, label in PLAIN_MAGIC if head.startswith(magic)), None)
+    attachment = (headers.get('Content-Disposition') or '').strip().lower().startswith('attachment')
+    if label is None and attachment and extension and extension not in MEDIA_EXTENSIONS:
+        label = extension.upper()[:12]
+    if label is None:
+        return None
+    return label, name or None
+
+
 def probe_url(url, referer=None, resolver=public_address):
     try:
         fetcher = Fetcher(referer, resolver=resolver)
@@ -836,6 +880,10 @@ def probe_url(url, referer=None, resolver=public_address):
             return result('ok', '', kind='file', container='MP3', size=total, audio={'codec': 'MP3'})
         if container:
             return result('ok', '', kind='file', container=container, size=total)
+        if not content_type.startswith(('video/', 'audio/')):
+            plain = plain_file(content_type, head, headers, final)   # OMNI_FILE_DOWNLOADS_V1
+            if plain:
+                return result('ok', '', kind='file', container=plain[0], size=total, title=plain[1], plain=True)
         if content_type.startswith(('video/', 'audio/')) or content_type == 'application/octet-stream':
             return result('ok', '', kind='file', container=(content_type.split('/', 1)[-1].upper()[:12] or 'File'), size=total)
         return result('unsupported', 'Not a media file Omni recognises.', kind='file')

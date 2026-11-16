@@ -104,6 +104,33 @@ class H(BaseHTTPRequestHandler):
                 return self.reply(200, dict(ok=True))
             if self.path == '/api/queue':
                 STATE['paused'] = bool(body['paused']); return self.reply(200, dict(queue_paused=STATE['paused']))
+            # OMNI_DL_RESUME_V1: pause / resume / retry, with the real worker's rules (simplified: a pause is immediate).
+            if self.path in ('/api/jobs/pause', '/api/jobs/resume', '/api/jobs/retry'):
+                if set(body) != {'id'}: return self.reply(400, {'error': 'This request requires only id.'})
+                j = next((j for j in STATE['jobs'] if j['id'] == body['id']), None)
+                if j is None: return self.reply(400, {'error': 'Unknown download.'})
+                action = self.path.rsplit('/', 1)[1]
+                STATE.setdefault('actions', []).append([action, j['id']])
+                if action == 'pause' and j['state'] in ('queued', 'extracting', 'downloading', 'processing'):
+                    j.update(state='paused', speed_bps=None, eta_seconds=None)
+                elif action in ('resume', 'retry') and j.get('url') and j['state'] in (('failed',) if action == 'retry' else ('paused', 'interrupted', 'failed')):
+                    j.update(state='queued', error='', attempt=1 if action == 'retry' else j.get('attempt', 1) + 1, retries=j.get('retries', 0) + (action == 'retry'))
+                else:
+                    return self.reply(400, {'error': 'Not possible for this download now.'})
+                return self.reply(200, dict(ok=True, id=j['id'], state=j['state']))
+            if self.path == '/api/_seed-resume':
+                # Test hook: one slow running job, one failed job (link kept), one interrupted job (link kept) and an
+                # old interrupted record whose link was not kept.
+                def job(state, name, **extra):
+                    return dict(dict(id=hexid(), state=state, engine='ytdlp', demo=False, audio=False, url='https://example.com/' + name, title=name,
+                                     error='', progress=40, engine_requested='ytdlp', downloaded_bytes=560_000_000, total_bytes=1_400_000_000), **extra)
+                seeded = [job('downloading', 'running.mp4', slow=True), job('failed', 'broken.mp4', error='Direct download was interrupted.'),
+                          job('interrupted', 'stopped.mp4', error='Worker stopped; resume to continue.'),
+                          job('interrupted', 'old.mp4', url='', error='Worker stopped; submit the link again.', restored=True)]
+                STATE['jobs'] = [j for j in STATE['jobs'] if j['state'] == 'completed'] + seeded
+                return self.reply(200, dict(ids={j['title']: j['id'] for j in seeded}))
+            if self.path == '/api/_actions':
+                return self.reply(200, dict(actions=STATE.get('actions', [])))
         self.reply(404, {'error': 'Not found'})
 def tick():
     while True:
@@ -111,7 +138,7 @@ def tick():
         with LOCK:
             for j in STATE['jobs']:
                 if j['state'] in ('queued', 'downloading'):
-                    j['state'] = 'downloading'; j['progress'] = min(100, (j['progress'] or 0) + 10)
+                    j['state'] = 'downloading'; j['progress'] = min(100, (j['progress'] or 0) + (1 if j.get('slow') else 10))
                     # OMNI_DL_SAVE_V1: byte counts as the real worker reports them (video + audio counted together)
                     j['total_bytes'] = 1_400_000_000; j['downloaded_bytes'] = j['total_bytes'] * j['progress'] // 100
                     j['speed_bps'] = 4_200_000; j['eta_seconds'] = (j['total_bytes'] - j['downloaded_bytes']) // j['speed_bps']

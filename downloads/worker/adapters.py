@@ -84,6 +84,10 @@ class NoFallback(Exception):
     """An outcome another engine must not retry (DRM, disk full, cancellation)."""
 
 
+class Paused(InterruptedError):
+    """OMNI_DL_RESUME_V1: the user paused the job; its partial files stay for a later resume."""
+
+
 class EngineUnavailable(RuntimeError):
     """The engine could not start for this job; another engine may take it."""
 
@@ -240,6 +244,7 @@ class PythonYtdlpAdapter:
         options = dict(outtmpl=str(Path(folder) / '%(title).120s [%(id)s].%(ext)s'),
                     noplaylist=True, restrictfilenames=True, quiet=True, no_warnings=True,
                     socket_timeout=20, retries=2, cachedir=False,
+                    continuedl=True, nopart=False,   # OMNI_DL_RESUME_V1: a resumed job continues its .part files
                     progress_hooks=[hook], postprocessor_hooks=[postprocess_hook], noprogress=True,
                     format=fmt or ('bestaudio' if audio else 'bestvideo+bestaudio/best'),
                     ffmpeg_location=ffmpeg.executable, js_runtimes={})
@@ -535,6 +540,72 @@ class DirectFileAdapter:
         name = re.sub(r'[^A-Za-z0-9._-]+', '_', name.replace('\\', '/').rsplit('/', 1)[-1]).strip('._')[:120]
         return name or 'download'
 
+    # OMNI_DL_RESUME_V1: one resumable part file per job folder. The side file keeps a hash of the link (never the
+    # link itself), the server's validator (strong ETag or Last-Modified), the total size and the chosen name.
+    PART = '.omni-direct.part'
+    META = '.omni-direct.part.json'
+
+    def _open(self, url, headers):
+        """Open one request; None when a ranged request was answered 416 (nothing to continue from)."""
+        try:
+            return self._opener().open(urllib.request.Request(url, headers=headers), timeout=self.timeout)
+        except urllib.error.HTTPError as error:
+            if error.msg == 'Redirect left HTTP(S)':
+                raise ValueError('Direct download redirected to a non-HTTP(S) address; refused.') from error
+            if error.code == 416 and 'Range' in headers:
+                error.close()
+                return None
+            raise RuntimeError(f'Direct download was refused by the server (HTTP {error.code}).') from error
+        except (urllib.error.URLError, socket.timeout, ssl.SSLError, OSError) as error:
+            raise RuntimeError('Direct download could not connect: ' + redact_urls(getattr(error, 'reason', error), 160)) from error
+
+    @staticmethod
+    def _validator(response):
+        etag = (response.headers.get('ETag') or '').strip()
+        if etag and not etag.startswith('W/') and len(etag) <= 200 and etag.isprintable():
+            return etag
+        modified = (response.headers.get('Last-Modified') or '').strip()
+        return modified if 0 < len(modified) <= 100 and modified.isprintable() else ''
+
+    @staticmethod
+    def _content_range(value):
+        """'bytes 100-999/1000' -> (100, 999, 1000); total None for '*'; None when malformed."""
+        match = re.fullmatch(r'\s*bytes\s+(\d{1,18})-(\d{1,18})/(\d{1,18}|\*)\s*', value or '')
+        if not match:
+            return None
+        start, end = int(match.group(1)), int(match.group(2))
+        total = None if match.group(3) == '*' else int(match.group(3))
+        if end < start or (total is not None and end >= total):
+            return None
+        return start, end, total
+
+    @staticmethod
+    def _link_hash(url):
+        import hashlib
+        return hashlib.sha256(url.encode('utf-8', 'surrogatepass')).hexdigest()
+
+    def _resume_point(self, folder, url):
+        """(bytes already saved, side info) for this link, or (0, None)."""
+        part, meta = folder / self.PART, folder / self.META
+        try:
+            if part.is_symlink() or meta.is_symlink() or not part.is_file():
+                return 0, None
+            with meta.open('rb') as source:
+                info = json.loads(source.read(4097).decode('utf-8'))
+            if not isinstance(info, dict) or info.get('link') != self._link_hash(url):
+                return 0, None
+            size = part.stat().st_size
+            return (size, info) if size > 0 else (0, None)
+        except (OSError, ValueError, UnicodeError):
+            return 0, None
+
+    def _discard(self, folder):
+        for name in (self.PART, self.META, self.META + '.tmp'):
+            try:
+                (folder / name).unlink(missing_ok=True)
+            except OSError:
+                pass
+
     def download(self, url, folder, hook=lambda _: None, metadata=lambda _: None, cancelled=lambda: False):
         folder = Path(folder).resolve()
         folder.mkdir(parents=True, exist_ok=True)
@@ -542,39 +613,76 @@ class DirectFileAdapter:
         if self.referer:
             headers['Referer'] = self.referer
         check_public_link(url)
-        request = urllib.request.Request(url, headers=headers)
-        try:
-            response = self._opener().open(request, timeout=self.timeout)
-        except urllib.error.HTTPError as error:
-            if error.msg == 'Redirect left HTTP(S)':
-                raise ValueError('Direct download redirected to a non-HTTP(S) address; refused.') from error
-            raise RuntimeError(f'Direct download was refused by the server (HTTP {error.code}).') from error
-        except (urllib.error.URLError, socket.timeout, ssl.SSLError, OSError) as error:
-            raise RuntimeError('Direct download could not connect: ' + redact_urls(getattr(error, 'reason', error), 160)) from error
+        offset, info = self._resume_point(folder, url)
+        response, resumed, total = None, False, None
+        if offset:
+            ranged = dict(headers, Range='bytes=%d-' % offset)
+            if info.get('validator'):
+                ranged['If-Range'] = str(info['validator'])[:200]
+            response = self._open(url, ranged)
+            if response is not None and response.status == 206:
+                found = self._content_range(response.headers.get('Content-Range'))
+                known = info.get('total') if type(info.get('total')) is int else None
+                if found and found[0] == offset and (found[2] is None or known is None or found[2] == known) \
+                        and (found[2] is None or found[1] == found[2] - 1):
+                    resumed, total = True, found[2] if found[2] is not None else known
+                else:
+                    response.close()   # not the bytes we asked for: start over cleanly
+                    response = None
+            # A 200 answer (the server ignored the range, or the file changed) is the whole file: start over with it.
+            if not resumed:
+                self._discard(folder)
+                offset, info = 0, None
+                if response is None:
+                    response = self._open(url, headers)
+        else:
+            self._discard(folder)   # a part file of another link (or without its side file) is never continued
+            response = self._open(url, headers)
+        if response is None:
+            raise RuntimeError('Direct download was refused by the server (HTTP 416).')
         with response:
+            if not resumed and response.status == 206:
+                raise RuntimeError('Direct download: the server sent part of the file without being asked.')
             kind = (response.headers.get('Content-Type') or '').split(';')[0].strip().lower()
             if kind in self.PAGE_TYPES:
                 raise ValueError('This link opens a web page, not a file.')
             if any(item in kind for item in self.MANIFEST_TYPES):
                 raise ValueError('This link is a streaming playlist; it cannot be saved as a plain file.')
             first = response.read(min(self.CHUNK, 65536))
-            if not kind and first.lstrip()[:15].lower().startswith((b'<!doctype html', b'<html')):
+            if not resumed and not kind and first.lstrip()[:15].lower().startswith((b'<!doctype html', b'<html')):
                 raise ValueError('This link opens a web page, not a file.')
-            total = response.headers.get('Content-Length')
-            total = int(total) if total and total.isdigit() else None
+            if not resumed:
+                total = response.headers.get('Content-Length')
+                total = int(total) if total and total.isdigit() else None
             limit = None
             try:
-                limit = shutil.disk_usage(folder).free - self.RESERVE
+                limit = shutil.disk_usage(folder).free - self.RESERVE + offset
             except (OSError, AttributeError):
                 pass
             if limit is not None and total is not None and total > limit:
                 raise NoFallback('Not enough free storage for this file.')
-            name = self._name(response, url)
+            saved_name = info.get('name') if resumed else None
+            if isinstance(saved_name, str) and re.fullmatch(r'[A-Za-z0-9._-]{1,120}', saved_name) and saved_name.strip('._'):
+                name = saved_name
+            else:
+                name = self._name(response, url)
             metadata({'title': name})
-            descriptor, temporary = tempfile.mkstemp(prefix='.omni-direct-', suffix='.part', dir=folder)
-            temporary = Path(temporary)
-            written = 0
+            part = folder / self.PART
+            written, keep, done = offset, False, False
             try:
+                flags = os.O_WRONLY | getattr(os, 'O_BINARY', 0) | getattr(os, 'O_NOFOLLOW', 0)
+                if resumed:
+                    descriptor = os.open(part, flags | os.O_APPEND)
+                    if os.fstat(descriptor).st_size != offset:
+                        os.close(descriptor)
+                        raise RuntimeError('Direct download: the saved part changed; start the download again.')
+                else:
+                    descriptor = os.open(part, flags | os.O_CREAT | os.O_EXCL, 0o600)
+                    side = json.dumps({'link': self._link_hash(url), 'validator': self._validator(response),
+                                       'total': total, 'name': name}).encode()
+                    temp = folder / (self.META + '.tmp')
+                    temp.write_bytes(side)
+                    os.replace(temp, folder / self.META)
                 with os.fdopen(descriptor, 'wb') as target:
                     chunk = first
                     while chunk:
@@ -585,24 +693,37 @@ class DirectFileAdapter:
                         if limit is not None and written > limit:
                             raise NoFallback('Not enough free storage for this file.')
                         hook({'status': 'downloading', 'downloaded_bytes': written, 'total_bytes': total})
-                        chunk = response.read(self.CHUNK)
+                        try:
+                            chunk = response.read(self.CHUNK)
+                        except Exception as error:   # connection lost mid-file: keep the part for a resume
+                            raise RuntimeError('Direct download was interrupted: ' + redact_urls(error, 160)) from error
                 if total is not None and written != total:
                     raise RuntimeError('Direct download ended early.')
                 output = folder / name
                 stem, suffix, counter = output.stem, output.suffix, 1
                 while True:
                     try:
-                        os.link(temporary, output)
+                        os.link(part, output)
                         break
                     except FileExistsError:
                         counter += 1
                         if counter > 99:
                             raise
                         output = folder / f'{stem}-{counter}{suffix}'
+                done = True
+            except Paused:
+                keep = True   # paused: the part file and its side file stay for the resume
+                raise
+            except (InterruptedError, NoFallback, ValueError):
+                raise
+            except Exception:
+                keep = written > 0   # a lost connection: a later resume or retry continues from here
+                raise
             finally:
-                temporary.unlink(missing_ok=True)
+                if done or not keep:
+                    self._discard(folder)
         hook({'status': 'finished', 'downloaded_bytes': written, 'total_bytes': written})
-        return dict(title=name, filepath=str(output), direct=True)
+        return dict(title=name, filepath=str(output), direct=True, resumed_from=offset)
 
 
 def capabilities():

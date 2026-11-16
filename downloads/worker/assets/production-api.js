@@ -2,7 +2,8 @@
 (function(root,factory){'use strict';var api=factory(root);if(typeof module==='object'&&module.exports)module.exports=api;else root.OmniProductionApi=api;})(typeof globalThis!=='undefined'?globalThis:window,function(root){
   'use strict';
   var HEX16=/^[a-f0-9]{16}$/,HEX32=/^[a-f0-9]{32}$/,TOKEN=/^[A-Za-z0-9_-]{16,128}$/;
-  var STATES=new Set(['queued','extracting','downloading','processing','cancelling','completed','failed','cancelled','interrupted']);
+  // OMNI_DL_RESUME_V1: 'pausing' (stops at the next progress report) and 'paused' (waits for the user) are not terminal.
+  var STATES=new Set(['queued','extracting','downloading','processing','cancelling','pausing','paused','completed','failed','cancelled','interrupted']);
   var TERMINAL=new Set(['completed','failed','cancelled','interrupted']);
   function fail(code,message,detail){var error=new Error(message);error.code=code;Object.assign(error,detail||{});return error;}
   function string(value,max,empty){return typeof value==='string'&&value.length<=max&&(empty||value.length>0)&&!/[\u0000\u000b\u000c]/.test(value);}
@@ -56,6 +57,10 @@
     // OMNI_DL_SAVE_V1: live byte counts, speed and time left (numbers or null), and the chosen file type.
     ['downloaded_bytes','total_bytes','speed_bps','eta_seconds'].forEach(function(key){var v=job[key];result[key]=typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=1e15?v:null;});
     result.container=['mp4','mkv','m4a','webm'].includes(job.container)?job.container:null;
+    // OMNI_DL_RESUME_V1: a job can be resumed (paused/interrupted/failed) or retried (failed) only while the worker kept its link.
+    ['attempt','retries'].forEach(function(key){var v=job[key];result[key]=Number.isSafeInteger(v)&&v>=0?v:0;});
+    result.resumable=!!job.url&&['paused','interrupted','failed'].includes(job.state);
+    result.retryable=!!job.url&&job.state==='failed';
     return result;
   }
   function create(options){
@@ -117,10 +122,15 @@
     }
     async function saveLink(url){if(!validUrl(url))throw fail('INVALID_URL','Use a complete HTTP(S) link without credentials or whitespace.');if(!pendingSave||pendingSave.url!==url)pendingSave={url:url,id:requestId()};var attempt=pendingSave;var response=await request('/api/saved-links',{url:url,request_id:attempt.id});if(!response||(typeof response.id!=='string'||!HEX16.test(response.id))||typeof response.created!=='boolean'||typeof response.present!=='boolean'||typeof response.replayed!=='boolean')throw fail('INVALID_RESPONSE','Worker returned an invalid save receipt. Check saved links before retrying.');if(pendingSave===attempt)pendingSave=null;savedAt=0;lastSaved=null;return response;}
     async function cancel(id){if(typeof id!=='string'||!HEX16.test(id))throw fail('INVALID_ID','Invalid job identity.');var value=await request('/api/cancel',{id:id});if(value?.ok!==true)throw fail('INVALID_RESPONSE','Worker did not confirm cancellation.');return value;}
+    // OMNI_DL_RESUME_V1: pause / resume / retry one job by id; the worker keeps the job's own choices.
+    async function jobAction(action,id){if(typeof id!=='string'||!HEX16.test(id))throw fail('INVALID_ID','Invalid job identity.');var value=await request('/api/jobs/'+action,{id:id});if(value?.ok!==true||value.id!==id||!STATES.has(value.state))throw fail('INVALID_RESPONSE','Worker did not confirm the '+action+'.');return value;}
+    function pause(id){return jobAction('pause',id);}
+    function resume(id){return jobAction('resume',id);}
+    function retry(id){return jobAction('retry',id);}
     async function setQueuePaused(paused){if(typeof paused!=='boolean')throw fail('INVALID_QUEUE','Queue state must be boolean.');var value=await request('/api/queue',{paused:paused});if(value?.queue_paused!==paused)throw fail('INVALID_RESPONSE','Worker did not confirm the queue state.');return value;}
     async function deleteLink(id){if(typeof id!=='string'||!HEX16.test(id))throw fail('INVALID_ID','Invalid saved-link identity.');var value=await request('/api/saved-links/delete',{id:id});if(typeof value?.removed!=='boolean')throw fail('INVALID_RESPONSE','Worker did not confirm saved-link deletion.');savedAt=0;lastSaved=null;return value;}
     function setPreferences(value){if(!value||Object.keys(value).some(function(key){return !['theme','reduced_motion','sound'].includes(key);}))throw fail('INVALID_PREFERENCES','Unsupported local preference.');if(value.theme!==undefined&&(typeof value.theme!=='string'||!/^[a-z0-9]{1,32}$/.test(value.theme)))throw fail('INVALID_PREFERENCES','Invalid theme.');['reduced_motion','sound'].forEach(function(key){if(value[key]!==undefined&&typeof value[key]!=='boolean')throw fail('INVALID_PREFERENCES','Invalid motion preference.');});Object.assign(preferences,value);try{options.storage?.setItem('omni.production.preferences',JSON.stringify(preferences));}catch(_){}return {preferences:Object.assign({},preferences)};}
-    return Object.freeze({state:state,probe:probe,createJob:createJob,saveLink:saveLink,deleteLink:deleteLink,cancel:cancel,setQueuePaused:setQueuePaused,setPreferences:setPreferences,renewSession:renewSession,sessionTokenForTest:options.testMode?function(){return token;}:undefined});
+    return Object.freeze({state:state,probe:probe,createJob:createJob,saveLink:saveLink,deleteLink:deleteLink,cancel:cancel,pause:pause,resume:resume,retry:retry,setQueuePaused:setQueuePaused,setPreferences:setPreferences,renewSession:renewSession,sessionTokenForTest:options.testMode?function(){return token;}:undefined});
   }
   return Object.freeze({create:create,validUrl:validUrl,validateStatus:validateStatus,validateSaved:validateSaved,normalizeJob:normalizeJob,terminal:TERMINAL});
 });
