@@ -18417,6 +18417,11 @@
       "sha256": "4b8ce02eda231c77040e72f8917d9d628639438672cb498d661a02612f906f86"
     },
     {
+      "path": "setup/omnibloom_setup/backup.py",
+      "bytes": 19495,
+      "sha256": "6609cfd0959452615da513b347e56395f7e91112429e1f05349e66191cd6b95f"
+    },
+    {
       "path": "setup/omnibloom_setup/bookmarks.py",
       "bytes": 13758,
       "sha256": "43db14f38b75016ae2e44b6851da4864f9f75318b4254cf729d22e7cd26f01da"
@@ -18448,8 +18453,8 @@
     },
     {
       "path": "setup/omnibloom_setup/gui.py",
-      "bytes": 54269,
-      "sha256": "4ab15b75e8be9772045b6f9773bc91071e22578ef948c48ba5dc11477ed36b0e"
+      "bytes": 63367,
+      "sha256": "3b22af3d5be24a007a2d5e8e321162ce074d1760b31275015373ee2ec2431887"
     },
     {
       "path": "setup/omnibloom_setup/installer.py",
@@ -18595,6 +18600,11 @@
       "path": "setup/tests/test_autoload_paths.py",
       "bytes": 2608,
       "sha256": "fee1a0a7f4b55d9737bfff8f428165db325e3464e3ab0e148f59bc97b4d1f131"
+    },
+    {
+      "path": "setup/tests/test_backup.py",
+      "bytes": 16612,
+      "sha256": "cf08d88ae3ce190f53713d328aef724367a48df7e168349ef561b464b233638a"
     },
     {
       "path": "setup/tests/test_bookmarks.py",
