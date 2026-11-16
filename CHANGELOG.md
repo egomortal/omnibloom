@@ -3,7 +3,9 @@
 ## v0.5.3
 
 Console package: Omni 0.5.3 (title f16ff5d6, engine a5083735, engine starter a3853c3a); Bloom Core, Downloads
-(downloader-9) and USB Files unchanged. Tested: 4 + 4 console launches plus a 20-launch soak with layers off and Master Control 0.4.5.
+(downloader-9) and USB Files unchanged. Tested: 4 + 4 console launches, then a 20-launch soak (layers off, Master Control 0.4.5 running): no crashes or console
+drops. YouTube's token rejections (known issue) still made the guard reload the page in 6 of the 10 4K runs; 4 played
+to the end.
 
 ### Less memory while a page loads
 - **Omni's own engine starter** (`omni/native-title/starter/`, `/data/omni/native/omni-starter.elf`, 127.0.0.1:9031)
