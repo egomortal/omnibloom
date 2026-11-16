@@ -91,6 +91,9 @@ python3 "$S1/tools/apply_bars_hide.py" "$TT" > "$LT_/apply_bars_hide.log" 2>&1 |
 # OMNI_UA_OVERRIDE_V1: desktop user agent from /data/omni/ua-desktop.txt (YouTube BotGuard A/B tests)
 python3 "$S1/tools/apply_ua_override.py" "$TT" > "$LT_/apply_ua_override.log" 2>&1 || { st "UA override FAILED: $(tail -1 "$LT_/apply_ua_override.log")"; exit 1; }
 st "OMNI_BARS_HIDE_V1: $(paste -sd' ' "$LT_/apply_bars_hide.log")"
+# OMNI_BARS_CLICK_V1 (2026-11-16): top-bar clicks 52 px low with the quick-access row hidden (needs OMNI_BARS_HIDE_V1)
+python3 "$S1/tools/apply_bars_click.py" "$TT" > "$LT_/apply_bars_click.log" 2>&1 || { st "bars click FAILED: $(tail -1 "$LT_/apply_bars_click.log")"; exit 1; }
+st "OMNI_BARS_CLICK_V1: $(tail -1 "$LT_/apply_bars_click.log")"
 # OMNI_GPUPAGES_ZEROCOPY_V1 (outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md): the shell side (inert without /data/omni/gpu-pages-zerocopy.flag)
 python3 "$S1/tools/apply_zerocopy_shell.py" "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_zerocopy_shell.log" 2>&1 || { st "zero-copy shell FAILED: $(tail -1 "$LT_/apply_zerocopy_shell.log")"; exit 1; }
 st "OMNI_GPUPAGES_ZEROCOPY_V1 shell: $(tail -1 "$LT_/apply_zerocopy_shell.log")"
