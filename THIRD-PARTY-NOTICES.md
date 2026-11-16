@@ -59,6 +59,7 @@ upstream project's source, at the version named.
 | yt-dlp | The Unlicense | <https://github.com/yt-dlp/yt-dlp>. Not bundled in this source tree. |
 | CPython | PSF License | The downloads worker runs on CPython 3.12 on the console. Not bundled in this source tree. |
 | QuickJS | MIT | Used by the downloads worker's runtime. Not bundled in this source tree. |
+| FFmpeg 7.1.5 (libavformat, libavcodec, libavutil) | LGPL-2.1-or-later | Linked statically into the console downloads worker (`python-worker.elf`, `_omni_native.remux`) for clip cuts, remux and metadata, stream copy only. Minimal LGPL configuration: no GPL, version3 or nonfree parts, no network, no encoders. Source: <https://ffmpeg.org/releases/ffmpeg-7.1.5.tar.xz> (SHA-256 `de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f`, signed by the FFmpeg release key FCF986EA15E6E293). Exact configure line and build recipe: `downloads/native/build-ffmpeg-lgpl.sh`; record: `downloads/native/FFMPEG-SOURCE.json`. Whoever distributes the worker must offer this FFmpeg source (or a written offer for it) and the LGPL-2.1 text (`COPYING.LGPLv2.1` in the source), and allow relinking against a changed FFmpeg (static link: publish the worker's native source or object files with its link script). Open item: that native source (`_omni_native` C files, link scripts) is not in this repository yet. Not bundled in this source tree. |
 
 ## Fonts
 

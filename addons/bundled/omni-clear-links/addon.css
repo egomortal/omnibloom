@@ -1,0 +1,3 @@
+html[data-omni-links="all"] a[href]:not([role="button"]):not([class*="btn"]):not([class*="button"]){text-decoration:underline!important;text-underline-offset:.18em!important;text-decoration-thickness:max(1px,.08em)!important}
+html[data-omni-links] :is(a[href],button,input,select,textarea,summary,[tabindex]:not([tabindex="-1"]),[role="button"],[role="link"]):focus{
+  outline:4px solid #ffd400!important;outline-offset:3px!important;box-shadow:0 0 0 8px rgba(0,0,0,.85)!important;border-radius:4px}

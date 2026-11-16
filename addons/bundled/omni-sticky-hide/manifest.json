@@ -1,0 +1,31 @@
+{
+  "manifest_version": 1,
+  "id": "omni-sticky-hide",
+  "name": "Sticky bar hider",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Gives a TV screen its height back: a page's fixed or sticky header and footer bars slide away while you scroll down and come back as soon as you scroll up or reach the top.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    { "key": "which", "type": "choice", "label": "Bars to hide while scrolling down", "default": "both", "choices": ["both", "top", "bottom"], "labels": ["Header and footer", "Header only", "Footer only"] }
+  ]
+}

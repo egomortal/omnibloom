@@ -2,7 +2,7 @@
 'use strict';
 const test=require('node:test'),a=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const ROOT=path.join(__dirname,'..','bundled');
-for(const id of['omni-resume-videos','omni-reader-view'])test(id+' manifest passes the loader checks',()=>{
+for(const id of['omni-resume-videos','omni-reader-view','omni-page-outline','omni-video-fit','omni-recipe-mode','omni-form-saver','omni-site-redirects','omni-search-blocklist','omni-unlock-select','omni-video-speed','omni-yt-chapters','omni-twitch-comfort','omni-image-gallery','omni-sticky-hide','omni-auto-scroll','omni-reading-ruler','omni-same-tab','omni-scroll-memory','omni-readable-font','omni-clear-links','omni-break-reminder','omni-yt-captions'])test(id+' manifest passes the loader checks',()=>{
   const dir=path.join(ROOT,id),raw=fs.readFileSync(path.join(dir,'manifest.json'),'utf8'),m=JSON.parse(raw);
   a.ok(raw.length<=64*1024);a.equal(m.manifest_version,1);a.equal(m.id,id);a.match(m.id,/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/);
   for(const[k,max]of[['name',60],['version',24],['licence',60],['description',300],['source',300]])if(k in m||k!=='source'){a.equal(typeof m[k],'string');a.ok(m[k].length<=max,k)}

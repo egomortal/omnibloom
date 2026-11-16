@@ -1,0 +1,29 @@
+{
+  "manifest_version": 1,
+  "id": "omni-auto-scroll",
+  "name": "Auto-scroll",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Hands-free reading: Alt+Shift+S scrolls the page slowly by itself, Alt+Shift+Up / Down change the speed (remembered), and any other key, a click or the end of the page stops it.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": []
+}

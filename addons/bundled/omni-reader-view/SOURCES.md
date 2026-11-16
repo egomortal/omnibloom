@@ -13,3 +13,9 @@ Fonts: only the ones Omni ships in /data/omni/fonts (DejaVu Sans, Serif and Mono
 No "Read aloud": the WebKit build has ENABLE_SPEECH_SYNTHESIS off (omni/webkit/configure-cmd.json), so there is no speechSynthesis to use.
 
 Controller: Omni's D-pad scrolls the page and goes back / forward instead of reaching page scripts, so the toolbar is made of large buttons for the pointer (left stick, Cross). A keyboard's arrow keys move between the buttons; Escape or Circle closes the options panel first, then the reader.
+
+## 1.2.0 (2026-11-16)
+
+Reading time and font presets, original code. The line above the title reads "~7 min read · 1,234 words": text in Chinese, Japanese or Korean script is counted per character at about 400 a minute, other text per word at about 230 a minute; code blocks, figure and table captions and images are left out (core.js readingTime, from the clean tree that is shown).
+
+Font presets (prefs.js PRESETS): Comfort (serif, large, medium width, relaxed lines), Clean (sans, medium, medium width, normal lines), Big (sans, giant, wide, normal lines, for across the room) and Dyslexia-friendly (the "Easy read" face with wider letter and word spacing, huge, narrow column, relaxed lines). Dyslexia-friendly is spacing-based: no font is bundled (OpenDyslexic is OFL but about 300 KB a weight and not in Omni's font folder), and nothing is downloaded. A preset writes ordinary toolbar choices, so it is remembered in the add-on's own storage like them; changing one option afterwards shows "Custom". The "Preset" button on the bar (pointer + Cross) and the C key (Triangle when Omni turns pad buttons into keys) cycle Comfort, Clean, Big, Dyslexia-friendly; the options panel has a Preset row too. Private tabs behave as before (the choice lasts for that page).

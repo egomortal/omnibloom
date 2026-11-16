@@ -1,0 +1,8 @@
+/* Text elements only: icon fonts (i, [class*=icon]), code, maths and form controls keep the page's own faces. */
+html[data-omni-font] :is(p,li,dd,dt,td,th,blockquote,figcaption,h1,h2,h3,h4,h5,h6,article,section,main,span,a,label,summary):not([class*="icon"]):not([class*="Icon"]):not(i):not(code):not(pre):not(kbd):not(samp){
+  font-family:var(--omni-font)!important}
+html[data-omni-font="sans"]{--omni-font:"Inter","Helvetica Neue",Arial,sans-serif}
+html[data-omni-font="serif"]{--omni-font:Georgia,"Times New Roman",serif}
+html[data-omni-font="easy"]{--omni-font:Verdana,"Trebuchet MS",Tahoma,sans-serif}
+html[data-omni-spacing="wide"] :is(p,li,dd,blockquote,td,figcaption){line-height:1.7!important;letter-spacing:.02em!important;word-spacing:.08em!important}
+html[data-omni-spacing="wider"] :is(p,li,dd,blockquote,td,figcaption){line-height:1.95!important;letter-spacing:.05em!important;word-spacing:.18em!important}

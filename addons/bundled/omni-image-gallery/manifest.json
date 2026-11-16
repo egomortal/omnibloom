@@ -1,0 +1,29 @@
+{
+  "manifest_version": 1,
+  "id": "omni-image-gallery",
+  "name": "Image gallery",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Alt+Shift+G shows the page's large pictures (lazy-loaded ones too, at their biggest size) one at a time on the whole screen: D-pad left / right steps, Escape closes. Only the shown picture and the next one are kept loaded.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": []
+}

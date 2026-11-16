@@ -1,0 +1,36 @@
+{
+  "manifest_version": 1,
+  "id": "omni-unlock-select",
+  "name": "Unlock selection",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Lets you select, copy and right-click text on sites that block it, so L2 text select works there. Only events the site was seen cancelling on plain text; never text fields, buttons or canvas games. Turn it on per site.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_start",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": false,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "mousedown",
+      "type": "bool",
+      "label": "Also undo mouse-press blocks on text",
+      "default": true
+    }
+  ]
+}

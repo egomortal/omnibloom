@@ -1,0 +1,5 @@
+.omni-sm-bar{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:2147483646;display:flex;gap:10px;background:rgba(18,18,18,.95);
+  padding:10px;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.5);font:16px system-ui,sans-serif}
+.omni-sm-bar button{font:inherit;color:#fff;background:rgba(255,255,255,.1);border:2px solid transparent;border-radius:8px;padding:8px 14px;cursor:pointer}
+.omni-sm-bar button:first-child{background:#3ea6ff;color:#001a33}
+.omni-sm-bar button:focus{outline:none;border-color:#fff}

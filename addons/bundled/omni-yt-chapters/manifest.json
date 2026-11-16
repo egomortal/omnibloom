@@ -1,0 +1,30 @@
+{
+  "manifest_version": 1,
+  "id": "omni-yt-chapters",
+  "name": "YouTube chapters",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "A chapter list for long YouTube videos (from YouTube's chapter markers or the description's timestamps): Alt+Shift+C opens it, D-pad and Cross jump; Alt+Shift+Right / Left go to the next / previous chapter. Reads the page only.",
+  "matches": [
+    "*://www.youtube.com/*",
+    "*://m.youtube.com/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": []
+}

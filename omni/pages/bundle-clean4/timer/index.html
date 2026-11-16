@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; media-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"><title>Omni · Couch timer</title><link rel="stylesheet" href="../hdr/tokens.css"><link rel="stylesheet" href="timer.css"></head><body>
+<main id="content">
+<header class="top"><div><p class="eyebrow">OMNI · TOOLS</p><h1>Couch timer</h1></div><span id="clock" class="clock" aria-label="Time now">--:--</span></header>
+<nav class="blades" role="tablist" aria-label="Timer mode">
+<button id="tab-countdown" class="blade" role="tab" data-mode="countdown">Countdown<span id="badge-countdown" class="badge"></span></button>
+<button id="tab-stopwatch" class="blade" role="tab" data-mode="stopwatch">Stopwatch<span id="badge-stopwatch" class="badge"></span></button>
+<button id="tab-alarm" class="blade" role="tab" data-mode="alarm">Alarm<span id="badge-alarm" class="badge"></span></button>
+</nav>
+<section id="panel-countdown" class="panel" role="tabpanel" aria-labelledby="tab-countdown">
+<button id="cd-display" class="digits" aria-label="Countdown time. Choose to set your own"><span id="cd-h" class="f"></span><span id="cd-c1" class="colon">:</span><span id="cd-m" class="f"></span><span class="colon">:</span><span id="cd-s" class="f"></span></button>
+<p id="cd-note" class="note" role="status"></p>
+<div class="chips" role="group" aria-label="Presets"><button id="preset-1" class="chip" data-min="1">1 min</button><button id="preset-3" class="chip" data-min="3">3 min</button><button id="preset-5" class="chip" data-min="5">5 min</button><button id="preset-10" class="chip" data-min="10">10 min</button><button id="preset-15" class="chip" data-min="15">15 min</button><button id="preset-30" class="chip" data-min="30">30 min</button></div>
+<div class="actions"><button id="cd-go" class="act primary">Start</button><button id="cd-reset" class="act">Reset</button></div>
+</section>
+<section id="panel-stopwatch" class="panel" role="tabpanel" aria-labelledby="tab-stopwatch" hidden>
+<div class="digits sw" aria-live="off"><span id="sw-main"></span><span id="sw-frac" class="frac"></span></div>
+<p id="sw-note" class="note" role="status"></p>
+<div class="actions"><button id="sw-go" class="act primary">Start</button><button id="sw-lap" class="act">Lap</button><button id="sw-reset" class="act">Reset</button></div>
+<ol id="sw-laps" class="laps" aria-label="Laps"></ol>
+</section>
+<section id="panel-alarm" class="panel" role="tabpanel" aria-labelledby="tab-alarm" hidden>
+<button id="al-display" class="digits" aria-label="Alarm time. Choose to change it"><span id="al-h" class="f"></span><span class="colon">:</span><span id="al-m" class="f"></span></button>
+<p id="al-note" class="note" role="status"></p>
+<div class="actions"><button id="al-go" class="act primary">Set alarm</button></div>
+</section>
+<p id="missed" class="missed" role="status" hidden></p>
+</main>
+<footer class="hint"><span id="hint"></span><span id="sound" class="sound"></span></footer>
+<div id="ring" class="ring" role="alertdialog" aria-labelledby="ring-title" hidden><div class="ring-in"><p id="ring-title" class="ring-title">Time's up</p><p id="ring-over" class="ring-digits">0:00</p><p id="ring-hint" class="ring-hint"></p></div></div>
+<audio id="beep" src="beep.wav" preload="auto" loop></audio>
+<script src="model.js"></script><script src="app.js"></script>
+</body></html>

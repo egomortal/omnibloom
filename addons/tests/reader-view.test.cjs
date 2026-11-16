@@ -47,7 +47,7 @@ const css=fs.readFileSync(path.join(DIR,'addon.css'),'utf8'),runtime=fs.readFile
 
 test('reading time comes from the article words and is shown up top, then counts down',()=>{
   const r=R.extract(load('reader-news.html','https://news.example.org/2026/11/bridge'));
-  a.ok(r.words>50);a.equal(r.minutes,Math.max(1,Math.round(r.words/230)));
+  a.ok(r.words>50);a.equal(r.chars,0);a.deepEqual(R.readingTime(r.content),{words:r.words,chars:0,minutes:Math.max(1,Math.round(r.words/230))});
   a.equal(Pr.timeLabel(4,0),'4 min read');a.equal(Pr.timeLabel(4,.5),'2 min left');a.equal(Pr.timeLabel(4,.9),'1 min left');a.equal(Pr.timeLabel(4,1),'Finished');
   a.equal(Pr.timeLabel(0,0),'1 min read');a.equal(Pr.timeLabel(3,NaN),'3 min read');a.equal(Pr.timeLabel(3,-1),'3 min read');
   a.match(runtime,/omni-reader-time/);a.match(runtime,/timeLabel\(minutes,room>0\?view\.scrollTop\/room:0\)/);
@@ -156,11 +156,11 @@ function readerHarness(opts={}){
 test('toolbar: saved options apply on open; A+, choices and the panel restyle in place and are saved',async()=>{
   const h=readerHarness({stored:Pr.pack({font:'sans',width:'narrow'},{size:'large',theme:'auto'})});h.open();
   const v=h.view();a.ok(v,'reader open');a.match(v.className,/omni-reader-light omni-reader-large omni-reader-w-narrow omni-reader-f-sans omni-reader-l-normal/);
-  a.equal(h.btn('omni-reader-left').textContent,'4 min read');a.match(h.btn('omni-reader-time').textContent,/About 4 min read · 920 words/);
+  a.equal(h.btn('omni-reader-left').textContent,'4 min read');a.equal(h.btn('omni-reader-time').textContent,'~4 min read · 920 words');
   h.btn('omni-reader-larger').click();await h.tick();a.match(v.className,/omni-reader-huge/);a.deepEqual(h.writes.at(-1).choices,{font:'sans',width:'narrow',size:'huge'});
   h.btn('omni-reader-larger').click();a.match(v.className,/omni-reader-giant/);a.equal(h.btn('omni-reader-larger').disabled,true);
   const panel=h.btn('omni-reader-panel');a.equal(panel.hidden,true);h.btn('omni-reader-opts').click();a.equal(panel.hidden,false);
-  a.equal(h.btn('omni-reader-opts').getAttribute('aria-expanded'),'true');a.equal(v.querySelectorAll('.omni-reader-choice').length,5+3+3+4+3);
+  a.equal(h.btn('omni-reader-opts').getAttribute('aria-expanded'),'true');a.equal(v.querySelectorAll('.omni-reader-choice').length,4+5+3+3+4+3);
   h.btn('omni-reader-c-theme-black').click();a.match(v.className,/omni-reader-black/);a.equal(h.btn('omni-reader-c-theme-black').getAttribute('aria-pressed'),'true');
   a.equal(h.btn('omni-reader-c-theme-light').getAttribute('aria-pressed'),'false');
   h.btn('omni-reader-c-spacing-relaxed').click();h.btn('omni-reader-c-font-readable').click();a.match(v.className,/omni-reader-f-readable omni-reader-l-relaxed/);
@@ -184,4 +184,75 @@ test('the settings page wins: changing Text size there drops the toolbar size, k
   a.match(h.view().className,/omni-reader-dark omni-reader-giant/);
   h.setSettings({size:'small'});await h.tick();a.match(h.view().className,/omni-reader-small .*omni-reader-f-sans/);
   a.deepEqual(JSON.parse(h.store.get('prefs')),{choices:{font:'sans'},base:{size:'small',theme:'auto'}});
+});
+
+// ---- 1.2.0: reading time (CJK-aware, code and captions left out) and font presets ------------------------------------
+test('reading time: English words at 230 a minute, CJK characters at 400, mixed adds both',()=>{
+  a.equal(R.WORDS_PER_MIN,230);a.equal(R.CJK_PER_MIN,400);
+  a.deepEqual(R.readingTime('word '.repeat(1610)),{words:1610,chars:0,minutes:7});
+  a.deepEqual(R.readingTime('Short.'),{words:1,chars:0,minutes:1},'never under a minute');
+  a.deepEqual(R.readingTime('— , 42 x-ray'),{words:2,chars:0,minutes:1},'punctuation alone is not a word');
+  a.deepEqual(R.readingTime('東京の朝は静かです。'.repeat(400)),{words:0,chars:3600,minutes:9},'Japanese: kana and kanji counted, 。 not');
+  a.deepEqual(R.readingTime('한국어 문장'.repeat(800)),{words:0,chars:4000,minutes:10},'Hangul per character');
+  a.deepEqual(R.readingTime('𠀀𠀁'),{words:0,chars:2,minutes:1},'astral CJK (surrogate pairs) counts once each');
+  const mixed=R.readingTime('Omni 浏览器 supports 中文 text. '.repeat(200));   // 3 words + 5 characters a time
+  a.deepEqual(mixed,{words:600,chars:1000,minutes:Math.round(1000/400+600/230)});
+});
+test('reading time: code blocks, captions and images are not read; blocks keep words apart, inline tags do not split them',()=>{
+  const tree=[{tag:'p',attrs:{},kids:['one two ',{tag:'em',attrs:{},kids:['thr']},'ee']},{tag:'p',attrs:{},kids:['four']},
+    {tag:'pre',attrs:{},kids:[{tag:'code',attrs:{},kids:['const a = b + c; '.repeat(500)]}]},
+    {tag:'figure',attrs:{},kids:[{tag:'img',attrs:{src:'https://x/i.png',alt:'many alt words here'},kids:[]},{tag:'figcaption',attrs:{},kids:['Photo credit somebody 中文']}]},
+    {tag:'table',attrs:{},kids:[{tag:'caption',attrs:{},kids:['Table caption words']},{tag:'tr',attrs:{},kids:[{tag:'td',attrs:{},kids:['five']},{tag:'td',attrs:{},kids:['six']}]}]},
+    {tag:'li',attrs:{},kids:['inline ',{tag:'code',attrs:{},kids:['x']},' code']}];
+  a.deepEqual(R.readingTime(tree),{words:9,chars:0,minutes:1});
+  const doc=parse('<html lang="en"><body><article>'+('<p>'+'Plain reading words, with commas, in a sentence. '.repeat(6)+'</p>').repeat(4)+'<pre><code>'+'let x = 1; '.repeat(3000)+'</code></pre><figure><img src="/a.png"><figcaption>'+'caption '.repeat(500)+'</figcaption></figure></article></body></html>','https://s.example/');
+  const r=R.extract(doc);a.ok(r&&r.content.length);a.equal(r.words,4*6*8,'only the paragraphs count');a.equal(r.minutes,1);
+  a.match(JSON.stringify(r.content),/let x = 1/,'the code block is still shown');
+});
+test('header line: ~N min read with grouped word and character counts',()=>{
+  a.equal(Pr.headLabel({minutes:7,words:1610}),'~7 min read · 1,610 words');
+  a.equal(Pr.headLabel({minutes:9,words:0,chars:3600}),'~9 min read · 3,600 characters');
+  a.equal(Pr.headLabel({minutes:4,words:600,chars:1000}),'~4 min read · 600 words · 1,000 characters');
+  a.equal(Pr.headLabel({minutes:0,words:1}),'~1 min read · 1 word');a.equal(Pr.headLabel(null),'~1 min read');
+  a.equal(Pr.headLabel({minutes:2,words:1234567}),'~2 min read · 1,234,567 words');
+});
+test('presets: four bundles of font, size, line width and line spacing; all valid; cycle; Custom after a tweak',()=>{
+  a.deepEqual(Pr.PRESETS.map(p=>p.key),['comfort','clean','big','dyslexia']);
+  for(const p of Pr.PRESETS){a.ok(Object.isFrozen(p)&&Object.isFrozen(p.set));a.deepEqual(Object.keys(p.set).sort(),['font','size','spacing','width']);a.ok(p.label.length<=12);
+    for(const[k,v]of Object.entries(p.set))a.ok(Pr.valid(k,v),p.key+' '+k+'='+v)}
+  const S=k=>Pr.PRESET_BY_KEY[k].set;
+  a.equal(S('comfort').font,'serif');a.equal(S('clean').font,'sans');a.equal(S('big').font,'sans');a.equal(S('big').size,'giant');a.equal(S('dyslexia').font,'readable');
+  a.equal(S('dyslexia').spacing,'relaxed');a.ok(Pr.BY_KEY.size.values.indexOf(S('comfort').size)>Pr.BY_KEY.size.values.indexOf(S('clean').size),'comfort is larger than clean');
+  a.equal(new Set(Pr.PRESETS.map(p=>JSON.stringify(p.set))).size,4,'no two presets are the same');
+  a.equal(Pr.presetOf(Pr.resolve(null,null)),'');a.equal(Pr.presetLabel(Pr.resolve(null,null)),'Custom');
+  let c={theme:'black'};const seen=[];for(let i=0;i<5;i++){const k=Pr.nextPreset(Pr.resolve(c,null));c=Pr.applyPreset(c,k);seen.push(Pr.presetOf(Pr.resolve(c,null)))}
+  a.deepEqual(seen,['comfort','clean','big','dyslexia','comfort']);a.equal(c.theme,'black','colours are not part of a preset');
+  const tweaked=Pr.resolve(Object.assign({},c,{size:'small'}),null);a.equal(Pr.presetOf(tweaked),'');a.equal(Pr.nextPreset(tweaked),'comfort');
+  a.deepEqual(Pr.applyPreset({font:'sans',junk:1},'nope'),{font:'sans'});
+  const p=Pr.resolve(Pr.applyPreset({},'dyslexia'),null);a.equal(Pr.classes(p,false),'omni-reader omni-reader-light omni-reader-huge omni-reader-w-narrow omni-reader-f-readable omni-reader-l-relaxed');
+  a.match(css,/omni-reader-f-readable\{[^}]*letter-spacing:[^;]+;word-spacing:/,'dyslexia preset is spacing-based');a.doesNotMatch(css,/@font-face/,'no font bundled');
+});
+test('presets in the reader: bar button and C cycle, applied in place, remembered, panel row, no clash with text fields',async()=>{
+  const h=readerHarness();h.open();const v=h.view(),pb=h.btn('omni-reader-preset');
+  a.equal(pb.textContent,'Preset: Custom');a.match(pb.getAttribute('aria-label'),/C or Triangle/);
+  pb.click();await h.tick();a.equal(pb.textContent,'Preset: Comfort');a.match(v.className,/omni-reader-large omni-reader-w-medium omni-reader-f-serif omni-reader-l-relaxed/);
+  a.deepEqual(JSON.parse(h.store.get('prefs')).choices,{font:'serif',size:'large',width:'medium',spacing:'relaxed'});
+  h.key({key:'c'});await h.tick();a.equal(pb.textContent,'Preset: Clean');a.match(v.className,/omni-reader-medium omni-reader-w-medium omni-reader-f-sans omni-reader-l-normal/);
+  h.key({key:'C'});a.match(v.className,/omni-reader-giant omni-reader-w-wide omni-reader-f-sans/);
+  h.key({key:'c',repeat:true});a.equal(pb.textContent,'Preset: Big','held key does not spin');
+  h.key({key:'c',ctrlKey:true});a.equal(pb.textContent,'Preset: Big');
+  h.key({key:'c',target:{tagName:'INPUT'}});a.equal(pb.textContent,'Preset: Big','typing c in a field is left alone');
+  h.btn('omni-reader-opts').click();a.equal(h.btn('omni-reader-c-preset-big').getAttribute('aria-pressed'),'true');
+  h.btn('omni-reader-c-preset-dyslexia').click();await h.tick();a.match(v.className,/omni-reader-huge omni-reader-w-narrow omni-reader-f-readable omni-reader-l-relaxed/);
+  a.equal(h.btn('omni-reader-c-preset-dyslexia').getAttribute('aria-pressed'),'true');a.equal(h.btn('omni-reader-c-preset-big').getAttribute('aria-pressed'),'false');
+  h.btn('omni-reader-c-width-wide').click();a.equal(pb.textContent,'Preset: Custom');await h.tick();
+  const again=readerHarness({stored:JSON.parse(h.store.get('prefs'))});again.open();a.match(again.view().className,/omni-reader-huge omni-reader-w-wide omni-reader-f-readable omni-reader-l-relaxed/,'remembered on the next page');
+  const back=readerHarness({stored:Pr.pack(Pr.applyPreset({},'clean'),{size:'large',theme:'auto'})});back.open();a.equal(back.btn('omni-reader-preset').textContent,'Preset: Clean');
+  back.key({key:'Escape'});await back.tick();a.equal(back.view(),null,'Escape still closes');
+});
+test('presets in a private tab: applied on the page, storage refused quietly; manifest stays private_safe with bool/choice settings',async()=>{
+  const h=readerHarness({private:true});h.open();h.key({key:'c'});await h.tick();
+  a.match(h.view().className,/omni-reader-f-serif omni-reader-l-relaxed/);a.equal(h.store.size,0);a.equal(h.writes.length,1);
+  const m=manifest();a.equal(m.private_safe,true);a.equal(m.version,'1.2.0');for(const x of m.settings)a.ok(x.type==='bool'||x.type==='choice');
+  a.match(runtime,/usePreset/);a.doesNotMatch(runtime,/settings\.set\(/);
 });

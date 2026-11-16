@@ -3,6 +3,10 @@
 OMNI_DL_RESUME_V1: submitted links and download choices are persisted ONLY for jobs that can still be resumed
 (paused, or unfinished when the worker stopped, which load as 'interrupted'); finished, failed and cancelled
 records stay link-free. A paused job loads as 'paused', not 'interrupted'.
+
+OMNI_DL_QUEUE_ORDER_V1 (D04): the file may also carry "queue": [job ids], the worker's run order when it was saved
+(running job first, then the waiting ones). It is optional: a file without it (the old FIFO format) loads as before,
+and an older worker ignores the key. After a restart the order applies to interrupted jobs as they are resumed.
 """
 import json
 import os
@@ -33,6 +37,14 @@ def _count(value):
     return value if type(value) is int and 0 <= value <= 10 ** 15 else None
 
 
+def _clip(value):
+    """OMNI_DL_CLIP_V1: [start s, end s] of a clip job, or None."""
+    if (isinstance(value, list) and len(value) == 2 and all(type(n) is int for n in value)
+            and 0 <= value[0] < value[1] <= 6 * 3600):
+        return list(value)
+    return None
+
+
 def _resume_fields(value):
     """The link and choices a resumable job needs; {} when the link is not usable. Re-validated on resume."""
     url = _text(value.get('url'), 4096, r'(?i)https?://\S+')
@@ -50,6 +62,7 @@ def _resume_fields(value):
                 save_folder=_text(value.get('save_folder'), 80),
                 save_name=_text(value.get('save_name'), 80),
                 direct=value.get('direct') is True,
+                clip=_clip(value.get('clip')),   # OMNI_DL_CLIP_V1
                 auto_fallback=value.get('auto_fallback') is not False,
                 request_id=request_id if isinstance(request_id, str) and _HEX32.match(request_id) else None,
                 downloaded_bytes=_count(value.get('downloaded_bytes')),
@@ -88,13 +101,29 @@ def _record(value):
     return record
 
 
+def _queue(value, jobs):
+    """OMNI_DL_QUEUE_ORDER_V1: the saved run order, kept only for loaded jobs that can be resumed; anything else
+    (missing, wrong type, unknown ids) falls back to the old FIFO behaviour."""
+    if not isinstance(value, list):
+        return []
+    order = []
+    for key in value[:MAX_JOBS]:
+        job = jobs.get(key) if isinstance(key, str) else None
+        if job is not None and key not in order and job['state'] == 'interrupted' and job.get('url'):
+            order.append(key)
+    return order
+
+
 class History:
     def __init__(self, path=None):
         self.path = Path(path) if path else None
         self.error = ''
+        self.queue = []      # OMNI_DL_QUEUE_ORDER_V1: the saved run order of resumable interrupted jobs (after load)
+        self.order = None    # OMNI_DL_QUEUE_ORDER_V1: callable giving the run order to save; None writes no "queue"
 
     def load(self):
         self.error = ''
+        self.queue = []
         if self.path is None:
             return {}
         try:
@@ -108,6 +137,7 @@ class History:
                 raise ValueError('Unsupported history format')
             jobs = {}
             skipped = 0
+            saved_queue = value.get('queue')   # OMNI_DL_QUEUE_ORDER_V1 (optional)
             for value in value['jobs'][-MAX_JOBS:]:
                 try:
                     saved = _record(value)
@@ -132,6 +162,7 @@ class History:
                                  cancel=state != 'completed' and not resumable, pause=False, restored=True)
             if skipped:
                 self.error = f'History omitted {skipped} invalid record(s).'
+            self.queue = _queue(saved_queue, jobs)
             return jobs
         except FileNotFoundError:
             return {}
@@ -153,6 +184,10 @@ class History:
                 if len(recent) == MAX_JOBS:
                     break
             prefix, suffix = b'{"version":1,"jobs":[', b']}'
+            if self.order is not None:   # OMNI_DL_QUEUE_ORDER_V1: ids are 16 hex characters, so this stays small
+                queue = [key for key in self.order() if isinstance(key, str) and len(key) == 16
+                         and not set(key) - set('0123456789abcdef')][:MAX_JOBS]
+                suffix = b'],"queue":' + json.dumps(queue, separators=(',', ':')).encode('ascii') + b'}'
             remaining = MAX_BYTES - len(prefix) - len(suffix)
             records = []
             skipped = 0

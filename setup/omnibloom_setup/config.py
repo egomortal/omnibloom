@@ -104,7 +104,7 @@ SETUP_LOCK_MINUTES = 30
 # sets Auto when there's no setting yet and keeps the user's choice otherwise.
 OMNI_HDR_PREF = "/data/omni/video-hdr-preference.txt"
 # Omni's bookmarks (OmniBookmarks.h): one `url TAB title` per line, UTF-8, read with a 2400-byte fgets buffer; Omni loads the
-# first 500, and saves URLs cut to 2048 bytes and titles to 300. Only http:// and https:// pages can be bookmarked.
+# first 500, and saves URLs cut to 2048 bytes and titles to 300. Only http:// and https:// pages (and bookmarklets, below).
 # Since OMNI_BOOKMARKS_MANAGER_V1 a line may carry a third column, the bookmark's folder (one level, at most 40 bytes):
 # `url TAB title [TAB folder]`; old two-column lines are bookmarks outside any folder.
 OMNI_BOOKMARKS = "/data/omni/bookmarks.txt"
@@ -113,6 +113,12 @@ OMNI_BOOKMARK_URL_MAX = 2048
 OMNI_BOOKMARK_TITLE_MAX = 300
 OMNI_BOOKMARK_FOLDER_MAX = 40
 OMNI_BOOKMARK_LINE_BUFFER = 2400
+# Since OMNI_BOOKMARKLETS_V1 a bookmark may also be a bookmarklet (a javascript: address, no other new scheme). A line
+# that starts with "javascript:" (any case) is read whole with a larger buffer (OmniBookmarkletsFile.h:
+# kScriptLineBuffer = 64 KB address + TAB + title + TAB + folder + 1 + 56) and its address may be up to 64 KB.
+OMNI_BOOKMARKLET_URL_MAX = 65536
+OMNI_BOOKMARKLET_LINE_BUFFER = (OMNI_BOOKMARKLET_URL_MAX + 1 + OMNI_BOOKMARK_TITLE_MAX + 1 + OMNI_BOOKMARK_FOLDER_MAX
+                                + 1 + 56)    # 65935: a line up to 65934 bytes
 # uBlock Origin's rule files. Omni's network filter reads them from /data/omni/ when ublock-native.flag (below) is on. Up to
 # v0.5.1 nothing installed them, and Omni then blocked every page ("Filtering failed ... (error 1)", 2026-11-15).
 # Setup carries them (omni/engine/resources) and writes the set when any of the first three is missing, empty or too big

@@ -349,5 +349,83 @@ class Malicious(Tmp):
         self.refused(zp)
 
 
+# Omni's newer stores (patch scripts after 0.6): every one is classified; parental.txt never.
+NEW_SETTINGS = ("apps.json", "start-page.json", "startup.txt", "autoplay.txt", "https-only.txt", "popup-allow.txt",
+                "site-volume.txt", "site-tweaks.txt", "reader-sites.txt", "game-sites.txt", "refresh-sites.txt",
+                "translate.txt", "search-custom.txt", "site-search.txt", "shortcuts-map.txt", "captions.txt",
+                "ui-accent.txt", "ui-scale.txt", "ui-lang.txt", "ui-theme-prev.txt", "night-light.txt",
+                "colour-filter.txt", "pointer-large.txt", "history-keep.txt", "tab-sleep.txt", "data-saver.txt",
+                "kb-layout.txt", "scroll-plus.txt", "spatial-nav.txt", "tips-seen.txt")
+NEW_PERSONAL = {"notes.txt": "notes", "highlights.json": "highlights", "sessions.txt": "tab-sessions",
+                "kb-words.txt": "kb-words", "bookmarklets.txt": "bookmarks"}
+NEW_NEVER = ("parental.txt", "running.txt", "perf-overlay.txt", "yt-media-stop.txt", "jank-mark.txt",
+             "crash-20261116.txt", "lang/de.txt", "sub/parental.txt")
+
+
+def new_console():
+    c = omni_console()
+    for n in NEW_SETTINGS + tuple(NEW_PERSONAL) + NEW_NEVER:
+        c.files[O + n] = ("omni %s 1\n" % n).encode()
+    return c
+
+
+class NewStores(Tmp):
+    def test_classification(self):
+        for n in NEW_SETTINGS:
+            self.assertEqual(backup.rule_for(O + n)["group"], "settings", n)
+        for n, g in NEW_PERSONAL.items():
+            self.assertEqual(backup.rule_for(O + n)["group"], g, n)
+            self.assertIn(g, backup.PERSONAL)
+        for n in NEW_NEVER:
+            self.assertIsNone(backup.rule_for(O + n), n)
+        self.assertIn(O + "parental.txt", backup.NEVER)
+        notes = [g for g in backup.GROUPS if g["id"] == "notes"]
+        self.assertEqual(len(notes), 1)
+        self.assertEqual(notes[0]["name"], "Notes")
+        self.assertFalse(notes[0].get("always"))           # opt-in like the other personal data
+
+    def test_notes_only_when_ticked(self):
+        backup.backup(new_console(), [], self.zp("a.zip"))
+        with zipfile.ZipFile(self.zp("a.zip")) as z:
+            names = set(z.namelist())
+        for n in NEW_SETTINGS:
+            self.assertIn("data/omni/" + n, names)
+        for n in tuple(NEW_PERSONAL) + NEW_NEVER:
+            self.assertNotIn("data/omni/" + n, names)
+        c = new_console()
+        backup.backup(c, ["notes"], self.zp("b.zip"))
+        with zipfile.ZipFile(self.zp("b.zip")) as z:
+            names = set(z.namelist())
+        self.assertIn("data/omni/notes.txt", names)
+        self.assertNotIn("data/omni/highlights.json", names)
+        self.assertNotIn(O + "parental.txt", c.reads)
+
+    def test_round_trip_with_new_names(self):
+        src = new_console()
+        backup.backup(src, list(backup.GROUP_IDS), self.zp())
+        m = backup.read_backup(self.zp())                  # the restore allow-list takes every new name
+        self.assertEqual(m["summary"]["notes"]["files"], 1)
+        target = Console({O + "parental.txt": b"pin-hash\n"})
+        r = backup.restore(target, self.zp(), groups=["settings", "notes", "highlights", "tab-sessions", "kb-words",
+                                                      "bookmarks"])
+        for n in NEW_SETTINGS + tuple(NEW_PERSONAL):
+            self.assertEqual(target.files[O + n], src.files[O + n], n)
+        for n in NEW_NEVER[1:]:
+            self.assertNotIn(O + n, target.files)
+        self.assertEqual(target.files[O + "parental.txt"], b"pin-hash\n")   # never touched
+        self.assertEqual(r["groups"]["notes"], 1)
+
+    def test_parental_in_a_crafted_zip_is_refused(self):
+        data = b"pin\n"
+        m = {"format": backup.FORMAT, "version": backup.FORMAT_VERSION, "files": [
+            {"path": O + "parental.txt", "group": "settings", "size": len(data),
+             "sha256": hashlib.sha256(data).hexdigest()}]}
+        with zipfile.ZipFile(self.zp(), "w") as z:
+            z.writestr("data/omni/parental.txt", data)
+            z.writestr(backup.MANIFEST_NAME, json.dumps(m))
+        with self.assertRaises(backup.BackupError):
+            backup.read_backup(self.zp())
+
+
 if __name__ == "__main__":
     unittest.main()

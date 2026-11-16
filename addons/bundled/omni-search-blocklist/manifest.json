@@ -1,0 +1,38 @@
+{
+  "manifest_version": 1,
+  "id": "omni-search-blocklist",
+  "name": "Search blocklist",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Hides results from sites you choose on Google, DuckDuckGo and Bing search pages, with one line saying how many were hidden (Show brings them back). Each result has a Block this site button; up to 200 sites, kept on this TV. Nothing is fetched.",
+  "matches": [
+    "*://*/search*",
+    "*://duckduckgo.com/*",
+    "*://*.duckduckgo.com/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": false,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "button",
+      "type": "bool",
+      "label": "Show a Block this site button on each result",
+      "default": true
+    }
+  ]
+}

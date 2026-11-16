@@ -300,6 +300,36 @@
    "source": "20261104-ui-clean4-final-pages",
    "round": 4,
    "title": "HDR playback preference"
+  },
+  {
+   "path": "controller/index.html",
+   "source": "20261116-omni-pad-test-v1",
+   "round": 4,
+   "title": "Controller test and drift visualiser"
+  },
+  {
+   "path": "whatsnew/index.html",
+   "source": "20261116-whatsnew",
+   "round": 4,
+   "title": "What's new (once after an update; Options > Settings > What's new)"
+  },
+  {
+   "path": "timer/index.html",
+   "source": "20261116-couch-timer",
+   "round": 4,
+   "title": "Couch timer: countdown, stopwatch and alarm"
+  },
+  {
+   "path": "help/index.html",
+   "source": "20261116-help-troubleshooting",
+   "round": 4,
+   "title": "Help & troubleshooting (offline, QR codes to the docs)"
+  },
+  {
+   "path": "solitaire/index.html",
+   "source": "20261116-solitaire",
+   "round": 4,
+   "title": "Solitaire (Klondike, draw one) for the controller"
   }
  ]
 }

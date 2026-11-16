@@ -1,0 +1,64 @@
+{
+  "manifest_version": 1,
+  "id": "omni-video-fit",
+  "name": "Video fit",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Changes how page videos fill the TV: Fit, Fill (crop to the screen), Stretch or Zoom 1.1/1.2/1.33 for letterboxed 4:3 and 21:9 video, remembered per site if you like. Alt+Shift+F, the quick switch or the Fit button that shows when a video starts opens it.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "mode",
+      "type": "choice",
+      "label": "Picture on sites without a saved choice",
+      "default": "fit",
+      "choices": [
+        "fit",
+        "fill",
+        "stretch",
+        "zoom110",
+        "zoom120",
+        "zoom133"
+      ],
+      "labels": [
+        "Fit",
+        "Fill (crop)",
+        "Stretch",
+        "Zoom 1.1×",
+        "Zoom 1.2×",
+        "Zoom 1.33×"
+      ]
+    },
+    {
+      "key": "keep_hw",
+      "type": "bool",
+      "label": "Limit zoom so video stays on the hardware video plane",
+      "default": true
+    },
+    {
+      "key": "button",
+      "type": "bool",
+      "label": "Show the Fit button when a video starts",
+      "default": true
+    }
+  ]
+}

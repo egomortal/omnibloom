@@ -48,17 +48,86 @@ function startWorker() {
     await p.waitForFunction(() => document.querySelector('#files-library .lib-range')?.textContent === '51–56 of 56');
     names = await rows();
     check('L5 Next shows the last 6 (oldest last)', names.length === 6 && names[5] === 'Part 51.bin', { names });
-    await p.click('#files-library [data-lib-kind="audio"]');
-    await waitStatus(/^1 file/);
-    check('L6 Audio filter', (await rows()).join() === 'Tone.wav', { rows: await rows() });
-    await p.click('#files-library [data-lib-kind="video"]');
-    await waitStatus(/^1 file/);
-    check('L7 Video filter', (await rows()).join() === 'Clip.mp4', { rows: await rows() });
-    await p.click('#files-library [data-lib-kind="other"]');
-    await waitStatus(/^54 files/);
-    check('L8 Other filter (no audio/video)', !(await rows()).some(n => /\.(wav|mp4)$/.test(n)), {});
-    await p.click('#files-library [data-lib-kind="all"]');
+    // OMNI_DL_LIBRARY_SEARCH_V1: type chips (several at once), search, sort, remembered choices, Show trash toggle.
+    const waitRows = (want, extra) => p.waitForFunction(([w, x]) => {
+      const names = [...document.querySelectorAll('#files-library .lib-row strong')].map(n => n.textContent).join('|');
+      const st = document.querySelector('#files-library .lib-status')?.textContent || '';
+      return names === w && (!x || new RegExp(x).test(st));
+    }, [want, extra ? extra.source : ''], { timeout: 8000 }).then(() => true, () => false);
+    const chip = c => p.click(`#files-library [data-lib-cat="${c}"]`);
+    const pressed = () => p.$$eval('#files-library [data-lib-cat][aria-pressed="true"]', n => n.map(x => x.dataset.libCat).join());
+    await chip('audio');
+    check('L6 Audio chip (back to page 1)', await waitRows('Tone.wav', /^1 file, newest first/) && await pressed() === 'audio', { rows: await rows(), pressed: await pressed() });
+    await chip('video');
+    check('L7 Video chip adds to Audio', await waitRows('Clip.mp4|Tone.wav', /^2 files/) && await pressed() === 'video,audio', { rows: await rows() });
+    await chip('audio');
+    check('L7b pressing Audio again removes it', await waitRows('Clip.mp4'), { rows: await rows() });
+    await chip('all');
     await waitStatus(/^56 files/);
+    await chip('image');
+    check('L8 Images chip', await waitRows('Picture.png'), { rows: await rows() });
+    await chip('image'); await chip('archive');
+    check('L8b Archives chip', await waitRows('Archive.zip'), { rows: await rows() });
+    await chip('archive'); await chip('other');
+    await waitStatus(/^52 files/);
+    check('L8c Other chip: only the .bin parts', (await rows()).every(n => /^Part \d\d\.bin$/.test(n)), {});
+    await chip('other'); await chip('document');
+    check('L8d Documents chip with nothing to show says so', await waitRows('', /^No files match in the chosen types/), { status: await status() });
+    await chip('all');
+    await waitStatus(/^56 files/);
+    check('L8e All clears the chips', await pressed() === 'all', { pressed: await pressed() });
+
+    await p.click('#lib-search');
+    await p.keyboard.type('part 5');
+    check('L8f search filters by name as you type (case-insensitive)', await waitRows('Part 50.bin|Part 51.bin', /^2 files match “part 5”, newest first/), { rows: await rows(), status: await status() });
+    check('L8g focus stays in the search box while the list updates', await p.evaluate(() => document.activeElement?.id === 'lib-search'), {});
+    await p.fill('#lib-search', 'finished tone');
+    await p.keyboard.press('Enter');
+    check('L8h search also matches the download title (Enter searches at once)', await waitRows('Tone.wav', /^1 file matches “finished tone”/), { rows: await rows() });
+    await chip('video');
+    check('L8i search and chips combine', await waitRows('', /^No files match “finished tone” in the chosen types/), { status: await status() });
+    await chip('all');
+    await p.fill('#lib-search', '');
+    await waitStatus(/^56 files, newest first/);
+
+    const sortTo = async (value, first, note) => { await p.selectOption('#lib-sort', value); return p.waitForFunction(([f, n]) => document.querySelector('#files-library .lib-row strong')?.textContent === f && (document.querySelector('#files-library .lib-status')?.textContent || '').includes(n), [first, note], { timeout: 8000 }).then(() => true, () => false); };
+    check('L8j sort Name', await sortTo('name', 'Archive.zip', 'by name'), { rows: (await rows()).slice(0, 3) });
+    check('L8k sort Size (largest first)', await sortTo('size', 'Tone.wav', 'largest first'), { rows: (await rows()).slice(0, 3) });
+    check('L8l sort Oldest', await sortTo('oldest', 'Part 51.bin', 'oldest first'), { rows: (await rows()).slice(0, 3) });
+    check('L8m sort Type (video first)', await sortTo('type', 'Clip.mp4', 'by type'), { rows: (await rows()).slice(0, 3) });
+
+    await sortTo('size', 'Tone.wav', 'largest first');
+    await chip('other');
+    await waitStatus(/^52 files, largest first/);
+    const stored = await p.evaluate(() => localStorage.getItem('omni-dl-library-view-v1'));
+    await p.goto('about:blank'); await p.goto(BASE + '/downloads#view=files');
+    await p.waitForFunction(() => document.documentElement.dataset.ready === 'true');
+    await waitStatus(/^52 files, largest first/);
+    check('L8n sort and chips are remembered across a reload (localStorage)', stored === '{"sort":"size","cats":["other"]}' && await p.$eval('#lib-sort', s => s.value) === 'size' && await pressed() === 'other' && (await rows())[0] === 'Part 51.bin', { stored, first: (await rows())[0] });
+    await p.evaluate(() => localStorage.setItem('omni-dl-library-view-v1', '{"sort":"evil<script>","cats":["exe","video","video"]}'));
+    await p.goto('about:blank'); await p.goto(BASE + '/downloads#view=files');
+    await p.waitForFunction(() => document.documentElement.dataset.ready === 'true');
+    check('L8o a tampered store falls back to known values', await waitRows('Clip.mp4', /newest first/) && await p.$eval('#lib-sort', s => s.value) === 'newest', { rows: await rows() });
+    await chip('all');
+    await waitStatus(/^56 files, newest first/);
+
+    // Controller: every new control is a plain focusable (button / text field / select) in reading order, so the
+    // D-pad moves over them and Cross steps the select or opens the on-screen keyboard on the field.
+    const order = await p.$$eval('#files-library button, #files-library input, #files-library select', n => n.filter(x => x.getClientRects().length && !x.disabled && x.tabIndex >= 0).slice(0, 12).map(x => x.id || x.dataset.libCat || (x.dataset.libArea ? 'trash-toggle' : x.dataset.libLargest !== undefined ? 'largest' : 'refresh')));
+    check('L8p controls are focusable in order: trash toggle, largest files, refresh, search, sort, chips',
+      order.join() === 'trash-toggle,largest,refresh,lib-search,lib-sort,all,video,audio,image,document,archive,other', { order });
+    check('L8q the search field is a plain text field (on-screen keyboard), 100 chars max',
+      await p.$eval('#lib-search', i => i.type === 'search' && i.maxLength === 100 && i.autocomplete === 'off'), {});
+    check('L8r Show trash is a toggle', await p.$eval('#files-library [data-lib-area]', b => b.getAttribute('aria-pressed') === 'false' && /Show trash/.test(b.textContent)), {});
+    await shot('library-01b-tools');
+    // OMNI_DL_STORAGE_METER_V1: the meter shows the worker's free space; Largest files switches to the size sort.
+    await p.waitForFunction(() => !document.querySelector('#files-library .lib-storage')?.hidden, null, { timeout: 8000 }).catch(() => {});
+    const meter = await p.$$eval('#files-library .lib-meter', n => n.map(m => ({ label: m.querySelector('.lib-meter-label').textContent, text: m.querySelector('.lib-meter-text').textContent, now: Number(m.querySelector('[role=meter]').getAttribute('aria-valuenow')) })));
+    check('L8s storage meter shows console storage with free space and a used share', meter.length >= 1 && meter[0].label === 'Console storage' && /free of/.test(meter[0].text) && meter[0].now >= 0 && meter[0].now <= 100, { meter });
+    await p.click('#files-library [data-lib-largest]');
+    await waitStatus(/largest first/);
+    check('L8t Largest files switches to the size sort', await p.$eval('#lib-sort', s => s.value) === 'size', {});
+    await p.selectOption('#lib-sort', 'newest'); await waitStatus(/newest first/);
 
     // Job row: a finished download has a Play button.
     check('L9 the finished job row has a Play button', !!(await p.$('[data-job-id="abababababababab"] [data-file-job]')), {});
@@ -115,6 +184,7 @@ function startWorker() {
     await p.click('#files-library [data-lib-area="trash"]');
     await waitStatus(/in the trash/);
     check('L21 Trash view lists it', (await rows()).join() === 'Archive.zip', { rows: await rows() });
+    check('L21b Show trash toggle reads pressed in the trash', await p.$eval('#files-library [data-lib-area]', b => b.getAttribute('aria-pressed') === 'true'), {});
     await p.click('#files-library [data-lib-delete]');
     await p.click('#files-library [data-lib-delete]');
     await waitStatus(/trash is empty/);

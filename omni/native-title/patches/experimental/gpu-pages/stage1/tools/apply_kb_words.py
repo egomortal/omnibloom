@@ -661,7 +661,7 @@ KBCLICK_OLD = 'static void omniKbClick(int x, int y)\n{\n    omniKbEnsure();\n'
 KBCLICK_NEW = KBCLICK_OLD + '    if (omniKwClick(x, y)) return; // OMNI_KB_WORDS_V1: a word chip in the preview row\n'
 
 HINTS_OLD = '    face(0, "Type"); face(2, "Delete");'
-HINTS_NEW = '    face(0, omniKwFocused() ? "Use word" : "Type"); face(2, "Delete"); // OMNI_KB_WORDS_V1'
+HINTS_NEW = '    face(0, omniKwFocused() ? "Use word" : "Type"); face(2, "Delete"); /* OMNI_KB_WORDS_V1 */'  # block comment: the line goes on (review fix)
 
 DRAW_AT = '// OMNI_STYLE_V1 / OMNI_KEYBOARD_V2: on-screen keyboard ---'
 DRAW = r'''// OMNI_KB_WORDS_V1: the word chips, right-aligned in the preview row (fy..fy+fh); returns the width they take (0: none).

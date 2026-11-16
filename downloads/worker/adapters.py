@@ -14,6 +14,7 @@ a site extractor fails, and a bounded direct-file fallback. No ffmpeg
 executable or subprocess is used; FFmpegFD delegation is refused explicitly.
 """
 from presets import preset_options
+import clips
 from pathlib import Path
 import importlib.util
 import json
@@ -236,12 +237,14 @@ def install_challenge_provider():
 
 
 class PythonYtdlpAdapter:
-    def options(self, folder, audio, hook, postprocess_hook=lambda _: None, fmt=None, referer=None, preset=None, subtitle_lang=None, container=None):
+    def options(self, folder, audio, hook, postprocess_hook=lambda _: None, fmt=None, referer=None, preset=None, subtitle_lang=None, container=None,
+                clip=None):
         global _provider
         import yt_dlp
         install_challenge_provider()
         ffmpeg = FFmpegAdapter()
-        options = dict(outtmpl=str(Path(folder) / '%(title).120s [%(id)s].%(ext)s'),
+        # OMNI_DL_CLIP_V1: a clip's file name says which part it holds: 'Title [id] (clip 1m20s-3m45s).mp4'.
+        options = dict(outtmpl=str(Path(folder) / ('%(title).120s [%(id)s]' + clips.suffix(clip) + '.%(ext)s')),
                     noplaylist=True, restrictfilenames=True, quiet=True, no_warnings=True,
                     socket_timeout=20, retries=2, cachedir=False,
                     continuedl=True, nopart=False,   # OMNI_DL_RESUME_V1: a resumed job continues its .part files
@@ -249,6 +252,8 @@ class PythonYtdlpAdapter:
                     format=fmt or ('bestaudio' if audio else 'bestvideo+bestaudio/best'),
                     ffmpeg_location=ffmpeg.executable, js_runtimes={})
         options.update(preset_options(preset, subtitle_lang))
+        # OMNI_DL_CLIP_V1: yt-dlp's own range download; exact cuts only when this worker has FFmpeg.
+        options.update(clips.ytdlp_options(clip, bool(ffmpeg.executable)))
         if container in ('mp4', 'mkv') and not audio:
             options['merge_output_format'] = container   # OMNI_DL_SAVE_V1: the file type the user chose
         if referer:
@@ -291,15 +296,16 @@ class PythonYtdlpAdapter:
                 'Site extractor: ' + redact_urls(first, 240) + ' | generic: ' + redact_urls(error, 240)) from error
 
     def download(self, url, folder, audio=False, hook=lambda _: None, metadata=lambda _: None, cancelled=lambda: False, postprocess_hook=lambda _: None,
-                 fmt=None, referer=None, preset=None, subtitle_lang=None, container=None):
+                 fmt=None, referer=None, preset=None, subtitle_lang=None, container=None, clip=None):
         import yt_dlp
         check_public_link(url)
         options = self.options(folder, audio, hook, postprocess_hook, fmt=fmt, referer=referer, preset=preset, subtitle_lang=subtitle_lang,
-                               container=container)
+                               container=container, clip=clip)
         with yt_dlp.YoutubeDL(options) as ydl:
             info = self.extract(ydl, url, cancelled)
             if cancelled():
                 raise InterruptedError('Cancelled')
+            clips.check_against_info(info, clip)   # OMNI_DL_CLIP_V1: no live clips; the clip lies inside the video
             metadata(info)
             return ydl.process_ie_result(info, download=True)
 
@@ -315,9 +321,15 @@ class NativePythonYtdlpAdapter(PythonYtdlpAdapter):
                                    'http_dash_segments_generator', 'm3u8_native', 'm3u8'))
     def download(self, url, folder, audio=False, hook=lambda _: None, metadata=lambda _: None,
                  cancelled=lambda: False, postprocess_hook=lambda _: None, fmt=None, referer=None, preset=None, subtitle_lang=None,
-                 container=None):
+                 container=None, clip=None):
         if importlib.util.find_spec('_omni_native') is None:
             raise RuntimeError('Native CPython binding is required')
+        # OMNI_DL_FFMPEG_V1: yt-dlp's own range download needs an ffmpeg program, which the console cannot run.
+        # A worker whose python-worker.elf links FFmpeg's libraries saves the streams and cuts them in-process
+        # (clips.native_remux). An older worker without it says so before any byte is fetched.
+        remux = clips.native_remux()
+        if clip and remux is None:
+            raise ValueError('Clips need FFmpeg to cut the video, and this console build has none. Save the whole video instead.')
         import yt_dlp
         check_public_link(url)
         folder = Path(folder).resolve()
@@ -338,6 +350,7 @@ class NativePythonYtdlpAdapter(PythonYtdlpAdapter):
             if (info.get('is_live') or info.get('live_status') in ('is_live', 'is_upcoming')
                     or info.get('_type') in ('playlist', 'multi_video')):
                 raise ValueError('Live streams and playlists are not supported; open one video and paste its link.')
+            clips.check_against_info(info, clip)   # OMNI_DL_CLIP_V1: the clip lies inside the video
             metadata(info)
             selection = (info.get('requested_downloads') or [info])[0]
             streams = selection.get('requested_formats') or [selection]
@@ -400,8 +413,54 @@ class NativePythonYtdlpAdapter(PythonYtdlpAdapter):
                         pass
             else:
                 output = _name_unknown_extension(files[0], url)
-            return dict(id=info.get('id'), title=info.get('title'), filepath=str(output), native=True,
-                        protocols=sorted({str(stream.get('protocol')) for stream in streams}))
+            result = dict(id=info.get('id'), title=info.get('title'), filepath=str(output), native=True,
+                          protocols=sorted({str(stream.get('protocol')) for stream in streams}))
+            if clip or (remux and container in ('mp4', 'mkv') and Path(output).suffix.lower() == '.ts'):
+                # OMNI_DL_FFMPEG_V1: cut the clip, or turn HLS MPEG-TS into the file type the user chose,
+                # in-process (stream copy, tagged with title/artist/date/link).
+                output, exact = _native_remux(remux, output, clip, container, audio, info, cancelled, postprocess_hook)
+                result['filepath'] = str(output)
+                if clip:
+                    result['clip_note'] = clips.note(clip, exact, clips.KEYFRAME_CONTAINER)
+            return result
+
+
+def _native_remux(remux, source, clip, container, audio, info, cancelled, postprocess_hook):
+    """OMNI_DL_FFMPEG_V1: stream-copy source into the first file type that takes its streams
+    (clips.cut_targets); the source is removed once the new file exists. -> (path, exact start)."""
+    source = Path(source)
+    stem = source.name[:-len(source.suffix)] if source.suffix else source.name
+    if stem.endswith('.merged'):
+        stem = stem[:-len('.merged')]
+    tags = clips.media_metadata(info)
+    start, end = (clip[0], clip[1]) if clip else (0, None)
+    name = 'OmniNativeCut' if clip else 'OmniNativeRemux'
+    postprocess_hook({'status': 'started', 'postprocessor': name})
+    failure = None
+    for kind in clips.cut_targets(source, container, audio):
+        target = source.with_name(stem + clips.suffix(clip) + '.' + kind)
+        if target == source or target.exists():
+            target = source.with_name(stem + clips.suffix(clip) + '.omni.' + kind)
+        try:
+            exact = remux(str(source), str(target), start, end, tags, cancelled)
+        except InterruptedError:
+            raise
+        except (RuntimeError, ValueError, OSError) as error:   # this file type can't take the streams
+            if cancelled():
+                raise InterruptedError('Cancelled') from error
+            failure = error
+            continue
+        if cancelled():
+            raise InterruptedError('Cancelled')
+        try:
+            source.unlink()
+        except OSError:
+            pass
+        postprocess_hook({'status': 'finished', 'postprocessor': name})
+        return target, bool(exact)
+    if not clip:
+        return source, True   # a remux is a nicety: keep the saved .ts rather than fail the download
+    raise RuntimeError('Could not cut the clip: ' + str(failure)[:300])
 
 
 def _refuse_live_playlist(ydl, stream, limit=4 * 1024 * 1024):

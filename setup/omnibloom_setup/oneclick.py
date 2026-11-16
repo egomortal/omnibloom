@@ -230,8 +230,9 @@ class OneClick:
                  report=None, progress=None, cancel=None, wait_minutes=0, networks=None, master_control=True,
                  start_master_control=True, autoload_master_control=True, hdr="auto-if-unset", sleep=time.sleep,
                  clock=time.time, record_dir=None, jdownloader=True, jd_folder=None, confirm=None, open_page=None,
-                 launcher_port=None, apps=None):
+                 launcher_port=None, apps=None, auto_backup=False):
         self.host = host
+        self.auto_backup = auto_backup   # S06: run autobackup.maybe_run once connected (the window turns it on)
         # Which apps to install (Customize): None = the full package. Bloom Core is always installed.
         self.apps = None if apps is None else set(apps) | {config.HUB_ID}
         self.ftp_port = ftp_port or config.FTP_PORT
@@ -773,6 +774,9 @@ class OneClick:
         except OSError as e:
             self.say("Your PS5 stopped answering (%s). Press the button again to retry; nothing was changed." % e)
             return self.result
+        if self.auto_backup:   # S06: opt-in, at most once a day, only reads the PS5; never stops the install
+            from . import autobackup
+            autobackup.maybe_run(console, log=self.detail)
         recorder = None
         try:
             try:

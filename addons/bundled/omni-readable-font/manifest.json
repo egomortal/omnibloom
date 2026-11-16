@@ -1,0 +1,31 @@
+{
+  "manifest_version": 1,
+  "id": "omni-readable-font",
+  "name": "Readable font",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Puts every site's text in one clear face (sans, serif or an easy-read face) with optional extra line and letter spacing. Icons, code and form fields keep the page's own fonts. Turn it on for one site or everywhere.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_start",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    { "key": "face", "type": "choice", "label": "Face", "default": "sans", "choices": ["sans", "serif", "easy"], "labels": ["Sans", "Serif", "Easy read (wide letters)"] },
+    { "key": "spacing", "type": "choice", "label": "Spacing", "default": "normal", "choices": ["normal", "wide", "wider"], "labels": ["The page's own", "Wide", "Wider"] }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "manifest_version": 1,
+  "id": "omni-clear-links",
+  "name": "Clear links",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Makes links easy to spot from the sofa: every text link underlined, and a thick yellow ring on whatever the D-pad or keyboard focus is on, on any site.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_start",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    { "key": "underline", "type": "bool", "label": "Underline every text link", "default": true }
+  ]
+}

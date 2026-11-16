@@ -2,7 +2,7 @@
 
 Reads Chrome, Edge and Brave (the Chromium "Bookmarks" file in each profile) and Firefox (places.sqlite, copied to a temp
 folder first because Firefox keeps it locked; the copy is opened read-only). Only http:// and https:// pages are kept,
-each address once, bookmarks-bar / toolbar ones first, so they win when Omni's 500-bookmark limit is reached.
+and bookmarklets (javascript: addresses, up to 64 KB; Omni runs them since OMNI_BOOKMARKLETS_V1), each address once, bookmarks-bar / toolbar ones first, so they win when Omni's 500-bookmark limit is reached.
 
 On the console nothing is removed: the bookmarks already there stay exactly as they are (same bytes, same order) and new
 ones are added after them. The old file is parked beside the new one (like every other Setup write).
@@ -13,7 +13,8 @@ Each bookmark keeps one folder level: the folder it sits in directly under the b
 Sync (plan_sync / apply_sync): bookmarks only on the PC are added to the console as above; bookmarks only in Omni are
 written to a Netscape-format HTML file the user imports into their browser themselves (the browser's own profile files
 are never written). Two bookmarks are the same page when url_key() matches: host case, a trailing slash and tracking
-parameters (utm_* and the like) don't count. Nothing is removed in either direction.
+parameters (utm_* and the like) don't count; bookmarklets are the same only when the whole address is. Nothing is removed
+in either direction.
 
 Bookmarks are personal: this module never logs an address or a title; only counts leave it, and the bookmarks themselves
 go nowhere but the console (and, for a sync, the HTML file on this PC).
@@ -57,10 +58,40 @@ class Source:
 
 
 # -- cleaning (Omni's limits) ---------------------------------------------------------------------------------------
+JS_SCHEME = "javascript:"
+_C0_SPACE = "".join(chr(c) for c in range(0x21))
+
+
+def is_bookmarklet(url):
+    """True for a javascript: address (any case), as Omni tells a bookmarklet line from a web page."""
+    if isinstance(url, bytes):
+        return url[:len(JS_SCHEME)].lower() == JS_SCHEME.encode()
+    return isinstance(url, str) and url[:len(JS_SCHEME)].lower() == JS_SCHEME
+
+
+def _clean_bookmarklet(url):
+    """A javascript: address cleaned the way browsers clean an address (URL Standard): leading / trailing C0 controls and
+    spaces dropped, every tab, LF and CR removed (a browser drops them too, so they are never part of the code), any other
+    control character percent-encoded. The rest stays exactly as it is (its %XX escapes are the code). None when empty
+    or over OMNI_BOOKMARKLET_URL_MAX bytes (a cut bookmarklet is broken code)."""
+    url = url.strip(_C0_SPACE).replace("\t", "").replace("\n", "").replace("\r", "")
+    if not is_bookmarklet(url) or not url[len(JS_SCHEME):]:
+        return None
+    url = "".join("%%%02X" % ord(c) if ord(c) < 0x20 or ord(c) == 0x7f else c for c in url)
+    try:
+        size = len(url.encode("utf-8"))
+    except UnicodeEncodeError:
+        return None
+    return url if size <= config.OMNI_BOOKMARKLET_URL_MAX else None
+
+
 def clean_url(url):
-    """The address as Omni will store it, or None when Omni can't take it (not a web page, too long, odd characters)."""
+    """The address as Omni will store it, or None when Omni can't take it (not a web page or bookmarklet, too long, odd
+    characters). Web pages: http / https, at most OMNI_BOOKMARK_URL_MAX bytes; bookmarklets: see _clean_bookmarklet."""
     if not isinstance(url, str):
         return None
+    if is_bookmarklet(url.lstrip(_C0_SPACE)):
+        return _clean_bookmarklet(url)
     url = url.strip()
     head, sep, rest = url.partition("://")
     if not sep or head.lower() not in ("http", "https") or not rest:
@@ -110,11 +141,14 @@ def _is_tracking(name):
 
 def url_key(url):
     """What makes two bookmarks the same page: scheme and host in lower case (default port dropped), the path without a
-    trailing slash, the query without tracking parameters (utm_*, fbclid, gclid...), the fragment as it is."""
+    trailing slash, the query without tracking parameters (utm_*, fbclid, gclid...), the fragment as it is. Anything
+    else (a bookmarklet) is matched by its exact address."""
     if isinstance(url, bytes):
         url = url.decode("utf-8", "replace")
     if not isinstance(url, str):
         return ""
+    if is_bookmarklet(url):
+        return url
     url = url.strip()
     try:
         p = urllib.parse.urlsplit(url)
@@ -316,10 +350,13 @@ def collect(sources):
 def omni_lines(data):
     """The (url, title, folder) bytes Omni loads from this bookmarks.txt, read the way OmniBookmarks.h reads it (fgets
     with a 2400-byte buffer, so a longer line counts as several; the first 500 entries). `url TAB title [TAB folder]`:
-    folder is b"" on old two-column lines, and a missing title is the address."""
+    folder is b"" on old two-column lines, and a missing title is the address. A line that starts with "javascript:"
+    (any case) is read whole up to OMNI_BOOKMARKLET_LINE_BUFFER - 1 bytes (65934; OmniBookmarkletsFile.h)."""
     out = []
-    i, n, chunk = 0, len(data), config.OMNI_BOOKMARK_LINE_BUFFER - 1
+    i, n = 0, len(data)
     while i < n and len(out) < config.OMNI_BOOKMARK_MAX:
+        chunk = (config.OMNI_BOOKMARKLET_LINE_BUFFER if is_bookmarklet(data[i:i + len(JS_SCHEME)])
+                 else config.OMNI_BOOKMARK_LINE_BUFFER) - 1
         end = data.find(b"\n", i, i + chunk)
         stop = end + 1 if end >= 0 else min(i + chunk, n)
         line = data[i:stop].split(b"\0", 1)[0].rstrip(b"\r\n")
@@ -405,9 +442,9 @@ def console_bookmarks(data):
 # -- two-way sync ------------------------------------------------------------------------------------------------------------
 class SyncPlan:
     """What a sync would do; nothing is changed by making one.
-    to_console: PC-only bookmarks Omni has room for. to_pc: Omni-only web pages, for the HTML file.
+    to_console: PC-only bookmarks Omni has room for. to_pc: Omni-only web pages and bookmarklets, for the HTML file.
     cap_skipped: PC-only bookmarks left out because Omni keeps up to 500. not_web: Omni-only entries that aren't web
-    pages (not exported). in_both: PC bookmarks Omni already has."""
+    pages or bookmarklets (not exported). in_both: PC bookmarks Omni already has."""
 
     def __init__(self):
         self.to_console, self.to_pc = [], []
@@ -466,7 +503,8 @@ def export_html(marks, top_folder=EXPORT_TOP_FOLDER):
         return html.escape(s or "", quote=True)
 
     def link(b, pad):
-        return '%s<DT><A HREF="%s">%s</A>\n' % (pad, esc(b.url), esc(b.title or b.url))
+        title = b.title or ("Bookmarklet" if is_bookmarklet(b.url) else b.url)   # never the code as a title
+        return '%s<DT><A HREF="%s">%s</A>\n' % (pad, esc(b.url), esc(title))
 
     loose, folders = [], {}
     for b in marks:

@@ -1,0 +1,26 @@
+{
+  "schema": "omni-third-party-source/v1",
+  "component": "FFmpeg",
+  "version": "7.1.5",
+  "used_by": "console downloads worker: python-worker.elf, _omni_native.remux (OMNI_DL_FFMPEG_V1) and _omni_native.merge",
+  "libraries": ["libavformat", "libavcodec", "libavutil"],
+  "linking": "static, in-process (the console cannot start an ffmpeg program)",
+  "license": "LGPL-2.1-or-later",
+  "license_checks": {"CONFIG_GPL": "no", "CONFIG_VERSION3": "no", "CONFIG_NONFREE": "no", "CONFIG_NETWORK": "no"},
+  "source": {
+    "url": "https://ffmpeg.org/releases/ffmpeg-7.1.5.tar.xz",
+    "sha256": "de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f",
+    "signature": "ffmpeg-7.1.5.tar.xz.asc, good signature from the FFmpeg release signing key FCF986EA15E6E293A5644F10B4322F04D67658D8",
+    "patches": []
+  },
+  "recipe": "downloads/native/build-ffmpeg-lgpl.sh",
+  "configure": "--disable-gpl --disable-version3 --disable-nonfree --enable-static --disable-shared --disable-programs --disable-doc --disable-debug --disable-autodetect --disable-network --disable-everything --disable-avdevice --disable-avfilter --disable-swscale --disable-swresample --disable-postproc --enable-zlib --enable-protocol=file --enable-demuxer=mov,matroska,mpegts,aac,mp3,ogg,flac,wav,ac3,eac3 --enable-muxer=mp4,mov,ipod,matroska,matroska_audio,webm --enable-parser=h264,hevc,av1,vp8,vp9,mpeg4video,aac,aac_latm,opus,vorbis,mpegaudio,ac3,flac --enable-bsf=aac_adtstoasc,vp9_superframe,extract_extradata --enable-decoder=aac,aac_latm",
+  "configure_target_ps5": "--enable-cross-compile --cross-prefix=<ps5-payload-sdk>/bin/prospero- --arch=x86_64 --target-os=freebsd (plus the SDK's cc/ar/nm/strip/ranlib/pkg-config and nasm as x86asm)",
+  "obligations": [
+    "Distribute or offer the exact FFmpeg source above with every worker binary that contains it, for at least three years (LGPL-2.1 section 6).",
+    "Ship the LGPL-2.1 text (COPYING.LGPLv2.1 in the FFmpeg source) and this notice with the worker.",
+    "Allow relinking the worker against a modified FFmpeg: publish the worker's native source or object files and link script (link-worker-lgpl-ffmpeg.sh). Open item: not yet in this repository.",
+    "State in the notices that FFmpeg is used and under which licence (THIRD-PARTY-NOTICES.md, Downloads)."
+  ],
+  "replaces": "the PS5 Payload SDK's FFmpeg 7.0 copy (libavformat 61.1.100), configured with --enable-gpl --enable-version3 --enable-libx264, which python-worker.elf up to 0.5.3 links"
+}

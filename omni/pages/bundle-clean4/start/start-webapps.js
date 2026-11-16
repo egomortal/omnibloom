@@ -3,7 +3,8 @@
    window.__omniWebApps when this file was not ready yet): {v:1, apps:[{id,n,h,c,k,l}], max:12, hint}.
    Nothing here reads files or storage, nothing is saved here. Cross on a tile asks Omni to open the app
    (request "webapps.open", params.url = the app id); "Manage" asks for the Apps panel ("webapps.manage").
-   Tiles are coloured letters: this page's CSP allows only its own and data: images, so site icons are not drawn. */
+   Tiles are coloured letters; OMNI_START_ICONS_V1: the letter becomes the site's icon ("icon" key from Omni, loaded
+   same-origin from omni://pages/_user/icon/<key>.png by start-icons.js) once it has loaded. */
 (function (root) {
 'use strict';
 const MAX = 12;
@@ -27,13 +28,14 @@ function normalize(D) {
     seen.add(a.id);
     const n = text(a.n, 40) || text(a.h, 80) || 'App';
     const l = text(a.l, 4);
-    apps.push({ id: a.id, n, h: text(a.h, 80), c: colour(a.c, FALLBACK), k: colour(a.k, '#ffffff'), l: l && [...l].length === 1 ? l : letterOf(n) });
+    apps.push({ id: a.id, n, h: text(a.h, 80), c: colour(a.c, FALLBACK), k: colour(a.k, '#ffffff'), l: l && [...l].length === 1 ? l : letterOf(n), icon: iconKey(a.icon) });
   }
   return { apps, hint: text(d.hint, 40) };
 }
+function iconKey(k) { return typeof k === 'string' && /^[0-9a-f]{16}$/.test(k) ? k : ''; }   // OMNI_START_ICONS_V1
 function countText(n) { return n + ' of ' + MAX; }
 
-const api = { MAX, normalize, letterOf, validId, countText };
+const api = { MAX, normalize, letterOf, validId, countText, iconKey };
 if (typeof module === 'object' && module.exports) { module.exports = api; return; }
 
 // --- the page --------------------------------------------------------------------------------------------------------
@@ -78,7 +80,10 @@ function tile(a) {
   t.title = a.h ? a.n + ' (' + a.h + ')' : a.n;
   t.style.setProperty('--owap-bg', a.c);
   t.style.setProperty('--owap-ink', a.k);
-  t.append(el('span', 'owap-letter', a.l), el('b', 'owap-name', a.n), el('small', 'owap-host', a.h));
+  const letter = el('span', 'owap-letter', a.l);
+  t.append(letter, el('b', 'owap-name', a.n), el('small', 'owap-host', a.h));
+  const SI = root.omniStartIcons;   // OMNI_START_ICONS_V1: the site's icon replaces the letter once it has loaded
+  if (a.icon && SI && typeof SI.attach === 'function') try { SI.attach(letter, a.icon); } catch (e) {}
   t.addEventListener('click', () => ask('webapps.open', a.id, 'This app could not open.'));
   return t;
 }

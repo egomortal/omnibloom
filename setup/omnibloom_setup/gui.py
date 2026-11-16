@@ -17,7 +17,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
 
-from . import backup, bookmarks, checks, config, diagnostics, installer, jd, oneclick, ps5, release, shortcuts
+from . import backup, bookmarks, checks, config, devflags, diagnostics, installer, jd, oneclick, ps5, release, shortcuts
 
 C = config.COLORS
 STATUS_MARK = {"ok": ("✓", C["ok"]), "warn": ("!", C["warn"]), "bad": ("✕", C["bad"]), "info": ("i", C["accent"])}
@@ -330,7 +330,7 @@ class SetupApp:
                                websrv_port=self.ports.get("websrv"), launcher_port=self.ports.get("launcher"), catalog=self.catalog,
                                catalog_loader=lambda log: release.load_catalog(log=log),
                                report=lambda e: self.q.put(lambda: self._oc_event(e)), progress=self._progress,
-                               cancel=self.oc_cancel, networks=nets, confirm=confirm, **choice)
+                               cancel=self.oc_cancel, networks=nets, confirm=confirm, auto_backup=True, **choice)
         self.run_bg(oc.run, lambda result, err: self._oc_done(oc, result, err))
 
     def _ask_from_worker(self, question):
@@ -491,7 +491,10 @@ class SetupApp:
 
     def _do_checks(self, host):
         with self.console(host) as c:
-            return checks.run_checks(c)
+            result = checks.run_checks(c)
+            from . import autobackup                            # S06: opt-in, at most once a day
+            autobackup.maybe_run(c)
+            return result
 
     def _checks_done(self, result, err):
         if not self.check_box.winfo_exists():
@@ -520,15 +523,62 @@ class SetupApp:
         # Technical logs only, personal data redacted, previewed, saved on this PC: for bug reports (nothing is uploaded)
         ttk.Button(actions, text="Save a diagnostics bundle…", style="Ghost.TButton",
                    command=self.page_diagnostics).pack(side="left", padx=8)
+        # Same bundle, redacted again, reviewed in full, then a pre-filled GitHub issue (bug_report.py; no upload)
+        ttk.Button(actions, text="Report a bug…", style="Ghost.TButton",
+                   command=self.page_bug_report).pack(side="left", padx=(0, 8))
+        # What Omni uses on the PS5, with confirmed clean-ups of caches, trash and old copies (storage.py)
+        ttk.Button(actions, text="Storage on the PS5…", style="Ghost.TButton",
+                   command=self.page_storage).pack(side="left")
+        ttk.Button(actions, text="Advanced: Omni developer flags…", style="Ghost.TButton",
+                   command=self.page_devflags).pack(side="right")
         more = tk.Frame(self.check_box, bg=C["ground"])
         more.pack(fill="x")
         ttk.Button(more, text="Import bookmarks from this PC…", style="Ghost.TButton", command=self.page_bookmarks).pack(side="left")
         ttk.Button(more, text="Sync bookmarks…", style="Ghost.TButton",
                    command=lambda: self.page_bookmarks(sync=True)).pack(side="left", padx=(8, 0))
+        ttk.Button(more, text="Import read later…", style="Ghost.TButton",
+                   command=self.readlater_window).pack(side="left", padx=(8, 0))
+        ttk.Button(more, text="Most visited sites…", style="Ghost.TButton",   # S14 (topsites.py)
+                   command=self.topsites_window).pack(side="left", padx=(8, 0))
         ttk.Button(more, text="Back up Omni…", style="Ghost.TButton", command=self.page_backup).pack(side="left", padx=8)
         ttk.Button(more, text="Restore Omni backup…", style="Ghost.TButton", command=self.page_restore).pack(side="left")
         ttk.Button(more, text="Export reading list…", style="Ghost.TButton",
                    command=self.page_reading_list).pack(side="left", padx=(8, 0))
+        copy_row = tk.Frame(self.check_box, bg=C["ground"])     # screenshots + saved downloads -> this PC (pccopy)
+        copy_row.pack(fill="x", pady=(8, 0))
+        ttk.Button(copy_row, text="Copy from PS5…", style="Ghost.TButton",
+                   command=self.page_copy_to_pc).pack(side="left")
+        link_row = tk.Frame(self.check_box, bg=C["ground"])     # OMNI_PC_LINKS_V1: a link from this PC -> Omni (pclinks)
+        link_row.pack(fill="x", pady=(8, 0))
+        ttk.Button(link_row, text="Send a link to Omni…", style="Ghost.TButton",
+                   command=self.page_send_link).pack(side="left")
+        se_row = tk.Frame(self.check_box, bg=C["ground"])       # S04: search-shortcuts.txt / quick-access.txt editor
+        se_row.pack(fill="x", pady=(8, 0))
+        ttk.Button(se_row, text="Search shortcuts and Quick access…", style="Ghost.TButton",
+                   command=self.page_shortcuts_edit).pack(side="left")
+        mf_row = tk.Frame(self.check_box, bg=C["ground"])       # S10: ublock-user-filters.txt ("My filters") editor
+        mf_row.pack(fill="x", pady=(8, 0))
+        ttk.Button(mf_row, text="My filters…", style="Ghost.TButton",
+                   command=self.page_filters_edit).pack(side="left")
+        ttk.Button(mf_row, text="Omni add-ons…", style="Ghost.TButton",      # S12: push / list / remove user add-ons
+                   command=self.page_addons).pack(side="left", padx=(8, 0))
+        bi_row =tk.Frame(self.check_box, bg=C["ground"])       # S05: look inside a backup, restore single items
+        bi_row.pack(fill="x", pady=(8, 0))
+        ttk.Button(bi_row, text="Inspect a backup…", style="Ghost.TButton",
+                   command=self.page_backup_inspect).pack(side="left")
+        sr_row = tk.Frame(self.check_box, bg=C["ground"])       # S08: reset Omni settings (backup first, undo)
+        sr_row.pack(fill="x", pady=(8, 0))
+        ttk.Button(sr_row, text="Reset Omni settings…", style="Ghost.TButton",
+                   command=self.page_settings_reset).pack(side="left")
+        ttk.Button(sr_row, text="All Omni settings…", style="Ghost.TButton",   # S15: settings editor (settings_editor.py)
+                   command=self.page_settings_editor).pack(side="left", padx=(8, 0))
+        from . import autobackup                              # S06: automatic backup when the PS5 is found
+        ab_row = tk.Frame(self.check_box, bg=C["ground"])
+        ab_row.pack(fill="x", pady=(8, 0))
+        ab_line = self.label(ab_row, autobackup.status_line(), "small", wrap=0)
+        ttk.Button(ab_row, text="Automatic backup…", style="Ghost.TButton", command=lambda: autobackup.open_window(
+            self.root, on_change=lambda: ab_line.configure(text=autobackup.status_line()))).pack(side="left")
+        ab_line.pack(side="left", padx=8)
         if self.summary["can_install"]:
             self.next_btn.configure(state="normal")
 
@@ -587,6 +637,128 @@ class SetupApp:
         self.job = job
         self.show(5)
 
+    # -- S14: most-visited sites from this PC's browser history -> Omni's "Most visited" bookmarks folder (topsites.py) --
+    def topsites_window(self):
+        from . import bookmarks as bm, topsites as ts
+        win = tk.Toplevel(self.root)
+        win.title("Most visited sites")
+        win.configure(bg=C["ground"])
+        win.transient(self.root)
+        tk.Label(win, text="Find the sites you visit most in this PC's browsers (Chrome, Edge, Brave, Firefox) and add their "
+                           "home pages to Omni's \"%s\" bookmarks folder. Nothing is read until you press Find; you see "
+                           "the list first and can untick sites. Only the chosen home pages go to the PS5. Close Omni on "
+                           "the PS5 first." % ts.FOLDER,
+                 font=self.f_body, fg=C["text"], bg=C["ground"], wraplength=520, justify="left").pack(anchor="w", padx=14, pady=(12, 6))
+        listbox = tk.Frame(win, bg=C["ground"])
+        listbox.pack(fill="x", padx=14)
+        note = tk.Label(win, text="", font=self.f_small, fg=C["text"], bg=C["ground"], wraplength=520, justify="left")
+        note.pack(anchor="w", padx=14, pady=6)
+        btns = tk.Frame(win, bg=C["ground"])
+        btns.pack(fill="x", padx=14, pady=(0, 12))
+        ttk.Button(btns, text="Close", style="Ghost.TButton", command=win.destroy).pack(side="right")
+        found, ticks = [], []
+
+        def shown(sites, err):
+            if not win.winfo_exists():
+                return
+            find.configure(state="normal")
+            if err:
+                note.configure(text="Couldn't read the browsers' history: %s" % err, fg=C["bad"])
+                return
+            found[:] = sites
+            ticks[:] = []
+            for w in listbox.winfo_children():
+                w.destroy()
+            for s in sites:
+                v = tk.BooleanVar(value=True)
+                ticks.append(v)
+                ttk.Checkbutton(listbox, text="%s  (%s)" % (s.title, s.host), variable=v).pack(anchor="w")
+            note.configure(text="%d sites found." % len(sites) if sites else "No browser history found on this PC.", fg=C["text"])
+            add.configure(state="normal" if sites else "disabled")
+
+        def go_find():
+            find.configure(state="disabled")
+            note.configure(text="Reading this PC's browser history…", fg=C["text"])
+            self.run_bg(lambda: ts.top_sites(bm.find_sources()), shown)
+
+        def added(r, err):
+            if not win.winfo_exists():
+                return
+            add.configure(state="normal")
+            note.configure(text=("Couldn't add them: %s. Your earlier bookmarks are still on the PS5." % err) if err else
+                           "%d added to \"%s\", %d were already in Omni." % (r["added"], ts.FOLDER, r["already"]),
+                           fg=C["bad"] if err else C["text"])
+
+        def go_add():
+            chosen = [s for s, v in zip(found, ticks) if v.get()]
+            if not chosen:
+                note.configure(text="Tick at least one site.", fg=C["text"])
+                return
+            host = self.host.get().strip()
+            add.configure(state="disabled")
+
+            def work():
+                with self.console(host) as c:
+                    return ts.import_sites(c, chosen)
+            self.run_bg(work, added)
+
+        add = ttk.Button(btns, text="Add to Omni", style="Accent.TButton", command=go_add, state="disabled")
+        add.pack(side="right", padx=8)
+        find = ttk.Button(btns, text="Find", style="Ghost.TButton", command=go_find)
+        find.pack(side="right")
+
+    # -- read-later queue (Pocket / Instapaper / bookmarks HTML) into Omni's "Read later" folder (readlater_import.py) --
+    def readlater_window(self):
+        from . import readlater_import as rl
+        win = tk.Toplevel(self.root)
+        win.title("Import read later")
+        win.configure(bg=C["ground"])
+        win.transient(self.root)
+        tk.Label(win, text="Pick a Pocket export (ril_export.html or CSV), an Instapaper CSV or a bookmarks HTML file. "
+                           "Pages go into Omni's \"%s\" bookmarks folder; nothing in Omni is removed. Only web pages "
+                           "are added, each address once, up to %d bookmarks in all. Close Omni on the PS5 first."
+                           % (rl.READ_LATER_FOLDER, config.OMNI_BOOKMARK_MAX),
+                 font=self.f_body, fg=C["text"], bg=C["ground"], wraplength=520, justify="left").pack(
+            anchor="w", padx=14, pady=(12, 6))
+        archive, notes = tk.BooleanVar(value=False), tk.BooleanVar(value=False)
+        ttk.Checkbutton(win, text="Also read / archived items (into \"%s\")" % rl.READ_LATER_ARCHIVE_FOLDER,
+                        variable=archive).pack(anchor="w", padx=14)
+        ttk.Checkbutton(win, text="Add Instapaper highlighted text to titles (stays on this PC and the PS5)",
+                        variable=notes).pack(anchor="w", padx=14)
+        note = tk.Label(win, text="", font=self.f_small, fg=C["text"], bg=C["ground"], wraplength=520, justify="left")
+        note.pack(anchor="w", padx=14, pady=6)
+        btns = tk.Frame(win, bg=C["ground"])
+        btns.pack(fill="x", padx=14, pady=(0, 12))
+        ttk.Button(btns, text="Close", style="Ghost.TButton", command=win.destroy).pack(side="right")
+
+        def done(r, err):
+            if not win.winfo_exists():
+                return
+            pick.configure(state="normal")
+            if err:
+                note.configure(text="Couldn't import: %s\nYour earlier bookmarks are still on the PS5." % err, fg=C["bad"])
+            else:
+                note.configure(text=rl.summary(r), fg=C["text"])
+
+        def go():
+            path = filedialog.askopenfilename(parent=win, title="Read-later export", filetypes=[
+                ("Pocket, Instapaper or bookmarks", "*.html *.htm *.csv"), ("All files", "*.*")])
+            if not path:
+                return
+            host, arch, keep = self.host.get().strip(), archive.get(), notes.get()
+            pick.configure(state="disabled")
+            note.configure(text="Reading the file and adding it to Omni…", fg=C["text"])
+
+            def work():   # read on this PC; sent only to the PS5's bookmarks file
+                _, items, bad = rl.read_file(path, include_notes=keep)
+                plan = rl.plan_import(items, include_archive=arch, include_notes=keep, bad_rows=bad)
+                with self.console(host) as c:
+                    return rl.import_to_console(c, plan)
+            self.run_bg(work, done)
+
+        pick = ttk.Button(btns, text="Choose file and import…", style="Accent.TButton", command=go)
+        pick.pack(side="right", padx=8)
+
     # -- bookmarks from this PC (from the check page) -------------------------------
     def page_bookmarks(self, sync=False):
         self._clear()
@@ -628,8 +800,8 @@ class SetupApp:
                     "browser. Nothing is removed on either side." % config.OMNI_BOOKMARK_MAX)
         else:
             text = ("They're added after the bookmarks already in Omni; none are removed or changed. Omni keeps "
-                    "up to %d, bookmarks-bar ones first. Only web pages are added. If Omni is open on the PS5, "
-                    "close it first." % config.OMNI_BOOKMARK_MAX)
+                    "up to %d, bookmarks-bar ones first. Only web pages and bookmarklets are added. If Omni is open on "
+                    "the PS5, close it first." % config.OMNI_BOOKMARK_MAX)
         self.label(self.bm_box, text, "small", wrap=640).pack(anchor="w", pady=(10, 0))
         self.next_btn.configure(state="normal")
 
@@ -917,6 +1089,30 @@ class SetupApp:
         self._dg_save = save
         self.run_bg(work, ready)
 
+    def page_bug_report(self):
+        """Ask for a short summary, read + redact the bundle, show all of it read-only; save/open only on confirm."""
+        from tkinter import simpledialog
+        from . import bug_report
+        summary = simpledialog.askstring(config.APP_NAME, "What went wrong? (one or two sentences)", parent=self.root)
+        if summary is None:
+            return
+        host = self.host.get().strip()
+
+        def work():
+            with self.console(host) as c:
+                return diagnostics.gather(c, setup_version=config.SETUP_VERSION)
+
+        def ready(bundle, err):
+            if err:
+                messagebox.showerror(config.APP_NAME, "Couldn't read the PS5: %s\nNothing was saved or sent." % err)
+                return
+            report = bug_report.BugReport(bundle, summary=summary)
+            bug_report.review_window(self.root, report, diagnostics.default_path(), on_done=lambda path, url:
+                                     messagebox.showinfo(config.APP_NAME, "Zip saved to:\n%s\n\nGitHub's new-issue page "
+                                                         "is open in your browser. Attach the zip there yourself, "
+                                                         "then press Submit." % path))
+        self.run_bg(work, ready)
+
     def page_restore(self):
         start = backup.default_folder()
         path = filedialog.askopenfilename(title="Open an Omni backup", filetypes=[("Omni backup", "*.zip")],
@@ -994,6 +1190,148 @@ class SetupApp:
         if r["written"]:
             tip += " The files they replaced were kept on the PS5 beside them (%s)." % r["parked_suffix"].lstrip(".")
         self.label(self.rs_box, tip, "small", wrap=640).pack(anchor="w")
+
+    # -- S04 search shortcuts / Quick access editor (from the check page): its own window, shortcuts_edit.py ------
+    def page_shortcuts_edit(self):
+        from . import shortcuts_edit
+        host = self.host.get().strip()
+        shortcuts_edit.open_editor(self.root, connect=(lambda: self.console(host)) if host else None,
+                                   run_bg=self.run_bg)
+
+    # -- S10 "My filters" editor (from the check page): its own window, filters_edit.py ------------------------------
+    def page_filters_edit(self):
+        from . import filters_edit
+        host = self.host.get().strip()
+        filters_edit.open_editor(self.root, connect=(lambda: self.console(host)) if host else None,
+                                 run_bg=self.run_bg)
+
+    # -- S12 user add-ons (from the check page): push a checked .zip / folder, list, remove, roll back; addon_push.py --
+    def page_addons(self):
+        from . import addon_push
+        host = self.host.get().strip()
+        addon_push.open_window(self.root, connect=(lambda: self.console(host)) if host else None, run_bg=self.run_bg)
+
+    # -- S08 settings reset (from the check page): its own window, settings_reset.py ---------------------------
+    def page_settings_reset(self):
+        from . import settings_reset
+        host = self.host.get().strip()
+        settings_reset.open_window(self.root, connect=(lambda: self.console(host)) if host else None,
+                                   dest_fn=lambda: backup.default_path(backup.default_folder()), run_bg=self.run_bg)
+
+    # -- S15 settings editor (from the check page): its own window, settings_editor.py / settings_catalog.py -----
+    def page_settings_editor(self):
+        from . import settings_editor
+        host = self.host.get().strip()
+        settings_editor.open_window(self.root, connect=(lambda: self.console(host)) if host else None,
+                                    run_bg=self.run_bg)
+
+    # -- S05 backup inspector (from the check page): its own window, backup_inspect.py --------------------------
+    def page_backup_inspect(self):
+        from . import backup_inspect
+        start = backup.default_folder()
+        path = filedialog.askopenfilename(title="Inspect an Omni backup", filetypes=[("Omni backup", "*.zip")],
+                                          initialdir=start if os.path.isdir(start) else None)
+        if not path:
+            return
+        host = self.host.get().strip()
+        backup_inspect.open_window(self.root, path, connect=(lambda: self.console(host)) if host else None,
+                                   run_bg=self.run_bg)
+
+    # -- Omni developer flags (Advanced, from the check page): DEVELOPERS.md's flags as tick boxes -------------
+    def page_devflags(self):
+        if not messagebox.askokcancel(config.APP_NAME, "Omni developer flags are for testing. They can break pages, video "
+                                      "or ad blocking, and Omni has no screen to undo them.\n\nOnly change them if you "
+                                      "know why. Continue?", icon="warning"):
+            return
+        note, box = self._sub_page("Omni developer flags", "Reading which flags are set on the PS5 (names only)…")
+        self.next_btn.configure(text="Apply", state="disabled")
+        host = self.host.get().strip()
+        picks, removes = {}, {}
+
+        def work():
+            with self.console(host) as c:
+                return devflags.state(c)
+
+        def ready(current, err):
+            if not box.winfo_exists():
+                return
+            if err:
+                note.configure(text="Couldn't read the PS5: %s\nNothing was changed." % err, fg=C["bad"])
+                return
+            note.configure(text="Ticked = the flag file is on the PS5. Omni reads them when it starts, so restart Omni "
+                                "after applying. Removing a file always brings back the default.", fg=C["muted"])
+            canvas = tk.Canvas(box, bg=C["ground"], highlightthickness=0)
+            bar = ttk.Scrollbar(box, command=canvas.yview)
+            inner = tk.Frame(canvas, bg=C["ground"])
+            inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+            canvas.create_window((0, 0), window=inner, anchor="nw")
+            canvas.configure(yscrollcommand=bar.set)
+            canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
+            bar.pack(side="right", fill="y")
+            canvas.pack(side="left", fill="both", expand=True)
+            for kind, title, about in devflags.KINDS:
+                self.label(inner, title, "head").pack(anchor="w", pady=(8, 0))
+                self.label(inner, about, "small", wrap=640).pack(anchor="w", pady=(0, 4))
+                for row in [r for r in devflags.ROWS if r["kind"] == kind]:
+                    p = self.panel(inner)
+                    p.pack(fill="x", pady=2)
+                    for name in row["files"]:
+                        on = bool(current.get(name))
+                        if kind == devflags.OVERRIDE:
+                            var = removes[name] = tk.BooleanVar(value=False)
+                            ttk.Checkbutton(p, text="Move %s aside  (%s)" % (name, "on the PS5" if on else "not there"),
+                                            variable=var, style="Panel.TCheckbutton",
+                                            state="normal" if on else "disabled").pack(anchor="w")
+                        else:
+                            var = picks[name] = tk.BooleanVar(value=on)
+                            ttk.Checkbutton(p, text=name, variable=var, style="Panel.TCheckbutton").pack(anchor="w")
+                    self.label(p, "%s. Without it: %s. For: %s." % (row["effect"], row["default"], row["for"]), "small",
+                               bg=C["panel"], wrap=600).pack(anchor="w")
+                    self.label(p, "Risk: " + row["risk"], "small", bg=C["panel"], fg=C["warn"], wrap=600).pack(anchor="w")
+            self.label(inner, "Setup only switches these files. It never edits a user agent or tuning value; use an FTP "
+                              "client for that (see DEVELOPERS.md).", "small", wrap=640).pack(anchor="w", pady=(8, 0))
+            self.next_btn.configure(state="normal", command=lambda: go(current))
+
+        def go(current):
+            try:
+                changes = devflags.plan(current, {n: v.get() for n, v in picks.items()},
+                                        [n for n, v in removes.items() if v.get()])
+            except devflags.FlagError as e:
+                messagebox.showerror(config.APP_NAME, str(e))
+                return
+            if not changes:
+                messagebox.showinfo(config.APP_NAME, "Nothing to change.")
+                return
+            if not messagebox.askokcancel(config.APP_NAME, "Make these changes on the PS5?\n\n%s\n\nFiles are moved aside "
+                                          "(.before-setup-…), never deleted. Restart Omni to apply."
+                                          % "\n".join(devflags.describe(changes))):
+                return
+            self.next_btn.configure(state="disabled")
+            self.back_btn.configure(state="disabled")
+            for w in box.winfo_children():
+                w.destroy()
+            note.configure(text="Changing the flags on the PS5…", fg=C["muted"])
+
+            def apply():
+                with self.console(host) as c:
+                    return devflags.apply(c, changes)
+            self.run_bg(apply, done)
+
+        def done(r, err):
+            if not box.winfo_exists():
+                return
+            self.back_btn.configure(state="normal")
+            self.next_btn.configure(text="Done", state="normal", command=lambda: self.show(self.step))
+            if err:
+                note.configure(text="Couldn't change the flags: %s" % err, fg=C["bad"])
+                return
+            lines = ["Turned on: %s" % ", ".join(r["created"]) if r["created"] else "",
+                     "Moved aside: %s" % ", ".join(n for n, _ in r["removed"]) if r["removed"] else "",
+                     "Already as asked: %s" % ", ".join(r["skipped"]) if r["skipped"] else "",
+                     "Restart Omni to apply."]
+            note.configure(text="\n".join(x for x in lines if x), fg=C["text"])
+
+        self.run_bg(work, ready)
 
     # -- reading list export (from the check page): read-only copy to a PC folder, optional EPUB ----------------
     def page_reading_list(self):
@@ -1090,6 +1428,184 @@ class SetupApp:
             note.configure(text="\n".join(lines), fg=C["text"])
             ttk.Button(box, text="Open folder", style="Ghost.TButton",
                        command=lambda: self._open_folder(r["path"])).pack(anchor="w", pady=(8, 0))
+
+        self.run_bg(work, ready)
+
+    # -- copy screenshots and saved downloads to this PC (from the check page) ------------------------
+    def page_copy_to_pc(self):
+        from . import pccopy
+        import datetime as _dt
+        note, box = self._sub_page("Copy from PS5", "Reading Omni's screenshots and the Downloads app's saved files "
+                                                    "(nothing is changed)…")
+        self.next_btn.configure(text="Copy", state="disabled")
+        host = self.host.get().strip()
+        st = {"picked": set(), "cancel": threading.Event()}
+
+        def work():
+            with self.console(host) as c:
+                return pccopy.scan(c)
+
+        def when(it):
+            return _dt.datetime.fromtimestamp(it.mtime, _dt.timezone.utc).strftime("%Y-%m-%d %H:%M") if it.mtime else ""
+
+        def ready(s, err):
+            if not box.winfo_exists():
+                return
+            if err:
+                note.configure(text="Couldn't read the PS5: %s\nNothing was copied." % err, fg=C["bad"])
+                return
+            items = st["items"] = s["items"]
+            if not items:
+                note.configure(text="There are no screenshots or saved downloads on this PS5 yet.", fg=C["text"])
+                return
+            note.configure(text="%d file%s on the PS5 (%s). Tick what to copy; files already on this PC are skipped."
+                           % (len(items), "" if len(items) == 1 else "s", self._size_text(sum(i.size for i in items))),
+                           fg=C["text"], wraplength=640, justify="left")
+            labels = dict(pccopy.KIND_LABELS)
+            filt = tk.Frame(box, bg=C["ground"])
+            filt.pack(fill="x", pady=(0, 6))
+            kind = tk.StringVar(value="Everything")
+            ttk.Combobox(filt, textvariable=kind, state="readonly", width=16,
+                         values=["Everything"] + [v for _k, v in pccopy.KIND_LABELS]).pack(side="left")
+            self.label(filt, "from", "small").pack(side="left", padx=(8, 4))
+            since = tk.StringVar(value="")
+            ttk.Entry(filt, textvariable=since, width=11).pack(side="left")
+            self.label(filt, "(YYYY-MM-DD, optional)", "small").pack(side="left", padx=(4, 8))
+
+            def select_matching():
+                kinds = None if kind.get() == "Everything" else {k for k, v in pccopy.KIND_LABELS if v == kind.get()}
+                t = None
+                if since.get().strip():
+                    try:
+                        t = int((_dt.datetime.strptime(since.get().strip(), "%Y-%m-%d")
+                                 - _dt.datetime(1970, 1, 1)).total_seconds())
+                    except ValueError:
+                        messagebox.showinfo(config.APP_NAME, "Type the date as YYYY-MM-DD, for example 2026-11-01.")
+                        return
+                st["picked"] = {i.rel for i in pccopy.select(items, kinds, since=t)}
+                redraw()
+
+            ttk.Button(filt, text="Select these", style="Small.TButton", command=select_matching).pack(side="left")
+            ttk.Button(filt, text="All", style="Small.TButton",
+                       command=lambda: (st["picked"].update(i.rel for i in items), redraw())).pack(side="left", padx=4)
+            ttk.Button(filt, text="None", style="Small.TButton",
+                       command=lambda: (st["picked"].clear(), redraw())).pack(side="left")
+            lf = tk.Frame(box, bg=C["ground"])
+            lf.pack(fill="both", expand=True)
+            tree = ttk.Treeview(lf, columns=("pick", "name", "kind", "size", "date"), show="headings", height=9,
+                                selectmode="none")
+            for col, text, w in (("pick", "", 30), ("name", "Name", 300), ("kind", "Type", 110), ("size", "Size", 80),
+                                 ("date", "Date", 120)):
+                tree.heading(col, text=text)
+                tree.column(col, width=w, stretch=col == "name", anchor="w")
+            sb = ttk.Scrollbar(lf, orient="vertical", command=tree.yview)
+            tree.configure(yscrollcommand=sb.set)
+            tree.pack(side="left", fill="both", expand=True)
+            sb.pack(side="left", fill="y")
+            for n, it in enumerate(items):
+                tree.insert("", "end", iid=str(n), values=("☐", it.rel, labels.get(it.kind, ""),
+                                                           self._size_text(it.size), when(it)))
+
+            def redraw():
+                for n, it in enumerate(items):
+                    tree.set(str(n), "pick", "☑" if it.rel in st["picked"] else "☐")
+
+            def toggle(event):
+                row = tree.identify_row(event.y)
+                if row:
+                    rel = items[int(row)].rel
+                    st["picked"].symmetric_difference_update({rel})
+                    redraw()
+
+            tree.bind("<Button-1>", toggle)
+            pics, dls = pccopy.default_folders()
+            st["pics"], st["dls"] = tk.StringVar(value=pics), tk.StringVar(value=dls)
+            for label, var in (("Screenshots to:", st["pics"]), ("Downloads to:", st["dls"])):
+                row = tk.Frame(box, bg=C["ground"])
+                row.pack(fill="x", pady=(6, 0))
+                self.label(row, label, "small").pack(side="left")
+                ttk.Entry(row, textvariable=var, width=56).pack(side="left", padx=8, fill="x", expand=True)
+                ttk.Button(row, text="Browse…", style="Small.TButton",
+                           command=lambda v=var: v.set(filedialog.askdirectory(initialdir=v.get() or None) or v.get())
+                           ).pack(side="left")
+            st["trash"] = tk.BooleanVar(value=False)
+            ttk.Checkbutton(box, text="After copying, move the files to the Downloads app's trash on the PS5 (you can "
+                                      "restore them there)", variable=st["trash"]).pack(anchor="w", pady=(8, 0))
+            self.next_btn.configure(state="normal", command=start)
+
+        def start():
+            chosen = [i for i in st["items"] if i.rel in st["picked"]]
+            if not chosen:
+                messagebox.showinfo(config.APP_NAME, "Tick the files to copy first.")
+                return
+            pics = st["pics"].get().strip() or pccopy.default_folders()[0]
+            dls = st["dls"].get().strip() or pccopy.default_folders()[1]
+            try:
+                pccopy.check_space(chosen, pics, dls)
+            except (pccopy.CopyError, OSError) as e:
+                messagebox.showerror(config.APP_NAME, str(e))
+                return
+            trash = st["trash"].get()
+            if trash and not messagebox.askyesno(config.APP_NAME, "Move the %d copied file%s to the Downloads app's "
+                                                 "trash on the PS5?" % (len(chosen), "" if len(chosen) == 1 else "s")):
+                return
+            self.next_btn.configure(text="Stop", state="normal", command=st["cancel"].set)
+            self.back_btn.configure(state="disabled")
+            for w in box.winfo_children():
+                w.destroy()
+            note.configure(text="Copying from the PS5…", fg=C["muted"])
+            bar = ttk.Progressbar(box, mode="determinate", maximum=max(sum(i.size for i in chosen), 1))
+            bar.pack(fill="x", pady=(6, 0))
+            status = self.label(box, "", "small")
+            status.pack(anchor="w", pady=(4, 0))
+            last = [0.0]
+
+            def progress(done_b, total_b, i, n):
+                now = time.time()
+                if now - last[0] < 0.15 and done_b < total_b:
+                    return
+                last[0] = now
+
+                def show():
+                    if bar.winfo_exists():
+                        bar.configure(value=done_b)
+                        status.configure(text="File %d of %d · %s of %s" % (i + 1, n, self._size_text(done_b),
+                                                                           self._size_text(total_b)))
+                self.q.put(show)
+
+            def copy():
+                with self.console(host) as c:
+                    return pccopy.copy(c, chosen, pics, dls, move_to_trash=trash, progress=progress,
+                                       cancel=st["cancel"])
+
+            self.run_bg(copy, done)
+
+        def done(r, err):
+            if not box.winfo_exists():
+                return
+            self.back_btn.configure(state="normal")
+            self.next_btn.configure(text="Done", state="normal", command=lambda: self.show(self.step))
+            if err:
+                note.configure(text="Couldn't copy: %s\nFiles already copied stay on this PC; run it again to carry "
+                                    "on." % err, fg=C["bad"])
+                return
+            lines = ["Copied %d file%s (%s); %d already on this PC." % (r["copied"], "" if r["copied"] == 1 else "s",
+                                                                      self._size_text(r["bytes"]), r["same"])]
+            if r.get("cancelled"):
+                lines.append("Stopped. Run it again to carry on where it stopped.")
+            if r["renamed"]:
+                lines.append("%d saved under a new name (a different file had the same name)." % r["renamed"])
+            if r["trashed"]:
+                lines.append("%d moved to the Downloads app's trash on the PS5." % r["trashed"])
+            if r["failed"]:
+                lines.append("%d couldn't be copied." % len(r["failed"]))
+            note.configure(text="\n".join(lines), fg=C["text"])
+            row = tk.Frame(box, bg=C["ground"])
+            row.pack(anchor="w", pady=(8, 0))
+            for text, folder in (("Open screenshots folder", r["pictures"]), ("Open downloads folder", r["downloads"])):
+                if os.path.isdir(folder):
+                    ttk.Button(row, text=text, style="Ghost.TButton",
+                               command=lambda f=folder: self._open_folder(f)).pack(side="left", padx=(0, 8))
 
         self.run_bg(work, ready)
 
@@ -1337,7 +1853,264 @@ class SetupApp:
             self._shortcut_panel(self.body)
         self.label(self.body, "Run Omnibloom Setup again any time to add, update, repair or remove apps.", "small").pack(anchor="w")
 
+    # -- storage on the PS5 (from the check page; storage.py) ---------------------------
+    def page_storage(self):
+        from . import storage
+        note, box = self._sub_page("Storage on the PS5",
+                                   "Reading what Omni uses on the PS5 (nothing is changed)…")
+        host = self.host.get().strip()
+
+        def work():
+            with self.console(host) as c:
+                return storage.scan(c)
+
+        def ready(rep, err):
+            if not box.winfo_exists():
+                return
+            if err:
+                note.configure(text="Couldn't read the PS5: %s\nNothing was changed." % err, fg=C["bad"])
+                return
+            free = ("Free on the PS5: %s." % storage.size_text(rep["free"])) if rep["free"] is not None else rep["free_note"]
+            note.configure(text="Omni and its parts use %s%s.\n%s" % (
+                storage.size_text(rep["total"]), " (at least: the listing stopped early)" if rep["truncated"] else "",
+                free), fg=C["text"], wraplength=640, justify="left")
+            table = tk.Frame(box, bg=C["ground"])
+            table.pack(fill="x")
+            largest = max([r["bytes"] for r in rep["rows"]] or [0])
+            for i, r in enumerate(rep["rows"]):
+                tk.Label(table, text=r["name"], font=self.f_body, fg=C["text"], bg=C["ground"], anchor="w").grid(
+                    row=i, column=0, sticky="w", padx=(0, 8))
+                cv = tk.Canvas(table, width=160, height=10, bg=C["panel"], highlightthickness=0)
+                if largest and r["bytes"]:
+                    cv.create_rectangle(0, 0, max(2, int(160 * r["bytes"] / float(largest))), 10, width=0,
+                                        fill=C["bad"] if r["id"] == "unknown" else C["accent"])
+                cv.grid(row=i, column=1, padx=4)
+                tk.Label(table, text=storage.size_text(r["bytes"]), font=self.f_body, fg=C["text"], bg=C["ground"],
+                         width=9, anchor="e").grid(row=i, column=2)
+                detail = storage.types_text(rep["types"]) if r["id"] == "dl-saved" and rep["types"] else r["note"]
+                tk.Label(table, text=detail, font=self.f_small, fg=C["muted"], bg=C["ground"], anchor="w",
+                         wraplength=300, justify="left").grid(row=i, column=3, sticky="w", padx=(8, 0))
+            if rep["unknown_count"]:
+                self.label(box, "Not recognised, left alone: " + ", ".join(rep["unknown"][:5]) +
+                           (" and %d more" % (rep["unknown_count"] - 5) if rep["unknown_count"] > 5 else ""),
+                           "small", wrap=640).pack(anchor="w", pady=(6, 0))
+            acts = tk.Frame(box, bg=C["ground"])
+            acts.pack(fill="x", pady=(10, 0))
+            self.label(acts, "Clean up (each asks first and lists every file):", "small").pack(anchor="w")
+            row = tk.Frame(acts, bg=C["ground"])
+            row.pack(fill="x", pady=(4, 0))
+            any_action = False
+            for a in storage.ACTIONS:
+                items = storage.candidates(rep, a["id"])
+                if not items:
+                    continue
+                any_action = True
+                text = "%s (%s)…" % (a["name"], storage.size_text(sum(i["size"] for i in items)))
+                ttk.Button(row, text=text, style="Ghost.TButton",
+                           command=lambda a=a, items=items: start(a["id"], items)).pack(side="left", padx=(0, 8))
+            if not any_action:
+                self.label(row, "Nothing to clean up.", "small").pack(anchor="w")
+
+        def start(action, items):
+            head, lines = storage.confirmation(action, items)
+            if not self._storage_confirm(head, lines):
+                return
+            for w in box.winfo_children():
+                w.destroy()
+            note.configure(text="Deleting on the PS5…", fg=C["muted"])
+
+            def go():
+                with self.console(host) as c:
+                    return storage.clean(c, action, items)
+
+            self.run_bg(go, done)
+
+        def done(r, err):
+            if not box.winfo_exists():
+                return
+            if err:
+                note.configure(text="The clean-up stopped: %s" % err, fg=C["bad"])
+            else:
+                note.configure(text="Deleted %d file%s (%s)%s. Reading the PS5 again…" % (
+                    r["deleted"], "" if r["deleted"] == 1 else "s", storage.size_text(r["bytes"]),
+                    "; %d left alone (changed since the list was made)" % r["skipped"] if r["skipped"] else ""),
+                    fg=C["text"])
+            self.run_bg(work, ready)
+
+        self.run_bg(work, ready)
+
+    def _storage_confirm(self, head, lines):   # tests replace this
+        win = tk.Toplevel(self.root)
+        win.title(config.APP_NAME)
+        win.configure(bg=C["ground"])
+        win.transient(self.root)
+        tk.Label(win, text=head, font=self.f_body, fg=C["text"], bg=C["ground"], wraplength=560, justify="left").pack(
+            anchor="w", padx=14, pady=(12, 6))
+        frame = tk.Frame(win, bg=C["ground"])
+        frame.pack(fill="both", expand=True, padx=14)
+        text = tk.Text(frame, width=86, height=min(16, max(4, len(lines))), bg=C["panel"], fg=C["text"], bd=0,
+                       font=self.f_small)
+        sb = ttk.Scrollbar(frame, command=text.yview)
+        text.configure(yscrollcommand=sb.set)
+        text.insert("end", "\n".join(lines))
+        text.configure(state="disabled")
+        text.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        answer = {"ok": False}
+
+        def yes():
+            answer["ok"] = True
+            win.destroy()
+
+        btns = tk.Frame(win, bg=C["ground"])
+        btns.pack(fill="x", padx=14, pady=12)
+        ttk.Button(btns, text="Cancel", style="Ghost.TButton", command=win.destroy).pack(side="right")
+        ttk.Button(btns, text="Delete %d file%s" % (len(lines), "" if len(lines) == 1 else "s"), style="Accent.TButton",
+                   command=yes).pack(side="right", padx=8)
+        win.grab_set()
+        self.root.wait_window(win)
+        return answer["ok"]
+
     # -- controller shortcuts (the same list as the README) ---------------------------
+    # -- send a link to Omni (OMNI_PC_LINKS_V1, pclinks.py) ---------------------------------------------------------------
+    def page_send_link(self):
+        from . import pclinks
+        note, box = self._sub_page(
+            "Send a link to Omni", "Paste a web address (or up to %d, one per line), or drop a link on the box. Omni asks "
+            "on the TV before it opens anything: \"Link from your PC\", Open or Dismiss." % pclinks.MAX_LINKS)
+        self.pl_note = note
+        self.next_btn.configure(text="Send", state="normal", command=self._pl_send)
+        p = self.panel(box)
+        p.pack(fill="x")
+        self.label(p, "Web address", "head", bg=C["panel"]).pack(anchor="w")
+        self.pl_text = tk.Text(p, height=4, bg=C["ground"], fg=C["text"], insertbackground=C["text"], bd=0,
+                               highlightthickness=1, font=self.f_body, wrap="char", undo=True)
+        self.pl_text.pack(fill="x", pady=(4, 6))
+        self.pl_preview = self.label(p, "", "small", bg=C["panel"], wrap=640)
+        self.pl_preview.pack(anchor="w")
+        row = tk.Frame(p, bg=C["panel"])
+        row.pack(fill="x", pady=(8, 2))
+        ttk.Button(row, text="Paste", style="Small.TButton", command=self._pl_paste).pack(side="left")
+        self.label(row, "Code (optional):", "small", bg=C["panel"]).pack(side="left", padx=(16, 6))
+        self.pl_code = tk.StringVar(value="")
+        ttk.Entry(row, textvariable=self.pl_code, width=9).pack(side="left")
+        self.label(box, "Without a code the link goes into Omni's inbox over FTP and Omni asks about it while it is on "
+                        "screen (within about 5 seconds). With the 6-digit code from Omni's Browser settings, \"Send "
+                        "links from your phone\", it opens at once. Only http:// and https:// links, without a user name "
+                        "or password.", "small", wrap=640).pack(anchor="w", pady=(10, 0))
+        self.pl_text.bind("<<Modified>>", self._pl_changed)
+        self._pl_enable_drop(self.pl_text)
+        try:   # a link already on the clipboard is offered (not sent)
+            clip = self.root.clipboard_get()
+        except tk.TclError:
+            clip = ""
+        try:
+            if clip and len(clip) <= 4 * pclinks.MAX_URL and pclinks.parse_input(clip)[0]:
+                self.pl_text.insert("1.0", clip.strip())
+        except pclinks.SendError:
+            pass
+        self._pl_changed()
+
+    def _pl_enable_drop(self, widget):
+        """Dropping a link (or a .url shortcut) on the box: needs tkinterdnd2's Tk; without it, Paste does the job."""
+        if not hasattr(widget, "drop_target_register"):
+            return False
+        try:
+            widget.drop_target_register("DND_Text", "DND_Files")
+        except tk.TclError:
+            return False
+
+        def dropped(event):
+            data = event.data or ""
+            if os.path.isfile(data.strip("{}")) and data.strip("{}").lower().endswith(".url"):
+                try:
+                    with open(data.strip("{}"), encoding="utf-8", errors="replace") as f:
+                        data = f.read(8192)
+                except OSError:
+                    return event.action
+            self._pl_set(data)
+            return event.action
+        widget.dnd_bind("<<Drop>>", dropped)
+        return True
+
+    def _pl_set(self, text):
+        self.pl_text.delete("1.0", "end")
+        self.pl_text.insert("1.0", (text or "").strip())
+        self._pl_changed()
+
+    def _pl_paste(self):
+        try:
+            self._pl_set(self.root.clipboard_get())
+        except tk.TclError:
+            self.pl_note.configure(text="The clipboard has no text.", fg=C["bad"])
+
+    def _pl_changed(self, _event=None):
+        from . import pclinks
+        if not self.pl_text.winfo_exists():
+            return
+        self.pl_text.edit_modified(False)
+        raw = self.pl_text.get("1.0", "end")
+        try:
+            links, bad = pclinks.parse_input(raw)
+        except pclinks.SendError as e:
+            self.pl_preview.configure(text=str(e), fg=C["bad"])
+            return
+        if not raw.strip():
+            text, color = "", C["muted"]
+        elif not links:
+            text, color = "That isn't a web address Omni can open.", C["bad"]
+        else:
+            sites = ", ".join(pclinks.site(u) for u in links[:4]) + (", …" if len(links) > 4 else "")
+            text = "%d link%s: %s" % (len(links), "" if len(links) == 1 else "s", sites)
+            text += ("  (%d line%s skipped: not a web address)" % (bad, "" if bad == 1 else "s")) if bad else ""
+            color = C["muted"]
+        self.pl_preview.configure(text=text, fg=color)
+
+    def _pl_send(self):
+        from . import pclinks
+        host = self.host.get().strip()
+        try:
+            links, _bad = pclinks.parse_input(self.pl_text.get("1.0", "end"))
+        except pclinks.SendError as e:
+            self.pl_note.configure(text=str(e), fg=C["bad"])
+            return
+        if not links:
+            self.pl_note.configure(text="Paste a web address first (https://…).", fg=C["bad"])
+            return
+        if not host:
+            self.pl_note.configure(text="Find your PS5 first (Back, then Find).", fg=C["bad"])
+            return
+        code = self.pl_code.get().strip()
+        self.next_btn.configure(state="disabled")
+        self.pl_note.configure(text="Sending…", fg=C["muted"])
+
+        def work():
+            if code:
+                return {"direct": pclinks.send_direct(host, links, code)}
+            with self.console(host) as c:
+                return pclinks.send_inbox(c, links)
+
+        def done(r, err):
+            if not self.pl_note.winfo_exists():
+                return
+            self.next_btn.configure(state="normal")
+            if err:
+                msg = str(err) if isinstance(err, pclinks.SendError) else "Couldn't reach the PS5: %s" % err
+                self.pl_note.configure(text=msg + "\nNothing was sent.", fg=C["bad"])
+                return
+            n = r.get("direct") or r["links"]
+            if "direct" in r:
+                text = "Sent. Omni opens %s in a new tab." % ("it" if n == 1 else "them")
+            else:
+                text = ("Sent. Omni asks about %s on the TV (Open or Dismiss) while it is on screen."
+                        % ("it" if n == 1 else "the %d links" % n))
+                if r.get("waiting", 0) > 1:
+                    text += " %d sends are waiting for Omni." % r["waiting"]
+            self.pl_note.configure(text=text, fg=C["ok"])
+            self.pl_text.delete("1.0", "end")
+            self._pl_changed()
+        self.run_bg(work, done)
+
     def _shortcut_panel(self, parent):
         p = self.panel(parent)
         p.pack(fill="x", pady=(0, 12))

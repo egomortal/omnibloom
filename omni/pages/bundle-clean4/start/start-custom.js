@@ -3,7 +3,8 @@
    window.__omniStartCustom when this file was not ready yet); nothing here reads files or storage, nothing is saved here.
    Sections: search (the hero's search box; the Universe picker stays), apps, shortcuts (Pinned + Recent sites),
    cw (Continue watching, drawn by Omni itself as #omni-cw), reading (latest 3 saved pages), closed (recently closed
-   tabs). Default order: the Universe's own grid layout; any other order: one column in that order (CSS order). */
+   tabs). Default order: the Universe's own grid layout; any other order: one column in that order (CSS order).
+   OMNI_START_ICONS_V1: reading / closed tiles show the site's icon ("icon" key from Omni, start-icons.js loads it). */
 (function (root) {
 'use strict';
 const KEYS = ['search', 'apps', 'shortcuts', 'cw', 'reading', 'closed'];
@@ -12,6 +13,7 @@ const MAX_READING = 3, MAX_CLOSED = 5;
 
 function text(v, max) { return typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, max) : ''; }
 function webURL(u) { return typeof u === 'string' && u.length <= 4096 && /^https?:\/\/[^\s"<>\\]+$/.test(u); }
+function iconKey(k) { return typeof k === 'string' && /^[0-9a-f]{16}$/.test(k) ? k : ''; }   // OMNI_START_ICONS_V1
 function readingId(id) { return typeof id === 'string' && id.length > 0 && id.length <= 255 && id[0] !== '.' && !/[\s\/\\\u0000-\u001f\u007f]/.test(id); }
 
 // The data from Omni -> a checked plan (anything unexpected falls back to the default look).
@@ -32,9 +34,9 @@ function normalize(D) {
   if (b.kind === 'colour' && /^#[0-9a-fA-F]{6}$/.test(b.value || '')) bg = { kind: 'colour', value: b.value };
   else if (b.kind === 'picture' && typeof b.url === 'string' && b.url.startsWith(PICTURE) && /^[\w\-]{1,64}$/.test(b.url.slice(PICTURE.length))) bg = { kind: 'picture', url: b.url };
   const reading = (Array.isArray(d.reading) ? d.reading : []).filter(r => r && readingId(r.id)).slice(0, MAX_READING)
-    .map(r => ({ id: r.id, t: text(r.t, 200) || text(r.s, 200) || 'Saved page', s: text(r.s, 120), d: text(r.d, 40) }));
+    .map(r => ({ id: r.id, t: text(r.t, 200) || text(r.s, 200) || 'Saved page', s: text(r.s, 120), d: text(r.d, 40), icon: iconKey(r.icon) }));
   const closed = d.private === true ? [] : (Array.isArray(d.closed) ? d.closed : []).filter(r => r && webURL(r.u)).slice(0, MAX_CLOSED)
-    .map(r => ({ u: r.u, t: text(r.t, 200) || text(r.s, 200) || r.u, s: text(r.s, 120) }));
+    .map(r => ({ u: r.u, t: text(r.t, 200) || text(r.s, 200) || r.u, s: text(r.s, 120), icon: iconKey(r.icon) }));
   const linear = order.join() !== KEYS.join();
   return { order, hidden, bg, clock: d.clock === true, private: d.private === true, linear, reading, closed, hint: text(d.hint, 80) };
 }
@@ -52,7 +54,7 @@ function clockText(date) {
   return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
 }
 
-const api = { KEYS, normalize, plan, clockText, webURL, readingId };
+const api = { KEYS, normalize, plan, clockText, webURL, readingId, iconKey };
 if (typeof module === 'object' && module.exports) { module.exports = api; return; }
 
 // --- the page --------------------------------------------------------------------------------------------------------
@@ -90,11 +92,17 @@ function ensureSection(id, title) {
   if (before && before.parentNode === main) main.insertBefore(s, before); else main.append(s);
   return s;
 }
-function tile(title, sub, onclick) {
+// icon: the site's icon key ("" none). Its slot stays empty and hidden until the icon has loaded (OMNI_START_ICONS_V1).
+function tile(title, sub, onclick, icon) {
   const b = el('button', 'oscu-tile');
   b.type = 'button';
   b.title = title;
-  b.append(el('b', null, title), el('small', null, sub));
+  const head = el('span', 'oscu-head'), slot = el('span', 'oscu-ico');
+  slot.setAttribute('aria-hidden', 'true');
+  head.append(slot, el('b', null, title));
+  b.append(head, el('small', null, sub));
+  const SI = root.omniStartIcons;
+  if (icon && SI && typeof SI.attach === 'function') try { SI.attach(slot, icon); } catch (e) {}
   b.addEventListener('click', onclick);
   return b;
 }
@@ -104,7 +112,7 @@ function drawLists(n) {
   lastLists = key;
   const r = ensureSection('oscu-reading', 'Reading list'), rt = r.querySelector('.oscu-tiles');
   rt.replaceChildren(...n.reading.map(x => tile(x.t, [x.s, x.d].filter(Boolean).join(' · '),
-    () => ask('start.reading.open', x.id, 'This saved page could not open.'))));
+    () => ask('start.reading.open', x.id, 'This saved page could not open.'), x.icon)));
   if (!r.querySelector('.oscu-all')) {
     const all = el('button', 'oscu-all', 'All saved pages');
     all.type = 'button';
@@ -112,7 +120,7 @@ function drawLists(n) {
     r.querySelector('.row').append(all);
   }
   const c = ensureSection('oscu-closed', 'Recently closed tabs'), ct = c.querySelector('.oscu-tiles');
-  ct.replaceChildren(...n.closed.map(x => tile(x.t, x.s, () => ask('start.closed.open', x.u, 'This tab could not reopen.'))));
+  ct.replaceChildren(...n.closed.map(x => tile(x.t, x.s, () => ask('start.closed.open', x.u, 'This tab could not reopen.'), x.icon)));
 }
 function place() {
   if (!current) return;

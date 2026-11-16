@@ -1,0 +1,29 @@
+{
+  "manifest_version": 1,
+  "id": "omni-same-tab",
+  "name": "Same-tab links",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Links that would open a new tab open in the current one instead (Back returns), so tabs don't pile up. Hold Shift, Ctrl or Alt while choosing a link to still get a new tab. Downloads and in-page frames are left alone.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [],
+  "run_at": "document_start",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    { "key": "mode", "type": "choice", "label": "Open in this tab", "default": "all", "choices": ["all", "other"], "labels": ["Every new-tab link", "Only links to other sites"] }
+  ]
+}

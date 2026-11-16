@@ -58,6 +58,15 @@ KINDS['.vtt'] = ('text', 'text/vtt; charset=utf-8')
 KINDS['.srt'] = ('text', 'text/plain; charset=utf-8')
 OTHER = ('other', 'application/octet-stream')
 
+# OMNI_DL_LIBRARY_SEARCH_V1: the Library's filter chips and sort orders.
+CATEGORIES = ('video', 'audio', 'image', 'document', 'archive', 'other')
+SORTS = ('newest', 'oldest', 'name', 'size', 'type')
+MAX_QUERY = 100
+_DOCUMENT_EXT = frozenset(('.pdf', '.txt', '.vtt', '.srt', '.ass', '.doc', '.docx', '.odt', '.rtf', '.epub', '.mobi',
+                           '.md', '.csv', '.xls', '.xlsx', '.ods', '.ppt', '.pptx', '.odp'))
+_ARCHIVE_EXT = frozenset(('.zip', '.rar', '.7z', '.tar', '.gz', '.tgz', '.bz2', '.tbz2', '.xz', '.txz', '.zst', '.lz',
+                          '.lzma', '.cab'))
+
 
 class NotFound(Exception):
     """The id is unknown, expired with a restart, or its file is gone or no longer safe to use."""
@@ -69,6 +78,33 @@ class Unsatisfiable(Exception):
 
 def kind_of(name):
     return KINDS.get(os.path.splitext(name)[1].lower(), OTHER)
+
+
+def category_of(name):
+    """The Library chip a file belongs to: video, audio, image, document, archive or other."""
+    ext = os.path.splitext(name)[1].lower()
+    file_kind = KINDS.get(ext, OTHER)[0]
+    if file_kind in ('video', 'audio', 'image'):
+        return file_kind
+    if file_kind in ('pdf', 'text') or ext in _DOCUMENT_EXT:
+        return 'document'
+    if ext in _ARCHIVE_EXT:
+        return 'archive'
+    return 'other'
+
+
+def parse_categories(value):
+    """'video,audio' -> ('video', 'audio'); '' -> () meaning every category. ValueError on anything else."""
+    if not isinstance(value, str) or len(value) > 80:
+        raise ValueError('Unknown library filter.')
+    parts = tuple(value.split(',')) if value else ()
+    if any(part not in CATEGORIES for part in parts) or len(set(parts)) != len(parts):
+        raise ValueError('Unknown library filter.')
+    return parts
+
+
+def _query_ok(q):
+    return isinstance(q, str) and len(q) <= MAX_QUERY and not any(ord(c) < 32 or ord(c) == 127 for c in q)
 
 
 def parse_range(header, size):
@@ -210,11 +246,23 @@ class Library:
                 continue
         return out
 
-    def listing(self, kind='all', area='files', offset=0, limit=50, jobs=()):
+    def listing(self, kind='all', area='files', offset=0, limit=50, jobs=(), categories=(), q='', sort='newest'):
+        """One page of saved files. kind: the old All/Video/Audio/Other tabs; categories: the chips (any of
+        CATEGORIES, empty = all); q: case-insensitive text in the name or the download's title; sort: one of SORTS."""
         if kind not in ('all', 'video', 'audio', 'other') or area not in ('files', 'trash'):
             raise ValueError('Unknown library filter.')
         if type(offset) is not int or type(limit) is not int or not 0 <= offset <= 10 ** 6 or not 1 <= limit <= MAX_PAGE:
             raise ValueError('Invalid page.')
+        if isinstance(categories, str):
+            categories = parse_categories(categories)
+        if not isinstance(categories, (tuple, list)) or any(c not in CATEGORIES for c in categories):
+            raise ValueError('Unknown library filter.')
+        if sort not in SORTS:
+            raise ValueError('Unknown library sort.')
+        if not _query_ok(q):
+            raise ValueError('Invalid search.')
+        needle = ' '.join(q.split()).casefold()
+        wanted = frozenset(categories)
         titles = {}
         for job in jobs:
             if job.get('state') == 'completed' and not job.get('demo') and job.get('filepath'):
@@ -234,16 +282,32 @@ class Library:
                 if kind == 'video' and file_kind != 'video' or kind == 'audio' and file_kind != 'audio' \
                         or kind == 'other' and file_kind in ('video', 'audio'):
                     continue
+                category = category_of(rel)
+                if wanted and category not in wanted:
+                    continue
                 folder, _, name = rel.rpartition('/')
+                title = titles.get(str(base / rel), '')
+                if needle and needle not in name.casefold() and needle not in title.casefold():
+                    continue
                 rows.append(dict(root_id=root_id, rel=rel, name=name, folder=folder, place=root_id, place_label=label,
                                  size=info.st_size, mtime=int(info.st_mtime), kind=file_kind, mime=mime.split(';')[0],
-                                 job_title=titles.get(str(base / rel), '')))
-        rows.sort(key=lambda row: (-row['mtime'], row['name']))
+                                 category=category, job_title=title))
+        if sort == 'oldest':
+            rows.sort(key=lambda row: (row['mtime'], row['name'].casefold(), row['name']))
+        elif sort == 'name':
+            rows.sort(key=lambda row: (row['name'].casefold(), row['name'], -row['mtime']))
+        elif sort == 'size':
+            rows.sort(key=lambda row: (-row['size'], row['name'].casefold(), row['name']))
+        elif sort == 'type':
+            rows.sort(key=lambda row: (CATEGORIES.index(row['category']), os.path.splitext(row['name'])[1].lower(),
+                                       row['name'].casefold(), row['name']))
+        else:
+            rows.sort(key=lambda row: (-row['mtime'], row['name']))
         page = rows[offset:offset + limit]
         for row in page:
             row['id'] = self.file_id(row.pop('root_id'), area, row.pop('rel'))
         return dict(files=page, total=len(rows), offset=offset, limit=limit, area=area, kind=kind,
-                    truncated=budget[0] <= 0)
+                    categories=list(categories), q=q, sort=sort, truncated=budget[0] <= 0)
 
     def id_for_job(self, job):
         """A finished job's file, if it lies inside a save root (files area)."""
@@ -264,7 +328,7 @@ class Library:
         root_id, area, rel, path, info = self.resolve(fid)
         file_kind, mime = kind_of(rel)
         return dict(id=fid, name=rel.rpartition('/')[2], kind=file_kind, mime=mime.split(';')[0], size=info.st_size,
-                    area=area, place=root_id)
+                    area=area, place=root_id, folder=rel.rpartition('/')[0])   # OMNI_DL_FOLDER_PLAY_V1: as the Library rows show it
 
     # ---- signed stream links -----------------------------------------------------------------------------------
     def sign(self, fid, exp):

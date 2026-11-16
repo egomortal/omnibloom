@@ -1,0 +1,29 @@
+{
+  "manifest_version": 1,
+  "id": "omni-scroll-memory",
+  "name": "Remember reading position",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Long articles remember how far you read. When you come back, a small bar offers \"Continue reading\" (it never jumps by itself). Kept on the console for 30 days, under a scrambled code instead of the page address; never in private tabs.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": []
+}

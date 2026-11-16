@@ -36,4 +36,26 @@ function classes(p,darkPages){return['omni-reader','omni-reader-'+themeFor(p.the
 // The reading time in the bar: the whole estimate at the top, then what is left as the article scrolls (progress 0..1).
 function timeLabel(minutes,progress){const m=Math.max(1,Math.round(Number(minutes)||1)),p=Math.max(0,Math.min(1,Number(progress)||0));
   if(p<.02)return m+' min read';if(p>=.98)return'Finished';return Math.max(1,Math.ceil(m*(1-p)))+' min left'}
-return Object.freeze({STORAGE_KEY,OPTIONS,BY_KEY,DEFAULTS,MANIFEST_KEYS,valid,resolve,clean,pack,load,step,atEnd,themeFor,classes,timeLabel})});
+// The line above the title: "~7 min read · 1,234 words" (CJK text is counted in characters: "· 3,200 characters").
+const group=n=>String(Math.max(0,Math.round(Number(n)||0))).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+function headLabel(r){const x=r||{},m=Math.max(1,Math.round(Number(x.minutes)||1)),w=Number(x.words)||0,c=Number(x.chars)||0,parts=['~'+m+' min read'];
+  if(w)parts.push(group(w)+(w===1?' word':' words'));if(c)parts.push(group(c)+(c===1?' character':' characters'));return parts.join(' · ')}
+// Font presets: one press sets font, text size, line width and line spacing together. Each value is an ordinary toolbar
+// choice, so it is saved like any other and a later single tweak just leaves the preset ("Custom"). Dyslexia-friendly is
+// spacing-based (the "Easy read" face: DejaVu Sans with wider letter and word spacing, relaxed lines, narrow column); no
+// font is bundled: OpenDyslexic (OFL) is ~300 KB a weight, and Omni's font folder ships none of it.
+const PRESETS=Object.freeze([
+  {key:'comfort',label:'Comfort',set:{font:'serif',size:'large',width:'medium',spacing:'relaxed'}},
+  {key:'clean',label:'Clean',set:{font:'sans',size:'medium',width:'medium',spacing:'normal'}},
+  {key:'big',label:'Big',set:{font:'sans',size:'giant',width:'wide',spacing:'normal'}},
+  {key:'dyslexia',label:'Dyslexia',set:{font:'readable',size:'huge',width:'narrow',spacing:'relaxed'}}
+].map(p=>Object.freeze(Object.assign(p,{set:Object.freeze(p.set)}))));
+const PRESET_BY_KEY=Object.freeze(Object.fromEntries(PRESETS.map(p=>[p.key,p])));
+// The preset the current options match exactly, or '' (Custom).
+function presetOf(p){if(!p)return'';for(const x of PRESETS)if(Object.keys(x.set).every(k=>p[k]===x.set[k]))return x.key;return''}
+// Comfort -> Clean -> Big -> Dyslexia -> Comfort; from Custom it starts at Comfort.
+function nextPreset(p){const i=PRESETS.findIndex(x=>x.key===presetOf(p));return PRESETS[(i+1)%PRESETS.length].key}
+// New toolbar choices with a preset's values on top (unknown preset: unchanged copy).
+function applyPreset(choices,key){const x=PRESET_BY_KEY[key];return Object.assign({},clean(choices),x?x.set:{})}
+const presetLabel=p=>{const k=presetOf(p);return k?PRESET_BY_KEY[k].label:'Custom'};
+return Object.freeze({STORAGE_KEY,OPTIONS,BY_KEY,DEFAULTS,MANIFEST_KEYS,PRESETS,PRESET_BY_KEY,valid,resolve,clean,pack,load,step,atEnd,themeFor,classes,timeLabel,headLabel,presetOf,nextPreset,applyPreset,presetLabel})});

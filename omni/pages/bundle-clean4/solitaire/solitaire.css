@@ -1,0 +1,22 @@
+/* OMNI_SOLITAIRE_V1: big cards for TV distance, sized from the screen width. */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{font-size:clamp(18px,1vw,36px)}
+body{background:radial-gradient(ellipse at 50% 0,#12352a 0,var(--ob-ground) 65%) fixed,var(--ob-ground);color:var(--ob-text);font-family:Inter,sans-serif;margin:0;padding:1.4rem 4vw 4rem;min-height:100vh;overflow:hidden}
+h1{font-family:Rajdhani,sans-serif;font-weight:700;font-size:2rem;margin:.1rem 0}
+.top{display:flex;justify-content:space-between;align-items:flex-end}
+.eyebrow{color:var(--ob-muted);letter-spacing:.16em;font-size:.9rem;margin:0}
+.moves{font-family:Rajdhani,sans-serif;font-size:1.6rem;color:var(--ob-muted);font-variant-numeric:tabular-nums}
+.row-top,.tableau{display:grid;grid-template-columns:repeat(7,1fr);gap:1.2vw;margin-top:1.2rem}
+.col{display:flex;flex-direction:column}
+.col .card+.card{margin-top:-5.2vw}
+.card{width:100%;aspect-ratio:5/7;border-radius:.6rem;background:#f7f4ec;border:3px solid transparent;display:flex;align-items:flex-start;justify-content:flex-start;
+  padding:.3rem .5rem;font-family:Rajdhani,sans-serif;font-weight:700;font-size:2.2rem;line-height:1;box-shadow:0 .2rem .6rem rgba(0,0,0,.45)}
+.card.red{color:#c3202f}.card.black{color:#14171c}
+.card.back{background:repeating-linear-gradient(45deg,#1f4f7a 0 .5rem,#173e60 .5rem 1rem)}
+.card.slot{background:transparent;border:2px dashed rgba(255,255,255,.25);color:rgba(255,255,255,.35);box-shadow:none;align-items:center;justify-content:center}
+.card.here{border-color:var(--ob-accent);box-shadow:0 0 0 .25rem var(--ob-accent)}
+.card.held{transform:translateY(-.6rem);box-shadow:0 0 0 .25rem #f5c542,0 .6rem 1rem rgba(0,0,0,.5)}
+.holding,.note{margin:.6rem 0 0;font-size:1.2rem;min-height:1.5rem}
+.note{color:var(--ob-muted)}
+.hint{position:fixed;left:0;right:0;bottom:0;padding:.8rem 4vw;color:var(--ob-muted);font-size:1rem;background:rgba(0,0,0,.35)}

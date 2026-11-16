@@ -39,6 +39,9 @@
 .omni-reader button.omni-reader-c-font-serif{font-family:'DejaVu Serif',serif!important}
 .omni-reader button.omni-reader-c-font-readable{font-family:'OpenDyslexic','Atkinson Hyperlegible','Lexend','Verdana','DejaVu Sans',sans-serif!important}
 .omni-reader-row-done{justify-content:flex-end!important}
+/* The preset button keeps its width as the name changes, so the buttons after it do not jump. */
+.omni-reader button.omni-reader-preset{min-width:9.5em!important;text-align:center!important}
+.omni-reader button.omni-reader-c-preset-dyslexia{letter-spacing:.035em!important;word-spacing:.16em!important}
 /* Line width. */
 .omni-reader-article{display:block!important;width:36em!important;max-width:90vw!important;margin:0 auto!important;padding:1.2em 0 3em!important}
 .omni-reader-w-narrow .omni-reader-article{width:28em!important}

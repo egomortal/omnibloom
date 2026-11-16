@@ -1,0 +1,28 @@
+{
+  "manifest_version": 1,
+  "id": "omni-yt-captions",
+  "name": "YouTube captions on",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Turns YouTube's captions on by itself for every video that has them, using the player's own CC button. Switch them off and that video stays off. Pairs with the Subtitle style add-on for big, readable captions.",
+  "matches": [
+    "*://www.youtube.com/*",
+    "*://m.youtube.com/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": []
+}

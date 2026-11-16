@@ -127,3 +127,7 @@ html[data-omni-input=pad] .theme-option:focus{transform:translateY(-4px);outline
 #quality-summary{overflow-wrap:anywhere}
 /* OMNI_DL_SAVE_V1: the add form grew (Save to, File type, Folder, File name); keep "Add to queue" in view on a 720p screen. */
 #add-dialog .download-submit{position:sticky;bottom:0;z-index:2;margin-top:4px;box-shadow:0 10px 0 var(--panel),0 -14px 18px var(--panel)}
+/* OMNI_DOWNLOAD_ALL_V1: the file list from the browser's "Download all..." (names only; scrolls on a 720p screen). */
+#batch-dialog .batch-list{max-height:40vh;overflow-y:auto;margin:8px 0 12px;padding-left:22px;overflow-wrap:anywhere}
+#batch-dialog .batch-more{list-style:none;opacity:.75}
+#held-note button{margin-left:8px}

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 1,
+  "id": "omni-form-saver",
+  "name": "Form saver",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Keeps what you type into text boxes on this TV (in the page's own storage, up to 24 h) and offers Restore what you typed? after a crash, Back or reload. Never password, card or code fields, never private tabs, never fills by itself.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": false,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": []
+}

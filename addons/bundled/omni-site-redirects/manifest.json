@@ -1,0 +1,54 @@
+{
+  "manifest_version": 1,
+  "id": "omni-site-redirects",
+  "name": "Site redirects",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Lighter pages, each rule switched on by you: reddit.com to old.reddit.com, YouTube Shorts to the normal watch page, AMP pages to the site's own canonical page. One redirect per visit, none after Back; never in private tabs.",
+  "matches": [
+    "*://reddit.com/*",
+    "*://www.reddit.com/*",
+    "*://new.reddit.com/*",
+    "*://youtube.com/*",
+    "*://www.youtube.com/*",
+    "*://m.youtube.com/*",
+    "*://google.com/amp/s/*",
+    "*://www.google.com/amp/s/*",
+    "*://*/*amp*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [],
+  "run_at": "document_start",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": false,
+  "quick_switch": false,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "reddit",
+      "type": "bool",
+      "label": "Open Reddit links on old.reddit.com",
+      "default": false
+    },
+    {
+      "key": "shorts",
+      "type": "bool",
+      "label": "Open YouTube Shorts as normal videos (/watch)",
+      "default": false
+    },
+    {
+      "key": "amp",
+      "type": "bool",
+      "label": "Leave AMP pages for the site's own page",
+      "default": false
+    }
+  ]
+}

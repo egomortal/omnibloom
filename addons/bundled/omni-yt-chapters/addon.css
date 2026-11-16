@@ -1,0 +1,11 @@
+.omni-ytc-panel{position:fixed;right:32px;top:72px;bottom:72px;width:min(520px,40vw);z-index:2147483646;background:rgba(18,18,18,.96);color:#f1f1f1;
+  border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;font:16px/1.35 system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.omni-ytc-panel h2{margin:0 0 4px;font-size:20px}
+.omni-ytc-list{overflow:auto;display:flex;flex-direction:column;gap:4px;flex:1}
+.omni-ytc-item,.omni-ytc-close{display:flex;gap:12px;align-items:baseline;text-align:left;background:transparent;color:inherit;border:2px solid transparent;
+  border-radius:8px;padding:8px 10px;font:inherit;cursor:pointer}
+.omni-ytc-item:focus,.omni-ytc-close:focus{outline:none;border-color:#3ea6ff;background:rgba(62,166,255,.12)}
+.omni-ytc-time{min-width:64px;color:#aaa;font-variant-numeric:tabular-nums}
+.omni-ytc-close{justify-content:center;background:rgba(255,255,255,.08)}
+.omni-ytc-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:2147483646;background:rgba(0,0,0,.8);color:#fff;
+  padding:8px 16px;border-radius:999px;font:16px system-ui,sans-serif}

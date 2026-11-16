@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"><title>Omni · Controller test</title><link rel="stylesheet" href="../hdr/tokens.css"><link rel="stylesheet" href="style.css"></head><body>
+<main id="content">
+<p class="eyebrow">OMNI · TOOLS</p>
+<h1>Controller test</h1>
+<p id="source" class="source" role="status" aria-live="polite">Waiting for a controller…</p>
+<div class="layout">
+<section class="tile sticks" aria-label="Sticks">
+<h2>Sticks</h2>
+<div class="stick-row">
+<figure class="stick"><canvas id="stick-l" width="320" height="320" aria-label="Left stick"></canvas><figcaption><b id="name-l3">Left stick</b><span id="raw-l" class="mono">x 0 · y 0</span><span id="drift-l" class="drift">Leave the stick alone to measure drift</span></figcaption></figure>
+<figure class="stick"><canvas id="stick-r" width="320" height="320" aria-label="Right stick"></canvas><figcaption><b id="name-r3">Right stick</b><span id="raw-r" class="mono">x 0 · y 0</span><span id="drift-r" class="drift">Leave the stick alone to measure drift</span></figcaption></figure>
+</div>
+<p class="legend"><span class="key dz"></span>Omni's dead zone (<span id="dz-name">Medium</span>): stick moves inside it do nothing <span class="key trail"></span>Trail</p>
+</section>
+<section class="tile" aria-label="Buttons">
+<h2>Buttons</h2>
+<div id="buttons" class="buttons"></div>
+</section>
+<section class="tile" aria-label="Triggers">
+<h2>Triggers</h2>
+<div class="trigger"><span id="name-l2" class="tname">L2</span><div class="bar"><div id="bar-l2" class="fill"></div></div><span id="val-l2" class="mono tval">0%</span></div>
+<div class="trigger"><span id="name-r2" class="tname">R2</span><div class="bar"><div id="bar-r2" class="fill"></div></div><span id="val-r2" class="mono tval">0%</span></div>
+</section>
+<section class="tile" aria-label="Touchpad">
+<h2>Touchpad</h2>
+<div id="touchpad" class="touchpad"><span id="tp-state" class="tp-state">Not pressed</span></div>
+<p id="tp-note" class="note"></p>
+</section>
+<section class="tile wide" aria-label="Dead zone and battery">
+<h2>Drift and dead zone</h2>
+<p id="suggest" class="suggest">Put the controller down and leave both sticks alone for 3 seconds.</p>
+<dl class="facts"><dt>Stick dead zone now</dt><dd id="dz-now">Medium</dd><dt>Battery</dt><dd id="battery">Not reported</dd></dl>
+<p class="note">Omni never changes this setting for you. The suggestion is text only; the setting is in Browser settings &gt; Stick dead zone.</p>
+</section>
+</div>
+</main>
+<footer class="hint"><span id="leave-hint">Hold Circle for 1 second to leave · Options: Omni's menu</span><span id="leave-bar" class="leave"><span id="leave-fill"></span></span></footer>
+<script src="model.js"></script><script src="app.js"></script>
+</body></html>

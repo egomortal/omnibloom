@@ -1,0 +1,31 @@
+{
+  "manifest_version": 1,
+  "id": "omni-break-reminder",
+  "name": "Break reminder",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "A gentle nudge for long sessions: counts the minutes you are really watching or reading and, every so often, shows a small card suggesting a break (OK or snooze 15 minutes). It never pauses or closes anything.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    { "key": "every", "type": "choice", "label": "Remind me every", "default": "60", "choices": ["30", "60", "90", "120"], "labels": ["30 minutes", "1 hour", "1.5 hours", "2 hours"] }
+  ]
+}

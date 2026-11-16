@@ -18,11 +18,14 @@
     <div class="controls">
       <button type="button" id="back10" class="pbtn" aria-label="Back 10 seconds"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#arrow-left"></use></svg>10 s</button>
       <button type="button" id="toggle" class="pbtn big" aria-label="Play"><svg class="icon" aria-hidden="true"><use id="toggle-icon" href="/assets/icons.svg#play"></use></svg></button>
+      <button type="button" id="folder-mode" class="pbtn" aria-label="Folder playback">Folder: off</button><!-- OMNI_DL_FOLDER_PLAY_V1 -->
       <button type="button" id="fwd10" class="pbtn" aria-label="Forward 10 seconds">10 s<svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#arrow-right"></use></svg></button>
     </div>
     <p class="hint" id="hint"><kbd data-glyph="cross">A</kbd> play / pause · <kbd>◀</kbd> <kbd>▶</kbd> 10 s · <kbd data-glyph="circle">B</kbd> back</p>
     <p class="message" id="message" role="status"></p>
   </main>
+  <script src="/assets/watch-progress.js" defer></script>
+  <script src="/assets/folder-play.js" defer></script>
   <script src="/assets/player.js" defer></script>
 </body>
 </html>

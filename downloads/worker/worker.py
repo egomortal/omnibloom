@@ -9,7 +9,8 @@ import importlib.util
 import gc
 from collections import deque
 from adapters import (PythonYtdlpAdapter, NativePythonYtdlpAdapter, DirectFileAdapter, NoFallback, Paused,
-                      EngineUnavailable, capabilities, classify_failure, redact_urls)
+                      EngineUnavailable, capabilities, classify_failure, redact_urls, FFmpegAdapter)
+import clips  # OMNI_DL_CLIP_V1
 import json
 import io
 import os
@@ -27,12 +28,21 @@ from presets import preset_options
 from probe import Prober, quality_format, site_probe  # OMNI_DOWNLOADS_PROBE_V5
 import save_places  # OMNI_DL_SAVE_V1
 import files_library  # OMNI_DL_LIBRARY_V1
+import library_seen  # OMNI_DL_ALREADY_V1
 from urllib.parse import urlsplit, parse_qs
 
 ROOT = Path(__file__).resolve().parent
 MAX_HTTP_REQUESTS = 16
 REQUEST_TIMEOUT = 5
 MAX_BODY_BYTES = 8192
+# OMNI_DOWNLOAD_ALL_V1: Omni's page menu "Download all..." hands up to MAX_BATCH file links over at once. The Downloads
+# GUI posts them (token, like every write) to /api/jobs/batch after the user confirms there. They wait in the worker's
+# held list (memory only: a worker restart drops what has not started) and become direct-file jobs as the queue has
+# room (MAX_PENDING); /api/jobs/held/clear drops the links still waiting.
+MAX_BATCH = 200
+MAX_HELD = 400
+BATCH_BODY_BYTES = 1024 * 1024
+BATCH_REPLAYS = 32
 ENGINE_NAMES = {'ytdlp': 'yt-dlp', 'jdownloader': 'JDownloader'}
 # OMNI_SMALL_COMFORTS_V1: every finished (non-demo) download is noted here as "job id<TAB>title", newest last, at most
 # DONE_KEEP lines; Omni checks the file's stamp every 5 s and shows "Downloaded: <title>" once when the user is on
@@ -73,6 +83,10 @@ def _console_offset(schedule_path):
     return provider
 
 
+class QueueConflict(ValueError):
+    """OMNI_DL_QUEUE_ORDER_V1: the job exists but is not waiting in the queue (HTTP 409)."""
+
+
 class Jobs:
     def __init__(self, folder, state_file=None, jd_adapter=None, jd_lifecycle=None, policy=None, done_file=DONE_FILE):
         self.folder = Path(folder)
@@ -85,6 +99,8 @@ class Jobs:
         self.policy = policy or Policy(_sched, offset_provider=_console_offset(_sched))
         self.history = History(state_file)
         self.jobs = self.history.load()
+        # OMNI_DL_ALREADY_V1: keyed fingerprints of saved media (no addresses), for the new-download form's warning.
+        self.seen = library_seen.Seen(Path(state_file).with_name('library-seen.json') if state_file else None)
         self.lock = threading.Lock()
         self.ready = threading.Condition(self.lock)
         self.pending = deque()
@@ -94,9 +110,16 @@ class Jobs:
         self.closed = False
         self.jd_adapter = jd_adapter or JDownloaderAdapter.from_environment()
         self.jd_lifecycle = jd_lifecycle
+        self.held = deque()        # OMNI_DOWNLOAD_ALL_V1: batch links waiting for a queue slot ({url, referer})
+        self.batches = {}          # OMNI_DOWNLOAD_ALL_V1: request_id -> receipt (a replayed batch is not added twice)
+        self.promote_lock = threading.Lock()   # OMNI_DOWNLOAD_ALL_V1: one promotion at a time (keeps page order)
+        # OMNI_DL_QUEUE_ORDER_V1 (D04): the run order is saved with the history (every save runs under self.lock);
+        # the order saved before a restart places interrupted jobs as they are resumed.
+        self.restore_order = list(self.history.queue)
+        self.history.order = self._saved_order
 
     def create(self, url, demo, audio=False, request_id=None, engine='ytdlp', auto_fallback=True, quality=None, referer=None, preset=None, subtitle_lang=None,
-               container=None, save_place=None, save_folder=None, save_name=None, direct=False):
+               container=None, save_place=None, save_folder=None, save_name=None, direct=False, clip_start=None, clip_end=None):
         if not isinstance(url, str) or len(url) > 4096 or type(demo) is not bool or type(audio) is not bool:
             raise ValueError('URL must be text (up to 4096 characters); demo and audio must be booleans.')
         # OMNI_FILE_DOWNLOADS_V1: an original (non-media) file, e.g. a PDF or ZIP Omni handed over from a page.
@@ -108,6 +131,12 @@ class Jobs:
         validate_http_url(url)
         if engine not in ('ytdlp', 'jdownloader'):
             raise ValueError('Choose yt-dlp or JDownloader.')
+        # OMNI_DL_CLIP_V1 (D01): an optional part of the video, checked here (the length is checked once yt-dlp reads it).
+        clip = clips.check_clip(clip_start, clip_end)
+        if clip is not None:
+            if direct or engine != 'ytdlp':
+                raise ValueError('Clips are cut by yt-dlp from videos; an original file or JDownloader saves the whole file.')
+            auto_fallback = False   # never fall back to an engine that would save the whole video
         if type(auto_fallback) is not bool:
             raise ValueError('auto_fallback must be a boolean.')
         if engine == 'jdownloader' and audio:
@@ -142,6 +171,8 @@ class Jobs:
             choice += json.dumps({'container':container,'save':[save_place,save_folder,save_name]},sort_keys=True)
         if direct:
             choice += '{"direct":true}'
+        if clip is not None:
+            choice += json.dumps({'clip': list(clip)})
         if request_id is not None and (not isinstance(request_id, str) or len(request_id) != 32
                                        or any(c not in '0123456789abcdef' for c in request_id)):
             raise ValueError('request_id must contain 32 lowercase hexadecimal characters.')
@@ -173,7 +204,7 @@ class Jobs:
                                  format=fmt, quality_key=choice, referer=referer, preset=preset, subtitle_lang=subtitle_lang,
                                  container=container, save_place=save_place, save_folder=save_folder, save_name=save_name,
                                  direct=direct, downloaded_bytes=None, total_bytes=None, speed_bps=None, eta_seconds=None,
-                                 pause=False, attempt=1, retries=0, resumed=False)
+                                 pause=False, attempt=1, retries=0, resumed=False, clip=list(clip) if clip else None)
             self.pending.append(key)
             self.history.save(self.jobs)
             self._start_dispatcher(key)
@@ -183,6 +214,73 @@ class Jobs:
     def waiting_count(self):
         """Jobs that hold a queue slot (running or waiting); paused jobs wait for the user and hold none."""
         return sum(j['state'] not in TERMINAL and j['state'] != PAUSED for j in self.jobs.values())
+
+    # ----- OMNI_DOWNLOAD_ALL_V1: many file links at once -----------------------
+    def add_batch(self, urls, request_id, referer=None):
+        """Hold up to MAX_BATCH links (each checked as a job's URL is) and queue as many as fit now.
+        Links already held or in a job that is not finished are skipped. The same request_id again returns the
+        first receipt (replayed=True) and adds nothing."""
+        if not isinstance(urls, list) or not 0 < len(urls) <= MAX_BATCH:
+            raise ValueError('A batch holds 1 to %d links.' % MAX_BATCH)
+        if not isinstance(request_id, str) or len(request_id) != 32 or not set(request_id) <= JOB_ID:
+            raise ValueError('request_id must contain 32 lowercase hexadecimal characters.')
+        if referer is not None:
+            validate_http_url(referer)
+        clean = []
+        for url in urls:
+            validate_http_url(url)
+            if url not in clean:
+                clean.append(url)
+        with self.lock:
+            if self.closed:
+                raise ValueError('Download worker is shutting down.')
+            if self.jd_adapter.poisoned:
+                raise ValueError('Java cleanup was not confirmed; restart its isolated worker before adding jobs.')
+            if request_id in self.batches:
+                return dict(self.batches[request_id], held=len(self.held), replayed=True)
+            known = {item['url'] for item in self.held}
+            known.update(j.get('url') for j in self.jobs.values() if j['state'] not in TERMINAL)
+            fresh = [url for url in clean if url not in known]
+            if len(self.held) + len(fresh) > MAX_HELD:
+                raise ValueError('Too many links are waiting (%d). Let some finish or drop the waiting ones.' % MAX_HELD)
+            self.held.extend(dict(url=url, referer=referer) for url in fresh)
+            receipt = dict(accepted=len(fresh), skipped=len(urls) - len(fresh))
+            self.batches[request_id] = receipt
+            while len(self.batches) > BATCH_REPLAYS:
+                del self.batches[next(iter(self.batches))]
+        with self.promote_lock:
+            self._promote()
+            with self.lock:
+                return dict(receipt, held=len(self.held), replayed=False)
+
+    def promote(self):
+        """Turn held links into direct-file jobs while the queue has room. Returns how many were queued.
+        A link the queue refuses for want of room goes back to the front; any other refusal drops it."""
+        with self.promote_lock:
+            return self._promote()
+
+    def _promote(self):
+        moved = 0
+        while True:
+            with self.lock:
+                if self.closed or not self.held or self.jd_adapter.poisoned or self.waiting_count() >= MAX_PENDING:
+                    return moved
+                item = self.held.popleft()
+            try:
+                self.create(item['url'], False, referer=item['referer'], direct=True)
+                moved += 1
+            except ValueError as error:
+                if str(error).startswith('Queue is full'):
+                    with self.lock:
+                        self.held.appendleft(item)
+                    return moved
+
+    def clear_held(self):
+        with self.ready:
+            count = len(self.held)
+            self.held.clear()
+            self.ready.notify_all()
+        return count
 
     def _start_dispatcher(self, key):
         """Called with the lock held, after `key` was queued."""
@@ -228,7 +326,7 @@ class Jobs:
             self.history.save(self.jobs)
             return 'pausing'
 
-    def resume(self, key, retry=False):
+    def resume(self, key, retry=False, override=None):
         """Queue a paused, interrupted or failed job again with the same choices; its partial files are continued.
         Retry (failed jobs only) is the same with a fresh attempt counter."""
         self._job_id(key)
@@ -263,11 +361,13 @@ class Jobs:
                 raise ValueError('Queue is full (8 pending jobs). Wait or cancel a job.')
             attempt = 1 if retry else int(current.get('attempt') or 1) + 1
             retries = int(current.get('retries') or 0) + (1 if retry else 0)
+            if override:   # OMNI_DL_RETRY_AS_V1: new choices for this retry (checked by retry_as)
+                current.update(override)
             current.update(state='queued', cancel=False, pause=False, error='', resumed=True, restored=False,
                            attempt=attempt, retries=retries, speed_bps=None, eta_seconds=None,
                            engine=current.get('engine_requested', current.get('engine', 'ytdlp')),
                            note=('Retry %d started by you.' % retries) if retry else 'Resumed by you; partial files are continued.')
-            self.pending.append(key)
+            self._enqueue_resumed(key)
             self.history.save(self.jobs)
             self._start_dispatcher(key)
             self.ready.notify_all()
@@ -275,6 +375,73 @@ class Jobs:
 
     def retry(self, key):
         return self.resume(key, retry=True)
+
+    # OMNI_DL_RETRY_AS_V1 (D05): a failed yt-dlp download tried again with other choices, in one press.
+    RETRY_AS = {
+        'audio': dict(audio=True, preset='audio-m4a', format=None, quality_key='', container=None),
+        '1080p': dict(audio=False, preset='1080p', format=None, quality_key='', container=None),
+    }
+
+    def retry_as(self, key, how):
+        """Retry a failed yt-dlp job as audio only or at 1080p at most. Clips, original files, demo jobs and
+        JDownloader jobs keep the plain retry; asking for what the job already was is refused."""
+        if not isinstance(how, str) or how not in self.RETRY_AS:
+            raise ValueError('Retry as audio or 1080p.')
+        self._job_id(key)
+        with self.lock:
+            job = self.jobs.get(key)
+            if job is None:
+                raise ValueError('Unknown download.')
+            if job['state'] != 'failed':
+                raise ValueError('Only failed downloads can be retried.')
+            if job.get('demo') or job.get('direct') or job.get('clip') or job.get('engine_requested', job.get('engine')) != 'ytdlp':
+                raise ValueError('This download can only be retried with the same choices.')
+            if how == 'audio' and job.get('audio') or how == '1080p' and job.get('preset') == '1080p':
+                raise ValueError('The download already used these choices; use Retry.')
+        return self.resume(key, retry=True, override=dict(self.RETRY_AS[how]))
+
+    # ----- queue order (OMNI_DL_QUEUE_ORDER_V1, D04) -----------------------
+    def _saved_order(self):
+        """Called by History.save with the lock held: running job, waiting jobs, then interrupted jobs that were
+        queued before the last restart and are not resumed yet."""
+        order = [self.active] if self.active is not None else []
+        order += [key for key in self.pending if key not in order]
+        order += [key for key in self.restore_order if key not in order
+                  and self.jobs.get(key, {}).get('state') == 'interrupted']
+        return order
+
+    def _enqueue_resumed(self, key):
+        """Lock held. A job queued before the last restart goes back ahead of the waiting jobs that came after it
+        in that saved order; any other resumed job joins the end, as before."""
+        rank = {k: i for i, k in enumerate(self.restore_order)}
+        if key not in rank:
+            self.pending.append(key)
+            return
+        index = next((i for i, k in enumerate(self.pending) if rank.get(k, -1) > rank[key]), len(self.pending))
+        self.pending.insert(index, key)
+
+    def move(self, key, to):
+        """Move a waiting job to "front" (starts next), "end", "up", "down" or a 0-based queue position.
+        Atomic with the dispatcher: it takes pending[0] under the same lock. Returns the new waiting order."""
+        self._job_id(key)
+        if not (to in ('front', 'end', 'up', 'down') if isinstance(to, str) else type(to) is int):
+            raise ValueError('to must be "front", "end", "up", "down" or a queue position.')
+        with self.ready:
+            if self.jobs.get(key) is None:
+                raise ValueError('Unknown download.')
+            if key not in self.pending:
+                raise QueueConflict('Only a waiting download can be moved; this one is not in the queue.')
+            here, last = self.pending.index(key), len(self.pending) - 1
+            index = dict(front=0, end=last, up=here - 1, down=here + 1).get(to, to)
+            if not 0 <= index <= last:
+                raise ValueError('Queue position must be 0 to %d.' % last if type(to) is int else
+                                 'This download is already %s of the queue.' % ('at the front' if to == 'up' else 'at the end'))
+            if index != here:
+                del self.pending[here]
+                self.pending.insert(index, key)
+                self.history.save(self.jobs)
+                self.ready.notify_all()
+            return list(self.pending)
 
     def pause_requested(self, key):
         if 'jobs' not in self.__dict__:   # a bare Jobs in unit tests
@@ -297,11 +464,16 @@ class Jobs:
     def dispatch(self):
         """One owned thread consumes every job, including rapid cancel/recreate."""
         while True:
+            self.promote()   # OMNI_DOWNLOAD_ALL_V1: held batch links fill free queue slots
             with self.ready:
                 while not self.closed and (not self.pending or self.queue_paused or not self.policy.allow_start()):
                     self.ready.wait(timeout=1)
+                    if self.held and self.waiting_count() < MAX_PENDING:
+                        break   # OMNI_DOWNLOAD_ALL_V1: a slot came free: promote first (always after a wait)
                 if self.closed:
                     return
+                if not self.pending or self.queue_paused or not self.policy.allow_start():
+                    continue
                 key = self.pending[0]
             self.run(key)
 
@@ -314,6 +486,7 @@ class Jobs:
         with self.ready:
             if not self.closed:
                 self.closed = True
+                self.held.clear()   # OMNI_DOWNLOAD_ALL_V1
                 for key in self.pending:
                     self.jobs[key].update(cancel=True, state='cancelled')
                 self.pending.clear()
@@ -388,7 +561,8 @@ class Jobs:
 
     def snapshot(self):
         with self.lock:
-            return [dict(j) for j in self.jobs.values()]
+            place = {key: n for n, key in enumerate(self.pending, 1)}   # OMNI_DL_QUEUE_ORDER_V1: 1 = starts next
+            return [dict(j, queue_position=place[j['id']]) if j['id'] in place else dict(j) for j in self.jobs.values()]
 
     def active_summary(self):
         """OMNI_DL_PROGRESS_V1: what Omni's top bar shows ("2 ↓ 45%"): how many jobs are working or waiting
@@ -419,6 +593,8 @@ class Jobs:
                     self.pending.popleft()
                     self.active = key
                     break
+                if self.active is None and self.pending[0] != key:
+                    return  # OMNI_DL_QUEUE_ORDER_V1: reordered before its turn; the dispatcher takes the new front.
                 self.ready.wait()
             else:
                 return  # Cancelled/pruned before this thread acquired its turn.
@@ -521,13 +697,20 @@ class Jobs:
                 note = f'Downloaded by {how} after {ENGINE_NAMES[order[0]]} could not take it ({redact_urls(reasons[0][1], 160)}).'
             else:
                 note = f'Downloaded by {how}.'
+            note += result.get('clip_note', '')   # OMNI_DL_CLIP_V1: exact or keyframe cut
             filepath = result.get('filepath', '')
             if job.get('save_place') and filepath:
                 # OMNI_DL_SAVE_V1: move the finished file to the chosen place under a free name.
                 self.update(key, state='processing', progress=100, title='Saving the file')
-                filepath = str(save_places.publish(filepath, job['save_place'], self.folder, job.get('save_folder'), job.get('save_name')))
+                filepath = str(save_places.publish(filepath, job['save_place'], self.folder, job.get('save_folder'),
+                                                   clip_save_name(job.get('save_name'), job.get('clip'), filepath)))
                 note += ' Saved to ' + filepath + '.'
             self.update(key, state='completed', progress=100, filepath=filepath, note=note[:400])
+            if not job.get('demo') and filepath and not job.get('clip'):   # OMNI_DL_ALREADY_V1: a clip is not the whole video
+                try:
+                    self.seen.record(job.get('url', ''), bool(job.get('audio')), filepath)
+                except Exception:   # the warning is a convenience; it never fails a finished download
+                    pass
             return
         summary = ' | '.join(f'{ENGINE_NAMES[name]}: {redact_urls(message, 300)}' for name, message in reasons)
         if len(order) == 1:
@@ -618,14 +801,14 @@ class Jobs:
                 lambda: self.cancelled(key),
                 lambda data: self.update(key, state='processing', progress=None),
                 fmt=job.get('format'), referer=job.get('referer'), preset=job.get('preset'), subtitle_lang=job.get('subtitle_lang'),
-                container=job.get('container'))
+                container=job.get('container'), **({'clip': tuple(job['clip'])} if job.get('clip') else {}))
         except (InterruptedError, NoFallback):
             raise
         except Exception as error:
             self.check_stop(key)
             classify_failure(error)
-            if job['audio'] or job.get('preset') is not None:
-                raise
+            if job['audio'] or job.get('preset') is not None or job.get('clip'):
+                raise   # OMNI_DL_CLIP_V1: a direct file download would save the whole video
             # Last yt-dlp-side step: a plain file link the extractors rejected.
             self.update(key, state='extracting', title='Trying a direct file download')
             try:
@@ -642,7 +825,24 @@ class Jobs:
         filepath = result.get('filepath') or next((entry.get('filepath') for entry in result.get('requested_downloads', []) if entry.get('filepath')), '')
         protocols = result.get('protocols') or [entry.get('protocol') for entry in result.get('requested_downloads', [])] or []
         kind = ' (HLS)' if any(str(p).startswith('m3u8') for p in protocols) else ' (DASH)' if any('dash' in str(p) for p in protocols) else ''
-        return dict(filepath=filepath, via='yt-dlp' + kind)
+        # OMNI_DL_FFMPEG_V1: the console's in-process cut says itself how exact it was (MP4 exact, MKV keyframe).
+        clip_note = result.get('clip_note') if isinstance(result.get('clip_note'), str) else clips.note(job.get('clip'), self.clip_cut_exact())
+        return dict(filepath=filepath, via='yt-dlp' + kind, clip_note=clip_note)
+
+    def clip_cut_exact(self):
+        """OMNI_DL_CLIP_V1: exact cuts need FFmpeg next to yt-dlp (the console's native path has none)."""
+        return self.ytdlp_adapter() is not NativePythonYtdlpAdapter and bool(FFmpegAdapter().executable)
+
+
+def clip_save_name(name, clip, filepath):
+    """OMNI_DL_CLIP_V1: a name the user typed also gets ' (clip 1m20s-3m45s)', kept within the 80-character name rule."""
+    if not name or not clip:
+        return name
+    tail = clips.suffix(clip)
+    ext = os.path.splitext(str(filepath))[1].lower()
+    typed_ext = ext if ext and name.lower().endswith(ext) else ''
+    stem = name[:len(name) - len(typed_ext)][:80 - len(tail) - len(typed_ext)].rstrip(' .') or 'Clip'
+    return stem + tail + typed_ext
 
 
 def expected_size(info):
@@ -764,6 +964,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
      '/assets/art/tide.webp': ('assets/art/tide.webp', 'image/webp'),
      '/assets/brand-icon.png': ('assets/brand-icon.png', 'image/png'),
      '/assets/candidate-wire.js': ('assets/candidate-wire.js', 'text/javascript; charset=utf-8'),
+     '/assets/batch-wire.js': ('assets/batch-wire.js', 'text/javascript; charset=utf-8'),  # OMNI_DOWNLOAD_ALL_V1
      '/assets/favicon.svg': ('assets/favicon.svg', 'image/svg+xml'),
      '/assets/files-library.css': ('assets/files-library.css', 'text/css; charset=utf-8'),
      '/assets/files-library.js': ('assets/files-library.js', 'text/javascript; charset=utf-8'),
@@ -784,7 +985,11 @@ class WorkerHandler(BaseHTTPRequestHandler):
      '/assets/soundwave.svg': ('assets/soundwave.svg', 'image/svg+xml'),
      '/assets/styles.css': ('styles.css', 'text/css; charset=utf-8'),
      '/assets/universe-symbols.svg': ('assets/universe-symbols.svg', 'image/svg+xml'),
-     '/assets/universes.css': ('assets/universes.css', 'text/css; charset=utf-8')}
+     '/assets/universes.css': ('assets/universes.css', 'text/css; charset=utf-8'),
+     '/assets/watch-progress.js': ('assets/watch-progress.js', 'text/javascript; charset=utf-8'),
+     '/assets/storage-meter.js': ('assets/storage-meter.js', 'text/javascript; charset=utf-8'),   # OMNI_DL_STORAGE_METER_V1
+     '/assets/site-choices.js': ('assets/site-choices.js', 'text/javascript; charset=utf-8'),   # OMNI_DL_SITE_CHOICES_V1
+     '/assets/folder-play.js': ('assets/folder-play.js', 'text/javascript; charset=utf-8')}   # OMNI_DL_FOLDER_PLAY_V1
     PAGES = {'/': 'index.html', '/downloads': 'index.html', '/integration-preview': 'integration/preview.html',
              '/player': 'player.html'}  # OMNI_DL_LIBRARY_V1: the player page (file id in the #fragment, never sent)
     # OMNIBLOOM_DL6_TOOLS (R3-043 presets, R3-046 library, R3-048 subtitle tools): exact allowlisted routes only.
@@ -921,22 +1126,26 @@ class WorkerHandler(BaseHTTPRequestHandler):
                                        **self.server.runtime, folder=str(jobs.folder),
                                        places=save_places.places(jobs.folder), save_v1=True,
                                        history_error=jobs.history.error, max_pending=MAX_PENDING,
-                                       queue_paused=jobs.queue_paused))
+                                       queue_paused=jobs.queue_paused, held=len(jobs.held)))  # OMNI_DOWNLOAD_ALL_V1
         self.reply(404, {'error': 'Not found'})
 
     # ---- OMNI_DL_LIBRARY_V1: the library of saved files --------------------------------------------------------
     def files_list(self, query):
         try:
-            params = parse_qs(query, keep_blank_values=True, max_num_fields=8)
-            if not set(params) <= {'kind', 'area', 'offset', 'limit'} or any(len(v) != 1 for v in params.values()):
-                raise ValueError('Library listing takes kind, area, offset and limit once each.')
+            params = parse_qs(query, keep_blank_values=True, max_num_fields=10)
+            # OMNI_DL_LIBRARY_SEARCH_V1: cats (filter chips), q (search) and sort as well.
+            if not set(params) <= {'kind', 'area', 'offset', 'limit', 'cats', 'q', 'sort'} \
+                    or any(len(v) != 1 for v in params.values()):
+                raise ValueError('Library listing takes kind, area, offset, limit, cats, q and sort once each.')
             one = {key: value[0] for key, value in params.items()}
             for key in ('offset', 'limit'):
                 if key in one and not (one[key].isdigit() and len(one[key]) <= 7):
                     raise ValueError('Invalid page.')
             result = self.server.library.listing(one.get('kind', 'all'), one.get('area', 'files'),
                                                  int(one.get('offset', 0)), int(one.get('limit', 50)),
-                                                 self.server.jobs.snapshot())
+                                                 self.server.jobs.snapshot(),
+                                                 files_library.parse_categories(one.get('cats', '')),
+                                                 one.get('q', ''), one.get('sort', 'newest'))
         except ValueError as error:
             return self.reply(400, {'error': str(error)})
         return self.reply(200, result)
@@ -1034,7 +1243,8 @@ class WorkerHandler(BaseHTTPRequestHandler):
             if len(lengths) != 1 or self.headers.get('Transfer-Encoding'):
                 raise ValueError('One Content-Length header is required; chunked requests are unsupported.')
             length = int(lengths[0])
-            if not 0 < length <= MAX_BODY_BYTES:
+            limit = BATCH_BODY_BYTES if self.path == '/api/jobs/batch' else MAX_BODY_BYTES   # OMNI_DOWNLOAD_ALL_V1
+            if not 0 < length <= limit:
                 raise ValueError('Invalid request length')
             raw = self.rfile.read(length)
             if len(raw) != length:
@@ -1056,8 +1266,23 @@ class WorkerHandler(BaseHTTPRequestHandler):
                                               body.get('engine', 'ytdlp'), body.get('auto_fallback', True),
                                               body.get('quality'), body.get('referer'), body.get('preset'), body.get('subtitle_lang'),
                                               body.get('container'), body.get('save_place'), body.get('save_folder'), body.get('save_name'),
-                                              body.get('direct', False))
+                                              body.get('direct', False), body.get('clip_start'), body.get('clip_end'))
                 return self.reply(201, {'id': key})
+            if self.path == '/api/jobs/batch':
+                # OMNI_DOWNLOAD_ALL_V1: {urls, request_id[, referer]}; every link is saved as an original file.
+                if not set(body) <= {'urls', 'request_id', 'referer'} or not {'urls', 'request_id'} <= set(body):
+                    raise ValueError('A batch requires urls and request_id, with optional referer.')
+                return self.reply(200, self.server.jobs.add_batch(body['urls'], body['request_id'], body.get('referer')))
+            if self.path == '/api/jobs/held/clear':
+                if body != {'clear': True}:
+                    raise ValueError('Dropping waiting links requires {"clear": true}.')
+                return self.reply(200, {'cleared': self.server.jobs.clear_held()})
+            if self.path == '/api/library/check':
+                # OMNI_DL_ALREADY_V1: is this link already saved? Answers with the file name only, never a path.
+                if set(body) != {'url', 'audio'} or type(body['audio']) is not bool:
+                    raise ValueError('Library check requires url and audio (boolean).')
+                validate_http_url(body['url'])
+                return self.reply(200, self.server.jobs.seen.check(body['url'], body['audio']))
             if self.path == '/api/probe':
                 # OMNI_DOWNLOADS_PROBE_V5: read-only check of one grabbed link (public hosts only).
                 if not set(body) <= {'url', 'referer', 'deep'} or 'url' not in body:
@@ -1073,6 +1298,12 @@ class WorkerHandler(BaseHTTPRequestHandler):
             if self.path == '/api/cancel':
                 self.server.jobs.cancel(body['id'])
                 return self.reply(200, {'ok': True})
+            if self.path == '/api/jobs/retry-as':
+                # OMNI_DL_RETRY_AS_V1: {id, how} with how 'audio' or '1080p'
+                if set(body) != {'id', 'how'}:
+                    raise ValueError('Retry-as requires id and how.')
+                state = self.server.jobs.retry_as(body['id'], body['how'])
+                return self.reply(200, {'ok': True, 'id': body['id'], 'state': state, 'how': body['how']})
             if self.path in ('/api/jobs/pause', '/api/jobs/resume', '/api/jobs/retry'):
                 # OMNI_DL_RESUME_V1: {id} only; the job keeps the choices it was created with.
                 if set(body) != {'id'}:
@@ -1087,6 +1318,15 @@ class WorkerHandler(BaseHTTPRequestHandler):
                     return self.reply(404, {'error': str(error)})
                 except OSError:
                     return self.reply(409, {'error': 'The file could not be changed. Check the drive and try again.'})
+            if self.path == '/api/queue/move':
+                # OMNI_DL_QUEUE_ORDER_V1 (D04): {id, to}; to is "front" (start next), "end", "up", "down" or an index.
+                if set(body) != {'id', 'to'}:
+                    raise ValueError('Moving a download requires only id and to.')
+                try:
+                    order = self.server.jobs.move(body['id'], body['to'])
+                except QueueConflict as error:
+                    return self.reply(409, {'error': str(error)})
+                return self.reply(200, {'ok': True, 'id': body['id'], 'queue': order})
             if self.path == '/api/queue':
                 self.server.jobs.set_paused(body['paused'])
                 return self.reply(200, {'queue_paused': self.server.jobs.queue_paused})

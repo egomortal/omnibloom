@@ -24,13 +24,17 @@ const button=(cls,text,label,fn)=>{const b=node('button','omni-reader-btn '+cls,
 // The options panel: one row per option, one big button per choice. Omni's D-pad scrolls and goes back/forward rather
 // than reaching the page, so these are pointer targets (left stick + Cross); a keyboard's arrows move between them too.
 function buildPanel(){const p=node('div','omni-reader-panel');p.id='omni-reader-panel';p.setAttribute('role','group');p.setAttribute('aria-label','Reading options');p.hidden=true;
+{const row=node('div','omni-reader-row omni-reader-row-preset'),name=node('span','omni-reader-label','Preset');name.id='omni-reader-l-preset';row.append(name);
+const set=node('div','omni-reader-choices');set.setAttribute('role','group');set.setAttribute('aria-labelledby',name.id);
+for(const x of P.PRESETS){const b=button('omni-reader-choice omni-reader-c-preset-'+x.key,x.label,'',()=>usePreset(x.key));b.dataset.key='preset';b.dataset.value=x.key;set.append(b)}row.append(set);p.append(row)}
 for(const o of P.OPTIONS){const row=node('div','omni-reader-row'),name=node('span','omni-reader-label',o.label);name.id='omni-reader-l-'+o.key;row.append(name);
 const set=node('div','omni-reader-choices');set.setAttribute('role','group');set.setAttribute('aria-labelledby',name.id);
 o.values.forEach((v,i)=>{const b=button('omni-reader-choice omni-reader-c-'+o.key+'-'+v,o.labels[i],'',()=>choose(o.key,v));b.dataset.key=o.key;b.dataset.value=v;set.append(b)});row.append(set);p.append(row)}
 const row=node('div','omni-reader-row omni-reader-row-done');row.append(button('omni-reader-done','Done','Close reading options',()=>togglePanel(false)));p.append(row);return p}
 function refreshPanel(){if(!view)return;const theme=P.themeFor(prefs.theme,darkPages());
-for(const b of view.querySelectorAll('.omni-reader-choice')){const v=b.dataset.key==='theme'?theme:prefs[b.dataset.key];b.setAttribute('aria-pressed',String(v===b.dataset.value))}
-const s=view.querySelector('.omni-reader-smaller'),l=view.querySelector('.omni-reader-larger');if(s)s.disabled=P.atEnd('size',prefs.size,-1);if(l)l.disabled=P.atEnd('size',prefs.size,1)}
+for(const b of view.querySelectorAll('.omni-reader-choice')){const v=b.dataset.key==='theme'?theme:b.dataset.key==='preset'?P.presetOf(prefs):prefs[b.dataset.key];b.setAttribute('aria-pressed',String(v===b.dataset.value))}
+const s=view.querySelector('.omni-reader-smaller'),l=view.querySelector('.omni-reader-larger');if(s)s.disabled=P.atEnd('size',prefs.size,-1);if(l)l.disabled=P.atEnd('size',prefs.size,1);
+const pb=view.querySelector('.omni-reader-preset');if(pb)pb.textContent='Preset: '+P.presetLabel(prefs)}
 // The open panel has its own history entry, so Back (Circle) closes the panel first and the reader on the next press.
 function togglePanel(want,fromPop){if(!panel)return;const show=want===undefined?panel.hidden:want;if(show===!panel.hidden)return;panel.hidden=!show;optsBtn.setAttribute('aria-expanded',String(show));
 if(show&&!panelPushed&&pushed){try{history.pushState(Object.assign({},history.state,{omniReaderPanel:1}),'');panelPushed=true}catch(_){}}
@@ -40,6 +44,9 @@ if(show){const on=panel.querySelector('[aria-pressed="true"]')||panel.querySelec
 function apply(){if(!view)return;const at=view.scrollHeight>view.clientHeight?view.scrollTop/view.scrollHeight:0;view.className=P.classes(prefs,darkPages());
 if(at)view.scrollTop=at*view.scrollHeight;refreshPanel();updateTime()}
 function choose(key,value){if(!P.valid(key,value)||!prefs)return;choices=Object.assign({},choices,{[key]:value});prefs=P.resolve(choices,lastBase);apply();savePrefs()}
+// A preset sets font, size, line width and line spacing at once; they are saved as ordinary choices (remembered everywhere).
+function usePreset(key){if(!prefs||!P.PRESET_BY_KEY[key])return;choices=P.applyPreset(choices,key);prefs=P.resolve(choices,lastBase);apply();savePrefs()}
+const cyclePreset=()=>{if(prefs)usePreset(P.nextPreset(prefs))};
 function resize(dir){const v=P.step('size',prefs.size,dir);if(v!==prefs.size)choose('size',v)}
 function updateTime(){tick=0;if(!view||!timeEl)return;const room=view.scrollHeight-view.clientHeight;timeEl.textContent=P.timeLabel(minutes,room>0?view.scrollTop/room:0)}
 function onScroll(){if(!tick)tick=requestAnimationFrame(updateTime)}
@@ -50,11 +57,11 @@ view=node('div',P.classes(prefs,darkPages()));view.id='omni-reader-view';view.da
 view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-label','Reader view');
 const bar=node('div','omni-reader-bar'),where=node('span','omni-reader-where');where.append(node('span','omni-reader-site',r.site||location.hostname.replace(/^www\./,'')),' · ');
 timeEl=node('span','omni-reader-left',P.timeLabel(minutes,0));where.append(timeEl);
-optsBtn=button('omni-reader-opts','Aa Options','Reading options: text size, line width, font, colours, line spacing',()=>togglePanel());optsBtn.setAttribute('aria-expanded','false');
-bar.append(where,button('omni-reader-smaller','A−','Smaller text',()=>resize(-1)),button('omni-reader-larger','A+','Larger text',()=>resize(1)),optsBtn,button('omni-reader-close','Close reader','',()=>close()));
+optsBtn=button('omni-reader-opts','Aa Options','Reading options: preset, text size, line width, font, colours, line spacing',()=>togglePanel());optsBtn.setAttribute('aria-expanded','false');
+bar.append(where,button('omni-reader-preset','Preset: '+P.presetLabel(prefs),'Next font preset: Comfort, Clean, Big, Dyslexia-friendly (C or Triangle)',()=>cyclePreset()),button('omni-reader-smaller','A−','Smaller text',()=>resize(-1)),button('omni-reader-larger','A+','Larger text',()=>resize(1)),optsBtn,button('omni-reader-close','Close reader','',()=>close()));
 panel=buildPanel();optsBtn.setAttribute('aria-controls',panel.id);bar.append(panel);
 const art=node('article','omni-reader-article');if(r.lang)art.lang=r.lang;if(r.dir==='rtl'||r.dir==='ltr')art.dir=r.dir;
-art.append(node('p','omni-reader-time','About '+r.minutes+' min read'+(r.words?' · '+r.words.toLocaleString()+' words':'')));
+art.append(node('p','omni-reader-time',P.headLabel(r)));
 art.append(node('h1','omni-reader-title',r.title||document.title));if(r.byline)art.append(node('p','omni-reader-byline',r.byline));
 const body=node('div','omni-reader-body');build(r.content,body);art.append(body);
 const foot=node('p','omni-reader-end');foot.append(button('omni-reader-close','Close reader','',()=>close()));art.append(foot);
@@ -85,6 +92,8 @@ live[ri][ci].focus({preventScroll:true});return true}
 function onViewKey(e){if(!view)return;if(e.key==='Escape'||e.key==='GoBack'||(e.key==='Backspace'&&!editable(e.target))){e.preventDefault();e.stopImmediatePropagation();
 if(panel&&!panel.hidden)togglePanel(false);else close();return}
 if(/^Arrow(Left|Right|Up|Down)$/.test(e.key)&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&moveFocus(e)){e.preventDefault();e.stopImmediatePropagation();return}
+// C (Triangle when Omni turns pad buttons into keys, as in Recipe mode) cycles the font preset. Not in text fields.
+if((e.key==='c'||e.key==='C')&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.repeat&&!editable(e.target)){e.preventDefault();e.stopImmediatePropagation();cyclePreset();return}
 // While open the page's own shortcuts stay quiet; scrolling keys reach the reader (the default action still runs).
 if(!e.ctrlKey&&!e.metaKey&&!(e.altKey&&e.shiftKey)){if(!view.contains(e.target))view.focus({preventScroll:true});e.stopImmediatePropagation()}}
 function onKey(e){if(!enabled||!e.isTrusted||!e.altKey||!e.shiftKey||e.code!=='KeyR'||e.repeat)return;e.preventDefault();e.stopImmediatePropagation();view?close():open()}
@@ -100,5 +109,5 @@ api.onEnable(()=>start(true));api.onDisable(stop);
 api.onSettings(()=>{if(!enabled)return;if(prefs){const now=base(),had=Object.keys(choices).length;({choices,prefs}=P.load(P.pack(choices,lastBase),now));lastBase=now;
 if(Object.keys(choices).length!==had)savePrefs()}
 if(view)apply();else showFab()});
-window.OmniReaderDiagnostics=()=>({enabled,open:!!view,article:!!(found&&found.isArticle),length:found?found.length:0,paragraphs:found?found.paragraphs:0,prefs:prefs&&Object.assign({},prefs)});
+window.OmniReaderDiagnostics=()=>({enabled,open:!!view,article:!!(found&&found.isArticle),length:found?found.length:0,paragraphs:found?found.paragraphs:0,prefs:prefs&&Object.assign({},prefs),preset:prefs?P.presetOf(prefs):''});
 if(api.active)start(injectedLate())})();

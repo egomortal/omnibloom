@@ -80,6 +80,10 @@
       if(path.startsWith('/api/saved-links/')&&method==='DELETE')return client.deleteLink(path.slice('/api/saved-links/'.length));
       const action=/^\/api\/downloads\/([a-f0-9]{16})\/(cancel|pause|resume|retry)$/.exec(path);
       if(action&&method==='POST')return client[action[2]](action[1]);
+      const retryAs=/^\/api\/downloads\/([a-f0-9]{16})\/retry-as-(audio|1080p)$/.exec(path);   // OMNI_DL_RETRY_AS_V1
+      if(retryAs&&method==='POST')return client.retryAs(retryAs[1],retryAs[2]);
+      const move=/^\/api\/downloads\/([a-f0-9]{16})\/move-(front|end|up|down)$/.exec(path);   // OMNI_DL_QUEUE_ORDER_V1
+      if(move&&method==='POST')return client.move(move[1],move[2]);
       throw new Error('This action is not supported by the installed worker.');
     });
     requestChain=request.catch(()=>{});return request;
@@ -106,6 +110,7 @@
       const card=cards.find(node=>node.dataset.themeChoice===theme)||cards[0];
       if(card){card.focus({preventScroll:true});padReveal(card);}
     }
+    if (id === 'batch-dialog') setTimeout(() => { const start=$('#batch-start'); if(start){start.focus({preventScroll:true});padReveal(start);} }, 0); // OMNI_DOWNLOAD_ALL_V1
     if (id === 'quality-dialog') { // OMNI_DOWNLOADS_PROBE_V5: start on the chosen quality
       setTimeout(() => { const start=$('#quality-options [aria-pressed="true"]')||$('#quality-options button'); if(start){start.focus({preventScroll:true});padReveal(start);} }, 0);
     }
@@ -269,7 +274,7 @@
   }
 
   function queuePage() {
-    return `${pageHeader(routes[1],`<button type="button" class="primary-button" id="add-link">${icon('plus')} Add a link</button>`)}<div class="stat-grid"><div class="stat-card">${icon('download')}<strong id="stat-active">0</strong><span>On their way</span></div><div class="stat-card">${icon('clock')}<strong id="stat-queued">0</strong><span>Next in line</span></div><div class="stat-card">${icon('check')}<strong id="stat-completed">0</strong><span>All yours</span></div></div><section class="panel"><div class="panel-heading"><h2>Your collection in motion</h2><button type="button" id="queue-hold" class="secondary-button">Hold waiting queue</button></div><div class="filter-tabs" role="group" aria-label="Filter downloads">${[['all','Everything'],['active','In progress'],['completed','Completed']].map(([value,label])=>`<button type="button" data-filter="${value}" aria-pressed="${jobFilter===value}">${label}</button>`).join('')}</div><div id="job-list" class="job-list"></div><div id="empty-queue" class="view-empty"><div class="empty-illustration">${icon('download')}</div><h2>A fresh start. A world of possibilities.</h2><p>Add something you found, or explore a Demo simulation to see how everything works.</p><button type="button" class="primary-button" data-sample="landscape">Run a Demo ${icon('arrow-right')}</button></div><p class="simulation-note"><span class="status-dot"></span> Holding the queue affects waiting jobs only. Active downloads continue. Demo jobs are marked explicitly.</p></section><section id="files-library" class="panel" aria-label="Library of saved files"></section>`;
+    return `${pageHeader(routes[1],`<button type="button" class="primary-button" id="add-link">${icon('plus')} Add a link</button>`)}<div class="stat-grid"><div class="stat-card">${icon('download')}<strong id="stat-active">0</strong><span>On their way</span></div><div class="stat-card">${icon('clock')}<strong id="stat-queued">0</strong><span>Next in line</span></div><div class="stat-card">${icon('check')}<strong id="stat-completed">0</strong><span>All yours</span></div></div><section class="panel"><div class="panel-heading"><h2>Your collection in motion</h2><button type="button" id="queue-hold" class="secondary-button">Hold waiting queue</button></div><div class="filter-tabs" role="group" aria-label="Filter downloads">${[['all','Everything'],['active','In progress'],['completed','Completed']].map(([value,label])=>`<button type="button" data-filter="${value}" aria-pressed="${jobFilter===value}">${label}</button>`).join('')}</div><p id="held-note" class="simulation-note" hidden><span id="held-text"></span> <button type="button" id="held-clear" class="secondary-button">Drop waiting links</button></p><div id="job-list" class="job-list"></div><div id="empty-queue" class="view-empty"><div class="empty-illustration">${icon('download')}</div><h2>A fresh start. A world of possibilities.</h2><p>Add something you found, or explore a Demo simulation to see how everything works.</p><button type="button" class="primary-button" data-sample="landscape">Run a Demo ${icon('arrow-right')}</button></div><p class="simulation-note"><span class="status-dot"></span> Holding the queue affects waiting jobs only. Active downloads continue. Demo jobs are marked explicitly.</p></section><section id="files-library" class="panel" aria-label="Library of saved files"></section>`;
   }
 
   function libraryPage() {
@@ -334,18 +339,27 @@
   const artForJob=job=>job.kind==='audio'?'soundwave':job.engine==='jdownloader'?'orbital':'landscape';
   // OMNI_DL_RESUME_V1: pause / resume / retry sit next to cancel, as ordinary buttons the D-pad reaches.
   const jobButton=(action,name,label,job)=>`<button type="button" class="icon-button" data-action="${action}" aria-label="${label} ${esc(job.title)}" title="${label}">${icon(name)}</button>`;
+  // OMNI_DL_QUEUE_ORDER_V1 (D04): a waiting row can start next, move up/down or go to the end of the queue.
+  let queueLength=0;
+  function moveButtons(job){
+    const at=job.queue_position;
+    if(!at||queueLength<2)return '';
+    return (at>1?jobButton('move-front','move-front','Start next',job)+jobButton('move-up','move-up','Move up',job):'')
+      +(at<queueLength?jobButton('move-down','move-down','Move down',job)+jobButton('move-end','move-end','Move to end',job):'');
+  }
   function jobButtons(job){
     const cancel=jobButton('cancel','close','Cancel',job);
     if(['queued','extracting','downloading','processing'].includes(job.status))
-      return (job.status==='queued'||job.engine!=='jdownloader'?jobButton('pause','pause','Pause',job):'')+cancel;
+      return moveButtons(job)+(job.status==='queued'||job.engine!=='jdownloader'?jobButton('pause','pause','Pause',job):'')+cancel;
     if(job.status==='pausing')return `<span class="badge">Pausing</span>`+cancel;
     if(job.status==='paused'||job.status==='interrupted'&&job.resumable)return jobButton('resume','play','Resume',job)+cancel;
-    if(job.status==='failed'&&job.retryable)return jobButton('retry','refresh','Retry',job);
+    if(job.status==='failed'&&job.retryable)return jobButton('retry','refresh','Retry',job)
+      +(job.retry_as||[]).map(h=>`<button type="button" class="secondary-button retry-as" data-action="retry-as-${h}" aria-label="Retry ${h==='audio'?'as audio only':'at 1080p'}: ${esc(job.title)}">${h==='audio'?'Audio only':'1080p'}</button>`).join('');   // OMNI_DL_RETRY_AS_V1
     // OMNI_DL_LIBRARY_V1: a finished real download can be played or opened right from its row.
     const open=job.status==='completed'&&!job.demo&&job.filepath?`<button type="button" class="icon-button" data-file-job="${esc(job.id)}" aria-label="Play or open ${esc(job.title)}" title="Play or open">${icon('play')}</button>`:'';
     return open+`<span class="badge">${job.status==='completed'?(job.demo?'Demo complete':'Worker complete'):esc(names[job.status]||job.status)}</span>`;
   }
-  const controlsKey=job=>job.status+(job.resumable?'+r':'')+(job.retryable?'+t':'')+(job.filepath?'+f':'')+job.engine;
+  const controlsKey=job=>job.status+(job.resumable?'+r':'')+(job.retryable?'+t':'')+(job.filepath?'+f':'')+job.engine+(job.queue_position?'+q'+job.queue_position+'/'+queueLength:'');
 
   function newJobNode(job) {
     const node = document.createElement('article');
@@ -367,6 +381,7 @@
   function refreshJobs() {
     const container = $('#job-list');
     if (!container) return;
+    queueLength = state.jobs.filter(job=>job.queue_position).length;
     let jobs = state.jobs.filter(job => jobFilter==='all' || (jobFilter==='active' ? activeStatuses.has(job.status) : job.status==='completed'));
     if (currentRoute === 'launch') jobs = jobs.slice(0,3);
     const ids = new Set(jobs.map(job=>job.id));
@@ -428,12 +443,14 @@
   }
 
   function refreshContent() {
-    refreshJobs(); refreshSaved(); refreshActivity(); window.OmniFilesLibrary?.notify(state.jobs);
+    refreshJobs(); refreshSaved(); refreshActivity(); window.OmniFilesLibrary?.notify(state.jobs,state.places);
     const stats = {active:state.jobs.filter(job=>['extracting','downloading','processing','cancelling'].includes(job.status)).length, queued:state.jobs.filter(job=>job.status==='queued').length,completed:state.jobs.filter(job=>job.status==='completed').length,total:state.jobs.length,saved:state.saved_links.length};
     Object.entries(stats).forEach(([name,value])=>{ const node = $('#stat-'+name); if(node)setText(node,value); });
     $$('.engine-choice').forEach(node=>setAttr(node,'aria-pressed',node.dataset.engine===engine));
     updateFormControls();
     if($('#queue-hold'))setText($('#queue-hold'),state.queue_paused?'Release waiting queue':'Hold waiting queue');
+    { const held=Number.isSafeInteger(state.raw?.held)&&state.raw.held>0?state.raw.held:0,note=$('#held-note'); // OMNI_DOWNLOAD_ALL_V1
+      if(note){if(note.hidden!==!held)note.hidden=!held;setText($('#held-text'),held+' more link'+(held===1?' waits':'s wait')+' for a free place in the queue.');} }
     renderCandidate();
   }
 
@@ -503,6 +520,7 @@
     const audio=kind==='audio'||qualityChoices.get($('#download-url')?.value.trim()||'')?.quality?.audio_only===true;
     const list=engine==='jdownloader'||kind==='file'?[]:audio?[['m4a','M4A · plays almost anywhere'],['webm','WebM (Opus)']]:[['mp4','MP4 · plays almost anywhere'],['mkv','MKV']];
     box.hidden=!list.length;
+    const clipBox=$('#download-clip-box'),clipHelp=$('#download-clip-help');if(clipBox){clipBox.hidden=!list.length;if(clipHelp)clipHelp.hidden=!list.length;} // OMNI_DL_CLIP_V1: yt-dlp videos only
     const wanted=list.map(x=>x[0]).join(',');
     if(select.dataset.types!==wanted){select.replaceChildren(...list.map(([v,t])=>Object.assign(document.createElement('option'),{value:v,textContent:t})));select.dataset.types=wanted;}
     renderSpace();
@@ -534,10 +552,62 @@
       out.container=formOpen&&typeBox&&!typeBox.hidden?$('#download-type').value:(kind==='audio'?'m4a':'mp4');
     }
     if(formOpen){const folder=$('#download-folder')?.value.trim(),name=$('#download-name')?.value.trim();if(folder)out.save_folder=folder;if(name)out.save_name=name;}
+    // OMNI_DL_CLIP_V1: the clip times (yt-dlp videos only); the worker checks them again and against the video's length.
+    const clipBox=$('#download-clip-box');
+    if(formOpen&&engine==='ytdlp'&&kind!=='file'&&clipBox&&!clipBox.hidden){
+      const start=clipTime($('#download-clip-start')?.value),end=clipTime($('#download-clip-end')?.value);
+      if(start||end){
+        const s=clipSeconds(start||'0:00'),e=clipSeconds(end);
+        if(!end)throw new Error('Give the clip an end time, for example 3:45.');
+        if(s===null||e===null)throw new Error('Clip times look like 1:20 or 1:02:03.');
+        if(e>6*3600)throw new Error('A clip must end within the first 6 hours.');
+        if(s>=e)throw new Error('The clip must start before it ends.');
+        if(start)out.clip_start=start;
+        out.clip_end=end;
+      }
+    }
     return out;
+  }
+  // OMNI_DL_CLIP_V1: '1.20', '1 20' or '1,20' (easier on a controller keyboard) become '1:20'.
+  function clipTime(value){return String(value||'').trim().replace(/[.,\s]+/g,':');}
+  function clipSeconds(text){
+    let m=/^(\d):([0-5]\d):([0-5]\d)$/.exec(text);if(m)return +m[1]*3600+ +m[2]*60+ +m[3];
+    m=/^(\d{1,3}):([0-5]\d)$/.exec(text);return m?+m[1]*60+ +m[2]:null;
   }
   document.addEventListener('change',event=>{if(['download-kind','download-engine'].includes(event.target.id))renderTypes();else if(event.target.id==='download-place')renderSpace();});
   document.addEventListener('input',event=>{if(event.target.id==='download-url')renderSpace();});
+  // OMNI_DL_ALREADY_V1: a quiet note under the link when the same video (or file) is already saved. It never blocks.
+  let alreadyTimer=0,alreadySeq=0;
+  function checkAlready(){
+    clearTimeout(alreadyTimer);
+    alreadyTimer=setTimeout(async()=>{
+      const line=$('#download-already');if(!line||typeof client?.checkLibrary!=='function')return;
+      const url=$('#download-url')?.value.trim()||'',kind=$('#download-kind')?.value,ticket=++alreadySeq;
+      if(!/^https?:\/\//i.test(url)||kind==='file'||$('#download-demo')?.checked){line.hidden=true;return;}
+      try{const r=await client.checkLibrary(url,kind==='audio');if(ticket!==alreadySeq)return;
+        line.hidden=!r.already;line.textContent=r.already?'Already in the Library: '+r.name+'. You can still download it again.':'';}
+      catch(_){if(ticket===alreadySeq)line.hidden=true;}
+    },400);
+  }
+  document.addEventListener('input',event=>{if(event.target.id==='download-url')checkAlready();});
+  // OMNI_DL_SITE_CHOICES_V1 (D06): a link from a site you downloaded from before gets that site's choices back.
+  let siteTimer=0,siteApplied='';
+  function setSelect(id,value){const s=$('#'+id);if(!s||value==null||![...s.options].some(o=>o.value===value)||s.value===value)return;s.value=value;s.dispatchEvent(new Event('change',{bubbles:true}));}
+  function applySiteChoices(){
+    clearTimeout(siteTimer);
+    siteTimer=setTimeout(()=>{
+      const note=$('#download-site-note'),url=$('#download-url')?.value||'';if(!note||!window.OmniSiteChoices)return;
+      let c=null;try{c=window.OmniSiteChoices.lookup(window.localStorage,url);}catch(_){}
+      if(!c){note.hidden=true;siteApplied='';return;}
+      if(siteApplied!==c.site){setSelect('download-engine',c.engine);setSelect('download-kind',c.kind);setSelect('download-type',c.type);setSelect('download-place',c.place);siteApplied=c.site;}
+      note.querySelector('span').textContent='Using your usual choices for '+c.site+'.';note.hidden=false;
+    },350);
+  }
+  document.addEventListener('input',event=>{if(event.target.id==='download-url')applySiteChoices();});
+  document.addEventListener('click',event=>{if(event.target.id!=='download-site-forget')return;
+    try{window.OmniSiteChoices&&window.OmniSiteChoices.forget(window.localStorage,$('#download-url')?.value||'');}catch(_){}
+    const note=$('#download-site-note');if(note)note.hidden=true;siteApplied='';toast('Choices for this site forgotten.');});
+  document.addEventListener('change',event=>{if(['download-kind','download-demo','download-url'].includes(event.target.id))checkAlready();});
 
   async function addDownload(url,selectedEngine,kind,title,demo=false){
     if(!validLink(url))throw new Error('Use a complete HTTP(S) source without credentials or whitespace.');
@@ -571,6 +641,8 @@
   document.addEventListener('click', async event => {
     const target = event.target.closest('button,a[data-open-route]');
     if (!target) return;
+    if(target.id==='batch-start')return startBatch(); // OMNI_DOWNLOAD_ALL_V1
+    if(target.id==='held-clear'){target.disabled=true;try{const r=await client.clearHeld();await loadState();toast(r.cleared?'Dropped '+r.cleared+' waiting link'+(r.cleared===1?'':'s')+'.':'No links were waiting.');}catch(error){toast(error.message);}finally{if(target.isConnected)target.disabled=false;}return;} // OMNI_DOWNLOAD_ALL_V1
     if(target.id==='queue-hold'){target.disabled=true;try{await client.setQueuePaused(!state.queue_paused);await loadState();toast(state.queue_paused?'Waiting queue held. Active downloads continue.':'Waiting queue released.');}catch(error){toast(error.message);}finally{if(target.isConnected)target.disabled=false;}return;}
     if (target.dataset.closeDialog) return $('#'+target.dataset.closeDialog).close();
     if (target.id === 'theme-toggle' || target.hasAttribute('data-open-themes')) return openDialog('theme-dialog');
@@ -605,12 +677,14 @@
       const noteFocusMove=()=>{focusMoved=true;};
       target.disabled=true;
       document.addEventListener('focusin',noteFocusMove);
-      try { await api(`/api/downloads/${encodeURIComponent(id)}/${target.dataset.action}`,'POST',{}); await loadState(); const messages={cancel:'Cancellation requested. The worker will report its final state.',pause:'Pausing. What is already downloaded is kept.',resume:'Resumed. The download continues where it stopped.',retry:'Retrying with the same choices.'};toast(messages[target.dataset.action]); }
+      try { await api(`/api/downloads/${encodeURIComponent(id)}/${target.dataset.action}`,'POST',{}); await loadState(); const messages={cancel:'Cancellation requested. The worker will report its final state.',pause:'Pausing. What is already downloaded is kept.',resume:'Resumed. The download continues where it stopped.',retry:'Retrying with the same choices.','move-front':'Starts next, after the current download.','move-up':'Moved up the queue.','move-down':'Moved down the queue.','move-end':'Moved to the end of the queue.','retry-as-audio':'Retrying as audio only.','retry-as-1080p':'Retrying at 1080p at most.'};toast(messages[target.dataset.action]); }
       catch(error){toast(error.message);} finally{
         document.removeEventListener('focusin',noteFocusMove);
         if(target.isConnected)target.disabled=false;
         if(ownedFocus&&!focusMoved&&node.isConnected&&(document.activeElement===document.body||document.activeElement===target)) {
+          const same=!target.isConnected&&$(`.job-controls [data-action="${target.dataset.action}"]`,node);   // OMNI_DL_QUEUE_ORDER_V1: keep pressing the same move
           if(target.isConnected)target.focus({preventScroll:true});
+          else if(same)same.focus({preventScroll:true});
           else focusJobControl(node);
         }
       }
@@ -686,8 +760,11 @@
         const result=await api('/api/saved-links','POST',{url});
         draft.saved='';$('#save-url').value='';await loadState();toast(!result.present?'This replay refers to a removed link. Save again to create a new entry.':result.created?'Link saved.':'Link already saved.');
       } else if (form.id==='download-form') {
+        try{if(window.OmniSiteChoices&&!$('#download-demo').checked)window.OmniSiteChoices.remember(window.localStorage,$('#download-url').value,   // OMNI_DL_SITE_CHOICES_V1
+          {kind:$('#download-kind').value,engine:$('#download-engine').value,type:$('#download-type')?.value||'',place:$('#download-place')?.value});}catch(_){}
         await addDownload($('#download-url').value.trim(),$('#download-engine').value,$('#download-kind').value,undefined,$('#download-demo').checked);
         $('#add-dialog').close();$('#download-url').value='';
+        for(const id of ['download-clip-start','download-clip-end']){const box=$('#'+id);if(box)box.value='';} // OMNI_DL_CLIP_V1: a clip is for one link
         $('h1').tabIndex=-1;$('h1').focus({preventScroll:true});
       } else {
         await addDownload($('#quick-url').value.trim(),engine,engine==='jdownloader'?'file':'video',undefined,$('#quick-demo').checked);draft.quick='';
@@ -1001,14 +1078,46 @@
     if(existing&&existing!==value){toast('Your draft is kept. Clear it before using the suggested link.');return false;}
     $('#download-url').value=value;openDialog('add-dialog');return true;
   }
+  // ---- OMNI_DOWNLOAD_ALL_V1: "Download all..." from Omni's page menu -------------------------------------------
+  // The list arrives in the #files= fragment (OmniBatchWire checks it); one press on "Download N files" posts it to
+  // /api/jobs/batch with the session token. Each link is saved as an original file; links beyond the queue's room wait
+  // in the worker (the Queue view says how many, with "Drop waiting links").
+  let batchPending=null,batchBusy=false;
+  function openBatch(raw){
+    const parsed=window.OmniBatchWire.parse(raw,validLink);
+    if(!parsed.ok){toast(parsed.message);return;}
+    batchPending=parsed;
+    const n=parsed.urls.length,host=parsed.page?safeHost(parsed.page):'';
+    setText($('#batch-heading'),'Download '+n+' file'+(n===1?'':'s')+'?');
+    setText($('#batch-summary'),(host?'From '+host+'. ':'')+'Each file is saved as it is (original file). Nothing has been downloaded yet.');
+    const shown=parsed.urls.slice(0,40).map(url=>`<li>${esc(window.OmniBatchWire.nameOf(url))}</li>`).join('');
+    $('#batch-list').innerHTML=shown+(n>40?`<li class="batch-more">and ${n-40} more</li>`:'');
+    setText($('#batch-error'),'');
+    setText($('#batch-start'),'Download '+n+' file'+(n===1?'':'s'));
+    openDialog('batch-dialog');
+  }
+  async function startBatch(){
+    if(!batchPending||batchBusy)return;
+    const batch=batchPending,button=$('#batch-start');batchBusy=true;button.disabled=true;
+    try{
+      const r=await client.addBatch(batch.urls,batch.page||null);
+      batchPending=null;$('#batch-dialog').close();
+      toast((r.accepted?'Added '+r.accepted+' file'+(r.accepted===1?'':'s')+' to Downloads':'Nothing new to add')+(r.skipped?' · '+r.skipped+' already there':'')+(r.held?' · '+r.held+' wait for a free place':'')+'.',5000);
+      await loadState();
+    }catch(error){setText($('#batch-error'),error.message);}
+    finally{batchBusy=false;if(button.isConnected)button.disabled=false;}
+  }
   function takeNativeLink(){
     const raw=location.hash;
-    const bounded=raw.length<=32768;
+    const batchHash=/^#files=/.test(raw);  // OMNI_DOWNLOAD_ALL_V1: a file list from Omni's "Download all..." (larger bound)
+    const bounded=raw.length<=(batchHash?window.OmniBatchWire.hashMax:32768);
     const p=new URLSearchParams(bounded?raw.slice(1):'');
-    const view=p.get('view')==='saved'?'library':p.get('view')==='files'?'queue':'launch';  // OMNI_DL_LIBRARY_V1: files = Queue + Library
+    const view=batchHash?'queue':p.get('view')==='saved'?'library':p.get('view')==='files'?'queue':'launch';  // OMNI_DL_LIBRARY_V1: files = Queue + Library
     // Source-bearing data is removed synchronously, before parsing or network I/O.
     history.replaceState({omniRoute:view},'',location.pathname+location.search+(view==='library'?'#view=saved':''));
+    if(!bounded&&batchHash){toast('The file list exceeded its safety limit. Nothing was downloaded.');commitNavigation(view);return;} // OMNI_DOWNLOAD_ALL_V1
     if(!bounded){clearCandidates();candidateWireError='The media suggestion exceeded its safety limit.';commitNavigation(view);return;}
+    if(batchHash){commitNavigation(view);openBatch(raw);return;} // OMNI_DOWNLOAD_ALL_V1: nothing starts before the user confirms
     if(p.has('candidate')){clearCandidates();candidateLink=validLink(p.get('candidate'))?p.get('candidate'):'';candidateDetected=!!candidateLink&&p.get('detected')==='1';}
     if(p.has('candidates')){
       const parsed=window.OmniCandidateWire.parse(raw);

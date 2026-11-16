@@ -14,3 +14,5 @@
 .owap-empty{margin:.4rem 0 0;opacity:.8}
 @media (max-width:900px){.owap-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){.owap-tile:is(:hover,:focus,.pad-focus){transform:none}}
+/* OMNI_START_ICONS_V1: the letter's place shows the site's icon on a light plate once it has loaded. */
+.owap-letter.osic-on{top:.5rem;width:2.6rem;height:2.6rem;padding:4px;box-sizing:border-box;border-radius:.5rem;background:#fff;opacity:1}

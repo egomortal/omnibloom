@@ -1,0 +1,42 @@
+{
+  "manifest_version": 1,
+  "id": "omni-page-outline",
+  "name": "Page outline",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Lists a page's headings and main regions in a side panel for long articles, wikis and docs. D-pad moves, Cross goes to the heading, Circle closes. Open it with the quick switch, the Outline button or Alt+Shift+O.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "button",
+      "type": "bool",
+      "label": "Show the Outline button on pages with three or more headings",
+      "default": true
+    },
+    {
+      "key": "landmarks",
+      "type": "bool",
+      "label": "Also list page regions (main, navigation, articles, named sections)",
+      "default": true
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "manifest_version": 1,
+  "id": "omni-reading-ruler",
+  "name": "Reading ruler",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Keeps your place on long text: a clear band across the middle of the screen, sized to the text there, with the rest gently dimmed. Scroll the page through it; Alt+Shift+R shows or hides it.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    { "key": "height", "type": "choice", "label": "Band height", "default": "medium", "choices": ["small", "medium", "large"], "labels": ["About 1.5 lines", "About 2.5 lines", "About 3.5 lines"] },
+    { "key": "start_on", "type": "bool", "label": "Show the ruler as soon as a page opens", "default": false }
+  ]
+}

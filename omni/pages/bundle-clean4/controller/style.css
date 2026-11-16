@@ -1,0 +1,50 @@
+@font-face{font-family:Inter;src:url(../shared/fonts/inter-latin-400-normal.woff2)}
+@font-face{font-family:Rajdhani;src:url(../shared/fonts/rajdhani-latin-700-normal.woff2);font-weight:700}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{font-size:clamp(20px,1.05vw,40px)}
+body{background:var(--ob-ground);color:var(--ob-text);font-family:Inter,sans-serif;margin:0;padding:2rem 4vw 4.5rem}
+h1,h2{font-family:Rajdhani,sans-serif;font-weight:700}
+h1{font-size:2.3rem;margin:.2rem 0}
+h2{font-size:1.35rem;margin:0 0 .8rem}
+.eyebrow{color:var(--ob-muted);letter-spacing:.16em;font-size:.9rem;margin:0}
+.source{color:var(--ob-muted);margin:.2rem 0 1rem;min-height:1.4em}
+.source.live{color:var(--ob-success)}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr);gap:1rem}
+.tile{padding:1rem;background:var(--ob-panel);border:1px solid #365063;border-radius:16px;min-width:0}
+.sticks{grid-row:span 2}
+.wide{grid-column:2 / span 2}
+.stick-row{display:flex;gap:1rem;justify-content:space-around}
+.stick{margin:0;display:flex;flex-direction:column;align-items:center;gap:.4rem;min-width:0}
+.stick canvas{width:min(15rem,100%);aspect-ratio:1;height:auto;background:#0a131b;border-radius:50%}
+.stick figcaption{display:flex;flex-direction:column;align-items:center;gap:.2rem;text-align:center}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;color:var(--ob-muted)}
+.drift{font-size:.9rem;color:var(--ob-muted);max-width:15rem}
+.drift.ok{color:var(--ob-success)}.drift.warn{color:var(--ob-warning)}.drift.bad{color:var(--ob-danger)}
+.legend{font-size:.85rem;color:var(--ob-muted);margin:.8rem 0 0}
+.key{display:inline-block;width:.9rem;height:.9rem;border-radius:50%;vertical-align:-.1rem;margin:0 .35rem 0 .8rem}
+.key.dz{background:#6ccbff33;border:2px solid #6ccbff}.key.trail{background:#ffd28a}
+.buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.45rem}
+.btn{border:2px solid #476579;border-radius:10px;padding:.4rem .2rem;text-align:center;font-size:.85rem;background:#152634;color:var(--ob-muted);transition:background var(--ob-motion-fast),color var(--ob-motion-fast);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn.on{background:var(--ob-accent);border-color:var(--ob-accent);color:var(--ob-accent-ink);font-weight:600}
+.trigger{display:flex;align-items:center;gap:.6rem;margin:.6rem 0}
+.tname{width:2.6rem;font-weight:600}
+.bar{flex:1;height:1.1rem;border-radius:.55rem;background:#0a131b;border:1px solid #365063;overflow:hidden}
+.fill{height:100%;width:0;background:var(--ob-accent)}
+.tval{width:5.6rem;text-align:right}
+.touchpad{position:relative;aspect-ratio:2.6;border:2px solid #476579;border-radius:14px;background:#0a131b;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.touchpad.on{border-color:var(--ob-accent);background:#10283a}
+.tp-state{font-size:.85rem;color:var(--ob-muted);padding:.3rem}
+.touchpad.on .tp-state{color:var(--ob-accent)}
+.finger{position:absolute;width:1.1rem;height:1.1rem;margin:-.55rem 0 0 -.55rem;border-radius:50%;background:var(--ob-warning)}
+.note{font-size:.85rem;color:var(--ob-muted);margin:.6rem 0 0}
+.suggest{font-size:1.05rem;line-height:1.45;margin:0 0 .6rem}
+.suggest.ok{color:var(--ob-success)}.suggest.warn{color:var(--ob-warning)}.suggest.bad{color:var(--ob-danger)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:.3rem 1rem;margin:0}
+.facts dt{color:var(--ob-muted)}.facts dd{margin:0}
+.hint{position:fixed;bottom:0;left:0;right:0;background:#070c12;border-top:1px solid #365063;padding:.6rem 4vw;font-size:.95rem;display:flex;gap:1rem;align-items:center}
+.leave{flex:0 0 8rem;height:.5rem;border-radius:.25rem;background:#152634;overflow:hidden;visibility:hidden}
+.leave.on{visibility:visible}
+#leave-fill{display:block;height:100%;width:0;background:var(--ob-accent)}
+@media(max-width:1100px){.layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.sticks{grid-column:1 / span 2;grid-row:auto}.wide{grid-column:1 / span 2}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}

@@ -1,3 +1,5 @@
+import {parseParams,docFetchPath,docAddress,decide} from './viewer-nav.mjs'; // OMNI_PDF_VIEWER_V1
+const openParams=parseParams(location.search); // OMNI_PDF_VIEWER_V1: ?doc=<token>&name=..&src=.. (a PDF Omni opened here)
 let pdfjs=null,pdfLibraryPromise=null;
 async function ensurePDFJS(){
  if(!pdfLibraryPromise)pdfLibraryPromise=import('./vendor/pdfjs/pdf.mjs').then(module=>{module.GlobalWorkerOptions.workerSrc=new URL('./vendor/pdfjs/pdf.worker.mjs',import.meta.url).href;pdfjs=module;return module}).catch(error=>{pdfLibraryPromise=null;throw error});
@@ -29,8 +31,9 @@ function clearDocumentUI(){
  pageNumber=1;zoom=1;lastPageText='';canvas.width=canvas.height=1;
  canvas.removeAttribute('aria-label');document.getElementById('page-text').textContent='';controls();
 }
-async function render(){
+async function render(edge){
  if(!active||!documentPDF)return;
+ const keepX=viewport.scrollWidth>viewport.clientWidth?(viewport.scrollLeft+viewport.clientWidth/2)/viewport.scrollWidth:.5,keepY=viewport.scrollHeight>viewport.clientHeight?(viewport.scrollTop+viewport.clientHeight/2)/viewport.scrollHeight:0;
  const token=++requested,epoch=generation,doc=documentPDF,current=pageNumber;
  const currentRender=()=>owns(epoch)&&token===requested&&doc===documentPDF;
  const previous=renderTask;renderTask=null;cancel(previous);
@@ -47,7 +50,9 @@ async function render(){
  const text=await page.getTextContent();if(!currentRender())return;
  lastPageText=text.items.map(i=>i.str+(i.hasEOL?'\n':' ')).join('');
  document.getElementById('page-text').textContent=lastPageText||'This page has no extractable text.';
- canvas.setAttribute('aria-label','PDF page '+current+' of '+doc.numPages);viewport.scrollTop=viewport.scrollLeft=0;
+ canvas.setAttribute('aria-label','PDF page '+current+' of '+doc.numPages);
+ if(edge==='keep'){viewport.scrollLeft=Math.max(0,keepX*viewport.scrollWidth-viewport.clientWidth/2);viewport.scrollTop=Math.max(0,keepY*viewport.scrollHeight-viewport.clientHeight/2);} // OMNI_PDF_VIEWER_V1: zoom keeps the view centre
+ else{viewport.scrollLeft=0;viewport.scrollTop=edge==='bottom'?viewport.scrollHeight:0;} // OMNI_PDF_VIEWER_V1: up at the top shows the previous page's end
  controls();notify('Page '+current+' ready.');
  if(document.activeElement===document.body||document.activeElement?.disabled)obUI.focus(viewport);
  page.cleanup();
@@ -77,8 +82,8 @@ async function openBytes(bytes){
   }
  }catch(e){if(owns(token)){documentPDF=null;controls();notify('Could not open this PDF. '+String(e.message||e).slice(0,160));}}
 }
-async function page(delta){if(!active||!documentPDF)return false;const next=Math.max(1,Math.min(documentPDF.numPages,pageNumber+delta));if(next===pageNumber)return true;pageNumber=next;await render();return true;}
-async function changeZoom(delta){if(!active||!documentPDF)return false;zoom=Math.max(.5,Math.min(3,zoom+delta));await render();return true;}
+async function page(delta,edge){if(!active||!documentPDF)return false;const next=Math.max(1,Math.min(documentPDF.numPages,pageNumber+delta));if(next===pageNumber)return true;pageNumber=next;await render(edge);return true;}
+async function changeZoom(delta){if(!active||!documentPDF)return false;zoom=Math.max(.5,Math.min(3,zoom+delta));await render('keep');return true;}
 function report(promise){const epoch=generation;Promise.resolve(promise).catch(e=>{if(owns(epoch))notify('PDF rendering failed. '+String(e.message||e).slice(0,160));});}
 document.getElementById('previous').onclick=()=>report(page(-1));document.getElementById('next').onclick=()=>report(page(1));
 document.getElementById('zoom-out').onclick=()=>report(changeZoom(-.25));document.getElementById('zoom-in').onclick=()=>report(changeZoom(.25));
@@ -90,18 +95,62 @@ document.getElementById('pdf-file').onchange=async e=>{
  try{const bytes=await file.arrayBuffer();if(!owns(selection))return;await openBytes(new Uint8Array(bytes));}catch(error){if(owns(selection))notify(error.message);}
 };
 const baseController=window.omniMediaController;
-function controller(action){if(document.querySelector('dialog[open]'))return baseController(action);if((action==='left'||action==='right')&&document.activeElement===viewport){report(page(action==='left'?-1:1));return !!documentPDF;}if(action==='l1'||action==='r1'){report(changeZoom(action==='l1'?-.25:.25));return !!documentPDF;}return baseController(action);}
+// OMNI_PDF_VIEWER_V1: D-pad scrolls (turns the page at the ends), L1 / R1 page, R2 / L2 zoom (sent by the shell),
+// Square saves to Downloads, Circle goes back (the shared controller: dialogs first). Decisions: viewer-nav.mjs.
+async function saveToDownloads(){
+ const host=window.omnibloomHost,address=docAddress(openParams.doc);
+ if(!host||!address||!documentPDF){notify('Save works for PDFs Omni opened from a link.');return;}
+ notify('Saving to Downloads…');
+ const r=await host.request({method:'pdf.save',params:{url:address}});
+ notify(r&&r.ok?'Saved '+((r.result&&r.result.name)||'the PDF')+' to Downloads.':r&&r.code==='NOT_FOUND'?'This PDF is no longer open: open its link again to save it.':'Could not save this PDF.');
+}
+function navState(){
+ const e=document.activeElement;
+ return {hasDoc:!!documentPDF,dialogOpen:!!document.querySelector('dialog[open]'),inViewport:!e||e===document.body||e===viewport||viewport.contains(e),
+  page:pageNumber,pages:documentPDF?documentPDF.numPages:0,top:viewport.scrollTop,maxTop:viewport.scrollHeight-viewport.clientHeight,
+  left:viewport.scrollLeft,maxLeft:viewport.scrollWidth-viewport.clientWidth,viewH:viewport.clientHeight,viewW:viewport.clientWidth};
+}
+function controller(action){
+ const d=decide(action,navState());
+ switch(d.kind){
+ case 'scroll':viewport.scrollBy({left:d.dx,top:d.dy,behavior:'smooth'});return true;
+ case 'page':report(page(d.delta,d.edge));return true;
+ case 'zoom':report(changeZoom(d.delta));return true;
+ case 'save':report(saveToDownloads());return true;
+ case 'none':return true;
+ case 'ignore':return false;
+ default:return baseController(action);
+ }
+}
 window.omniMediaController=window.omniPadController=controller;
-document.addEventListener('keydown',e=>{if(document.activeElement===viewport&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();e.stopImmediatePropagation();controller(e.key==='ArrowLeft'?'left':'right');}},true);
+document.addEventListener('keydown',e=>{const k={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',PageUp:'l1',PageDown:'r1'}[e.key];if(k&&documentPDF&&(document.activeElement===viewport||document.activeElement===document.body)){e.preventDefault();e.stopImmediatePropagation();controller(k);}},true);
+// The right stick scrolls with wheel events at the pointer: outside the document area they move the document too.
+document.addEventListener('wheel',e=>{if(!documentPDF||viewport.contains(e.target)||e.target.closest?.('dialog'))return;e.preventDefault();viewport.scrollBy(e.deltaX,e.deltaY);},{passive:false});
+const original=document.getElementById('open-original');
+if(original){original.hidden=!openParams.src;original.onclick=()=>{if(openParams.src&&window.omnibloomHost)window.omnibloomHost.request({method:'navigation.open',params:{url:openParams.src}});};}
+async function openFromOmni(){
+ // A PDF Omni downloaded for this tab: same-origin bytes from omni://pages/_user/pdf/<token>.pdf (held in memory by Omni).
+ const token=++generation;
+ if(openParams.name){document.title=openParams.name+' · PDF reader';}
+ notify('Opening '+(openParams.name||'PDF')+'…');
+ try{
+  const response=await fetch(docFetchPath(openParams.doc),{cache:'no-store'});
+  if(!owns(token))return;
+  if(!response.ok){notify('This PDF is no longer open.'+(openParams.src?' Use Open original to load it again.':''));if(original&&openParams.src)original.hidden=false;return;}
+  const bytes=await response.arrayBuffer();
+  if(owns(token))await openBytes(new Uint8Array(bytes));
+ }catch(e){if(owns(token))notify('Could not open this PDF. '+String(e.message||e).slice(0,160));}
+}
 window.obPDFViewer={openBytes,next:()=>page(1),previous:()=>page(-1),getState:()=>({version:pdfjs?.version||null,pageNumber,pages:documentPDF?.numPages||0,zoom,pixels:canvas.width*canvas.height,text:lastPageText,rendering:!!renderTask,active})};
 addEventListener('pagehide',()=>{
  active=false;generation++;requested++;
  const task=loadingTask,doc=documentPDF;loadingTask=null;documentPDF=null;cancel(renderTask);renderTask=null;
  clearDocumentUI();document.getElementById('pdf-file').value='';notify('Open a PDF to begin. Documents stay on this device.');void queueDispose(task,doc);
 });
-addEventListener('pageshow',()=>{active=true;controls();if(!documentPDF)notify(window.omnibloomHost?'Open a PDF from Files.':'Open a PDF to begin. Documents stay on this device.');});
+addEventListener('pageshow',e=>{active=true;controls();if(documentPDF)return;if(e.persisted&&openParams.doc&&window.omnibloomHost){void openFromOmni();return;}if(!openParams.doc)notify(window.omnibloomHost?'Open a PDF from Files.':'Open a PDF to begin. Documents stay on this device.');}); // OMNI_PDF_VIEWER_V1: Back / Forward to the reader opens it again
 controls();
-if(window.omnibloomHost)notify('Open a PDF from Files.');
+if(openParams.doc&&window.omnibloomHost)await openFromOmni(); // OMNI_PDF_VIEWER_V1
+else if(window.omnibloomHost)notify('Open a PDF from Files.');
 else if(new URL(location.href).searchParams.get('sample')==='1'){
  const token=++generation;
  try{const response=await fetch('sample.pdf');if(!owns(token)){}else if(!response.ok)throw Error('Sample unavailable');else{const bytes=await response.arrayBuffer();if(owns(token))await openBytes(new Uint8Array(bytes));}}

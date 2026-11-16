@@ -20,7 +20,7 @@ What the user sees
     and the tab reloads. Private tabs work the same way: everything goes through the page's own data store
     (WKPageGetWebsiteDataStore), which for a private tab is omniPrivateStore (non-persistent).
 
-What WebKit's C API offers here (checked in /home/builder/s1/webkit + the UIProcess unified object of the build):
+What WebKit's C API offers here (checked in the engine's WebKit tree (s1/webkit) + the UIProcess unified object of the build):
   per site / origin, real implementations, exported:
     WKWebsiteDataStoreStatisticsDeleteCookiesForTesting(store, url, includeHttpOnly, ...)
         -> NetworkProcess::deleteCookiesForTesting -> deleteAndRestrictWebsiteDataForRegistrableDomains(Cookies):

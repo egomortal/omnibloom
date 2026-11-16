@@ -1,0 +1,67 @@
+/* OMNI_COUCH_TIMER_V1: TV distance. Digits are sized from the screen height so they read from across a room. */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{font-size:clamp(20px,1.05vw,40px)}
+body{background:radial-gradient(ellipse at 50% 0,#12283a 0,var(--ob-ground) 60%) fixed,var(--ob-ground);color:var(--ob-text);font-family:Inter,sans-serif;margin:0;padding:1.6rem 4vw 4.5rem;min-height:100vh;overflow:hidden}
+h1{font-family:Rajdhani,sans-serif;font-weight:700;font-size:2.1rem;margin:.1rem 0}
+.top{display:flex;justify-content:space-between;align-items:flex-end}
+.eyebrow{color:var(--ob-muted);letter-spacing:.16em;font-size:.9rem;margin:0}
+.clock{font-family:Rajdhani,sans-serif;font-weight:700;font-size:2.4rem;color:var(--ob-muted);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* mode blades */
+.blades{display:flex;gap:.6rem;margin:1rem 0 .4rem}
+.blade{background:var(--ob-panel);border:2px solid #365063;border-radius:var(--ob-radius-small);padding:.5rem 1.6rem;font-family:Rajdhani,sans-serif;font-weight:700;font-size:1.5rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ob-muted);min-height:var(--ob-target);transform:skewX(-10deg);display:flex;gap:.7rem;align-items:center}
+.blade[aria-selected=true]{background:var(--ob-accent);color:var(--ob-accent-ink);border-color:var(--ob-accent)}
+.badge{font-size:1.1rem;font-variant-numeric:tabular-nums;opacity:.85}
+.badge:empty{display:none}
+
+.panel{display:flex;flex-direction:column;align-items:center;gap:1rem}
+/* the big digits */
+.digits{display:flex;align-items:baseline;justify-content:center;font-family:Rajdhani,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;
+  font-size:min(38vh,22vw);line-height:.95;letter-spacing:.01em;background:none;border:4px solid transparent;border-radius:var(--ob-radius);padding:0 2.5vw;margin:0;color:var(--ob-text);text-shadow:0 .03em 0 #000a}
+.digits.run{color:#fff}
+.digits.final{color:var(--ob-warning);animation:beat 1s steps(1) infinite}
+.digits .colon{opacity:.55;padding:0 .02em}
+.digits .f{border-radius:var(--ob-radius-small);padding:0 .04em}
+.digits.editing .f{opacity:.5}
+.digits.editing .f.sel{opacity:1;background:var(--ob-accent);color:var(--ob-accent-ink);text-shadow:none}
+.digits.sw{font-size:min(34vh,19vw)}
+.digits .frac{font-size:.45em;color:var(--ob-muted);margin-left:.05em}
+.note{color:var(--ob-muted);font-size:1.3rem;margin:0;min-height:1.6em;text-align:center}
+
+/* presets and actions */
+.chips,.actions{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center}
+.chip{background:var(--ob-panel);border:2px solid #365063;border-radius:999px;padding:.4rem 1.4rem;font-size:1.35rem;min-height:var(--ob-target);font-weight:600}
+.chip.sel{border-color:var(--ob-accent);color:var(--ob-accent)}
+.act{background:var(--ob-panel-raised);border:2px solid #365063;border-radius:var(--ob-radius-small);padding:.5rem 2.2rem;font-size:1.5rem;min-height:calc(var(--ob-target) + 8px);font-weight:600;min-width:9rem}
+.act.primary{background:var(--ob-success);color:#062012;border-color:var(--ob-success)}
+.act.dim{opacity:.45}
+.focus,button:focus-visible{outline:4px solid var(--ob-focus);outline-offset:4px;box-shadow:0 0 0 10px #6ccbff40}
+.digits.focus{border-color:var(--ob-focus);outline:none}
+button:focus:not(.focus){outline:none}
+
+.laps{list-style:none;margin:0;padding:0;width:min(46rem,100%);font-variant-numeric:tabular-nums;font-size:1.3rem}
+.laps li{display:grid;grid-template-columns:1fr 1fr 1fr;padding:.3rem 1rem;border-bottom:1px solid #365063}
+.laps li:first-child{color:var(--ob-accent)}
+.laps .split,.laps .total{text-align:right}
+.laps .total{color:var(--ob-muted)}
+.missed{color:var(--ob-warning);text-align:center;font-size:1.3rem;margin:.6rem 0 0}
+
+.hint{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;gap:1rem;padding:.9rem 4vw;background:#070c12f2;border-top:1px solid #365063;color:var(--ob-muted);font-size:1rem;white-space:pre}
+.sound{white-space:normal;text-align:right}
+
+/* ringing: full-screen flash (1 per second, well under the 3 Hz photosensitivity limit) and a pulsing readout */
+.ring{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:var(--ob-ground);animation:flash 1s steps(1) infinite}
+.ring-in{text-align:center;animation:pulse 1s ease-in-out infinite}
+.ring-title{font-family:Rajdhani,sans-serif;font-weight:700;font-size:min(16vh,10vw);margin:0;text-transform:uppercase;letter-spacing:.04em}
+.ring-digits{font-family:Rajdhani,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;font-size:min(24vh,15vw);margin:0;line-height:1}
+.ring-hint{font-size:1.6rem;margin:1rem 0 0;white-space:pre}
+@keyframes flash{0%{background:var(--ob-warning);color:#1d1200}50%{background:var(--ob-ground);color:var(--ob-warning)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes beat{0%{opacity:1}50%{opacity:.55}}
+@media(prefers-reduced-motion:reduce){
+  .ring{animation:none;background:var(--ob-warning);color:#1d1200}
+  .ring-in,.digits.final{animation:none}
+}
+@media(max-width:900px){body{padding:1rem 16px 5rem;overflow:auto}.blade{padding:.4rem .8rem;font-size:1.1rem}.hint{white-space:normal;flex-direction:column}}

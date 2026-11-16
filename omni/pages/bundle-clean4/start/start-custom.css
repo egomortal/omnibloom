@@ -22,3 +22,12 @@ body.oscu-linear #ob-arrange-toggle{display:none!important}
 .oscu-gear{min-height:2.5rem;padding:.3rem .8rem;margin-inline-start:.6rem}
 /* Own colours and pictures: panels keep their Universe colours; text straight on the background gets a shadow. */
 body.oscu-bg-picture .topline,body.oscu-bg-colour .topline{text-shadow:0 1px 3px rgba(0,0,0,.6)}
+/* OMNI_START_ICONS_V1: site icons (start-icons.js). A slot shows only once its icon has loaded (.osic-on). */
+.osic-img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:auto}
+.oscu-head{display:flex;align-items:center;gap:.5rem;min-width:0;max-width:100%}
+.oscu-ico{display:none;flex:none;box-sizing:border-box;width:1.5rem;height:1.5rem;padding:2px;border-radius:.35rem;background:#fff}
+.oscu-ico.osic-on{display:block}
+.osic-site{display:none;flex:none;box-sizing:border-box;width:1.5rem;height:1.5rem;padding:2px;border-radius:.35rem;background:#fff}
+.osic-site.osic-on{display:inline-block;vertical-align:middle;margin-inline-end:.5rem}
+/* Continue watching's letter disc (styled by Omni's script): a light plate behind the icon. */
+#omni-cw i.osic-on{background:#fff!important;padding:6px;box-sizing:border-box}

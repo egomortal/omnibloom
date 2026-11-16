@@ -70,13 +70,23 @@ function pickTitle(doc,m){const h1s=findAll(doc.body||doc,n=>tag(n)==='h1',3).ma
 const raw=docTitle(doc);const parts=raw.split(/\s+[|\-–—:»·]\s+/);if(parts.length>1){const longest=parts.reduce((a,b)=>b.split(' ').length>a.split(' ').length?b:a);if(longest.split(' ').length>=3)return longest}return raw||h1s[0]||''}
 function pickByline(doc,m){const a=m.author||m['article:author']||m['parsely-author']||m['sailthru.author']||'';if(a&&!/^https?:/i.test(a))return a.slice(0,120);
 const n=findAll(doc.body||doc,n=>attr(n,'rel')==='author'||attr(n,'itemprop')==='author'||/\b(byline|author)\b/i.test(attr(n,'class')+' '+attr(n,'id')),5).map(n=>squash(textOf(n)).trim()).find(s=>s&&s.length<=120);return n||''}
-function words(text){return(String(text).match(/\S+/g)||[]).length}
-// extract(document, {base}) -> {title, byline, site, lang, dir, content, length, paragraphs, words, minutes, isArticle} or null.
+// Reading time from the clean tree: CJK (Han, kana, Hangul) counts per character at ~400 a minute, other text per word
+// at ~230 a minute; code blocks (pre), captions (figcaption, table caption) and images are not read.
+const CJK=/[ᄀ-ᇿ⺀-⿟぀-ヿ㄀-ㄯ㄰-㆏ㆠ-ㇿ㐀-䶿一-鿿가-힯豈-﫿ｦ-ﾟ]|[\ud840-\ud87f][\udc00-\udfff]/g;
+const NOT_READ=new Set(['pre','figcaption','caption','img']);
+const BREAKS=new Set(['p','h2','h3','h4','h5','h6','ul','ol','li','blockquote','div','figure','dl','dt','dd','table','thead','tbody','tr','th','td','br','hr']);
+const CJK_PER_MIN=400,WORDS_PER_MIN=230;
+function readingTime(input){let text='';
+  const walk=items=>{for(const x of items||[]){if(typeof x==='string')text+=x;else if(x&&typeof x==='object'&&!NOT_READ.has(x.tag)){const b=BREAKS.has(x.tag);if(b)text+=' ';walk(x.kids);if(b)text+=' '}}};
+  if(typeof input==='string')text=input;else walk(input);
+  const chars=(text.match(CJK)||[]).length,words=(text.replace(CJK,' ').match(/\S+/g)||[]).filter(w=>/[\p{L}\p{N}]/u.test(w)).length;
+  return{words,chars,minutes:Math.max(1,Math.round(chars/CJK_PER_MIN+words/WORDS_PER_MIN))}}
+// extract(document, {base}) -> {title, byline, site, lang, dir, content, length, paragraphs, words, chars, minutes, isArticle} or null.
 function extract(doc,opts={}){const r=score(doc);if(!r)return null;const m=meta(doc),title=pickTitle(doc,m),nodes=contentNodes(r);
 let length=0,paragraphs=0;for(const n of nodes){const st=r.stats.get(n);if(st)length+=st.len}
 for(const n of nodes)for(const p of findAll(n,x=>{const st=r.stats.get(x);return!!st&&tag(x)!=='td'&&isParagraph(x,tag(x),st)&&st.len>=80&&density(st)<.3},2000))paragraphs++;
 const content=clean(nodes,opts.base||doc.baseURI||'',title,r.stats);const html=doc.documentElement||findAll(doc,n=>tag(n)==='html',1)[0];
 const typed=/article|blog|news/i.test(m['og:type']||'');const isArticle=paragraphs>=3&&length>=(typed?600:900);
-const text=nodes.map(textOf).join(' '),count=words(text);
-return{title,byline:pickByline(doc,m),site:m['og:site_name']||'',lang:html?attr(html,'lang'):'',dir:html?attr(html,'dir'):'',content,length,paragraphs,words:count,minutes:Math.max(1,Math.round(count/230)),isArticle,best:r.best,score:r.score}}
-return Object.freeze({extract,score,contentNodes,meta,pickTitle,imageSource,textOf,MAX_ELEMENTS})});
+const rt=readingTime(content);
+return{title,byline:pickByline(doc,m),site:m['og:site_name']||'',lang:html?attr(html,'lang'):'',dir:html?attr(html,'dir'):'',content,length,paragraphs,words:rt.words,chars:rt.chars,minutes:rt.minutes,isArticle,best:r.best,score:r.score}}
+return Object.freeze({extract,readingTime,CJK_PER_MIN,WORDS_PER_MIN,score,contentNodes,meta,pickTitle,imageSource,textOf,MAX_ELEMENTS})});

@@ -1,0 +1,331 @@
+{
+ "schema": 1,
+ "id": "524912d76300edab",
+ "release": "Unreleased (dev branch, not tested on a console yet unless noted)",
+ "intro": "We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.",
+ "groups": [
+  {
+   "key": "tabs",
+   "title": "Tabs",
+   "items": [
+    {
+     "title": "Pinned tabs",
+     "text": "D-pad left / right on a tab row in the Tabs panel, or \"Pin this tab\" in the hold-Cross menu. Up to 6; never in private tabs; kept after a restart.",
+     "button": {
+      "ps": "D-pad left / right",
+      "xbox": "D-pad left / right",
+      "note": "Not for private tabs",
+      "noteXbox": "Not for private tabs"
+     },
+     "where": "Options > Browse > Tabs",
+     "try": "tabs"
+    },
+    {
+     "title": "Tab audio",
+     "text": "Speaker icons on tabs that play sound; Triangle in the Tabs panel mutes / unmutes a tab.",
+     "button": {
+      "ps": "Triangle",
+      "xbox": "Y",
+      "note": "",
+      "noteXbox": ""
+     },
+     "where": "Options > Browse > Tabs",
+     "try": "tabs"
+    },
+    {
+     "title": "Saved tab sessions",
+     "text": "Save the open tabs under a name and open them later (Tabs panel).",
+     "button": {
+      "ps": "Cross",
+      "xbox": "A",
+      "note": "The row below the tabs",
+      "noteXbox": "The row below the tabs"
+     },
+     "where": "Options > Browse > Tabs",
+     "try": "tabs"
+    },
+    {
+     "title": "Open in background tab",
+     "text": "Open in background tab is now the first row of the hold-Cross link menu.",
+     "button": {
+      "ps": "Hold Cross",
+      "xbox": "Hold A",
+      "note": "Then Cross: the link menu's first row (R1 shows it)",
+      "noteXbox": "Then A: the link menu's first row (RB shows it)"
+     },
+     "where": null,
+     "try": null
+    }
+   ]
+  },
+  {
+   "key": "video",
+   "title": "Video",
+   "items": [
+    {
+     "title": "Autoplay",
+     "text": "Autoplay setting: Allow (default) / Block sound / Block all, also per site.",
+     "button": null,
+     "where": "Browser settings",
+     "try": "settings"
+    },
+    {
+     "title": "Continue watching",
+     "text": "Continue watching row on the start page (needs the Resume videos add-on 1.1.0, which now keeps the page address and title of up to 30 unfinished videos; private tabs never record).",
+     "button": null,
+     "where": "Start page",
+     "try": null
+    },
+    {
+     "title": "YouTube TV mode",
+     "text": "YouTube TV mode (off by default): opens YouTube's TV app, driven with the D-pad.",
+     "button": {
+      "ps": "D-pad",
+      "xbox": "D-pad",
+      "note": "Cross is Enter, Circle is Back",
+      "noteXbox": "A is Enter, B is Back"
+     },
+     "where": "Browser settings",
+     "try": "settings"
+    },
+    {
+     "title": "Now playing",
+     "text": "\"Now playing\" controls in the Options menu for whichever tab plays sound.",
+     "button": {
+      "ps": "Options",
+      "xbox": "Menu",
+      "note": "Options tile while a tab plays: pause, tracks, 10 s, mute",
+      "noteXbox": "Options tile while a tab plays: pause, tracks, 10 s, mute"
+     },
+     "where": "Options, while a tab plays",
+     "try": "options"
+    },
+    {
+     "title": "Sleep timer",
+     "text": "Sleep timer (Options): pauses playback after 15 / 30 / 60 / 90 minutes.",
+     "button": {
+      "ps": "Options",
+      "xbox": "Menu",
+      "note": "Options > Now playing > Sleep timer: 15-90 min or end of video",
+      "noteXbox": "Options > Now playing > Sleep timer: 15-90 min or end of video"
+     },
+     "where": "Options",
+     "try": "options"
+    }
+   ]
+  },
+  {
+   "key": "reading",
+   "title": "Reading",
+   "items": [
+    {
+     "title": "Save page for later",
+     "text": "A reading list of offline copies (hold Cross, or Options > Browse); never in private tabs.",
+     "button": {
+      "ps": "Options",
+      "xbox": "Menu",
+      "note": "Options > Browse, or the page menu (hold Cross)",
+      "noteXbox": "Options > Browse, or the page menu (hold A)"
+     },
+     "where": "Options > Browse",
+     "try": "reading-list"
+    }
+   ]
+  },
+  {
+   "key": "privacy",
+   "title": "Privacy",
+   "items": [
+    {
+     "title": "Clear data for this site",
+     "text": "Clear data for this site (Site settings): deletes the site's cookies and the page's storage after asking, then reloads.",
+     "button": null,
+     "where": "Options > Settings > Site settings",
+     "try": "site-settings"
+    },
+    {
+     "title": "HTTPS-only mode",
+     "text": "HTTPS-only mode and \"Ask sites not to sell or share my data\" (Global Privacy Control): both off by default.",
+     "button": null,
+     "where": "Browser settings",
+     "try": "settings"
+    },
+    {
+     "title": "Tell sites this is Omni (off)",
+     "text": "The \" Omni/<version>\" user-agent token is off by default (\"Tell sites this is Omni\" turns it on).",
+     "button": null,
+     "where": "Browser settings",
+     "try": "settings"
+    },
+    {
+     "title": "Ad block in embedded frames",
+     "text": "uBlock's site fixes and element hiding also run inside frames from other sites (on by default).",
+     "button": null,
+     "where": "Browser settings",
+     "try": "settings"
+    }
+   ]
+  },
+  {
+   "key": "accessibility",
+   "title": "Accessibility",
+   "items": [
+    {
+     "title": "Zoom per site",
+     "text": "Zoom per site (50-200%, remembered per site): L2 + D-pad up / down, or \"Zoom (this site)\" in Options.",
+     "button": {
+      "ps": "L2 + D-pad up / down",
+      "xbox": "LT + D-pad up / down",
+      "note": "Remembered for the site",
+      "noteXbox": "Remembered for the site"
+     },
+     "where": "Options > Quick toggles",
+     "try": "options"
+    }
+   ]
+  },
+  {
+   "key": "controller",
+   "title": "Controller",
+   "items": [
+    {
+     "title": "Controller battery",
+     "text": "Controller battery icon in the top bar, and a \"Downloaded: <title>\" notice when a download finishes.",
+     "button": null,
+     "where": "Top bar",
+     "try": null
+    }
+   ]
+  },
+  {
+   "key": "keyboard",
+   "title": "Keyboard",
+   "items": [
+    {
+     "title": "Keyboard word suggestions",
+     "text": "Up to 3 word chips above the on-screen keyboard (D-pad up to reach them). Built-in word list only by default. \"Learn words I type\" is off by default; when on, words are kept in /data/omni/kb-words.txt on the console, and never from password, login/username, email, one-time-code, card or number fields, any field in a form with a password, or private tabs. \"Clear learned words\" deletes them; \"Word suggestions\" turns the chips off.",
+     "button": {
+      "ps": "D-pad up",
+      "xbox": "D-pad up",
+      "note": "From the top row; Cross uses the word",
+      "noteXbox": "From the top row; A uses the word"
+     },
+     "where": "Browser settings",
+     "try": "settings"
+    }
+   ]
+  },
+  {
+   "key": "browsing",
+   "title": "Browsing",
+   "items": [
+    {
+     "title": "Page screenshots",
+     "text": "L2 + R3 saves the visible page to Downloads > Saved > Screenshots; never in private tabs.",
+     "button": {
+      "ps": "L2 + R3",
+      "xbox": "LT + RS",
+      "note": "Downloads > Saved > Screenshots (not in private tabs)",
+      "noteXbox": "Downloads > Saved > Screenshots (not in private tabs)"
+     },
+     "where": "Downloads > Saved > Screenshots",
+     "try": "screenshots"
+    },
+    {
+     "title": "Search shortcuts",
+     "text": "Search shortcuts in the address bar (\"yt lofi beats\") and most-visited tiles in empty shortcut slots.",
+     "button": null,
+     "where": "Address bar, start page",
+     "try": null
+    },
+    {
+     "title": "History",
+     "text": "Search, day groups, delete a whole site, clear the last hour / today / everything.",
+     "button": {
+      "ps": "Triangle",
+      "xbox": "Y",
+      "note": "",
+      "noteXbox": ""
+     },
+     "where": "Options > Browse > History",
+     "try": "history"
+    },
+    {
+     "title": "Send a link from your phone",
+     "text": "Send a link from your phone to Omni over the home network, with a 6-digit code (off by default).",
+     "button": null,
+     "where": "Browser settings",
+     "try": "settings"
+    },
+    {
+     "title": "File downloads",
+     "text": "File downloads on pages (PDF, ZIP, attachments) go to the Downloads app when Media Downloads is on.",
+     "button": null,
+     "where": "Options > More > Downloads",
+     "try": "downloads"
+    },
+    {
+     "title": "What's new",
+     "text": "What's new page: opens once after Omni updates, listing the new features with their buttons and a \"Try it\" button; again any time from Options > Settings > What's new. Built from this changelog; nothing is fetched.",
+     "button": {
+      "ps": "Options",
+      "xbox": "Menu",
+      "note": "Options again closes it",
+      "noteXbox": "Menu again closes it"
+     },
+     "where": "Options > Settings > What's new",
+     "try": "options"
+    },
+    {
+     "title": "Video upscaling",
+     "text": "Video upscaling (Browser settings, off by default): Smooth or Sharp enlargement for video shown larger than its own size (e.g. 1080p on a 4K TV), instead of repeating pixels. 1:1, smaller and HDR video are unchanged.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Keyboard",
+     "text": "Number / phone / code fields open a big number pad; hold L3 + L1 / R1 for the previous / next text box; saved snippets; a show password toggle; emoji; more layouts and accents.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Per site",
+     "text": "Always mute, remembered volume, auto-fullscreen video, minimum text size, cookie policy, fit page to the screen width, and hide this element for good (your own filters).",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Tabs",
+     "text": "Tab search, groups and \"group tabs by site\", tab switcher, close unused tabs (7 / 14 / 30 days, off by default), tab thumbnails, Lite mode for heavy sites, a crash page with choices (reload, reader view, data saver).",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Video",
+     "text": "Playback speed, seek faster by holding L1 / R1, \"pause everything\" (L2 + Options), a paused-video info strip (time left, ends at), background audio (off by default), YouTube cut recovery.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Privacy & safety",
+     "text": "Clear on exit (off by default), a PIN lock for saved passwords, parental controls, guest mode.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Comfort",
+     "text": "Night light, colour filters, magnifier, high contrast, reduce motion, OLED care (off by default), UI scale, accent colour and language, notice actions (Open / Allow once), recent notices, reader view by default per site.",
+     "button": null,
+     "where": null,
+     "try": null
+    }
+   ]
+  }
+ ]
+}

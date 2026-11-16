@@ -3,7 +3,7 @@
 What a backup may hold is a fixed list (ITEMS): Omni's settings always, and personal data only when ticked. Everything
 else under /data/omni is left out on purpose: saved passwords and their key, autofill, the open-tabs session, the
 browser profile (cookies, sign-ins, site storage), caches, logs, screenshots, downloads, test and tuning flags, the
-engine, fonts and the ad block rules (Setup installs those).
+engine, fonts and the ad block rules (Setup installs those; your own "My filters" list is a personal group), and the parental-controls file (it holds the PIN hash).
 
 The zip: one entry per file, named by its console path without the leading "/", plus MANIFEST_NAME (format, versions,
 created time, and every file's path, group, size and sha256).
@@ -21,6 +21,7 @@ import os
 import posixpath
 import re
 import zipfile
+import zlib
 
 from . import config
 
@@ -38,13 +39,19 @@ DL_STATE = "/data/omni-downloader/state/"
 # Groups, in the order the window lists them. "always": part of every backup.
 GROUPS = (
     {"id": "settings", "name": "Omni settings", "detail": "browser settings, theme, controller, bars, quick access, "
-     "dark mode, site zoom and permissions, search shortcuts, add-on choices", "always": True},
-    {"id": "bookmarks", "name": "Bookmarks", "detail": "bookmarks.txt"},
+     "dark mode, site zoom, volume and permissions, search shortcuts, start page, web apps, add-on choices",
+     "always": True},
+    {"id": "bookmarks", "name": "Bookmarks", "detail": "bookmarks.txt and the bookmarklets you let run without asking"},
+    {"id": "notes", "name": "Notes", "detail": "your notes"},
+    {"id": "highlights", "name": "Highlights", "detail": "text you marked on pages"},
+    {"id": "tab-sessions", "name": "Saved tab sessions", "detail": "named sets of tabs you saved"},
     {"id": "history", "name": "History", "detail": "the pages you visited"},
     {"id": "reading-list", "name": "Reading list", "detail": "pages saved for later (can be large)"},
     {"id": "addon-data", "name": "Add-on data", "detail": "what each add-on saved for itself"},
     {"id": "downloads", "name": "Downloads list and saved links", "detail": "the Downloads app's history"},
     {"id": "pointers", "name": "Pointer pictures", "detail": "your own pointer images"},
+    {"id": "kb-words", "name": "Learned keyboard words", "detail": "words the keyboard learned from your typing"},
+    {"id": "my-filters", "name": "My filters", "detail": "your own ad-block rules and the elements you hid"},
 )
 GROUP_IDS = tuple(g["id"] for g in GROUPS)
 PERSONAL = tuple(g["id"] for g in GROUPS if not g.get("always"))
@@ -77,7 +84,44 @@ FILES = (
     _f(OMNI + "ublock-allowlist.txt", "settings", 2 * MiB),
     _f(OMNI + "addons/state.json", "settings", 2 * MiB),
     _f(DL_STATE + "schedule.json", "settings", 256 * KiB),
+    # Settings added with Omni's everyday features (each file's own read cap, or a small fixed one for one-line files).
+    _f(OMNI + "apps.json", "settings", 64 * KiB),
+    _f(OMNI + "start-page.json", "settings", 16 * KiB),
+    _f(OMNI + "startup.txt", "settings", 4 * KiB),
+    _f(OMNI + "autoplay.txt", "settings", 256 * KiB),
+    _f(OMNI + "https-only.txt", "settings", 64 * KiB),
+    _f(OMNI + "popup-allow.txt", "settings", 64 * KiB),
+    _f(OMNI + "site-volume.txt", "settings", 64 * KiB),
+    _f(OMNI + "site-tweaks.txt", "settings", 256 * KiB),
+    _f(OMNI + "reader-sites.txt", "settings", 64 * KiB),
+    _f(OMNI + "game-sites.txt", "settings", 64 * KiB),
+    _f(OMNI + "refresh-sites.txt", "settings", 64 * KiB),
+    _f(OMNI + "translate.txt", "settings", 64 * KiB),
+    _f(OMNI + "search-custom.txt", "settings", 4 * KiB),
+    _f(OMNI + "site-search.txt", "settings", 4 * KiB),
+    _f(OMNI + "shortcuts-map.txt", "settings", 4 * KiB),
+    _f(OMNI + "captions.txt", "settings", 4 * KiB),
+    _f(OMNI + "ui-accent.txt", "settings", 4 * KiB),
+    _f(OMNI + "ui-scale.txt", "settings", 4 * KiB),
+    _f(OMNI + "ui-lang.txt", "settings", 4 * KiB),
+    _f(OMNI + "ui-theme-prev.txt", "settings", 4 * KiB),
+    _f(OMNI + "night-light.txt", "settings", 4 * KiB),
+    _f(OMNI + "colour-filter.txt", "settings", 4 * KiB),
+    _f(OMNI + "pointer-large.txt", "settings", 4 * KiB),
+    _f(OMNI + "history-keep.txt", "settings", 4 * KiB),
+    _f(OMNI + "tab-sleep.txt", "settings", 4 * KiB),
+    _f(OMNI + "data-saver.txt", "settings", 4 * KiB),
+    _f(OMNI + "kb-layout.txt", "settings", 4 * KiB),
+    _f(OMNI + "scroll-plus.txt", "settings", 4 * KiB),
+    _f(OMNI + "spatial-nav.txt", "settings", 4 * KiB),
+    _f(OMNI + "tips-seen.txt", "settings", 4 * KiB),
     _f(config.OMNI_BOOKMARKS, "bookmarks", 2 * MiB),
+    _f(OMNI + "bookmarklets.txt", "bookmarks", 128 * KiB),   # "Always" answers: SHA-256 keys of trusted bookmarklets
+    _f(OMNI + "notes.txt", "notes", 4 * MiB),
+    _f(OMNI + "highlights.json", "highlights", 2 * MiB),
+    _f(OMNI + "sessions.txt", "tab-sessions", 2 * MiB),
+    _f(OMNI + "kb-words.txt", "kb-words", 512 * KiB),
+    _f(OMNI + "ublock-user-filters.txt", "my-filters", 256 * KiB),   # OmniZapper::kMaxFileBytes
     _f(OMNI + "history.txt", "history", 32 * MiB),
     _f(OMNI + "reading-list/index.tsv", "reading-list", 4 * MiB),
     _f(DL_STATE + "jobs.json", "downloads", 16 * MiB),
@@ -101,11 +145,17 @@ NEVER = (
     OMNI + "passwords.txt", OMNI + "passwords.key", OMNI + "autofill.txt", OMNI + "session.txt",
     OMNI + "browser-profile/", OMNI + "downloads/", OMNI + "uploads/", OMNI + "screenshots/", OMNI + "native/",
     OMNI + "fonts/", OMNI + "content-rules/", OMNI + "gpu-pages/", OMNI + "ubo-content/", OMNI + "ubo-site/",
-    OMNI + "*.flag", OMNI + "*.png", OMNI + "*.log", OMNI + "*.tmp", OMNI + "ublock-*", OMNI + "omni-engine.elf",
+    OMNI + "*.flag", OMNI + "*.png", OMNI + "*.log", OMNI + "*.tmp", OMNI + "ublock-*",   # except ublock-user-filters.txt ("My filters", opt-in)
+    OMNI + "omni-engine.elf",
     OMNI + "display-hz.txt", OMNI + "raster-env.txt", OMNI + "jsc-env.txt", OMNI + "paint-threads.txt",
     OMNI + "ua-desktop.txt", OMNI + "ua-youtube-tv.txt", OMNI + "mse-quota-mb.txt", OMNI + "gpu-watchdog-ms.txt",
     OMNI + "yt-timeline.txt", OMNI + "addons/bundled/", OMNI + "addons/dev/", DL_STATE + "tz-offset.json",
     "/data/omni-downloader/jdownloader/", "/data/omni-downloader/downloads/",
+    # parental.txt holds the parental-controls PIN hash and rules: restoring it (onto another console, or after the
+    # owner reset a forgotten PIN by deleting it) could lock people out of settings and sites with a PIN nobody there
+    # knows, so it is never saved. The rest are markers, test and tuning files, or installed by Setup.
+    OMNI + "parental.txt", OMNI + "running.txt", OMNI + "perf-overlay.txt", OMNI + "yt-media-stop.txt",
+    OMNI + "jank-mark.txt", OMNI + "crash-*.txt", OMNI + "lang/", OMNI + "sub/",
 )
 
 
@@ -288,7 +338,7 @@ def read_backup(zip_path):
             raise BackupError("The backup's manifest is too big.")
         try:
             manifest = json.loads(_entry_bytes(z, info, MANIFEST_MAX).decode("utf-8"))
-        except (ValueError, UnicodeDecodeError, zipfile.BadZipFile, RuntimeError, NotImplementedError):
+        except (ValueError, UnicodeDecodeError, zipfile.BadZipFile, RuntimeError, NotImplementedError, zlib.error):
             raise BackupError("The backup's manifest can't be read.")
         if not isinstance(manifest, dict) or manifest.get("format") != FORMAT:
             raise BackupError("This zip isn't an Omni backup.")
@@ -336,7 +386,7 @@ def read_backup(zip_path):
                 raise BackupError("A file in the backup doesn't match its manifest. Nothing was changed.")
             try:
                 data = _entry_bytes(z, info, f["size"])
-            except (zipfile.BadZipFile, RuntimeError, NotImplementedError, OSError, EOFError):
+            except (zipfile.BadZipFile, RuntimeError, NotImplementedError, OSError, EOFError, zlib.error):
                 raise BackupError("A file in the backup is damaged. Nothing was changed.")
             if len(data) != f["size"] or _sha(data) != f["sha256"]:
                 raise BackupError("A file in the backup doesn't match its manifest. Nothing was changed.")
@@ -353,18 +403,25 @@ def read_backup(zip_path):
 
 
 # -- restore -------------------------------------------------------------------------------------------------------------------
-def restore(console, zip_path, groups=None, log=lambda m: None, progress=None):
+def restore(console, zip_path, groups=None, log=lambda m: None, progress=None, paths=None, park_suffix=None):
     """Put the backup's files (only `groups`, default all) back on the PS5. The zip is checked in full first; each
     file then goes up verified, and a different file already there is parked as <name>.before-setup-<time>.
+    `paths` (console paths) narrows it to those files: every one must be in the backup's checked manifest, or nothing
+    is written. `park_suffix` replaces the parking suffix (the backup inspector uses ".prev", like shortcuts_edit).
     Omni must be closed (it keeps these files in memory and writes its own copy when it closes).
     Returns {"written", "same", "parked_suffix", "groups": {group: count}}."""
     from . import installer
     manifest = read_backup(zip_path)
     wanted = set(GROUP_IDS if groups is None else groups)
     files = [f for f in manifest["files"] if f["group"] in wanted]
+    if paths is not None:
+        chosen = set(paths)
+        if any(rule_for(p) is None for p in chosen) or not chosen <= {f["path"] for f in files}:
+            raise BackupError("That item isn't one Setup restores from this backup. Nothing was changed.")
+        files = [f for f in files if f["path"] in chosen]
     # Pages before the reading-list index (an index must never point at a page that isn't there yet).
     files.sort(key=lambda f: f["path"].endswith("/reading-list/index.tsv"))
-    suffix = ".before-setup-" + installer._stamp()
+    suffix = park_suffix or ".before-setup-" + installer._stamp()
     written = same = 0
     with zipfile.ZipFile(zip_path) as z:
         for i, f in enumerate(files):

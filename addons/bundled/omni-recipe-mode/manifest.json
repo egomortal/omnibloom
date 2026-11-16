@@ -1,0 +1,36 @@
+{
+  "manifest_version": 1,
+  "id": "omni-recipe-mode",
+  "name": "Recipe mode",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Cook from the TV: on pages that publish a schema.org recipe, a Recipe mode button opens big ingredients to tick off, one step at a time (L1 / R1), a servings scaler and step timers. Nothing is downloaded; private tabs keep ticks only for that page.",
+  "matches": [
+    "*://*/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [
+    "addon.css"
+  ],
+  "run_at": "document_end",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": false,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    {
+      "key": "button",
+      "type": "bool",
+      "label": "Show the Recipe mode button on recipe pages",
+      "default": true
+    }
+  ]
+}

@@ -3,3 +3,5 @@ __pycache__/
 # fetched lists and compiled output (omni/engine/tools/ublock-lists)
 omni/engine/tools/ublock-lists/lists/
 omni/engine/tools/ublock-lists/out/
+# test outputs (downloads/tests/*.cjs write screenshots and results here)
+downloads/out-tools/

@@ -6,3 +6,24 @@
 #files-library .lib-danger.armed{background:#5b1f1a;border-color:#ffb4a9;color:#ffd9d3;width:auto;padding:0 10px;gap:6px;display:inline-flex;align-items:center;font-size:10px}
 #files-library .lib-pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;font-size:11px;color:var(--muted)}
 @media(pointer:coarse){#files-library .saved-actions .icon-button{width:44px;height:44px}}
+/* OMNI_DL_LIBRARY_SEARCH_V1: search + sort row, type chips, trash toggle. */
+#files-library .lib-tools{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px}
+#files-library .lib-search{flex:1;min-width:0}
+#files-library .lib-sort{flex:none;width:170px}
+#files-library .lib-tools label{margin-bottom:6px}
+#files-library .lib-chips{margin-bottom:6px}
+#files-library .lib-trash-toggle[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
+@media(max-width:520px){#files-library .lib-tools{flex-wrap:wrap}#files-library .lib-sort{width:100%}}
+/* OMNI_DL_WATCH_V1: partly watched bar and Watched tick (read from the player's page-local store). */
+#files-library .lib-progress{display:block;height:3px;margin-top:6px;border-radius:2px;background:var(--line,#30372d);overflow:hidden;max-width:240px}
+#files-library .lib-progress>span{display:block;height:100%;background:var(--accent,#b9f879)}
+#files-library .lib-watched{display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-size:11px;font-weight:600;color:var(--accent,#b9f879)}
+/* OMNI_DL_STORAGE_METER_V1: free space per place above the Library tools. */
+#files-library .lib-storage{display:grid;gap:8px;margin:4px 0 12px}
+#files-library .lib-meter{display:grid;grid-template-columns:minmax(120px,auto) 1fr auto;align-items:center;gap:12px;font-size:13px}
+#files-library .lib-meter-label{font-weight:600}
+#files-library .lib-meter-bar{display:block;height:8px;border-radius:4px;background:var(--line,#30372d);overflow:hidden}
+#files-library .lib-meter-bar>span{display:block;height:100%;background:var(--accent,#b9f879)}
+#files-library .lib-meter-text{color:var(--muted,#9aa395);white-space:nowrap}
+#files-library .lib-meter.low .lib-meter-bar>span{background:#e8a33a}
+#files-library .lib-meter.low .lib-meter-text{color:#e8a33a}

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 1,
+  "id": "omni-twitch-comfort",
+  "name": "Twitch comfort",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Twitch on a TV: channel pages open in theatre mode, Alt+Shift+H hides or shows chat, and (if you turn it on) the channel-points bonus is claimed for you, at most once every 10 seconds.",
+  "matches": [
+    "*://www.twitch.tv/*",
+    "*://twitch.tv/*"
+  ],
+  "excludes": [],
+  "js": [
+    "core.js",
+    "runtime.js"
+  ],
+  "css": [],
+  "run_at": "document_idle",
+  "all_frames": false,
+  "default_on": false,
+  "private_safe": true,
+  "quick_switch": true,
+  "live_toggle": true,
+  "css_level": "user",
+  "hosts": [],
+  "settings": [
+    { "key": "theatre", "type": "bool", "label": "Open channels in theatre mode", "default": true },
+    { "key": "claim", "type": "bool", "label": "Claim the channel-points bonus for me", "default": false }
+  ]
+}

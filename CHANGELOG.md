@@ -35,14 +35,47 @@ We're in the final stretch of building out Omni's browser features: about 200 ne
 - **Send a link from your phone** to Omni over the home network, with a 6-digit code (off by default).
 - **Controller battery** icon in the top bar, and a **"Downloaded: <title>"** notice when a download finishes.
 - **File downloads** on pages (PDF, ZIP, attachments) go to the Downloads app when Media Downloads is on.
+- **What's new** page: opens once after Omni updates, listing the new features with their buttons and a "Try it"
+  button; again any time from Options > Settings > What's new. Built from this changelog; nothing is fetched.
+- **Video upscaling** (Browser settings, off by default): Smooth or Sharp enlargement for video shown larger than its
+  own size (e.g. 1080p on a 4K TV), instead of repeating pixels. 1:1, smaller and HDR video are unchanged.
+- **Keyboard:** number / phone / code fields open a big number pad; hold L3 + L1 / R1 for the previous / next text box;
+  saved **snippets**; a **show password** toggle; emoji; more layouts and accents.
+- **Per site:** always mute, remembered volume, auto-fullscreen video, minimum text size, cookie policy, fit page to the
+  screen width, and **hide this element** for good (your own filters).
+- **Tabs:** tab search, groups and "group tabs by site", tab switcher, close unused tabs (7 / 14 / 30 days, off by
+  default), tab thumbnails, Lite mode for heavy sites, a crash page with choices (reload, reader view, data saver).
+- **Video:** playback speed, seek faster by holding L1 / R1, "pause everything" (L2 + Options), a paused-video info
+  strip (time left, ends at), background audio (off by default), YouTube cut recovery.
+- **Privacy & safety:** clear on exit (off by default), a PIN lock for saved passwords, parental controls, guest mode.
+- **Comfort:** night light, colour filters, magnifier, high contrast, reduce motion, OLED care (off by default), UI
+  scale, accent colour and language, notice actions (Open / Allow once), recent notices, reader view by default per site.
 
 ### Setup
 - **Back up / restore Omni** settings to a zip on the PC; personal data (bookmarks, history, reading list...) only if
   ticked; cookies, passwords and sessions are never included.
-
+- **Copy from PS5** (screenshots and saved downloads to this PC), **send a link to Omni**, **storage report**.
+- **Backup inspector** (restore single items), **automatic backups** (off by default), **reset Omni settings** (backup
+  first, undo).
+- **All Omni settings** editor, **search shortcuts / Quick access** editor, **My filters** editor, **push an add-on**.
+- **Import read later** (Pocket / Instapaper exports), **most visited sites** from this PC's browsers (opt-in,
+  previewed), **report a bug** (redacted, you see everything before it leaves the PC).
 ### Downloads
 - **Library** view (play, open, delete saved files), files handed over from Omni, pause / resume / retry.
+- **Library search, sort and type filters**, a **storage meter** and **Largest files**.
+- **Save a clip** (from / to), **queue reordering** ("start next"), **retry as audio / 1080p**.
+- **Remembered choices per site**, an **"already in the Library"** note, **resume where you stopped** with watched
+  marks, **folder playback** (in order / shuffle / repeat) and **captions** from `.vtt` files next to a video.
+- The console downloader now uses a minimal LGPL FFmpeg (stream copy only) for exact clip cuts and merging.
 
+### Add-ons (all off until you turn them on)
+- New: YouTube chapters, YouTube captions on, Twitch comfort, recipe mode, form saver, site redirects, search-results
+  blocklist, unlock selection, image gallery, sticky bar hider, auto-scroll, reading ruler, same-tab links, remember
+  reading position, readable font, clear links, break reminder.
+- Reader view: reading time and font presets. Video speed: an A-B loop and a whole-video loop.
+
+### Built-in pages
+- **Help & troubleshooting** (offline), **couch timer**, **solitaire**.
 ## v0.5.3
 
 Console package: Omni 0.5.3 (title f16ff5d6, engine a5083735, engine starter a3853c3a); Bloom Core, Downloads

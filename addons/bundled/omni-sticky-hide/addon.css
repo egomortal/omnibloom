@@ -1,0 +1,4 @@
+[data-omni-sticky]{transition:transform .2s ease-out!important}
+[data-omni-sticky="top hidden"]{transform:translateY(-110%)!important}
+[data-omni-sticky="bottom hidden"]{transform:translateY(110%)!important}
+@media (prefers-reduced-motion:reduce){[data-omni-sticky]{transition:none!important}}

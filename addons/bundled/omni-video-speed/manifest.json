@@ -2,9 +2,10 @@
   "manifest_version": 1,
   "id": "omni-video-speed",
   "name": "Video speed",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "licence": "MIT",
-  "description": "Video speed with explicit controls and no online service.",
+  "source": "https://github.com/egomortal/omnibloom",
+  "description": "Video speed, an A-B loop and a whole-video loop with explicit controls and no online service.",
   "matches": [
     "*://*/*"
   ],
@@ -12,6 +13,7 @@
   "js": [
     "controls.js",
     "core.js",
+    "abloop.js",
     "runtime.js"
   ],
   "css": [

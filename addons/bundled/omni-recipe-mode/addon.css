@@ -1,0 +1,44 @@
+.omni-recipe-fab{all:initial!important;position:fixed!important;right:2.5vw!important;bottom:5vh!important;z-index:2147483640!important;cursor:pointer!important;font:600 clamp(22px,1.15vw,40px)/1.2 Arial,sans-serif!important;color:#fff4e0!important;background:rgba(40,26,12,.94)!important;border:2px solid #ffb648!important;border-radius:.6em!important;padding:.45em .9em!important;box-shadow:0 .3em 1.2em rgba(0,0,0,.45)!important;box-sizing:border-box!important;animation:none!important;transition:none!important}
+.omni-recipe-fab:focus{outline:4px solid #fff!important;outline-offset:3px!important}
+/* The view: dark, high contrast, readable from across a kitchen. Fonts are the ones Omni ships (DejaVu, Noto). */
+.omni-recipe{all:initial!important;position:fixed!important;inset:0!important;z-index:2147483646!important;display:flex!important;flex-direction:column!important;box-sizing:border-box!important;width:100vw!important;height:100vh!important;padding:2.2vh 3vw!important;overflow:hidden!important;outline:none!important;filter:none!important;background:#121212!important;color:#f2efe9!important;font-family:'DejaVu Sans','Noto Sans JP',Arial,sans-serif!important;font-size:max(26px,1.45vw)!important;line-height:1.4!important;text-align:start!important}
+.omni-recipe:fullscreen{width:100vw!important;height:100vh!important}
+.omni-recipe *{box-sizing:border-box!important;color:inherit!important;font-family:inherit!important;margin:0!important;padding:0!important;border:0!important;background:none!important;text-transform:none!important;letter-spacing:normal!important;float:none!important;position:static!important;animation:none!important;transition:none!important}
+.omni-recipe [hidden][hidden]{display:none!important}
+.omni-recipe-head{display:grid!important;grid-template-columns:1fr auto!important;align-items:center!important;column-gap:1em!important;row-gap:.25em!important;padding-bottom:.6em!important;border-bottom:2px solid #3a3530!important}
+.omni-recipe-title{display:block!important;font-size:1.5em!important;font-weight:700!important;line-height:1.15!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.omni-recipe-meta{display:block!important;color:#c9c1b5!important;font-size:.85em!important}
+.omni-recipe-scale{display:flex!important;align-items:center!important;gap:.4em!important;justify-self:end!important;font-size:.85em!important}
+.omni-recipe-yield{display:inline!important;color:#c9c1b5!important;margin-right:.4em!important}
+.omni-recipe .omni-recipe-btn{display:inline-block!important;cursor:pointer!important;font-size:1em!important;font-weight:600!important;line-height:1.2!important;min-height:2.1em!important;padding:.35em .8em!important;border:2px solid #6b5a43!important;border-radius:.45em!important;background:#2a241d!important;color:#fff4e0!important}
+.omni-recipe .omni-recipe-btn:focus{outline:4px solid #fff!important;outline-offset:3px!important}
+.omni-recipe .omni-recipe-btn:disabled{opacity:.35!important;cursor:default!important}
+.omni-recipe .omni-recipe-btn[aria-pressed="true"]{background:#ffb648!important;border-color:#ffb648!important;color:#1b1309!important}
+.omni-recipe .omni-recipe-close{grid-column:2!important;grid-row:1!important}
+.omni-recipe-cols{display:flex!important;flex:1 1 auto!important;min-height:0!important;gap:3vw!important;padding-top:1em!important}
+.omni-recipe-ings{display:flex!important;flex-direction:column!important;flex:0 0 36%!important;min-height:0!important}
+.omni-recipe-h2{display:block!important;font-size:1.05em!important;font-weight:700!important;color:#ffb648!important;margin-bottom:.4em!important}
+.omni-recipe-count{display:inline!important;font-weight:400!important;font-size:.8em!important;color:#c9c1b5!important}
+.omni-recipe-list{display:block!important;list-style:none!important;overflow-y:auto!important;flex:1 1 auto!important;min-height:0!important;padding-right:.4em!important}
+.omni-recipe-li{display:block!important;margin-bottom:.35em!important}
+.omni-recipe .omni-recipe-ing{display:flex!important;align-items:flex-start!important;gap:.6em!important;width:100%!important;text-align:start!important;font-weight:400!important;background:transparent!important;border-color:transparent!important;padding:.25em .4em!important}
+.omni-recipe .omni-recipe-ing::before{content:''!important;flex:0 0 auto!important;width:1em!important;height:1em!important;margin-top:.15em!important;border:3px solid #ffb648!important;border-radius:.2em!important;box-sizing:border-box!important}
+.omni-recipe .omni-recipe-ing[aria-checked="true"]{color:#8d867c!important;text-decoration:line-through!important}
+.omni-recipe .omni-recipe-ing[aria-checked="true"]::before{background:#ffb648!important;box-shadow:inset 0 0 0 .15em #121212!important}
+.omni-recipe .omni-recipe-ing.omni-recipe-cursor{border-color:#ffb648!important;background:#2a241d!important}
+.omni-recipe-step{display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-width:0!important;min-height:0!important}
+.omni-recipe-pos{display:block!important;color:#ffb648!important;font-weight:700!important;font-size:.95em!important;margin-bottom:.3em!important}
+.omni-recipe-text{display:block!important;flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;font-size:1.75em!important;line-height:1.35!important}
+.omni-recipe-timers{display:flex!important;flex-wrap:wrap!important;gap:.5em!important;margin:.6em 0!important}
+.omni-recipe .omni-recipe-timer{font-size:1.1em!important;border-color:#ffb648!important}
+.omni-recipe .omni-recipe-timer.omni-recipe-running{background:#3a2a10!important}
+.omni-recipe .omni-recipe-done{background:#7a1f12!important;border-color:#ff7a5c!important}
+.omni-recipe-nav{display:flex!important;gap:1em!important;margin-top:.4em!important}
+.omni-recipe .omni-recipe-prev,.omni-recipe .omni-recipe-next{flex:1 1 0!important;font-size:1.15em!important;min-height:2.4em!important}
+.omni-recipe .omni-recipe-next{background:#4a3416!important;border-color:#ffb648!important}
+.omni-recipe-tray{display:flex!important;flex-wrap:wrap!important;gap:.5em!important;margin-top:.6em!important;font-size:.8em!important}
+.omni-recipe-hint{display:block!important;margin-top:.6em!important;color:#9a9288!important;font-size:.7em!important}
+/* A finished timer: a big banner over everything (no sound; Omni's WebKit has Web Audio off). */
+.omni-recipe .omni-recipe-alert{position:absolute!important;left:50%!important;top:38%!important;transform:translate(-50%,-50%)!important;z-index:2!important;display:flex!important;align-items:center!important;gap:1em!important;max-width:86vw!important;padding:.8em 1.2em!important;border:4px solid #ff7a5c!important;border-radius:.7em!important;background:#5c140a!important;color:#fff!important;font-size:1.5em!important;font-weight:700!important;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)!important;animation:omni-recipe-flash 1s steps(2,end) infinite!important}
+@keyframes omni-recipe-flash{50%{border-color:#fff}}
+@media(prefers-reduced-motion:reduce){.omni-recipe .omni-recipe-alert{animation:none!important}}

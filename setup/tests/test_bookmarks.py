@@ -111,7 +111,7 @@ class Cleaning(unittest.TestCase):
     def test_only_web_pages(self):
         self.assertEqual(bookmarks.clean_url("https://a.example/x"), "https://a.example/x")
         self.assertEqual(bookmarks.clean_url("HTTP://a.example/"), "http://a.example/")
-        for bad in ("javascript:alert(1)", "file:///C:/x", "chrome://settings", "ftp://x", "https://", "about:blank",
+        for bad in ("vbscript:alert(1)", "data:text/html,x", "javascript:", "file:///C:/x", "chrome://settings", "ftp://x", "https://", "about:blank",
                     "https://a.example/\tx", "https://a b", "https://a.example/\nx", None, 5):
             self.assertIsNone(bookmarks.clean_url(bad), bad)
 
@@ -372,10 +372,11 @@ class Sync(unittest.TestCase):
         data = (b"\n\tno url\njavascript:alert(1)\tJS\nnot-a-url\nhttps://ok.example/\tOK\tFolder\textra\tcols\n"
                 b"https://nul.example/\tN\x00ignored\nhttps://bad\xff.example/\tbad bytes\n")
         plan = bookmarks.plan_sync([], data)
-        self.assertEqual(plan.not_web, 2)          # javascript: and the bare word
-        self.assertEqual([(b.url, b.title, b.folder) for b in plan.to_pc][:2],
-                         [("https://ok.example/", "OK", "Folder"), ("https://nul.example/", "N", "")])
-        self.assertEqual(len(plan.to_pc), 3)
+        self.assertEqual(plan.not_web, 1)          # the bare word (a javascript: bookmarklet is exported now)
+        self.assertEqual([(b.url, b.title, b.folder) for b in plan.to_pc][:3],
+                         [("javascript:alert(1)", "JS", ""), ("https://ok.example/", "OK", "Folder"),
+                          ("https://nul.example/", "N", "")])
+        self.assertEqual(len(plan.to_pc), 4)
         self.assertNotIn("\x00", "".join(b.url + b.title for b in plan.to_pc))
 
     def test_duplicates(self):
@@ -480,6 +481,111 @@ class Sync(unittest.TestCase):
         fresh = Console()
         plan, r = self.sync(fresh, [])
         self.assertEqual((fresh.files, r["total"]), ({}, 0))
+
+
+def bookmarklet(size):
+    """A javascript: address of exactly `size` bytes."""
+    head = "javascript:(function(){var%20s='"
+    tail = "';alert(s.length)})()"
+    return head + "x" * (size - len(head) - len(tail)) + tail
+
+
+class Bookmarklets(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="omnibloom-bml-")
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_clean_url_keeps_bookmarklets(self):
+        self.assertEqual(bookmarks.clean_url("javascript:alert(1)"), "javascript:alert(1)")
+        self.assertEqual(bookmarks.clean_url("JavaScript:alert(1)"), "JavaScript:alert(1)")   # exact: case kept
+        self.assertEqual(bookmarks.clean_url(" javascript:a();\n//x\r\n\tb() "), "javascript:a();//xb()")
+        self.assertEqual(bookmarks.clean_url("javascript:a(' \x01\x7f')\x01"), "javascript:a(' %01%7F')")
+        self.assertEqual(bookmarks.clean_url("javascript:a('%20')"), "javascript:a('%20')")      # escapes are code
+        for bad in ("javascript:", "javascript: ", "vbscript:x", "javascript:\ud800"):
+            self.assertIsNone(bookmarks.clean_url(bad), bad)
+
+    def test_64_kb_cap(self):
+        ok = bookmarklet(config.OMNI_BOOKMARKLET_URL_MAX)
+        self.assertEqual(len(ok.encode()), 65536)
+        self.assertEqual(bookmarks.clean_url(ok), ok)
+        self.assertIsNone(bookmarks.clean_url(bookmarklet(config.OMNI_BOOKMARKLET_URL_MAX + 1)))
+        wide = "javascript:'" + "é" * 32762 + "'"            # multi-byte characters count as bytes
+        self.assertGreater(len(wide.encode()), 65536)
+        self.assertIsNone(bookmarks.clean_url(wide))
+        self.assertIsNone(bookmarks.clean_url("https://a.example/" + "x" * 2100))   # web pages keep 2048
+        self.assertEqual(config.OMNI_BOOKMARKLET_LINE_BUFFER - 1, 65934)
+
+    def test_long_bookmarklet_round_trip(self):
+        code = bookmarklet(config.OMNI_BOOKMARKLET_URL_MAX)
+        src = type("S", (), {"read": lambda self: [B(code, "Big\tone", True, "Tools"), B("https://a.example/", "A", True)]})
+        pc = bookmarks.collect([src()])
+        self.assertEqual([b.url for b in pc], [code, "https://a.example/"])
+        c = sync_console(b"https://old.example/\tOld\n")
+        r = bookmarks.import_to_console(c, pc)
+        self.assertEqual(r["added"], 2)
+        line = code.encode() + b"\tBig one\tTools\n"
+        self.assertIn(line, c.files[PATH])
+        # Read back whole (not as 2399-byte pieces), the web page after it intact.
+        self.assertEqual(bookmarks.omni_lines(c.files[PATH]),
+                         [(b"https://old.example/", b"Old", b""), (code.encode(), b"Big one", b"Tools"),
+                          (b"https://a.example/", b"A", b"")])
+        self.assertEqual(bookmarks.console_bookmarks(c.files[PATH])[1], B(code, "Big one", False, "Tools"))
+        # Matched by the exact address: nothing to do a second time.
+        again = bookmarks.plan_sync(pc, c.files[PATH])
+        self.assertEqual((again.to_console, [b.url for b in again.to_pc], again.in_both),
+                         ([], ["https://old.example/"], 2))
+        self.assertEqual(bookmarks.merge(c.files[PATH], pc)[1:], (0, 2, 0))
+        # Exact means exact: other case or an extra "utm_" tail is a different bookmarklet.
+        other = code.replace("javascript:", "JavaScript:", 1)
+        self.assertEqual(len(bookmarks.plan_sync([B(other, "x", False)], c.files[PATH]).to_console), 1)
+        self.assertNotEqual(bookmarks.url_key("javascript:a()?utm_source=x"), bookmarks.url_key("javascript:a()"))
+
+    def test_console_line_limits(self):
+        # Exactly 65934 bytes (no newline) is one entry; one byte more spills into a second piece.
+        line = bookmarklet(config.OMNI_BOOKMARKLET_URL_MAX).encode() + b"\t" + b"t" * 300 + b"\t" + b"f" * 40
+        line += b"z" * (65934 - len(line))
+        self.assertEqual(len(bookmarks.omni_lines(line)), 1)
+        self.assertEqual(len(bookmarks.omni_lines(line + b"Q")), 2)
+        # Ordinary lines keep the 2400-byte buffer; "javascript:" counts only at a line start, in any case.
+        self.assertEqual(len(bookmarks.omni_lines(b"https://a.example/" + b"x" * 3000)), 2)
+        self.assertEqual(len(bookmarks.omni_lines(b"JAVASCRIPT:" + b"x" * 3000 + b"\n")), 1)
+        self.assertEqual(len(bookmarks.omni_lines(b" javascript:" + b"x" * 3000)), 2)
+
+    def test_html_export_escapes(self):
+        code = "javascript:(function(){var a=\"<b>&amp;</b>\";if(1<2&&3>2)alert('x')})()"
+        marks = [B(code, 'Say "hi" & <go>', False, "Tools <1>"), B("javascript:void(0)", "", False)]
+        page = bookmarks.export_html(marks).decode("utf-8")
+        self.assertIn('<A HREF="javascript:(function(){var a=&quot;&lt;b&gt;&amp;amp;&lt;/b&gt;&quot;;'
+                      'if(1&lt;2&amp;&amp;3&gt;2)alert(&#x27;x&#x27;)})()">Say &quot;hi&quot; &amp; &lt;go&gt;</A>', page)
+        self.assertIn("<H3>Tools &lt;1&gt;</H3>", page)
+        self.assertIn('<A HREF="javascript:void(0)">Bookmarklet</A>', page)   # never the code as a title
+        self.assertNotIn("<b>", page)
+        import html.parser
+
+        class Hrefs(html.parser.HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.found = []
+
+            def handle_starttag(self, tag, attrs):
+                if tag == "a":
+                    self.found.append(dict(attrs)["href"])
+        p = Hrefs()
+        p.feed(page)
+        self.assertEqual(p.found, [code, "javascript:void(0)"])          # what a browser reads back is exact
+
+    def test_sync_exports_omni_bookmarklets(self):
+        code = bookmarklet(5000)
+        c = sync_console(code.encode() + b"\tLong JS\n" + b"https://w.example/\tW\n")
+        plan = bookmarks.plan_sync([], c.files[PATH])
+        self.assertEqual([(b.url, b.title) for b in plan.to_pc], [(code, "Long JS"), ("https://w.example/", "W")])
+        self.assertEqual(plan.not_web, 0)
+        out = os.path.join(self.dir, "o.html")
+        bookmarks.apply_sync(c, plan, export_path=out)
+        with open(out, encoding="utf-8") as f:
+            self.assertIn(code.replace("'", "&#x27;"), f.read())
 
 
 if __name__ == "__main__":
