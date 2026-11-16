@@ -733,8 +733,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 22987,
-      "sha256": "f2f4af0c958f77ffa3e0c7a45393246af487fdae3b8bc51e389054ca6a873e36"
+      "bytes": 24546,
+      "sha256": "85b7b77f8636ce4d72359920ddae5d53636e886049019324bd8d9b4f528f3bb1"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -5043,8 +5043,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
-      "bytes": 28916,
-      "sha256": "14b776a9b1fa6fa8ab08f2894c7e9deea4b0dccbdcca9b5fc6aed02e4fd2d3ec"
+      "bytes": 29424,
+      "sha256": "8b56368350d5d2f22cc833e53f3029ae5e26cbbb24ec5c47e9c0e184b57262be"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-launch-child-fallback.sh",
@@ -5473,13 +5473,18 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_kb_words.py",
-      "bytes": 38150,
-      "sha256": "da7a85cf2f4fa2c38e14afc1ca9332a9db9f1e601dc175b5616b9fe1fa05c09b"
+      "bytes": 51579,
+      "sha256": "461f4ec5855fda2c13f7d2e7919585fef5e53d4403ee2d512517bfcb59784581"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_l2_chords.py",
       "bytes": 11433,
       "sha256": "6c6fbdb3b675bfa64730028ad2eea5a0d7bfdcebd1cb50199ca25c46dae36136"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_media_controls.py",
+      "bytes": 29076,
+      "sha256": "5e33ba1ef47ff23e4f563e7268adb9342a6db3eaca8e2a848f4b83d0d6d42cf8"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_media_diag.py",
@@ -5510,6 +5515,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_paint_probe.py",
       "bytes": 7115,
       "sha256": "05fedd3b7e2a7877e172a2b6e1489eb8f709108c73236b69a0232e0bfe10108a"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pinned_tabs.py",
+      "bytes": 37157,
+      "sha256": "935ea6d1f5c277cf53fe5ecf22eca64a97db56ddd50d98dd2a874d11a8d6e75a"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_quick_actions.py",
@@ -5618,8 +5628,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/gen_kb_words.py",
-      "bytes": 9943,
-      "sha256": "d82c20d803f383fc0f6a95db597d9d247deddc71cc1b3adf01997168c9e1cc25"
+      "bytes": 9956,
+      "sha256": "f72f47298632addf89f7986e0f514a0908e9e47f6af9edc7fa0b8a66295280d5"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/ident.py",
@@ -5683,8 +5693,23 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_kb_words.cpp",
-      "bytes": 12443,
-      "sha256": "542e974cb2c78f932f1dda79ac06e8e9c6aabc2ad3c9fc92f99f7322fe35613b"
+      "bytes": 15234,
+      "sha256": "5af8beab2da254b9a02e6760ec26ebc7a0a89a7209522bb3337005f24955da86"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_media_controls.cjs",
+      "bytes": 7855,
+      "sha256": "f98bfbc87c910402bb5bbe1df5c03789b4fa261a445eb33ea1a2d5938bee6d8b"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_media_controls.cpp",
+      "bytes": 10178,
+      "sha256": "9233aa1012738d99f7477e7153a13d79790d3a7349c97042d5e3613c5d5801ef"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_pinned_tabs.cpp",
+      "bytes": 12538,
+      "sha256": "a531052e4d96a94749990fba8b3c6cba6d7a748ecc2027f3e45d77bd81de77c9"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_quick_actions.cpp",
