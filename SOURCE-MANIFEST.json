@@ -33,8 +33,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 30205,
-      "sha256": "3df3a0a6ef669fa0279be11be7f29768b157162fda2ce51b692f13c4491f77d0"
+      "bytes": 30909,
+      "sha256": "9e6638a455305134fade0502329d7bb2a96756ab9042a65f97418764a8222c44"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -5878,8 +5878,8 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
-      "bytes": 29663,
-      "sha256": "8456345aa1e20fdceb0ae166faeecba33390dbfa89792daf3876ca4dc700f3ae"
+      "bytes": 61531,
+      "sha256": "d8b7d8bd9480476bd421998e69827ce1450eebdee5239b24458778d87ca5802d"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-launch-child-fallback.sh",
@@ -6687,6 +6687,16 @@
       "sha256": "9577e50faa7b790a75fae8e776f10d6e2e9e07be314abee617c073e6612cb86d"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_gpu_default_on.py",
+      "bytes": 10636,
+      "sha256": "f650a49ed88c2279482c801da04cabaa25eb38ee7d4d56860e2ad1409443e720"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_gpu_mix.py",
+      "bytes": 61581,
+      "sha256": "cd120fe52bb0c2ca5bf3f5076a49870a91541a90cc583065a5c6160cd5427e70"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_gpu_watchdog.py",
       "bytes": 19560,
       "sha256": "d0a6160af997c6273718a6147b13b9517f43e5e23a1b95e7d35f8a97e2bd7ce2"
@@ -7317,6 +7327,11 @@
       "sha256": "b5f64d2db8ab4870f4231375247207fdfb6d46709ddb0b9edd79f9a08583fc56"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/audit_patch_markers.py",
+      "bytes": 2242,
+      "sha256": "cf4a82d2d306e7915487d55da62223f191a58bcd84053db8559fa2a124733187"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/gen_kb_words.py",
       "bytes": 9956,
       "sha256": "f72f47298632addf89f7986e0f514a0908e9e47f6af9edc7fa0b8a66295280d5"
@@ -7530,6 +7545,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_game_mode.cpp",
       "bytes": 6755,
       "sha256": "598ea5186b85286975f31c93a587d381c595d9fbbed48ce7e6cfd895ad44dbb2"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_gpu_mix.cpp",
+      "bytes": 16410,
+      "sha256": "64e70eb27e2d7e1eca2e6284ab10675c72e4cf7fa89408985f5ef015e105bd70"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/test_gpu_watchdog.cpp",
