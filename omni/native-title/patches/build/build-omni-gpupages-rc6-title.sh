@@ -100,6 +100,8 @@ st "OMNI_VIDEO_IMMERSIVE_V1: $(paste -sd' ' "$LT_/apply_video_immersive.log")"
 # ... and the eboot workspace's copy of the video service, which the title link compiles (tools/prep_launch.py)
 python3 "$S1/tools/apply_video_immersive.py" "$NE" media > "$LT_/apply_video_immersive_ne.log" 2>&1 || { st "video immersive (eboot media) FAILED: $(tail -1 "$LT_/apply_video_immersive_ne.log")"; exit 1; }
 st "OMNI_VIDEO_IMMERSIVE_V1 eboot media: $(paste -sd' ' "$LT_/apply_video_immersive_ne.log")"
+python3 "$S1/tools/apply_video_enhance_media.py" "$NE" > "$LT_/apply_video_enhance_media.log" 2>&1 || { st "video enhance (eboot media) FAILED: $(tail -1 "$LT_/apply_video_enhance_media.log")"; exit 1; }
+st "OMNI_VIDEO_ENHANCE_V1 eboot media: $(tail -1 "$LT_/apply_video_enhance_media.log")"
 # OMNI_GRABBER_SUSPECTS_V1 (2026-11-16): playlists found by content (Downloads confirms), 6 playlist rows
 python3 "$S1/tools/apply_grabber_suspects.py" "$TT" > "$LT_/apply_grabber_suspects.log" 2>&1 || { st "grabber suspects FAILED: $(tail -1 "$LT_/apply_grabber_suspects.log")"; exit 1; }
 st "OMNI_GRABBER_SUSPECTS_V1: $(tail -1 "$LT_/apply_grabber_suspects.log")"
@@ -145,21 +147,245 @@ python3 "$S1/tools/apply_pinned_tabs.py" "$TT" > "$LT_/apply_pinned_tabs.log" 2>
 st "OMNI_PINNED_TABS_V1: $(paste -sd' ' "$LT_/apply_pinned_tabs.log")"
 python3 "$S1/tools/apply_site_clear.py" "$TT" > "$LT_/apply_site_clear.log" 2>&1 || { st "OMNI_SITE_CLEAR_V1 FAILED: $(tail -1 "$LT_/apply_site_clear.log")"; exit 1; }
 st "OMNI_SITE_CLEAR_V1: $(paste -sd' ' "$LT_/apply_site_clear.log")"
+python3 "$S1/tools/apply_tab_search.py" "$TT" > "$LT_/apply_tab_search.log" 2>&1 || { st "OMNI_TAB_SEARCH_V1 FAILED: $(tail -1 "$LT_/apply_tab_search.log")"; exit 1; }
+st "OMNI_TAB_SEARCH_V1: $(paste -sd' ' "$LT_/apply_tab_search.log")"
+python3 "$S1/tools/apply_sleep_timer.py" "$TT" > "$LT_/apply_sleep_timer.log" 2>&1 || { st "OMNI_SLEEP_TIMER_V1 FAILED: $(tail -1 "$LT_/apply_sleep_timer.log")"; exit 1; }
+st "OMNI_SLEEP_TIMER_V1: $(paste -sd' ' "$LT_/apply_sleep_timer.log")"
+python3 "$S1/tools/apply_site_css.py" "$TT" > "$LT_/apply_site_css.log" 2>&1 || { st "OMNI_SITE_TWEAKS_V1 FAILED: $(tail -1 "$LT_/apply_site_css.log")"; exit 1; }
+st "OMNI_SITE_TWEAKS_V1: $(paste -sd' ' "$LT_/apply_site_css.log")"
+python3 "$S1/tools/apply_qr_share.py" "$TT" > "$LT_/apply_qr_share.log" 2>&1 || { st "OMNI_QR_SHARE_V1 FAILED: $(tail -1 "$LT_/apply_qr_share.log")"; exit 1; }
+st "OMNI_QR_SHARE_V1: $(paste -sd' ' "$LT_/apply_qr_share.log")"
+python3 "$S1/tools/apply_screenshot_gallery.py" "$TT" > "$LT_/apply_screenshot_gallery.log" 2>&1 || { st "OMNI_SCREENSHOT_GALLERY_V1 FAILED: $(tail -1 "$LT_/apply_screenshot_gallery.log")"; exit 1; }
+st "OMNI_SCREENSHOT_GALLERY_V1: $(paste -sd' ' "$LT_/apply_screenshot_gallery.log")"
+python3 "$S1/tools/apply_playback_speed.py" "$TT" > "$LT_/apply_playback_speed.log" 2>&1 || { st "OMNI_PLAYBACK_SPEED_V1 FAILED: $(tail -1 "$LT_/apply_playback_speed.log")"; exit 1; }
+st "OMNI_PLAYBACK_SPEED_V1: $(paste -sd' ' "$LT_/apply_playback_speed.log")"
+python3 "$S1/tools/apply_tab_groups.py" "$TT" > "$LT_/apply_tab_groups.log" 2>&1 || { st "OMNI_TAB_GROUPS_V1 FAILED: $(tail -1 "$LT_/apply_tab_groups.log")"; exit 1; }
+st "OMNI_TAB_GROUPS_V1: $(paste -sd' ' "$LT_/apply_tab_groups.log")"
+python3 "$S1/tools/apply_bookmarks_manager.py" "$TT" > "$LT_/apply_bookmarks_manager.log" 2>&1 || { st "OMNI_BOOKMARKS_MANAGER_V1 FAILED: $(tail -1 "$LT_/apply_bookmarks_manager.log")"; exit 1; }
+st "OMNI_BOOKMARKS_MANAGER_V1: $(paste -sd' ' "$LT_/apply_bookmarks_manager.log")"
+python3 "$S1/tools/apply_controls_help.py" "$TT" > "$LT_/apply_controls_help.log" 2>&1 || { st "OMNI_CONTROLS_HELP_V1 FAILED: $(tail -1 "$LT_/apply_controls_help.log")"; exit 1; }
+st "OMNI_CONTROLS_HELP_V1: $(paste -sd' ' "$LT_/apply_controls_help.log")"
+python3 "$S1/tools/apply_popup_notice.py" "$TT" > "$LT_/apply_popup_notice.log" 2>&1 || { st "OMNI_POPUP_NOTICE_V1 FAILED: $(tail -1 "$LT_/apply_popup_notice.log")"; exit 1; }
+st "OMNI_POPUP_NOTICE_V1: $(paste -sd' ' "$LT_/apply_popup_notice.log")"
+python3 "$S1/tools/apply_offline_retry.py" "$TT" > "$LT_/apply_offline_retry.log" 2>&1 || { st "OMNI_OFFLINE_RETRY_V1 FAILED: $(tail -1 "$LT_/apply_offline_retry.log")"; exit 1; }
+st "OMNI_OFFLINE_RETRY_V1: $(paste -sd' ' "$LT_/apply_offline_retry.log")"
+python3 "$S1/tools/apply_save_image.py" "$TT" > "$LT_/apply_save_image.log" 2>&1 || { st "OMNI_SAVE_IMAGE_V1 FAILED: $(tail -1 "$LT_/apply_save_image.log")"; exit 1; }
+st "OMNI_SAVE_IMAGE_V1: $(paste -sd' ' "$LT_/apply_save_image.log")"
+python3 "$S1/tools/apply_kb_layouts.py" "$TT" > "$LT_/apply_kb_layouts.log" 2>&1 || { st "OMNI_KB_LAYOUTS_V1 FAILED: $(tail -1 "$LT_/apply_kb_layouts.log")"; exit 1; }
+st "OMNI_KB_LAYOUTS_V1: $(paste -sd' ' "$LT_/apply_kb_layouts.log")"
+python3 "$S1/tools/apply_settings_search.py" "$TT" > "$LT_/apply_settings_search.log" 2>&1 || { st "OMNI_SETTINGS_SEARCH_V1 FAILED: $(tail -1 "$LT_/apply_settings_search.log")"; exit 1; }
+st "OMNI_SETTINGS_SEARCH_V1: $(paste -sd' ' "$LT_/apply_settings_search.log")"
+python3 "$S1/tools/apply_clear_range.py" "$TT" > "$LT_/apply_clear_range.log" 2>&1 || { st "OMNI_CLEAR_RANGE_V1 FAILED: $(tail -1 "$LT_/apply_clear_range.log")"; exit 1; }
+st "OMNI_CLEAR_RANGE_V1: $(paste -sd' ' "$LT_/apply_clear_range.log")"
+python3 "$S1/tools/apply_pad_feedback.py" "$TT" > "$LT_/apply_pad_feedback.log" 2>&1 || { st "OMNI_PAD_FEEDBACK_V1 FAILED: $(tail -1 "$LT_/apply_pad_feedback.log")"; exit 1; }
+st "OMNI_PAD_FEEDBACK_V1: $(paste -sd' ' "$LT_/apply_pad_feedback.log")"
+python3 "$S1/tools/apply_night_light.py" "$TT" > "$LT_/apply_night_light.log" 2>&1 || { st "OMNI_NIGHT_LIGHT_V1 FAILED: $(tail -1 "$LT_/apply_night_light.log")"; exit 1; }
+st "OMNI_NIGHT_LIGHT_V1: $(paste -sd' ' "$LT_/apply_night_light.log")"
+python3 "$S1/tools/apply_text_cache_cap.py" "$TT" > "$LT_/apply_text_cache_cap.log" 2>&1 || { st "OMNI_TEXT_CACHE_CAP_V1 FAILED: $(tail -1 "$LT_/apply_text_cache_cap.log")"; exit 1; }
+st "OMNI_TEXT_CACHE_CAP_V1: $(paste -sd' ' "$LT_/apply_text_cache_cap.log")"
+python3 "$S1/tools/apply_magnifier.py" "$TT" > "$LT_/apply_magnifier.log" 2>&1 || { st "OMNI_MAGNIFIER_V1 FAILED: $(tail -1 "$LT_/apply_magnifier.log")"; exit 1; }
+st "OMNI_MAGNIFIER_V1: $(paste -sd' ' "$LT_/apply_magnifier.log")"
+python3 "$S1/tools/apply_high_contrast.py" "$TT" > "$LT_/apply_high_contrast.log" 2>&1 || { st "OMNI_HIGH_CONTRAST_V1 FAILED: $(tail -1 "$LT_/apply_high_contrast.log")"; exit 1; }
+st "OMNI_HIGH_CONTRAST_V1: $(paste -sd' ' "$LT_/apply_high_contrast.log")"
+python3 "$S1/tools/apply_start_custom.py" "$TT" > "$LT_/apply_start_custom.log" 2>&1 || { st "OMNI_START_CUSTOM_V1 FAILED: $(tail -1 "$LT_/apply_start_custom.log")"; exit 1; }
+st "OMNI_START_CUSTOM_V1: $(paste -sd' ' "$LT_/apply_start_custom.log")"
+python3 "$S1/tools/apply_dl_progress.py" "$TT" > "$LT_/apply_dl_progress.log" 2>&1 || { st "OMNI_DL_PROGRESS_V1 FAILED: $(tail -1 "$LT_/apply_dl_progress.log")"; exit 1; }
+st "OMNI_DL_PROGRESS_V1: $(paste -sd' ' "$LT_/apply_dl_progress.log")"
+python3 "$S1/tools/apply_site_list.py" "$TT" > "$LT_/apply_site_list.log" 2>&1 || { st "OMNI_SITE_LIST_V1 FAILED: $(tail -1 "$LT_/apply_site_list.log")"; exit 1; }
+st "OMNI_SITE_LIST_V1: $(paste -sd' ' "$LT_/apply_site_list.log")"
+python3 "$S1/tools/apply_quick_answers.py" "$TT" > "$LT_/apply_quick_answers.log" 2>&1 || { st "OMNI_QUICK_ANSWERS_V1 FAILED: $(tail -1 "$LT_/apply_quick_answers.log")"; exit 1; }
+st "OMNI_QUICK_ANSWERS_V1: $(paste -sd' ' "$LT_/apply_quick_answers.log")"
+python3 "$S1/tools/apply_caption_style.py" "$TT" > "$LT_/apply_caption_style.log" 2>&1 || { st "OMNI_CAPTION_STYLE_V1 FAILED: $(tail -1 "$LT_/apply_caption_style.log")"; exit 1; }
+st "OMNI_CAPTION_STYLE_V1: $(paste -sd' ' "$LT_/apply_caption_style.log")"
+python3 "$S1/tools/apply_tab_memory_view.py" "$TT" > "$LT_/apply_tab_memory_view.log" 2>&1 || { st "OMNI_TAB_MEMORY_VIEW_V1 FAILED: $(tail -1 "$LT_/apply_tab_memory_view.log")"; exit 1; }
+st "OMNI_TAB_MEMORY_VIEW_V1: $(paste -sd' ' "$LT_/apply_tab_memory_view.log")"
+python3 "$S1/tools/apply_find_plus.py" "$TT" > "$LT_/apply_find_plus.log" 2>&1 || { st "OMNI_FIND_PLUS_V1 FAILED: $(tail -1 "$LT_/apply_find_plus.log")"; exit 1; }
+st "OMNI_FIND_PLUS_V1: $(paste -sd' ' "$LT_/apply_find_plus.log")"
+python3 "$S1/tools/apply_text_select.py" "$TT" > "$LT_/apply_text_select.log" 2>&1 || { st "OMNI_TEXT_SELECT_V1 FAILED: $(tail -1 "$LT_/apply_text_select.log")"; exit 1; }
+st "OMNI_TEXT_SELECT_V1: $(paste -sd' ' "$LT_/apply_text_select.log")"
+python3 "$S1/tools/apply_dark_schedule.py" "$TT" > "$LT_/apply_dark_schedule.log" 2>&1 || { st "OMNI_DARK_SCHEDULE_V1 FAILED: $(tail -1 "$LT_/apply_dark_schedule.log")"; exit 1; }
+st "OMNI_DARK_SCHEDULE_V1: $(paste -sd' ' "$LT_/apply_dark_schedule.log")"
+python3 "$S1/tools/apply_tab_switcher.py" "$TT" > "$LT_/apply_tab_switcher.log" 2>&1 || { st "OMNI_TAB_SWITCHER_V1 FAILED: $(tail -1 "$LT_/apply_tab_switcher.log")"; exit 1; }
+st "OMNI_TAB_SWITCHER_V1: $(paste -sd' ' "$LT_/apply_tab_switcher.log")"
+python3 "$S1/tools/apply_tab_volume.py" "$TT" > "$LT_/apply_tab_volume.log" 2>&1 || { st "OMNI_TAB_VOLUME_V1 FAILED: $(tail -1 "$LT_/apply_tab_volume.log")"; exit 1; }
+st "OMNI_TAB_VOLUME_V1: $(paste -sd' ' "$LT_/apply_tab_volume.log")"
+python3 "$S1/tools/apply_history_keep.py" "$TT" > "$LT_/apply_history_keep.log" 2>&1 || { st "OMNI_HISTORY_KEEP_V1 FAILED: $(tail -1 "$LT_/apply_history_keep.log")"; exit 1; }
+st "OMNI_HISTORY_KEEP_V1: $(paste -sd' ' "$LT_/apply_history_keep.log")"
+python3 "$S1/tools/apply_web_apps.py" "$TT" > "$LT_/apply_web_apps.log" 2>&1 || { st "OMNI_WEB_APPS_V1 FAILED: $(tail -1 "$LT_/apply_web_apps.log")"; exit 1; }
+st "OMNI_WEB_APPS_V1: $(paste -sd' ' "$LT_/apply_web_apps.log")"
+python3 "$S1/tools/apply_colour_filter.py" "$TT" > "$LT_/colour_filter.log" 2>&1 || { st "OMNI_COLOUR_FILTER FAILED: $(tail -1 "$LT_/colour_filter.log")"; exit 1; }
+st "OMNI_COLOUR_FILTER: $(paste -sd' ' "$LT_/colour_filter.log")"
 # OMNI_GPUPAGES_ZEROCOPY_V1 (outputs/omni-gpu-pages/ZERO-COPY-DESIGN.md): the shell side (inert without /data/omni/gpu-pages-zerocopy.flag)
 python3 "$S1/tools/apply_zerocopy_shell.py" "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_zerocopy_shell.log" 2>&1 || { st "zero-copy shell FAILED: $(tail -1 "$LT_/apply_zerocopy_shell.log")"; exit 1; }
 st "OMNI_GPUPAGES_ZEROCOPY_V1 shell: $(tail -1 "$LT_/apply_zerocopy_shell.log")"
-# OMNI_SPARE_DEFER_V1 (2026-11-15, reboot investigation): the reserve spare engine 30 s after a launch (off: spare-defer-off.flag)
-python3 "$S1/tools/apply_spare_defer.py" "$TT" > "$LT_/apply_spare_defer.log" 2>&1 || { st "spare defer FAILED: $(tail -1 "$LT_/apply_spare_defer.log")"; exit 1; }
-st "OMNI_SPARE_DEFER_V1: $(tail -1 "$LT_/apply_spare_defer.log")"
-# OMNI_SPARE_LAZY_V1 (2026-11-15): no reserve spare engine unless /data/omni/spare-reserve.flag (the idle 244 MB spare sat on every launch peak)
-python3 "$S1/tools/apply_spare_lazy.py" "$TT" > "$LT_/apply_spare_lazy.log" 2>&1 || { st "spare lazy FAILED: $(tail -1 "$LT_/apply_spare_lazy.log")"; exit 1; }
-st "OMNI_SPARE_LAZY_V1: $(tail -1 "$LT_/apply_spare_lazy.log")"
 # OMNI_UBLOCK_MISSING_V1 (2026-11-15): missing uBlock rule files -> pages load + a notice, not "Filtering failed (error 1)" on every page
 python3 "$S1/tools/apply_ublock_missing.py" --ublock "$TT/engine/entry/OmniUBlock.cpp" --blocker "$TT/engine/entry/OmniBlocker.cpp" --browser "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_ublock_missing.log" 2>&1 || { st "ublock missing FAILED: $(tail -1 "$LT_/apply_ublock_missing.log")"; exit 1; }
 st "OMNI_UBLOCK_MISSING_V1: $(paste -sd' ' "$LT_/apply_ublock_missing.log")"
 # OMNI_UBLOCK_REFINE_V1 (2026-11-15 refinement): per-request matcher failures, linear popup glob, IPv6 private-network check, unreadable vs missing rules
 python3 "$S1/tools/apply_ublock_refine.py" --ublock "$TT/engine/entry/OmniUBlock.cpp" --browser "$TT/engine/entry/OmniBrowser.cpp" > "$LT_/apply_ublock_refine.log" 2>&1 || { st "ublock refine FAILED: $(tail -1 "$LT_/apply_ublock_refine.log")"; exit 1; }
 st "OMNI_UBLOCK_REFINE_V1: $(paste -sd' ' "$LT_/apply_ublock_refine.log")"
+python3 "$S1/tools/apply_data_saver.py" "$TT" > "$LT_/data_saver.log" 2>&1 || { st "OMNI_DATA_SAVER FAILED: $(tail -1 "$LT_/data_saver.log")"; exit 1; }
+st "OMNI_DATA_SAVER: $(paste -sd' ' "$LT_/data_saver.log")"
+python3 "$S1/tools/apply_bg_audio.py" "$TT" > "$LT_/bg_audio.log" 2>&1 || { st "OMNI_BG_AUDIO FAILED: $(tail -1 "$LT_/bg_audio.log")"; exit 1; }
+st "OMNI_BG_AUDIO: $(paste -sd' ' "$LT_/bg_audio.log")"
+python3 "$S1/tools/apply_scroll_plus.py" "$TT" > "$LT_/scroll_plus.log" 2>&1 || { st "OMNI_SCROLL_PLUS FAILED: $(tail -1 "$LT_/scroll_plus.log")"; exit 1; }
+st "OMNI_SCROLL_PLUS: $(paste -sd' ' "$LT_/scroll_plus.log")"
+python3 "$S1/tools/apply_tab_actions.py" "$TT" > "$LT_/tab_actions.log" 2>&1 || { st "OMNI_TAB_ACTIONS FAILED: $(tail -1 "$LT_/tab_actions.log")"; exit 1; }
+st "OMNI_TAB_ACTIONS: $(paste -sd' ' "$LT_/tab_actions.log")"
+python3 "$S1/tools/apply_clip_history.py" "$TT" > "$LT_/clip_history.log" 2>&1 || { st "OMNI_CLIP_HISTORY FAILED: $(tail -1 "$LT_/clip_history.log")"; exit 1; }
+st "OMNI_CLIP_HISTORY: $(paste -sd' ' "$LT_/clip_history.log")"
+python3 "$S1/tools/apply_kb_emoji.py" "$TT" > "$LT_/kb_emoji.log" 2>&1 || { st "OMNI_KB_EMOJI FAILED: $(tail -1 "$LT_/kb_emoji.log")"; exit 1; }
+st "OMNI_KB_EMOJI: $(paste -sd' ' "$LT_/kb_emoji.log")"
+python3 "$S1/tools/apply_image_viewer.py" "$TT" > "$LT_/image_viewer.log" 2>&1 || { st "OMNI_IMAGE_VIEWER FAILED: $(tail -1 "$LT_/image_viewer.log")"; exit 1; }
+st "OMNI_IMAGE_VIEWER: $(paste -sd' ' "$LT_/image_viewer.log")"
+python3 "$S1/tools/apply_highlights.py" "$TT" > "$LT_/highlights.log" 2>&1 || { st "OMNI_HIGHLIGHTS FAILED: $(tail -1 "$LT_/highlights.log")"; exit 1; }
+st "OMNI_HIGHLIGHTS: $(paste -sd' ' "$LT_/highlights.log")"
+python3 "$S1/tools/apply_link_preview.py" "$TT" > "$LT_/link_preview.log" 2>&1 || { st "OMNI_LINK_PREVIEW FAILED: $(tail -1 "$LT_/link_preview.log")"; exit 1; }
+st "OMNI_LINK_PREVIEW: $(paste -sd' ' "$LT_/link_preview.log")"
+python3 "$S1/tools/apply_reader_auto.py" "$TT" > "$LT_/reader_auto.log" 2>&1 || { st "OMNI_READER_AUTO FAILED: $(tail -1 "$LT_/reader_auto.log")"; exit 1; }
+st "OMNI_READER_AUTO: $(paste -sd' ' "$LT_/reader_auto.log")"
+python3 "$S1/tools/apply_pdf_viewer.py" "$TT" > "$LT_/pdf_viewer.log" 2>&1 || { st "OMNI_PDF_VIEWER FAILED: $(tail -1 "$LT_/pdf_viewer.log")"; exit 1; }
+st "OMNI_PDF_VIEWER: $(paste -sd' ' "$LT_/pdf_viewer.log")"
+python3 "$S1/tools/apply_startup_choice.py" "$TT" > "$LT_/startup_choice.log" 2>&1 || { st "OMNI_STARTUP_CHOICE FAILED: $(tail -1 "$LT_/startup_choice.log")"; exit 1; }
+st "OMNI_STARTUP_CHOICE: $(paste -sd' ' "$LT_/startup_choice.log")"
+python3 "$S1/tools/apply_ui_accent.py" "$TT" > "$LT_/ui_accent.log" 2>&1 || { st "OMNI_UI_ACCENT FAILED: $(tail -1 "$LT_/ui_accent.log")"; exit 1; }
+st "OMNI_UI_ACCENT: $(paste -sd' ' "$LT_/ui_accent.log")"
+python3 "$S1/tools/apply_js_trim_fix.py" "$TT" > "$LT_/js_trim_fix.log" 2>&1 || { st "OMNI_JS_TRIM_FIX FAILED: $(tail -1 "$LT_/js_trim_fix.log")"; exit 1; }
+st "OMNI_JS_TRIM_FIX: $(paste -sd' ' "$LT_/js_trim_fix.log")"
+python3 "$S1/tools/apply_yt_media_stop.py" "$TT" > "$LT_/yt_media_stop.log" 2>&1 || { st "OMNI_YT_MEDIA_STOP FAILED: $(tail -1 "$LT_/yt_media_stop.log")"; exit 1; }
+st "OMNI_YT_MEDIA_STOP: $(paste -sd' ' "$LT_/yt_media_stop.log")"
+python3 "$S1/tools/apply_ui_scale.py" "$TT" > "$LT_/ui_scale.log" 2>&1 || { st "OMNI_UI_SCALE FAILED: $(tail -1 "$LT_/ui_scale.log")"; exit 1; }
+st "OMNI_UI_SCALE: $(paste -sd' ' "$LT_/ui_scale.log")"
+python3 "$S1/tools/apply_button_map.py" "$TT" > "$LT_/button_map.log" 2>&1 || { st "OMNI_BUTTON_MAP FAILED: $(tail -1 "$LT_/button_map.log")"; exit 1; }
+st "OMNI_BUTTON_MAP: $(paste -sd' ' "$LT_/button_map.log")"
+python3 "$S1/tools/apply_ui_lang.py" "$TT" > "$LT_/ui_lang.log" 2>&1 || { st "OMNI_UI_LANG FAILED: $(tail -1 "$LT_/ui_lang.log")"; exit 1; }
+st "OMNI_UI_LANG: $(paste -sd' ' "$LT_/ui_lang.log")"
+python3 "$S1/tools/apply_perf_overlay.py" "$TT" > "$LT_/perf_overlay.log" 2>&1 || { st "OMNI_PERF_OVERLAY FAILED: $(tail -1 "$LT_/perf_overlay.log")"; exit 1; }
+st "OMNI_PERF_OVERLAY: $(paste -sd' ' "$LT_/perf_overlay.log")"
+python3 "$S1/tools/apply_search_engine.py" "$TT" > "$LT_/search_engine.log" 2>&1 || { st "OMNI_SEARCH_ENGINE FAILED: $(tail -1 "$LT_/search_engine.log")"; exit 1; }
+st "OMNI_SEARCH_ENGINE: $(paste -sd' ' "$LT_/search_engine.log")"
+python3 "$S1/tools/apply_parental.py" "$TT" > "$LT_/parental.log" 2>&1 || { st "OMNI_PARENTAL FAILED: $(tail -1 "$LT_/parental.log")"; exit 1; }
+st "OMNI_PARENTAL: $(paste -sd' ' "$LT_/parental.log")"
+python3 "$S1/tools/apply_pw_lock.py" "$TT" > "$LT_/pw_lock.log" 2>&1 || { st "OMNI_PW_LOCK FAILED: $(tail -1 "$LT_/pw_lock.log")"; exit 1; }
+st "OMNI_PW_LOCK: $(paste -sd' ' "$LT_/pw_lock.log" | cut -c1-300)"
+python3 "$S1/tools/apply_reading_progress.py" "$TT" > "$LT_/reading_progress.log" 2>&1 || { st "OMNI_READING_PROGRESS FAILED: $(tail -1 "$LT_/reading_progress.log")"; exit 1; }
+st "OMNI_READING_PROGRESS: $(paste -sd' ' "$LT_/reading_progress.log")"
+python3 "$S1/tools/apply_reduce_motion.py" "$TT" > "$LT_/reduce_motion.log" 2>&1 || { st "OMNI_REDUCE_MOTION FAILED: $(tail -1 "$LT_/reduce_motion.log")"; exit 1; }
+st "OMNI_REDUCE_MOTION: $(paste -sd' ' "$LT_/reduce_motion.log")"
+python3 "$S1/tools/apply_bf_list.py" "$TT" > "$LT_/bf_list.log" 2>&1 || { st "OMNI_BF_LIST FAILED: $(tail -1 "$LT_/bf_list.log")"; exit 1; }
+st "OMNI_BF_LIST: $(paste -sd' ' "$LT_/bf_list.log")"
+python3 "$S1/tools/apply_tab_sleep.py" "$TT" > "$LT_/tab_sleep.log" 2>&1 || { st "OMNI_TAB_SLEEP FAILED: $(tail -1 "$LT_/tab_sleep.log")"; exit 1; }
+st "OMNI_TAB_SLEEP: $(paste -sd' ' "$LT_/tab_sleep.log")"
+python3 "$S1/tools/apply_tips.py" "$TT" > "$LT_/tips.log" 2>&1 || { st "OMNI_TIPS FAILED: $(tail -1 "$LT_/tips.log")"; exit 1; }
+st "OMNI_TIPS: $(paste -sd' ' "$LT_/tips.log")"
+python3 "$S1/tools/apply_notice_history.py" "$TT" > "$LT_/notice_history.log" 2>&1 || { st "OMNI_NOTICE_HISTORY FAILED: $(tail -1 "$LT_/notice_history.log")"; exit 1; }
+st "OMNI_NOTICE_HISTORY: $(paste -sd' ' "$LT_/notice_history.log")"
+python3 "$S1/tools/apply_tab_thumbs.py" "$TT" > "$LT_/tab_thumbs.log" 2>&1 || { st "OMNI_TAB_THUMBS FAILED: $(tail -1 "$LT_/tab_thumbs.log")"; exit 1; }
+st "OMNI_TAB_THUMBS: $(paste -sd' ' "$LT_/tab_thumbs.log" | cut -c1-300)"
+python3 "$S1/tools/apply_spatial_nav.py" "$TT" > "$LT_/spatial_nav.log" 2>&1 || { st "OMNI_SPATIAL_NAV FAILED: $(tail -1 "$LT_/spatial_nav.log")"; exit 1; }
+st "OMNI_SPATIAL_NAV: $(paste -sd' ' "$LT_/spatial_nav.log" | cut -c1-300)"
+python3 "$S1/tools/apply_video_keys.py" "$TT" > "$LT_/video_keys.log" 2>&1 || { st "OMNI_VIDEO_KEYS FAILED: $(tail -1 "$LT_/video_keys.log")"; exit 1; }
+st "OMNI_VIDEO_KEYS: $(paste -sd' ' "$LT_/video_keys.log" | cut -c1-300)"
+python3 "$S1/tools/apply_pause_info.py" "$TT" > "$LT_/pause_info.log" 2>&1 || { st "OMNI_PAUSE_INFO FAILED: $(tail -1 "$LT_/pause_info.log")"; exit 1; }
+st "OMNI_PAUSE_INFO: $(paste -sd' ' "$LT_/pause_info.log" | cut -c1-300)"
+python3 "$S1/tools/apply_download_all.py" "$TT" > "$LT_/download_all.log" 2>&1 || { st "OMNI_DOWNLOAD_ALL FAILED: $(tail -1 "$LT_/download_all.log")"; exit 1; }
+st "OMNI_DOWNLOAD_ALL: $(paste -sd' ' "$LT_/download_all.log" | cut -c1-300)"
+python3 "$S1/tools/apply_notes.py" "$TT" > "$LT_/notes.log" 2>&1 || { st "OMNI_NOTES FAILED: $(tail -1 "$LT_/notes.log")"; exit 1; }
+st "OMNI_NOTES: $(paste -sd' ' "$LT_/notes.log" | cut -c1-300)"
+python3 "$S1/tools/apply_favicons.py" "$TT" > "$LT_/favicons.log" 2>&1 || { st "OMNI_FAVICONS FAILED: $(tail -1 "$LT_/favicons.log")"; exit 1; }
+st "OMNI_FAVICONS: $(paste -sd' ' "$LT_/favicons.log" | cut -c1-300)"
+python3 "$S1/tools/apply_start_icons.py" "$TT" > "$LT_/start_icons.log" 2>&1 || { st "OMNI_START_ICONS FAILED: $(tail -1 "$LT_/start_icons.log")"; exit 1; }
+st "OMNI_START_ICONS: $(paste -sd' ' "$LT_/start_icons.log" | cut -c1-300)"
+python3 "$S1/tools/apply_page_info.py" "$TT" > "$LT_/page_info.log" 2>&1 || { st "OMNI_PAGE_INFO FAILED: $(tail -1 "$LT_/page_info.log")"; exit 1; }
+st "OMNI_PAGE_INFO: $(paste -sd' ' "$LT_/page_info.log" | cut -c1-300)"
+python3 "$S1/tools/apply_site_search.py" "$TT" > "$LT_/site_search.log" 2>&1 || { st "OMNI_SITE_SEARCH FAILED: $(tail -1 "$LT_/site_search.log")"; exit 1; }
+st "OMNI_SITE_SEARCH: $(paste -sd' ' "$LT_/site_search.log" | cut -c1-300)"
+python3 "$S1/tools/apply_site_search_suggest.py" "$TT" > "$LT_/site_search_suggest.log" 2>&1 || { st "OMNI_SITE_SEARCH_SUGGEST FAILED: $(tail -1 "$LT_/site_search_suggest.log")"; exit 1; }
+st "OMNI_SITE_SEARCH_SUGGEST: $(paste -sd' ' "$LT_/site_search_suggest.log" | cut -c1-300)"
+python3 "$S1/tools/apply_saved_suggest.py" "$TT" > "$LT_/saved_suggest.log" 2>&1 || { st "OMNI_SAVED_SUGGEST FAILED: $(tail -1 "$LT_/saved_suggest.log")"; exit 1; }
+st "OMNI_SAVED_SUGGEST: $(paste -sd' ' "$LT_/saved_suggest.log" | cut -c1-300)"
+python3 "$S1/tools/apply_guest_mode.py" "$TT" > "$LT_/guest_mode.log" 2>&1 || { st "OMNI_GUEST_MODE FAILED: $(tail -1 "$LT_/guest_mode.log")"; exit 1; }
+st "OMNI_GUEST_MODE: $(paste -sd' ' "$LT_/guest_mode.log" | cut -c1-300)"
+python3 "$S1/tools/apply_pc_links.py" "$TT" > "$LT_/pc_links.log" 2>&1 || { st "OMNI_PC_LINKS FAILED: $(tail -1 "$LT_/pc_links.log")"; exit 1; }
+st "OMNI_PC_LINKS: $(paste -sd' ' "$LT_/pc_links.log" | cut -c1-300)"
+python3 "$S1/tools/apply_bookmarklets.py" "$TT" > "$LT_/bookmarklets.log" 2>&1 || { st "OMNI_BOOKMARKLETS FAILED: $(tail -1 "$LT_/bookmarklets.log")"; exit 1; }
+st "OMNI_BOOKMARKLETS: $(paste -sd' ' "$LT_/bookmarklets.log" | cut -c1-300)"
+python3 "$S1/tools/apply_translate_plus.py" "$TT" > "$LT_/translate_plus.log" 2>&1 || { st "OMNI_TRANSLATE_PLUS FAILED: $(tail -1 "$LT_/translate_plus.log")"; exit 1; }
+st "OMNI_TRANSLATE_PLUS: $(paste -sd' ' "$LT_/translate_plus.log" | cut -c1-300)"
+python3 "$S1/tools/apply_yt_guard_recover.py" "$TT" > "$LT_/yt_guard_recover.log" 2>&1 || { st "OMNI_YT_GUARD_RECOVER FAILED: $(tail -1 "$LT_/yt_guard_recover.log")"; exit 1; }
+st "OMNI_YT_GUARD_RECOVER: $(paste -sd' ' "$LT_/yt_guard_recover.log" | cut -c1-300)"
+python3 "$S1/tools/apply_auto_refresh.py" "$TT" > "$LT_/auto_refresh.log" 2>&1 || { st "OMNI_AUTO_REFRESH FAILED: $(tail -1 "$LT_/auto_refresh.log")"; exit 1; }
+st "OMNI_AUTO_REFRESH: $(paste -sd' ' "$LT_/auto_refresh.log" | cut -c1-300)"
+python3 "$S1/tools/apply_audio_bar.py" "$TT" > "$LT_/audio_bar.log" 2>&1 || { st "OMNI_AUDIO_BAR FAILED: $(tail -1 "$LT_/audio_bar.log")"; exit 1; }
+st "OMNI_AUDIO_BAR: $(paste -sd' ' "$LT_/audio_bar.log" | cut -c1-300)"
+python3 "$S1/tools/apply_cookie_policy.py" "$TT" > "$LT_/cookie_policy.log" 2>&1 || { st "OMNI_COOKIE_POLICY FAILED: $(tail -1 "$LT_/cookie_policy.log")"; exit 1; }
+st "OMNI_COOKIE_POLICY: $(paste -sd' ' "$LT_/cookie_policy.log" | cut -c1-300)"
+python3 "$S1/tools/apply_min_text.py" "$TT" > "$LT_/min_text.log" 2>&1 || { st "OMNI_MIN_TEXT FAILED: $(tail -1 "$LT_/min_text.log")"; exit 1; }
+st "OMNI_MIN_TEXT: $(paste -sd' ' "$LT_/min_text.log" | cut -c1-300)"
+python3 "$S1/tools/apply_one_sound.py" "$TT" > "$LT_/one_sound.log" 2>&1 || { st "OMNI_ONE_SOUND FAILED: $(tail -1 "$LT_/one_sound.log")"; exit 1; }
+st "OMNI_ONE_SOUND: $(paste -sd' ' "$LT_/one_sound.log" | cut -c1-300)"
+python3 "$S1/tools/apply_sleep_end.py" "$TT" > "$LT_/sleep_end.log" 2>&1 || { st "OMNI_SLEEP_END FAILED: $(tail -1 "$LT_/sleep_end.log")"; exit 1; }
+st "OMNI_SLEEP_END: $(paste -sd' ' "$LT_/sleep_end.log" | cut -c1-300)"
+python3 "$S1/tools/apply_kb_showpw.py" "$TT" > "$LT_/kb_showpw.log" 2>&1 || { st "OMNI_KB_SHOWPW FAILED: $(tail -1 "$LT_/kb_showpw.log")"; exit 1; }
+st "OMNI_KB_SHOWPW: $(paste -sd' ' "$LT_/kb_showpw.log" | cut -c1-300)"
+python3 "$S1/tools/apply_kb_fields.py" "$TT" > "$LT_/kb_fields.log" 2>&1 || { st "OMNI_KB_FIELDS FAILED: $(tail -1 "$LT_/kb_fields.log")"; exit 1; }
+st "OMNI_KB_FIELDS: $(paste -sd' ' "$LT_/kb_fields.log" | cut -c1-300)"
+python3 "$S1/tools/apply_kb_nextfield.py" "$TT" > "$LT_/kb_nextfield.log" 2>&1 || { st "OMNI_KB_NEXTFIELD FAILED: $(tail -1 "$LT_/kb_nextfield.log")"; exit 1; }
+st "OMNI_KB_NEXTFIELD: $(paste -sd' ' "$LT_/kb_nextfield.log" | cut -c1-300)"
+python3 "$S1/tools/apply_kb_snippets.py" "$TT" > "$LT_/kb_snippets.log" 2>&1 || { st "OMNI_KB_SNIPPETS FAILED: $(tail -1 "$LT_/kb_snippets.log")"; exit 1; }
+st "OMNI_KB_SNIPPETS: $(paste -sd' ' "$LT_/kb_snippets.log" | cut -c1-300)"
+python3 "$S1/tools/apply_yt_autocontinue.py" "$TT" > "$LT_/yt_autocontinue.log" 2>&1 || { st "OMNI_YT_AUTOCONTINUE FAILED: $(tail -1 "$LT_/yt_autocontinue.log")"; exit 1; }
+st "OMNI_YT_AUTOCONTINUE: $(paste -sd' ' "$LT_/yt_autocontinue.log" | cut -c1-300)"
+python3 "$S1/tools/apply_whatsnew.py" "$TT" > "$LT_/whatsnew.log" 2>&1 || { st "OMNI_WHATSNEW FAILED: $(tail -1 "$LT_/whatsnew.log")"; exit 1; }
+st "OMNI_WHATSNEW: $(paste -sd' ' "$LT_/whatsnew.log" | cut -c1-300)"
+python3 "$S1/tools/apply_dl_panel.py" "$TT" > "$LT_/dl_panel.log" 2>&1 || { st "OMNI_DL_PANEL FAILED: $(tail -1 "$LT_/dl_panel.log")"; exit 1; }
+st "OMNI_DL_PANEL: $(paste -sd' ' "$LT_/dl_panel.log" | cut -c1-300)"
+python3 "$S1/tools/apply_hard_reload.py" "$TT" > "$LT_/hard_reload.log" 2>&1 || { st "OMNI_HARD_RELOAD FAILED: $(tail -1 "$LT_/hard_reload.log")"; exit 1; }
+st "OMNI_HARD_RELOAD: $(paste -sd' ' "$LT_/hard_reload.log" | cut -c1-300)"
+python3 "$S1/tools/apply_fit_width.py" "$TT" > "$LT_/fit_width.log" 2>&1 || { st "OMNI_FIT_WIDTH FAILED: $(tail -1 "$LT_/fit_width.log")"; exit 1; }
+st "OMNI_FIT_WIDTH: $(paste -sd' ' "$LT_/fit_width.log" | cut -c1-300)"
+python3 "$S1/tools/apply_site_mute.py" "$TT" > "$LT_/site_mute.log" 2>&1 || { st "OMNI_SITE_MUTE FAILED: $(tail -1 "$LT_/site_mute.log")"; exit 1; }
+st "OMNI_SITE_MUTE: $(paste -sd' ' "$LT_/site_mute.log" | cut -c1-300)"
+python3 "$S1/tools/apply_site_volume.py" "$TT" > "$LT_/site_volume.log" 2>&1 || { st "OMNI_SITE_VOLUME FAILED: $(tail -1 "$LT_/site_volume.log")"; exit 1; }
+st "OMNI_SITE_VOLUME: $(paste -sd' ' "$LT_/site_volume.log" | cut -c1-300)"
+python3 "$S1/tools/apply_auto_fullscreen.py" "$TT" > "$LT_/auto_fullscreen.log" 2>&1 || { st "OMNI_AUTO_FULLSCREEN FAILED: $(tail -1 "$LT_/auto_fullscreen.log")"; exit 1; }
+st "OMNI_AUTO_FULLSCREEN: $(paste -sd' ' "$LT_/auto_fullscreen.log" | cut -c1-300)"
+python3 "$S1/tools/apply_link_qr.py" "$TT" > "$LT_/link_qr.log" 2>&1 || { st "OMNI_LINK_QR FAILED: $(tail -1 "$LT_/link_qr.log")"; exit 1; }
+st "OMNI_LINK_QR: $(paste -sd' ' "$LT_/link_qr.log" | cut -c1-300)"
+python3 "$S1/tools/apply_tab_autoclose.py" "$TT" > "$LT_/tab_autoclose.log" 2>&1 || { st "OMNI_TAB_AUTOCLOSE FAILED: $(tail -1 "$LT_/tab_autoclose.log")"; exit 1; }
+st "OMNI_TAB_AUTOCLOSE: $(paste -sd' ' "$LT_/tab_autoclose.log" | cut -c1-300)"
+python3 "$S1/tools/apply_crash_choices.py" "$TT" > "$LT_/crash_choices.log" 2>&1 || { st "OMNI_CRASH_CHOICES FAILED: $(tail -1 "$LT_/crash_choices.log")"; exit 1; }
+st "OMNI_CRASH_CHOICES: $(paste -sd' ' "$LT_/crash_choices.log" | cut -c1-300)"
+python3 "$S1/tools/apply_lite_mode.py" "$TT" > "$LT_/lite_mode.log" 2>&1 || { st "OMNI_LITE_MODE FAILED: $(tail -1 "$LT_/lite_mode.log")"; exit 1; }
+st "OMNI_LITE_MODE: $(paste -sd' ' "$LT_/lite_mode.log" | cut -c1-300)"
+python3 "$S1/tools/apply_zapper.py" "$TT" > "$LT_/zapper.log" 2>&1 || { st "OMNI_ZAPPER FAILED: $(tail -1 "$LT_/zapper.log")"; exit 1; }
+st "OMNI_ZAPPER: $(paste -sd' ' "$LT_/zapper.log" | cut -c1-300)"
+python3 "$S1/tools/apply_game_mode.py" "$TT" > "$LT_/game_mode.log" 2>&1 || { st "OMNI_GAME_MODE FAILED: $(tail -1 "$LT_/game_mode.log")"; exit 1; }
+st "OMNI_GAME_MODE: $(paste -sd' ' "$LT_/game_mode.log" | cut -c1-300)"
+python3 "$S1/tools/apply_access_input.py" "$TT" > "$LT_/access_input.log" 2>&1 || { st "OMNI_ACCESS_INPUT FAILED: $(tail -1 "$LT_/access_input.log")"; exit 1; }
+st "OMNI_ACCESS_INPUT: $(paste -sd' ' "$LT_/access_input.log" | cut -c1-300)"
+python3 "$S1/tools/apply_pad_test.py" "$TT" > "$LT_/pad_test.log" 2>&1 || { st "OMNI_PAD_TEST FAILED: $(tail -1 "$LT_/pad_test.log")"; exit 1; }
+st "OMNI_PAD_TEST: $(paste -sd' ' "$LT_/pad_test.log" | cut -c1-300)"
+python3 "$S1/tools/apply_pointer_tune.py" "$TT" > "$LT_/pointer_tune.log" 2>&1 || { st "OMNI_POINTER_TUNE FAILED: $(tail -1 "$LT_/pointer_tune.log")"; exit 1; }
+st "OMNI_POINTER_TUNE: $(paste -sd' ' "$LT_/pointer_tune.log" | cut -c1-300)"
+python3 "$S1/tools/apply_seek_pause.py" "$TT" > "$LT_/seek_pause.log" 2>&1 || { st "OMNI_SEEK_PAUSE FAILED: $(tail -1 "$LT_/seek_pause.log")"; exit 1; }
+st "OMNI_SEEK_PAUSE: $(paste -sd' ' "$LT_/seek_pause.log" | cut -c1-300)"
+python3 "$S1/tools/apply_notice_actions.py" "$TT" > "$LT_/notice_actions.log" 2>&1 || { st "OMNI_NOTICE_ACTIONS FAILED: $(tail -1 "$LT_/notice_actions.log")"; exit 1; }
+st "OMNI_NOTICE_ACTIONS: $(paste -sd' ' "$LT_/notice_actions.log" | cut -c1-300)"
+python3 "$S1/tools/apply_tab_group_site.py" "$TT" > "$LT_/tab_group_site.log" 2>&1 || { st "OMNI_TAB_GROUP_SITE FAILED: $(tail -1 "$LT_/tab_group_site.log")"; exit 1; }
+st "OMNI_TAB_GROUP_SITE: $(paste -sd' ' "$LT_/tab_group_site.log" | cut -c1-300)"
+python3 "$S1/tools/apply_oled_care.py" "$TT" > "$LT_/oled_care.log" 2>&1 || { st "OMNI_OLED_CARE FAILED: $(tail -1 "$LT_/oled_care.log")"; exit 1; }
+st "OMNI_OLED_CARE: $(paste -sd' ' "$LT_/oled_care.log" | cut -c1-300)"
+python3 "$S1/tools/apply_clear_on_exit.py" "$TT" > "$LT_/clear_on_exit.log" 2>&1 || { st "OMNI_CLEAR_ON_EXIT FAILED: $(tail -1 "$LT_/clear_on_exit.log")"; exit 1; }
+st "OMNI_CLEAR_ON_EXIT: $(paste -sd' ' "$LT_/clear_on_exit.log" | cut -c1-300)"
+python3 "$S1/tools/apply_video_enhance.py" "$TT" > "$LT_/video_enhance.log" 2>&1 || { st "OMNI_VIDEO_ENHANCE FAILED: $(tail -1 "$LT_/video_enhance.log")"; exit 1; }
+st "OMNI_VIDEO_ENHANCE_V1 (Video upscaling row): $(tail -1 "$LT_/video_enhance.log")"
+# OMNI_SPARE_DEFER_V1 (2026-11-15, reboot investigation): the reserve spare engine 30 s after a launch (off: spare-defer-off.flag)
+python3 "$S1/tools/apply_spare_defer.py" "$TT" > "$LT_/apply_spare_defer.log" 2>&1 || { st "spare defer FAILED: $(tail -1 "$LT_/apply_spare_defer.log")"; exit 1; }
+st "OMNI_SPARE_DEFER_V1: $(tail -1 "$LT_/apply_spare_defer.log")"
+# OMNI_SPARE_LAZY_V1 (2026-11-15): no reserve spare engine unless /data/omni/spare-reserve.flag (the idle 244 MB spare sat on every launch peak)
+python3 "$S1/tools/apply_spare_lazy.py" "$TT" > "$LT_/apply_spare_lazy.log" 2>&1 || { st "spare lazy FAILED: $(tail -1 "$LT_/apply_spare_lazy.log")"; exit 1; }
+st "OMNI_SPARE_LAZY_V1: $(tail -1 "$LT_/apply_spare_lazy.log")"
 CGT=$TT/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics; CGB=$TB/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics
 for f in ogp-s1-drawingarea.inc ogp-s1-surface.inc ogp-s1-policy.h ogp-s1b-async.inc; do
   cmp -s "$CGT/$f" "$CGB/$f" && echo "same-as-child $f $(sha256sum "$CGT/$f" | cut -c1-8)" || echo "DIFF-from-child $f T $(sha256sum "$CGT/$f" | cut -c1-8) C $(sha256sum "$CGB/$f" | cut -c1-8)"
@@ -181,12 +407,54 @@ st "ninja state T ok: $(grep -c '^\[' "$F/logs/ninja-T.log") steps, $(grep -c 'w
 case "$IPCT" in da4a7562*) ;; *) st "IPC generated code $IPCT is not the pair's da4a7562: the title would not match child 60937efe: stopping"; exit 1;; esac
 # ---- 3. title link (launch recipe + stage-1 title sources) and the import gate
 python3 "$NE/make_link_command.py" > "$F/logs/link-command-title.log" 2>&1 || { st "title link command FAILED"; exit 1; }
+# OMNI_GPU_PREPREP_V1 (2026-11-17): prep_launch.py COPIES $NE/engine/media into /home/builder/ogp-ls1b-objs/media and
+# compiles it right there, and puts a fresh $NE/src/OmniGpuPresent.cpp in place. So the video-service halves of
+# OMNI_GPU_DEFAULT_ON_V1 / OMNI_GPU_MIX_V1 must be applied BEFORE prep (g2-g6 compiled OmniHwService.cpp without the
+# mix: "gpu mix check" absent from the g6 eboot), and the present halves again AFTER prep (the lines further down).
+python3 "$S1/tools/apply_gpu_default_on.py" "$NE" > "$F/logs/apply_gpu_default_on_pre.log" 2>&1 || { st "gpu default on (pre-prep) FAILED: $(tail -1 "$F/logs/apply_gpu_default_on_pre.log")"; exit 1; }
+python3 "$S1/tools/apply_gpu_mix.py" "$NE" > "$F/logs/apply_gpu_mix_pre.log" 2>&1 || { st "gpu mix (pre-prep) FAILED: $(tail -1 "$F/logs/apply_gpu_mix_pre.log")"; exit 1; }
+st "pre-prep GPU patches: default-on $(tail -1 "$F/logs/apply_gpu_default_on_pre.log" | cut -c1-60); mix $(tail -1 "$F/logs/apply_gpu_mix_pre.log" | cut -c1-80)"
 python3 "$NE/tools/prep_launch.py" > "$F/logs/prep.log" 2>&1 || { st "prep FAILED: $(tail -2 "$F/logs/prep.log" | tr '\n' ' ' | cut -c1-500)"; exit 1; }
+# OMNI_PAGES_FROM_REPO_V1 (2026-11-16): the built-in pages come from the public repo's committed bundle (omni/pages/bundle-clean4 at
+# its HEAD), not the 2026-11-04 codex-ui snapshot, which lacked every page added since (What's new, Help, timer, solitaire, ...).
+# Runs after prep_launch.py (which rewrites build.py) and before build.py.
+OMNIBLOOM='/path/to/omnibloom'; PG=/tmp/omni-pages-repo
+rm -rf "$PG" && mkdir -p "$PG" && git -c safe.directory='*' -C "$OMNIBLOOM" archive HEAD omni/pages/bundle-clean4 | tar -x -C "$PG" || { st "pages export FAILED"; exit 1; }
+python3 - "$NE/build.py" "$PG/omni/pages/bundle-clean4" > "$F/logs/pages-from-repo.log" 2>&1 <<'PY' || { st "pages source switch FAILED: $(tail -1 "$F/logs/pages-from-repo.log")"; exit 1; }
+import sys
+p, src = sys.argv[1], sys.argv[2]; s = open(p).read()
+old = "OUTS / 'codex-ui/20261104-ui-clean4-final-pages/proposed/pages'"
+if s.count(old) != 1 and src not in s: sys.exit('pages copy line not found once')
+s = s.replace(old, 'Path(%r)' % src); open(p, 'w').write(s); print('pages source:', src)
+PY
+st "OMNI_PAGES_FROM_REPO_V1: pages from the repo at $(git -c safe.directory='*' -C "$OMNIBLOOM" rev-parse --short HEAD) ($(find "$PG" -type f | wc -l) files)"
 python3 "$S1/tools/apply_zerocopy_present.py" "$NE/src" "$S1/src-title" > "$F/logs/apply_zerocopy_present.log" 2>&1 || { st "zero-copy present FAILED: $(tail -1 "$F/logs/apply_zerocopy_present.log")"; exit 1; }
 st "OMNI_GPUPAGES_ZEROCOPY_V1 present: $(tail -1 "$F/logs/apply_zerocopy_present.log")"
+python3 "$S1/tools/apply_night_light_present.py" "$NE/src" "$S1/src-title" > "$F/logs/apply_night_light_present.log" 2>&1 || { st "night light present FAILED: $(tail -1 "$F/logs/apply_night_light_present.log")"; exit 1; }
+st "OMNI_NIGHT_LIGHT_V1 present: $(tail -1 "$F/logs/apply_night_light_present.log")"
+python3 "$S1/tools/apply_colour_filter_present.py" "$NE/src" "$S1/src-title" > "$F/logs/apply_colour_filter_present.log" 2>&1 || { st "colour filter present FAILED: $(tail -1 "$F/logs/apply_colour_filter_present.log")"; exit 1; }
+st "OMNI_COLOUR_FILTER_V1 present: $(tail -1 "$F/logs/apply_colour_filter_present.log")"
+python3 "$S1/tools/apply_magnifier_present.py" "$NE/src" "$S1/src-title" > "$F/logs/apply_magnifier_present.log" 2>&1 || { st "magnifier present FAILED: $(tail -1 "$F/logs/apply_magnifier_present.log")"; exit 1; }
+st "OMNI_MAGNIFIER_V1 present: $(tail -1 "$F/logs/apply_magnifier_present.log")"
 # OMNI_STARTER_V1/V3 (2026-11-15): engine processes through Omni's own starter (outputs/omni-starter), elfldr as the fallback
 python3 "$S1/tools/apply_starter.py" "$NE/src" > "$F/logs/apply_starter.log" 2>&1 || { st "starter launcher FAILED: $(tail -1 "$F/logs/apply_starter.log")"; exit 1; }
 st "OMNI_STARTER_V3: $(tail -1 "$F/logs/apply_starter.log")"
+# OMNI_GPU_DEFAULT_ON_V1 (2026-11-17, moved here): GPU present + GPU video conversion on by default (off switches
+# gpu-present-off.flag / gpu-video-off.flag; headless self-tests keep the old flag rule). MUST run after prep_launch.py:
+# it puts a fresh OmniGpuPresent.cpp into $NE/src every build (before the move, g1/g3 shipped without the present edit).
+python3 "$S1/tools/apply_gpu_default_on.py" "$NE" > "$F/logs/apply_gpu_default_on.log" 2>&1 || { st "gpu default on FAILED: $(tail -1 "$F/logs/apply_gpu_default_on.log")"; exit 1; }
+st "OMNI_GPU_DEFAULT_ON_V1: $(paste -sd' ' "$F/logs/apply_gpu_default_on.log")"
+# check: the present source must carry the edit after this step (the title must not ship without it again)
+grep -q "OMNI_GPU_DEFAULT_ON_V1_R2 reason" "$NE/src/OmniGpuPresent.cpp" || { st "gpu default on MISSING in src/OmniGpuPresent.cpp"; exit 1; }
+# OMNI_GPU_MIX_V1 (2026-11-17): translucent page pixels over a full-screen video are blended on the GPU (one compute pass
+# in the GPU present) instead of recorded per pixel and blended on the CPU (4K overlay bench: page-frame accept 53-82 ms).
+# Off switch /data/omni/gpu-mix-off.flag. Must run LAST among the $NE patches (it changes lines others anchor on).
+python3 "$S1/tools/apply_gpu_mix.py" "$NE" > "$F/logs/apply_gpu_mix.log" 2>&1 || { st "gpu mix FAILED: $(tail -1 "$F/logs/apply_gpu_mix.log")"; exit 1; }
+st "OMNI_GPU_MIX_V1: $(tail -1 "$F/logs/apply_gpu_mix.log")"
+# OMNI_PATCH_MARKER_AUDIT_V1 (2026-11-17): every marker a step of this build reported as applied/already must still be in
+# the final sources (a re-copied file undid OMNI_GPU_DEFAULT_ON_V1 in g1/g3). Report-only; add --fatal after one clean run.
+python3 "$S1/tools/audit_patch_markers.py" --fatal "$F/steps.txt" "$TT/engine" "$NE/src" /home/builder/ogp-ls1b-objs/media "$NE/shader" > "$F/logs/marker-audit.txt" 2>&1 || { st "PATCH MARKER AUDIT FAILED: $(grep -m8 '^MISSING' "$F/logs/marker-audit.txt" | cut -d' ' -f2 | paste -sd' ')"; exit 1; }
+st "OMNI_PATCH_MARKER_AUDIT_V1: $(head -1 "$F/logs/marker-audit.txt") $(grep -m8 '^MISSING' "$F/logs/marker-audit.txt" | cut -d' ' -f2 | paste -sd' ')"
 OGP_BRK="$O/omni-gpupages-ls1b/broker-mem" python3 "$S1/tools/patch_title_build.py" "$NE/build.py" "$S1/src-title" > "$F/logs/patch-title-build.log" 2>&1 || { st "stage-1 title sources FAILED"; exit 1; }
 rm -rf "$NE/build" "$NE/out"
 nice -n 19 python3 "$NE/build.py" > "$F/logs/title-build.log" 2>&1 || { st "title FAILED: $(grep -o 'undefined symbol: .*' "$F/logs/title-build.log" | sort -u | head -6 | tr '\n' ' ') $(tail -3 "$F/logs/title-build.log" | tr '\n' ' ' | cut -c1-600)"; exit 1; }

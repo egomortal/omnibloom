@@ -5,6 +5,13 @@
 We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.
 
 ### Omni
+- **Graphics chip on by default:** the screen and video conversion now use the PS5's graphics chip unless you turn it
+  off (`/data/omni/gpu-present-off.flag`, `/data/omni/gpu-video-off.flag`). Before, they stayed on the processor
+  unless a test flag was set, so everyday Omni ran the slower path (4K video conversion 3-5 ms per frame instead of
+  about 0.5 ms).
+- **Video sites with a dimmed or framed player no longer slow Omni down:** semi-transparent layers over a full-screen
+  video are blended on the graphics chip. Console 4K test: page updates take 7-11 ms with a full-screen dim layer
+  instead of 53-75 ms. HDR videos keep the previous path. Off switch: `/data/omni/gpu-mix-off.flag`.
 - **Pinned tabs:** D-pad left / right on a tab row in the Tabs panel, or "Pin this tab" in the hold-Cross menu. Up to
   6; never in private tabs; kept after a restart.
 - **Tab audio:** speaker icons on tabs that play sound; Triangle in the Tabs panel mutes / unmutes a tab.
