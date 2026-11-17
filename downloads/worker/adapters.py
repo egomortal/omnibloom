@@ -240,7 +240,7 @@ class PythonYtdlpAdapter:
     def options(self, folder, audio, hook, postprocess_hook=lambda _: None, fmt=None, referer=None, preset=None, subtitle_lang=None, container=None,
                 clip=None):
         global _provider
-        import yt_dlp
+        import yt_dlp  # noqa: F401  (fails early when yt-dlp is missing)
         install_challenge_provider()
         ffmpeg = FFmpegAdapter()
         # OMNI_DL_CLIP_V1: a clip's file name says which part it holds: 'Title [id] (clip 1m20s-3m45s).mp4'.

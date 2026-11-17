@@ -14,7 +14,6 @@ Everything is checked here on the PC first with the console's own limits, then u
 verified FTP upload into a temporary folder name and renamed into place in one step. The earlier version is
 kept as <id>.prev (for Roll back); Remove renames to <id>.removed-<time>. Nothing on the PS5 is deleted.
 """
-import io
 import json
 import os
 import posixpath

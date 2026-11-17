@@ -4,7 +4,6 @@ root=Path(__file__).parent;base=root.parent
 sys.path.insert(0,str(root.parents[2]/'r2-build-tools/fonttools'))
 from fontTools.ttLib import TTFont
 from PIL import Image
-from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer,Image as PDFImage,PageBreak,KeepTogether
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors

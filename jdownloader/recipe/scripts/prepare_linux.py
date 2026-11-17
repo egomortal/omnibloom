@@ -1,5 +1,5 @@
 """Extract verified inputs into one fresh no-spaces Linux temporary build tree."""
-import hashlib,json,os,subprocess,tarfile,zipfile
+import hashlib,json,subprocess,tarfile,zipfile
 from pathlib import Path
 OUT=Path(__file__).resolve().parent
 BUILD=Path('/var/tmp/omni-jd-native-20261026-001')

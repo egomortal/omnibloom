@@ -1,5 +1,5 @@
 """Reproduce JD005 then change only entry to call existing metadata sampler."""
-import hashlib,json,os,re,shutil,subprocess,time
+import hashlib,json,os,shutil,subprocess,time
 from pathlib import Path
 OUT=Path(__file__).resolve().parent;C=json.loads((OUT/'linux-build-paths.json').read_text());BASE=OUT/'packages/jd-005';TARGET=OUT/'packages/jd-006';TARGET.mkdir();FROZEN=TARGET/'source';FROZEN.mkdir()
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()

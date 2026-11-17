@@ -162,8 +162,8 @@ class Races(Base):
             stop = threading.Event()
             errors = []
 
-            def shuffle():
-                rnd = random.Random(_round)
+            def shuffle(keys=keys, stop=stop, errors=errors, seed=_round):
+                rnd = random.Random(seed)
                 while not stop.is_set():
                     key = rnd.choice(keys)
                     try:
@@ -176,7 +176,7 @@ class Races(Base):
             mover = threading.Thread(target=shuffle, daemon=True)
             mover.start()
             self.jobs.set_paused(False)
-            wait_for(lambda: all(self.jobs.jobs[k]['state'] == 'completed' for k in keys))
+            wait_for(lambda keys=keys: all(self.jobs.jobs[k]['state'] == 'completed' for k in keys))
             stop.set()
             mover.join(5)
             self.assertEqual(errors, [])

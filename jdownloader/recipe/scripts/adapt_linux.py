@@ -1,5 +1,5 @@
 """Only private pinned-source adaptations for Linux host and owned PS5 paths."""
-import difflib,hashlib,json,os
+import difflib,hashlib,json
 from pathlib import Path
 OUT=Path(__file__).resolve().parent
 C=json.loads((OUT/'linux-build-paths.json').read_text());PORT=Path(C['port']);SOURCE=Path(C['source'])

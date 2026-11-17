@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 
 from fake_console import FakeConsole  # noqa: E402
-from test_end_to_end import catalog_of, make_packages, new_console  # noqa: E402
+from test_end_to_end import catalog_of, make_packages  # noqa: E402
 from omnibloom_setup import config, oneclick, ps5  # noqa: E402
 
 IPCONFIG = """

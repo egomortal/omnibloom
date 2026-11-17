@@ -1,5 +1,5 @@
 """Exclude unavailable optional CUPS printer native service on PS5 only."""
-import difflib,hashlib,json
+import difflib,json
 from pathlib import Path
 OUT=Path(__file__).resolve().parent;C=json.loads((OUT/'linux-build-paths.json').read_text());p=Path(C['source'])/'make/modules/java.desktop/lib/AwtLibraries.gmk';old=p.read_text()
 needle='  LIBAWT_HEADLESS_EXTRA_HEADER_DIRS := '

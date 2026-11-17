@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Copy (read-only) every source the java-worker.elf / Java image build used into ./source/.
 Inputs come from the downloader chat's folder; nothing there is changed."""
-import difflib, hashlib, json, os, shutil, sys, tarfile
+import difflib, hashlib, json, shutil, sys, tarfile
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ORIG = Path(sys.argv[1])            # .../downloader-workspace/outputs/omni-jdownloader-overnight-20261026

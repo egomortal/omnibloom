@@ -1,6 +1,6 @@
 """OMNI_DL_LIBRARY_V1: the real worker with a filled Saved folder, for test-library.cjs.
 Usage: serve_library_worker.py PORT   (prints "ready <port> <tmp>"; delete <tmp> afterwards)"""
-import math, os, struct, sys, tempfile, time, wave
+import math, os, sys, tempfile, time, wave
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'worker'))
 import worker

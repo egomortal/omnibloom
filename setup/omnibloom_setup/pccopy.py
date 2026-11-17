@@ -375,7 +375,7 @@ def copy(console, items, pictures, downloads, move_to_trash=False, progress=None
             break
         start = done[0]
 
-        def tick(n):
+        def tick(n, idx=idx):
             done[0] += n
             if progress:
                 progress(done[0], total, idx, len(items))

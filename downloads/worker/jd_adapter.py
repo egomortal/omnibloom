@@ -190,7 +190,6 @@ class JDownloaderAdapter:
                     while time.monotonic() < deadline:
                         state = self.call('status', id=key).get('state')
                         if state in ('completed', 'failed', 'cancelled'):
-                            terminal = True
                             try:
                                 self.call('release', id=key)
                                 break

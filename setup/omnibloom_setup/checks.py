@@ -2,7 +2,6 @@
 import time
 
 from . import config
-from .ps5 import port_open
 
 OK, WARN, BAD, INFO = "ok", "warn", "bad", "info"
 
