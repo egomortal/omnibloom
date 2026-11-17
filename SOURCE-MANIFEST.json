@@ -1623,8 +1623,8 @@
     },
     {
       "path": "docs/manual/build_manual.py",
-      "bytes": 7648,
-      "sha256": "5327f457489ed0111c1f7c9749293cfd024cc48de9090c13456b140ff1615aec"
+      "bytes": 7611,
+      "sha256": "2369221e9ee47db2ec86baa437384afbc92b2f25b1354dc4cbca04f8b2bf2024"
     },
     {
       "path": "docs/manual/controller.js",
@@ -2843,8 +2843,8 @@
     },
     {
       "path": "downloads/tests/astra/test_schedule.py",
-      "bytes": 2119,
-      "sha256": "017f80f734ba016dfebd17118c784817db480965cbf035d0780df16931251f8e"
+      "bytes": 2105,
+      "sha256": "8db96b1579cc75c51c4e8d25cd1991ec1ce5db3af99bf83be2d6aea83570e5a5"
     },
     {
       "path": "downloads/tests/fake_ytdlp/yt_dlp/__init__.py",
@@ -2853,13 +2853,13 @@
     },
     {
       "path": "downloads/tests/serve_library_worker.py",
-      "bytes": 2209,
-      "sha256": "f3c450b8157d5e6a743646411f375156224f8c3b30ea82ddadbee49852bb9022"
+      "bytes": 2201,
+      "sha256": "d965d5a8306c4db3687e8f2dd18dcaadbf7c31081512b30b2c0a7348846af1af"
     },
     {
       "path": "downloads/tests/serve_real_worker.py",
-      "bytes": 452,
-      "sha256": "b619582e803634a2b464244b9f5b6522639182c0e870074926d0f3ab1423067d"
+      "bytes": 435,
+      "sha256": "fcede0f351fd28aee6209f489af2751f33bc8ffb7e6302191c7936b79599f96a"
     },
     {
       "path": "downloads/tests/stub_worker.py",
@@ -3058,8 +3058,8 @@
     },
     {
       "path": "downloads/tests/test_queue_order.py",
-      "bytes": 15501,
-      "sha256": "e2f16b12f71af1671f077d3c5e37b5bbf8910c1b8d7ed1680a3f3555b0cb4660"
+      "bytes": 15557,
+      "sha256": "e5fe578ee442346290902e9c593252d9042582ed8736c4bd5c87e1419e76cf62"
     },
     {
       "path": "downloads/tests/test_refinement_2026_11_15.py",
@@ -3078,8 +3078,8 @@
     },
     {
       "path": "downloads/worker/adapters.py",
-      "bytes": 40366,
-      "sha256": "199024253eaf1aab255f81070d31694a71824168e8eca8aa8c29b35a2fba9556"
+      "bytes": 40418,
+      "sha256": "8f88702fc7722a50c2178c405197967a148767e19393f1bab99301c47422b8b0"
     },
     {
       "path": "downloads/worker/app.js",
@@ -3338,8 +3338,8 @@
     },
     {
       "path": "downloads/worker/jd_adapter.py",
-      "bytes": 10846,
-      "sha256": "670aac1f80153f296420f989d2b66ff638a8d86fec23fcd097eb8e2a091f55ce"
+      "bytes": 10801,
+      "sha256": "b299ed18a19fc5d256440625008f56ff4e003bf4629e0afd25ecede17475fd32"
     },
     {
       "path": "downloads/worker/jd_lifecycle.py",
@@ -3533,8 +3533,8 @@
     },
     {
       "path": "jdownloader/collect_sources.py",
-      "bytes": 4880,
-      "sha256": "223c82d656e5d573a8ed758b999168d7108cc30bc2901ecb92a4be26b0060a61"
+      "bytes": 4876,
+      "sha256": "921ea07845cb0b9541add990a6063974355105a074147df9951aa5deadf8c4f2"
     },
     {
       "path": "jdownloader/engine/filesystem_compat.cpp",
@@ -3733,8 +3733,8 @@
     },
     {
       "path": "jdownloader/recipe/scripts/adapt_linux.py",
-      "bytes": 2245,
-      "sha256": "764f8ea5901492868be1ca035d704ba8d2d0f1f6d7ec7e5f81b27b70ffb4dc8d"
+      "bytes": 2242,
+      "sha256": "352fc7ee9fd8a9d08e72f9c9a308be18d7c52e9dae199f20e3e134f4c8845477"
     },
     {
       "path": "jdownloader/recipe/scripts/awt-font-dependency.patch",
@@ -3788,8 +3788,8 @@
     },
     {
       "path": "jdownloader/recipe/scripts/fix_awt_printing.py",
-      "bytes": 857,
-      "sha256": "7dcdbdefed153973223d1a2dd17cd6d6a1c075c60c47ca0bf8c73dae1ba4c15f"
+      "bytes": 849,
+      "sha256": "9ce0e10ac399dbf088c70c21da0117333cc0b64329430dfa76f39d9cc1ff35c3"
     },
     {
       "path": "jdownloader/recipe/scripts/fix_awt_sound.py",
@@ -3818,13 +3818,13 @@
     },
     {
       "path": "jdownloader/recipe/scripts/package_payload.py",
-      "bytes": 9209,
-      "sha256": "d04a0e5f6e363749afc87b3fafcc84bd6162b3c10f5823987870b768a9404077"
+      "bytes": 9204,
+      "sha256": "9d10a99ea89f877a428f09258616924f38400411397f0554ddb2e41c92413c1e"
     },
     {
       "path": "jdownloader/recipe/scripts/prepare_linux.py",
-      "bytes": 2662,
-      "sha256": "335a57a180b6e39fb4ccbd1991adb0a3081fdf4d50d32b1d6661413eaaf7dfe4"
+      "bytes": 2659,
+      "sha256": "9350b848a0aa79e41316ff56119a3a08ff59be47e747ec850fd5c96cf08214c5"
     },
     {
       "path": "jdownloader/recipe/scripts/private-adaptations.patch",
@@ -3858,8 +3858,8 @@
     },
     {
       "path": "jdownloader/recipe/scripts/relink_sampling.py",
-      "bytes": 5256,
-      "sha256": "6e21e776963c828748ad3576d1c995b2c0dc752c68c7c0273383d691671ba6d7"
+      "bytes": 5253,
+      "sha256": "6f6b966b24f780633be70a5a2b0e0e9097d89f5f2e51107334135fac4c3c936c"
     },
     {
       "path": "jdownloader/recipe/scripts/relink_telemetry.py",
@@ -21053,8 +21053,8 @@
     },
     {
       "path": "setup/omnibloom_setup/addon_push.py",
-      "bytes": 34607,
-      "sha256": "c6223203e342fb5fe28f135f88815745a0070c6ce9056c08a07bb59a91795a7d"
+      "bytes": 34596,
+      "sha256": "44e97fba83780a6f88659468474df4c4579339a081b4be4214b71c5de887b30b"
     },
     {
       "path": "setup/omnibloom_setup/autobackup.py",
@@ -21083,8 +21083,8 @@
     },
     {
       "path": "setup/omnibloom_setup/checks.py",
-      "bytes": 3461,
-      "sha256": "ff37d36406138190953c6b42fb0c7a6f5a6322bf4aa4263b785a911cbd0e0186"
+      "bytes": 3433,
+      "sha256": "775fb5f85cadda93fe980c023994434448fdafdb7c8780fe62b93701c470edd8"
     },
     {
       "path": "setup/omnibloom_setup/cli.py",
@@ -21138,8 +21138,8 @@
     },
     {
       "path": "setup/omnibloom_setup/pccopy.py",
-      "bytes": 18600,
-      "sha256": "2d351565763d047d22bdb55a861b1caf2ad478d473d2b8998de538748295febc"
+      "bytes": 18609,
+      "sha256": "62b86256963305d430b28143aa9cb9a2416453fcd74a371d516aa3494e6c953f"
     },
     {
       "path": "setup/omnibloom_setup/pclinks.py",
@@ -21353,8 +21353,8 @@
     },
     {
       "path": "setup/tests/test_discovery.py",
-      "bytes": 10355,
-      "sha256": "c05916ac37154759b32d3c4dffe9655131ffd787287be801146f65398bbe9dbd"
+      "bytes": 10342,
+      "sha256": "ea0300213fbc8a197114bd9afb31200f60f9d81ea0b395781cc6a1c428eaaf52"
     },
     {
       "path": "setup/tests/test_end_to_end.py",
