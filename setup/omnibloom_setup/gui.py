@@ -57,6 +57,10 @@ class SetupApp:
         self.c_jd = tk.BooleanVar(value=True)
         self.c_jd_get = tk.BooleanVar(value=True)
         self.c_hdr = tk.BooleanVar(value=True)
+        # OMNIBLOOM_CHANNELS_V1: the experimental build (Bloom Preview) instead of the stable one; off unless ticked
+        # (or Omni on the PS5 already is a Bloom Preview build).
+        self.c_bloom = tk.BooleanVar(value=False)
+        self.c_bloom.trace_add("write", lambda *_: self._apply_channel())
 
         root.title(config.APP_NAME)
         root.geometry("800x680")
@@ -207,6 +211,7 @@ class SetupApp:
         ttk.Button(row, text="Install the full package (recommended)", style="Accent.TButton",
                    command=self.page_oneclick).pack(side="left")
         ttk.Button(row, text="Customize…", style="Alt.TButton", command=self.page_customize).pack(side="left", padx=(10, 0))
+        self._bloom_tick(one, C["panel"])
         addr = tk.Frame(one, bg=C["panel"])
         addr.pack(fill="x", pady=(8, 0))
         if not self.host.get():
@@ -238,6 +243,7 @@ class SetupApp:
         tick("Master Control: use other controllers", self.c_apps["master-control"])
         mc_now = tick("Start it now", self.start_mc, indent=24)
         mc_boot = tick("Start it with the PS5 (takes PadBridge's / EeveeLution's place)", self.autoload_mc, indent=24)
+        tick(config.BLOOM_TEXT, self.c_bloom)
         jd_tick = tick("JDownloader 2: your own copy, through Downloads", self.c_jd)
         jd_row = tk.Frame(box, bg=C["panel"])
         jd_row.pack(fill="x", padx=(24, 0), pady=1)
@@ -283,7 +289,8 @@ class SetupApp:
         return {"apps": apps, "master_control": mc, "start_master_control": mc and self.start_mc.get(),
                 "autoload_master_control": mc and self.autoload_mc.get(), "jdownloader": jd_on,
                 "jd_folder": (self.jd_folder.get().strip() or None) if jd_on else None,
-                "get_jdownloader": jd_on and self.c_jd_get.get(), "hdr": "auto-if-unset" if self.c_hdr.get() else "keep"}
+                "get_jdownloader": jd_on and self.c_jd_get.get(), "hdr": "auto-if-unset" if self.c_hdr.get() else "keep",
+                "channel": self._channel()}
 
     # -- the one button ------------------------------------------------------------
     def page_oneclick(self, customized=False):
@@ -323,7 +330,7 @@ class SetupApp:
         if choice is None:   # the full package: everything, Master Control started now and with the PS5, HDR Auto if unset
             choice = {"apps": None, "master_control": True, "start_master_control": True, "autoload_master_control": True,
                       "jdownloader": True, "jd_folder": self.jd_folder.get().strip() or None, "get_jdownloader": False,
-                      "hdr": "auto-if-unset"}
+                      "hdr": "auto-if-unset", "channel": self._channel()}
         self.oc_choice = choice
         confirm = (lambda question: True) if choice.pop("get_jdownloader") else self._ask_from_worker
         oc = oneclick.OneClick(host=host, ftp_port=self.ports.get("ftp"), loader_port=self.ports.get("loader"),
@@ -440,6 +447,23 @@ class SetupApp:
 
     def _catalog_done(self, cat, err):
         self.catalog, self.catalog_error = cat, err
+        self._apply_channel()
+
+    def _channel(self):
+        return config.BLOOM_CHANNEL if self.c_bloom.get() else None
+
+    def _apply_channel(self, ch=False):
+        """Point the loaded catalog at the stable or the experimental build (a package without one stays stable).
+        From a worker thread pass `ch` (read earlier on the window's thread); without it the tick box is read."""
+        cat = getattr(self, "catalog", None)
+        if cat is not None and hasattr(cat, "use_channel"):
+            if ch is False:
+                ch = self._channel()
+            cat.use_channel(ch if ch in cat.channels() else None)
+
+    def _bloom_tick(self, parent, bg):
+        ttk.Checkbutton(parent, text=config.BLOOM_TEXT, variable=self.c_bloom,
+                        style="Panel.TCheckbutton" if bg == C["panel"] else "TCheckbutton").pack(anchor="w", pady=(8, 0))
 
     def _start_scan(self):
         self.scan_bar["value"] = 0
@@ -505,6 +529,8 @@ class SetupApp:
             return
         items, self.summary = result
         self.installed = self.summary.get("installed") or {}
+        if "-bloom" in str((self.installed.get("omni") or {}).get("version", "")):
+            self.c_bloom.set(True)   # keep a Bloom Preview install on Bloom Preview (untick to go back to stable)
         self.check_note.configure(text="Here's what we found:")
         for it in items:
             row = tk.Frame(self.check_box, bg=C["panel"], padx=12, pady=7)
@@ -1636,6 +1662,8 @@ class SetupApp:
                 latest = cat.apps[main]["version"]
                 status = ("update %s → %s" % (have["version"], latest)) if installer.update_available(have["version"], latest) else "installed %s" % have["version"]
             ttk.Checkbutton(box, text="%s  (%s)" % (g["name"], status), variable=self.pick[g["id"]], style="Panel.TCheckbutton").pack(anchor="w")
+            if g["id"] == "omni" and config.BLOOM_CHANNEL in cat.channels():
+                ttk.Checkbutton(box, text=config.BLOOM_TEXT, variable=self.c_bloom, style="Panel.TCheckbutton").pack(anchor="w", padx=(24, 0))
             self.label(box, g["description"], "small", bg=C["panel"]).pack(anchor="w", padx=(24, 0))
             for sub in g["apps"][1:]:
                 if cat.has(sub):
@@ -1733,7 +1761,8 @@ class SetupApp:
         self.job = {"mode": "install", "apps": apps,
                     "autoload": ["master-control"] if self.autoload_mc.get() else [],
                     "start": ["master-control"] if self.start_mc.get() else [],
-                    "jd_folder": self.jd_folder.get() if self.jd_copy.get() else ""}
+                    "jd_folder": self.jd_folder.get() if self.jd_copy.get() else "",
+                    "channel": self._channel()}   # read here, on the window's thread (Tk variables aren't thread-safe)
 
     # -- 6. work ------------------------------------------------------------------
     def page_work(self):
@@ -1781,6 +1810,7 @@ class SetupApp:
             if job["mode"] == "repair":
                 installer.repair_app(c, self.catalog, job["app"], log=self._log, progress=self._progress)
                 return {}
+            self._apply_channel(job.get("channel"))
             receipts = installer.install(c, self.catalog, job["apps"], autoload=job["autoload"], start=job["start"],
                                          log=self._log, progress=self._progress)
             done = int(time.time()) + 1

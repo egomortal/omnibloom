@@ -230,8 +230,9 @@ class OneClick:
                  report=None, progress=None, cancel=None, wait_minutes=0, networks=None, master_control=True,
                  start_master_control=True, autoload_master_control=True, hdr="auto-if-unset", sleep=time.sleep,
                  clock=time.time, record_dir=None, jdownloader=True, jd_folder=None, confirm=None, open_page=None,
-                 launcher_port=None, apps=None, auto_backup=False):
+                 launcher_port=None, apps=None, auto_backup=False, channel=None):
         self.host = host
+        self.channel = channel   # OMNIBLOOM_CHANNELS_V1: e.g. "bloom-preview" (the experimental build); None = stable
         self.auto_backup = auto_backup   # S06: run autobackup.maybe_run once connected (the window turns it on)
         # Which apps to install (Customize): None = the full package. Bloom Core is always installed.
         self.apps = None if apps is None else set(apps) | {config.HUB_ID}
@@ -289,6 +290,13 @@ class OneClick:
         self.step("apps", "active", "Getting the Omnibloom apps…")
         if self.catalog is None:
             self.catalog = self.catalog_loader(self.detail)
+        if self.channel and self.channel not in self.catalog.channels():
+            self.detail("This package has no experimental build; installing the stable one.")
+            self.catalog.use_channel(None)
+        else:
+            self.catalog.use_channel(self.channel)
+            if self.channel:
+                self.detail("Using the %s." % self.catalog.channels()[self.channel]["label"])
         names = ", ".join("%s %s" % (NAMES.get(a, a), self.catalog.apps[a]["version"]) for a in ORDER if self.catalog.has(a))
         self.step("apps", "ok", "Got the apps: %s." % names)
 

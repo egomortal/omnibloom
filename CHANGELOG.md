@@ -52,6 +52,10 @@ We're in the final stretch of building out Omni's browser features: about 200 ne
   scale, accent colour and language, notice actions (Open / Allow once), recent notices, reader view by default per site.
 
 ### Setup
+- **Experimental build (Bloom Preview):** one package can now carry the stable Omni and the newest experimental
+  build. Tick "Experimental build (Bloom Preview)" (main page, Customize, or the Omni row) to install it; untick it
+  to go back to stable. `--experimental` does the same from the command line. Setups before 0.5.4 ignore it and
+  install the stable build.
 - **Back up / restore Omni** settings to a zip on the PC; personal data (bookmarks, history, reading list...) only if
   ticked; cookies, passwords and sessions are never included.
 - **Copy from PS5** (screenshots and saved downloads to this PC), **send a link to Omni**, **storage report**.

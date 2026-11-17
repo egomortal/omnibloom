@@ -28,8 +28,12 @@ def _console(a):
 
 def _catalog(a, log):
     if a.package:
-        return release.Catalog([release.Package(p) for p in a.package])
-    return release.load_catalog(online=not a.offline, api_base=a.api, log=log)
+        cat = release.Catalog([release.Package(p) for p in a.package])
+    else:
+        cat = release.load_catalog(online=not a.offline, api_base=a.api, log=log)
+    if getattr(a, "experimental", False) and a.command != "oneclick":   # oneclick switches it itself (and says so)
+        cat.use_channel(config.BLOOM_CHANNEL)
+    return cat
 
 
 def _narrator(log):
@@ -78,6 +82,8 @@ def main(argv=None):
     p.add_argument("--hdr", choices=["auto-if-unset", "auto", "keep"], default="auto-if-unset",
                    help="oneclick: Omni's HDR setting (default: Auto unless you already chose one)")
     p.add_argument("--plain", action="store_true", help="plain progress messages (no morph calls)")
+    p.add_argument("--experimental", action="store_true",
+                   help="install the experimental build (Bloom Preview) when the package has one, not the stable build")
     p.add_argument("--out", help="diagnostics: where to save the zip (default: your Downloads folder)")
     p.add_argument("--run-file", help="undo: a specific run file instead of the last one")
     p.add_argument("--no-jdownloader", action="store_true", help="oneclick: don't look for or set up JDownloader 2")
@@ -117,7 +123,8 @@ def main(argv=None):
                                start_master_control=not a.no_start_master_control,
                                autoload_master_control=not a.no_autoload_master_control, hdr=a.hdr,
                                jdownloader=not a.no_jdownloader, jd_folder=a.jd_folder, confirm=confirm,
-                               apps=_csv(a.apps))   # --apps omni,downloads,... picks the apps (default: all)
+                               apps=_csv(a.apps),   # --apps omni,downloads,... picks the apps (default: all)
+                               channel=config.BLOOM_CHANNEL if a.experimental else None)
         try:
             result = oc.run()
         except KeyboardInterrupt:

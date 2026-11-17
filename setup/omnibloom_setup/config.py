@@ -155,6 +155,9 @@ REQUIREMENTS = {
     "kstuff": ("kstuff", ("kstuff",)),
 }
 TESTED_FIRMWARE = "13.60"
+# OMNIBLOOM_CHANNELS_V1: the experimental build some packages carry beside the stable one (Setup asks; default stable).
+BLOOM_CHANNEL = "bloom-preview"
+BLOOM_TEXT = "Experimental build (Bloom Preview): Omni's newest features before they're finished. Expect rough edges."
 
 # What the user picks in the window. Each group installs one or more apps (IDs as in the cards).
 HUB_NAME = "Bloom Core"

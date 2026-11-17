@@ -31,6 +31,9 @@ HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 APP_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,31}\Z")
 KINDS = ("title", "payload", "service")
 AUTOLOAD = ("never", "optional", "required")
+# OMNIBLOOM_CHANNELS_V1: an optional "channels" block carries another build of some apps in the same zip (the experimental
+# Bloom Preview). Setups before 0.5.4 ignore the block and install the stable files, as before.
+CHANNEL_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,31}\Z")
 CARD_KEYS = {"name", "kind", "launch", "health", "pages", "provides", "consumes", "public_pages"}
 RELEASE_MANIFEST_ASSET = "RELEASE-MANIFEST.json"
 RELEASE_MANIFEST_SCHEMA = "omnibloom-release-manifest/v1"
@@ -256,6 +259,30 @@ class Package:
             seen.add(row["dest"])
             if not HEX64.fullmatch(row["sha256"]) or type(row["bytes"]) is not int:
                 raise ReleaseError("Malformed checksum in the package.")
+        self.channels = {}
+        channels = m.get("channels") or {}
+        if not isinstance(channels, dict):
+            raise ReleaseError("The package's channels are malformed.")
+        for name, ch in channels.items():
+            if not CHANNEL_ID.fullmatch(str(name)) or not isinstance(ch, dict) or not isinstance(ch.get("apps"), dict) or not ch["apps"]:
+                raise ReleaseError("Bad channel in the package: %r" % (name,))
+            apps = {}
+            for app_id, sub in ch["apps"].items():
+                if app_id not in self.apps or not isinstance(sub, dict) or not str(sub.get("version") or "") \
+                        or not isinstance(sub.get("files"), list) or not sub["files"]:
+                    raise ReleaseError("Channel %s has a bad entry for %s." % (name, app_id))
+                dests = set()
+                for row in sub["files"]:
+                    if not isinstance(row, dict) or set(row) != {"app", "src", "dest", "sha256", "bytes"} or row["app"] != app_id:
+                        raise ReleaseError("Malformed file entry in channel %s." % name)
+                    check_dest(row["dest"], self.apps[app_id]["roots"])
+                    if row["dest"] in dests:
+                        raise ReleaseError("Duplicate destination in channel %s: %s" % (name, row["dest"]))
+                    dests.add(row["dest"])
+                    if not HEX64.fullmatch(row["sha256"]) or type(row["bytes"]) is not int:
+                        raise ReleaseError("Malformed checksum in channel %s." % name)
+                apps[app_id] = {"version": str(sub["version"]), "files": sub["files"]}
+            self.channels[name] = {"label": str(ch.get("label") or name), "notes": str(ch.get("notes") or ""), "apps": apps}
 
     def data(self, row):
         blob = self.zip.read(row["src"])
@@ -264,10 +291,16 @@ class Package:
         return blob
 
     def verify_all(self):
-        for row in self.files:
-            self.data(row)
+        done = set()
+        for row in self.files + [r for ch in self.channels.values() for sub in ch["apps"].values() for r in sub["files"]]:
+            if row["src"] not in done:
+                self.data(row)
+                done.add(row["src"])
 
-    def files_for(self, app_id):
+    def files_for(self, app_id, channel=None):
+        sub = self.channels.get(channel, {}).get("apps", {}).get(app_id) if channel else None
+        if sub:
+            return list(sub["files"])
         return [r for r in self.files if r["app"] == app_id]
 
     def close(self):
@@ -281,17 +314,46 @@ class Catalog:
         self.packages = list(packages)
         self.apps = {}      # id -> app dict
         self.source = {}    # id -> Package
+        self.channel = None   # OMNIBLOOM_CHANNELS_V1: None = the stable build; else e.g. "bloom-preview"
         for pkg in self.packages:
-            for app_id, app in pkg.apps.items():
-                if app_id not in self.apps or version_key(app["version"]) > version_key(self.apps[app_id]["version"]):
-                    self.apps[app_id] = app
-                    self.source[app_id] = pkg
+            self._take(pkg)
+
+    def _take(self, pkg):
+        for app_id, app in pkg.apps.items():
+            if app_id not in self.source or version_key(app["version"]) > version_key(self.source[app_id].apps[app_id]["version"]):
+                self.source[app_id] = pkg
+                self.apps[app_id] = self._channel_app(app_id)
+
+    def _channel_app(self, app_id):
+        pkg = self.source[app_id]
+        sub = pkg.channels.get(self.channel, {}).get("apps", {}).get(app_id) if self.channel else None
+        return dict(pkg.apps[app_id], version=sub["version"]) if sub else pkg.apps[app_id]
+
+    def channels(self):
+        """{name: {"label", "notes"}} of every channel a package here carries."""
+        out = {}
+        for pkg in self.packages:
+            for name, ch in pkg.channels.items():
+                out.setdefault(name, {"label": ch["label"], "notes": ch["notes"]})
+        return out
+
+    def use_channel(self, name):
+        """Switch to a channel's build of the apps it covers (None = stable). Returns the app ids it changed."""
+        if name is not None and name not in self.channels():
+            raise ReleaseError("These packages have no %s build." % name)
+        self.channel = name
+        changed = []
+        for app_id in self.source:
+            self.apps[app_id] = self._channel_app(app_id)
+            if self.apps[app_id] is not self.source[app_id].apps[app_id]:
+                changed.append(app_id)
+        return changed
 
     def has(self, app_id):
         return app_id in self.apps
 
     def files_for(self, app_id):
-        return self.source[app_id].files_for(app_id)
+        return self.source[app_id].files_for(app_id, self.channel)
 
     def data(self, app_id, row):
         return self.source[app_id].data(row)
@@ -299,10 +361,7 @@ class Catalog:
     def add(self, pkg):
         """Merge one more package (e.g. the JDownloader 2 engine, fetched only when the user turns it on)."""
         self.packages.append(pkg)
-        for app_id, app in pkg.apps.items():
-            if app_id not in self.apps or version_key(app["version"]) > version_key(self.apps[app_id]["version"]):
-                self.apps[app_id] = app
-                self.source[app_id] = pkg
+        self._take(pkg)
 
     def jd_engine(self):
         """The engine package's `jdownloader_engine` block (pins for the Java runtime and java-worker), or None."""

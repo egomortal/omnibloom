@@ -162,22 +162,56 @@ def main():
     p.add_argument("--out", required=True)
     p.add_argument("--app-version", action="append", default=[])
     p.add_argument("--jd-engine-ready", action="store_true")
+    # OMNIBLOOM_CHANNELS_V1: another build of some apps in the same zip, e.g. the experimental Bloom Preview:
+    #   --channel bloom-preview=stage-bloom --channel-version bloom-preview=0.5.4-bloom.1
+    #   --channel-label "bloom-preview=Experimental build (Bloom Preview)" --channel-notes bloom-preview=...
+    # The channel stage holds the COMPLETE file set of each app it covers (an app with no file there stays stable).
+    # Files identical to the stable ones are stored once.
+    p.add_argument("--channel", action="append", default=[], help="name=stage folder")
+    p.add_argument("--channel-version", action="append", default=[], help="name=version of the apps it covers")
+    p.add_argument("--channel-label", action="append", default=[], help="name=label Setup shows")
+    p.add_argument("--channel-notes", action="append", default=[], help="name=one line Setup shows under the label")
     a = p.parse_args()
     versions = dict(v.split("=", 1) for v in a.app_version)
     apps = {k: v for k, v in APPS.items() if v["package"] == a.package}
-    rows = []
-    for dirpath, _, names in os.walk(a.stage):
-        for n in sorted(names):
-            full = os.path.join(dirpath, n)
-            dest = "/" + os.path.relpath(full, a.stage).replace(os.sep, "/")
-            owner = [k for k, v in apps.items() if _under(dest, v["roots"])]
-            if len(owner) != 1:
-                raise SystemExit("No single app owns %s" % dest)
-            check_dest(dest, apps[owner[0]]["roots"])
-            data = open(full, "rb").read()
-            rows.append({"app": owner[0], "src": "files" + dest, "dest": dest,
-                         "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)})
-    rows.sort(key=lambda r: r["dest"])
+
+    def walk(stage, src_prefix):
+        out = []
+        for dirpath, _, names in os.walk(stage):
+            for n in sorted(names):
+                full = os.path.join(dirpath, n)
+                dest = "/" + os.path.relpath(full, stage).replace(os.sep, "/")
+                owner = [k for k, v in apps.items() if _under(dest, v["roots"])]
+                if len(owner) != 1:
+                    raise SystemExit("No single app owns %s" % dest)
+                check_dest(dest, apps[owner[0]]["roots"])
+                with open(full, "rb") as f:
+                    data = f.read()
+                out.append({"app": owner[0], "src": src_prefix + dest, "dest": dest,
+                            "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data), "_full": full})
+        out.sort(key=lambda r: r["dest"])
+        return out
+    rows = walk(a.stage, "files")
+    stable = {(r["dest"], r["sha256"]): r for r in rows}
+    channels, extra = {}, []
+    ch_versions, labels, notes = (dict(v.split("=", 1) for v in lst) for lst in (a.channel_version, a.channel_label, a.channel_notes))
+    for spec in a.channel:
+        name, stage = spec.split("=", 1)
+        if name not in ch_versions:
+            raise SystemExit("--channel-version %s=... is required" % name)
+        ch_apps = {}
+        for r in walk(stage, "channels/%s/files" % name):
+            if r["app"] not in {x["app"] for x in rows}:
+                raise SystemExit("Channel %s has %s, an app the stable package doesn't ship" % (name, r["app"]))
+            same = stable.get((r["dest"], r["sha256"]))
+            if same:
+                r["src"], r["_full"] = same["src"], None   # stored once, under files/
+            else:
+                extra.append(r)
+            ch_apps.setdefault(r["app"], {"version": ch_versions[name], "files": []})["files"].append(r)
+        if not ch_apps:
+            raise SystemExit("Channel %s has no files" % name)
+        channels[name] = {"label": labels.get(name, name), "notes": notes.get(name, ""), "apps": ch_apps}
     shipped = sorted({r["app"] for r in rows})
     manifest_apps = {}
     for k in shipped:
@@ -189,17 +223,28 @@ def main():
                 "tested_firmware": config.TESTED_FIRMWARE, "apps": manifest_apps, "files": rows}
     if a.package == "omnibloom-jd-engine":
         manifest["jdownloader_engine"] = engine_block(rows, a.stage) if a.jd_engine_ready else {"ready": False}
+    if channels:
+        manifest["channels"] = channels
+    fulls = {r["src"]: r.pop("_full") for r in rows}
+    for ch in channels.values():
+        for sub in ch["apps"].values():
+            for r in sub["files"]:
+                full = r.pop("_full")
+                if full:
+                    fulls[r["src"]] = full
     os.makedirs(a.out, exist_ok=True)
     name = os.path.join(a.out, "%s%s.zip" % (PREFIX[a.package], a.version))
     with zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr(config.RELEASE_MANIFEST, json.dumps(manifest, indent=1))
-        for r in rows:
-            z.write(os.path.join(a.stage, r["dest"].lstrip("/")), r["src"])
-    Package(name).verify_all()   # the same checks Setup runs
+        for src, full in fulls.items():
+            z.write(full, src)
+    Package(name).verify_all()   # the same checks Setup runs (channel files included)
     digest = hashlib.sha256(open(name, "rb").read()).hexdigest()
     with open(name + ".sha256", "w") as f:
         f.write("%s  %s\n" % (digest, os.path.basename(name)))
-    print(name, digest, len(rows), "files", ",".join(shipped))
+    print(name, digest, len(rows), "files", ",".join(shipped),
+          "".join(" | channel %s: %s (%d new files)" % (n, ",".join(sorted(c["apps"])), sum(1 for r in extra if r["src"].startswith("channels/%s/" % n)))
+                  for n, c in channels.items()))
 
 
 if __name__ == "__main__":
