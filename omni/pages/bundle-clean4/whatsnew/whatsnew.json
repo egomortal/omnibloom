@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "id": "524912d76300edab",
+ "id": "9a1fdaf938959e7d",
  "release": "Unreleased (dev branch, not tested on a console yet unless noted)",
  "intro": "We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.",
  "groups": [
@@ -219,6 +219,20 @@
    "key": "browsing",
    "title": "Browsing",
    "items": [
+    {
+     "title": "Graphics chip on by default",
+     "text": "The screen and video conversion now use the PS5's graphics chip unless you turn it off (/data/omni/gpu-present-off.flag, /data/omni/gpu-video-off.flag). Before, they stayed on the processor unless a test flag was set, so everyday Omni ran the slower path (4K video conversion 3-5 ms per frame instead of about 0.5 ms).",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Video sites with a dimmed or framed player no longer slow Omni down",
+     "text": "Semi-transparent layers over a full-screen video are blended on the graphics chip. Console 4K test: page updates take 7-11 ms with a full-screen dim layer instead of 53-75 ms. HDR videos keep the previous path. Off switch: /data/omni/gpu-mix-off.flag.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
     {
      "title": "Page screenshots",
      "text": "L2 + R3 saves the visible page to Downloads > Saved > Screenshots; never in private tabs.",
