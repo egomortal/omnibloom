@@ -413,6 +413,9 @@ python3 "$NE/make_link_command.py" > "$F/logs/link-command-title.log" 2>&1 || { 
 # mix: "gpu mix check" absent from the g6 eboot), and the present halves again AFTER prep (the lines further down).
 python3 "$S1/tools/apply_gpu_default_on.py" "$NE" > "$F/logs/apply_gpu_default_on_pre.log" 2>&1 || { st "gpu default on (pre-prep) FAILED: $(tail -1 "$F/logs/apply_gpu_default_on_pre.log")"; exit 1; }
 python3 "$S1/tools/apply_gpu_mix.py" "$NE" > "$F/logs/apply_gpu_mix_pre.log" 2>&1 || { st "gpu mix (pre-prep) FAILED: $(tail -1 "$F/logs/apply_gpu_mix_pre.log")"; exit 1; }
+# OMNI_MEMMAP_V1 (2026-11-17): test-only title memory map (memmap.flag), engine/media -> must be pre-prep
+python3 "$S1/tools/apply_memmap.py" "$NE" > "$F/logs/apply_memmap.log" 2>&1 || { st "memmap FAILED: $(tail -1 "$F/logs/apply_memmap.log")"; exit 1; }
+st "memmap (pre-prep): $(tail -1 "$F/logs/apply_memmap.log")"
 st "pre-prep GPU patches: default-on $(tail -1 "$F/logs/apply_gpu_default_on_pre.log" | cut -c1-60); mix $(tail -1 "$F/logs/apply_gpu_mix_pre.log" | cut -c1-80)"
 python3 "$NE/tools/prep_launch.py" > "$F/logs/prep.log" 2>&1 || { st "prep FAILED: $(tail -2 "$F/logs/prep.log" | tr '\n' ' ' | cut -c1-500)"; exit 1; }
 # OMNI_PAGES_FROM_REPO_V1 (2026-11-16): the built-in pages come from the public repo's committed bundle (omni/pages/bundle-clean4 at
@@ -455,7 +458,13 @@ st "OMNI_GPU_MIX_V1: $(tail -1 "$F/logs/apply_gpu_mix.log")"
 # the final sources (a re-copied file undid OMNI_GPU_DEFAULT_ON_V1 in g1/g3). Report-only; add --fatal after one clean run.
 python3 "$S1/tools/audit_patch_markers.py" --fatal "$F/steps.txt" "$TT/engine" "$NE/src" /home/builder/ogp-ls1b-objs/media "$NE/shader" > "$F/logs/marker-audit.txt" 2>&1 || { st "PATCH MARKER AUDIT FAILED: $(grep -m8 '^MISSING' "$F/logs/marker-audit.txt" | cut -d' ' -f2 | paste -sd' ')"; exit 1; }
 st "OMNI_PATCH_MARKER_AUDIT_V1: $(head -1 "$F/logs/marker-audit.txt") $(grep -m8 '^MISSING' "$F/logs/marker-audit.txt" | cut -d' ' -f2 | paste -sd' ')"
-OGP_BRK="$O/omni-gpupages-ls1b/broker-mem" python3 "$S1/tools/patch_title_build.py" "$NE/build.py" "$S1/src-title" > "$F/logs/patch-title-build.log" 2>&1 || { st "stage-1 title sources FAILED"; exit 1; }
+# OMNI_GPU_ONE_SUBMITTER_V1: a patched COPY of the broker owner (the shared broker-mem stays as it is), then the AGC
+# wraps + the lock in the title link (stage1/tools/apply_one_submitter.py)
+rm -rf "$F/broker-onesub" && cp -r "$O/omni-gpupages-ls1b/broker-mem" "$F/broker-onesub" \
+  && python3 "$S1/tools/apply_one_submitter.py" broker "$F/broker-onesub/server.cpp" > "$F/logs/apply_one_submitter_broker.log" 2>&1 || { st "one submitter (broker) FAILED: $(tail -1 "$F/logs/apply_one_submitter_broker.log")"; exit 1; }
+OGP_BRK="$F/broker-onesub" python3 "$S1/tools/patch_title_build.py" "$NE/build.py" "$S1/src-title" > "$F/logs/patch-title-build.log" 2>&1 || { st "stage-1 title sources FAILED"; exit 1; }
+python3 "$S1/tools/apply_one_submitter.py" build "$NE/build.py" "$S1/src-title" > "$F/logs/apply_one_submitter_build.log" 2>&1 || { st "one submitter (title link) FAILED: $(tail -1 "$F/logs/apply_one_submitter_build.log")"; exit 1; }
+st "one submitter (broker; title link): $(tail -1 "$F/logs/apply_one_submitter_broker.log"); $(tail -1 "$F/logs/apply_one_submitter_build.log")"
 rm -rf "$NE/build" "$NE/out"
 nice -n 19 python3 "$NE/build.py" > "$F/logs/title-build.log" 2>&1 || { st "title FAILED: $(grep -o 'undefined symbol: .*' "$F/logs/title-build.log" | sort -u | head -6 | tr '\n' ' ') $(tail -3 "$F/logs/title-build.log" | tr '\n' ' ' | cut -c1-600)"; exit 1; }
 $LL/llvm-nm -D --undefined-only "$NE/build/llvm-pie.elf" | awk '{print $NF}' | sort -u > "$F/merge/imports-new.txt"

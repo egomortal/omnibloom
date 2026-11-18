@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "id": "9a1fdaf938959e7d",
+ "id": "1964a8ce3e61cf04",
  "release": "Unreleased (dev branch, not tested on a console yet unless noted)",
  "intro": "We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.",
  "groups": [
@@ -219,6 +219,20 @@
    "key": "browsing",
    "title": "Browsing",
    "items": [
+    {
+     "title": "Faster JavaScript",
+     "text": "Omni's JavaScript engine now uses its two optimizing compilers (DFG and FTL) by default. Console benchmark: 34.5 ms -> 12.7 ms on average (about 2.7x faster); YouTube's home page first appears in about 1.2 s instead of 1.8 s. Off switches: /data/omni/jsc-ftl-off.flag (FTL only), /data/omni/jsc-dfg-off.flag (both); the JavaScript JIT setting still turns all of it off.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "GPU guard (groundwork for smoother scrolling)",
+     "text": "The browser and its page processes now take turns sending work to the graphics chip. Without this, the two could collide and freeze the console when GPU page layers are on. Layers stay off by default; with the guard, 9 of 9 console runs with layers on were clean (a movie-streaming site scrolled with about 2.6x more screen updates), which is not yet enough to turn them on for everyone.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
     {
      "title": "Graphics chip on by default",
      "text": "The screen and video conversion now use the PS5's graphics chip unless you turn it off (/data/omni/gpu-present-off.flag, /data/omni/gpu-video-off.flag). Before, they stayed on the processor unless a test flag was set, so everyday Omni ran the slower path (4K video conversion 3-5 ms per frame instead of about 0.5 ms).",
