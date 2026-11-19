@@ -1962,6 +1962,11 @@
       "sha256": "5d727b9f8a539be6687672ba4a07c95d2a2f865eb9bbf2458ed5a21aa8259809"
     },
     {
+      "path": "docs/research/ps5-4k-memory-page-tables.md",
+      "bytes": 4547,
+      "sha256": "d65efbadaa140860fcc9f1cba584ce6cebf22d1caaaccba30fa4f5cf1d7c9e19"
+    },
+    {
       "path": "docs/site-v1/.nojekyll",
       "bytes": 0,
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -6177,6 +6182,16 @@
       "sha256": "bf56b8120e47568c58de6cd8339e8309693ed23dbca7f5dd112a0c664172f76e"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/research/memtrace_group.py",
+      "bytes": 921,
+      "sha256": "f23853e218808e40ba5f754f9bd78c7b7e4e61b3e1146c6ff5dab1ee53d56b8c"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/research/ptprobe.c",
+      "bytes": 3817,
+      "sha256": "3f314294fb522392b11d855a2c378fa49b29145ab8379c54e64766718cdd1413"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/OmniGpuPagesService.cpp",
       "bytes": 7451,
       "sha256": "6b7da2fb6d262a93a8f327e8a287ae27f72723d6f44dea72d4f3bd2a8520cb89"
@@ -6195,6 +6210,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_gpu_one_submitter.h",
       "bytes": 3024,
       "sha256": "c55fe8473a574327ef2b881b7e2e51f7a791f48d0d5fe9fd84354041221f0e5e"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_memtrace.c",
+      "bytes": 3553,
+      "sha256": "e3eb6eec657afb6d3d02c31feb9646418fcede6c5ac1849a2d20d4a38e44454b"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_zc_page.comp",
@@ -6525,6 +6545,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/add_lazy_graphics.py",
       "bytes": 2964,
       "sha256": "6cc60e06a38d674c6d7dedc0226c336b10e901e9a720f8276677f7a2f53c6330"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_abr_ceiling.py",
+      "bytes": 3829,
+      "sha256": "16273fe6aad534241f485f70b09420fe5710697316c644b4410ae1e444579798"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_access_input.py",
@@ -6870,6 +6895,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_memmap.py",
       "bytes": 5192,
       "sha256": "5e8737665e67e168214d048a17e0c24784fb1077c378e059ffbc7fe560ffc6d3"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_memtrace.py",
+      "bytes": 3961,
+      "sha256": "49a012da0e2f6b9ea4c6d7ea4f4692b3259a0926267fbf0f51d4fdce72e7db67"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_min_text.py",
