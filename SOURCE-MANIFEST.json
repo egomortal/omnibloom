@@ -33,8 +33,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 31769,
-      "sha256": "76230568e9cb7ffefb3f2b22cdf9ae4be3f2a4c4731fa1837eb693b6301dc861"
+      "bytes": 35699,
+      "sha256": "092075a190a56d989a825ad5e8c73e42c1f80e5a45a7489c7b5702fa65ce79d9"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1960,6 +1960,11 @@
       "path": "docs/research/gpu-page-layers-ps5.md",
       "bytes": 9186,
       "sha256": "5d727b9f8a539be6687672ba4a07c95d2a2f865eb9bbf2458ed5a21aa8259809"
+    },
+    {
+      "path": "docs/research/omnibloom-issues-deepdive.md",
+      "bytes": 28739,
+      "sha256": "e212129a73b620524f641b9252a3e1f057012e726cc1a6d4210426aec2650713"
     },
     {
       "path": "docs/research/ps5-4k-memory-page-tables.md",
@@ -5883,13 +5888,13 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
-      "bytes": 62741,
-      "sha256": "6a60d28ae37d11ae9a5b3bf8aba7e7c4ae652d19a0a67a0d9c906d83438536ef"
+      "bytes": 69231,
+      "sha256": "887cb55f6b2561d9a04288f837d333791b8d49e1529d5774b41cab0f36bf6e13"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-jscftl-child.sh",
-      "bytes": 26087,
-      "sha256": "4cd0decdc06ba212f1e72ff0474c6e24311ae852c47fe334fdf9dfb109ead681"
+      "bytes": 33101,
+      "sha256": "f07c7424116bead9c451223957c0ed82fd38dba7a94063f7ebbfdef5a098466b"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-launch-child-fallback.sh",
@@ -6192,14 +6197,34 @@
       "sha256": "3f314294fb522392b11d855a2c378fa49b29145ab8379c54e64766718cdd1413"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/OmniColourMatrixShader.h",
+      "bytes": 9076,
+      "sha256": "605054b65d5b6668cbe8aaa2e40f879d1b109ef6e9d09d0767e424c2a7f0f27d"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/OmniGpuPagesService.cpp",
       "bytes": 7451,
       "sha256": "6b7da2fb6d262a93a8f327e8a287ae27f72723d6f44dea72d4f3bd2a8520cb89"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/OmniMagnifierShader.h",
+      "bytes": 27343,
+      "sha256": "5981f7a43d38b0eaf7ff5157bdf19c3cad95cf22b9043a0a9ca63935b44a63e5"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/OmniNightLightShader.h",
+      "bytes": 8392,
+      "sha256": "320a82f726ed1c469e661f8853a8dbd7758cb9c50a95b35f16803e3490374640"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/OmniZcPageShader.h",
       "bytes": 13090,
       "sha256": "1b23fc570799ddb04c2a386ce3b8ecd997dd0970c6a69439f6aa87f2ea20389e"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_colour_matrix.comp",
+      "bytes": 1149,
+      "sha256": "3acfd23e37aec27c3deab337dfc8ec1f54cf1fa7ecb1be12ac532e20702c7ff3"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_gpu_one_submitter.c",
@@ -6212,9 +6237,19 @@
       "sha256": "c55fe8473a574327ef2b881b7e2e51f7a791f48d0d5fe9fd84354041221f0e5e"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_magnifier.comp",
+      "bytes": 3321,
+      "sha256": "32ad3576cf9d5b60ca810dc66c97a1fdbad9dcf90d05910ebc9b9703b2e9cf49"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_memtrace.c",
       "bytes": 3553,
       "sha256": "e3eb6eec657afb6d3d02c31feb9646418fcede6c5ac1849a2d20d4a38e44454b"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_night_light.comp",
+      "bytes": 927,
+      "sha256": "172debf360f1222a74c5dc918503f35f8881614cc5878d77b5c027c89353abbf"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_zc_page.comp",
@@ -6642,6 +6677,21 @@
       "sha256": "5435bd4c7bb448eee2d35765b5e2b753f16a1ab7c5180539f7654300bc2d035c"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_colour_filter_present.py",
+      "bytes": 7451,
+      "sha256": "8260f25ea98fa84429c67b9cdb3d405e2fc69e49dc25cea5ad8a919a2e6cc8f8"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_compositor_frame_guard.py",
+      "bytes": 1779,
+      "sha256": "fb4be6f61c5794fa6a506b54943103b3f58ad6052d296f01e576a173bba0f526"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_compositor_suspend_fix.py",
+      "bytes": 2718,
+      "sha256": "7950ff43763608f3eeacd9e0f3e169895f88b7c01228ecb254bea71b92ef5396"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_continue_watching.py",
       "bytes": 29963,
       "sha256": "1dd92482f512ce9a78170a6f1a68d71824d8665b0890af66a037071a67f9e985"
@@ -6660,6 +6710,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_coverage_probe.py",
       "bytes": 4173,
       "sha256": "f78b4ea35f500b5681be5ef9c46e9bfa5379a8f2e8a1f429e46f81f29c69afff"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_crash_autoreload.py",
+      "bytes": 2785,
+      "sha256": "76155195a0a4d9a37fca783d6fed115b9640a84323f2a487fd4551aa8bb366e5"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_crash_choices.py",
@@ -6797,6 +6852,11 @@
       "sha256": "54278629e46b1c00a6e4a63684e5e1e8d0b2f1e22cfe6920e7106ae31b1e21fe"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_hwclient_size_guard.py",
+      "bytes": 2205,
+      "sha256": "5ae0913b51798c4d85a41342558623d510341f72a2e7c05f744248ad521d21da"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_image_viewer.py",
       "bytes": 43023,
       "sha256": "2058484ceef6aa0b295429e74459bef89defe34e81775d421c9687926c402a54"
@@ -6847,6 +6907,26 @@
       "sha256": "6c6fbdb3b675bfa64730028ad2eea5a0d7bfdcebd1cb50199ca25c46dae36136"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_latest_frame.py",
+      "bytes": 6154,
+      "sha256": "2389418de64e357a72302ad2dfc792df4a13bb8d534115f4f9585751d4919cc0"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_layers_4k_cap.py",
+      "bytes": 4608,
+      "sha256": "d4f77623a49bb3e8fccd27c3c6da0a8290ad328a09d0c7ce66cd3777f5f0b97d"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_layers_default_on.py",
+      "bytes": 4292,
+      "sha256": "e2d539361ffbbc43dcdfba8dd893cb7d1b5e56fc4d661a58a01a8d92f8fc5ef0"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_layers_video_sleep.py",
+      "bytes": 4557,
+      "sha256": "1ba0fc97ea6cc49766e444cb5ad4052c1bb0f3185a7f613c640353b07fb3bd73"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_link_preview.py",
       "bytes": 54160,
       "sha256": "9c9494f5a04b7b368e11a4a998c882a9ed4f029953213b35d74c5bfc0d0fcc44"
@@ -6862,9 +6942,19 @@
       "sha256": "ed4b439f082ac4e6d252934ec559a9788303f2ec1a1c2f14230625fbd3a055f2"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_lp_probe_title.py",
+      "bytes": 4650,
+      "sha256": "b7ced8fb208951ce9ba6f48b901d2eb7b306685f0322aa35fa2dafb6fa2f8ade"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_magnifier.py",
       "bytes": 16546,
       "sha256": "ab4e1fd4c3403b05142fc540ec169de97baf6937762b8c3f1fc9a050ed33a427"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_magnifier_present.py",
+      "bytes": 22885,
+      "sha256": "e6e277ef4bafb8d7f72aed0f6bc813fd98890f73c2d08c43dc3cf4fc491e171c"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_media_controls.py",
@@ -6893,8 +6983,13 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_memmap.py",
-      "bytes": 5192,
-      "sha256": "5e8737665e67e168214d048a17e0c24784fb1077c378e059ffbc7fe560ffc6d3"
+      "bytes": 7328,
+      "sha256": "603a601308b00d8d9535470643bbac81b5ef68b6cf41e33113b7e606e6c6570a"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_memmap_child.py",
+      "bytes": 8292,
+      "sha256": "fb57dd9876d79aea983df11ba9aeac13264c5e5dfddf8e6ee3f6f4d87d5d4d7e"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_memtrace.py",
@@ -6915,6 +7010,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_night_light.py",
       "bytes": 28623,
       "sha256": "0385a8ef017fd552c2daacb8a9261e392ba04415b1c0cd6b4ffeed7109c2eeeb"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_night_light_present.py",
+      "bytes": 17728,
+      "sha256": "7ec6d83f779c4fa918dcbc431dd7973690231c307fbf042791f31fdb4fa4ccf0"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_notes.py",
@@ -6977,6 +7077,11 @@
       "sha256": "0da3b0d6f859749a6e14436bd00a70f112caf2a706897f38001a1e4d3f0bff81"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pas_decommit_remap.py",
+      "bytes": 4243,
+      "sha256": "9afee81f06fbcc2968cf8f3146896968ce11f0c9ee00b3d6f52ad50132e6a895"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pause_info.py",
       "bytes": 21852,
       "sha256": "6f29ef28683bd55a0a5ad3c2101d8daad7eb50f17fc817b2f8a66ec284c368a2"
@@ -7017,6 +7122,41 @@
       "sha256": "6c063709316d30da08661b1bc672c9aaa3b8f30dbc6860a69f328a5b90e89dd3"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pt_4k_pagecap.py",
+      "bytes": 10044,
+      "sha256": "015a951b1a519e2d4491c157d1a2b995d67d5a0b2bfaeba40fba9241c8f740e8"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pt_backstop.py",
+      "bytes": 13963,
+      "sha256": "27407686ca06a9768ebbdb2653d65c7e151a6e03dffb7257dd35fa6e55f3a994"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pt_gate_4k_line.py",
+      "bytes": 1982,
+      "sha256": "7cfb0d31fc4cd8c40bef7b31cbca1318b6da1ba95aad81e6d140fc7aa52bc3f5"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pt_gate_recal.py",
+      "bytes": 2177,
+      "sha256": "a62457e8093919208029bee921c7156023cf84baaec3a4505a58d43d8fe99ef7"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pt_gate_wait.py",
+      "bytes": 2642,
+      "sha256": "d46baae1cdb98e9fdf57a9fd8433c8b1da013115113399547858c2ef330521cb"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pt_open_gate.py",
+      "bytes": 3872,
+      "sha256": "52f4de89a3b0185f4ceaee827707b95fb0aa2e808746c0107db02ef7f43d2a7f"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pt_watchdog.py",
+      "bytes": 8134,
+      "sha256": "dee17548d123211bbe4d1e7d8fdb0275d0a16cc38f81eb5bf78c2941ec671d1e"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pw_lock.py",
       "bytes": 45053,
       "sha256": "ce0c2f61f26c655b811c09415ca9035f4f786fe9476f41d183d6429c4d8d2f7a"
@@ -7055,6 +7195,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_reduce_motion.py",
       "bytes": 26363,
       "sha256": "a6fa62947e0a4bbbf071109c6caa3a176755250a3d98a9c3b901373f4a28d007"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_runloop_stop_fix.py",
+      "bytes": 2362,
+      "sha256": "30e23bd40107ec7465fd725cb10b6830c93fdf5543fc25e297c0b02af4b2fc1b"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_save_image.py",
@@ -7100,6 +7245,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_settings_search.py",
       "bytes": 8542,
       "sha256": "775f20233f32054be329e504c26427583dc56872dd448676b95580142974541c"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_shm_lazy_slots.py",
+      "bytes": 4653,
+      "sha256": "c2845cda02f4bcce40ffe25d1ab9314a3d3f9839bf93e88d0f061e4dc334a2b7"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_site_clear.py",
@@ -7172,6 +7322,11 @@
       "sha256": "7e42845161611a473de9c01988468d079091971969e4b2729bd1818e0813e0ce"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_stack_min.py",
+      "bytes": 2011,
+      "sha256": "00e1a9e93977820890ed56e8636eeaffec5abf19d26938914466c509a7cddc7c"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_start_custom.py",
       "bytes": 64710,
       "sha256": "70c1fcb5b8358bb5817e3cbf107777fc9a3ccfa06da4bdbb0485f4d351b13776"
@@ -7185,6 +7340,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_starter.py",
       "bytes": 9794,
       "sha256": "e3d674123f8c03dfa6eb52450f7838a37e673f6ad2a3b2c9c8c24a8babbc9c20"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_starter_v4_req.py",
+      "bytes": 1209,
+      "sha256": "c4057b61ba8c237890c7c4782fe2e22280e10add03125fffb597fe2ea6aaa59e"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_startup_choice.py",
@@ -7267,6 +7427,11 @@
       "sha256": "b444016579e13cad2420a418a1e51f3377ff6358ac23fb72e7d772155eb5f1f4"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_trace_lazy.py",
+      "bytes": 1837,
+      "sha256": "d3d9c95698eb9ff03e83cfca5aabb56a842d3800879b7e2bb034adefd92689b7"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_translate_plus.py",
       "bytes": 37525,
       "sha256": "5d0dd1ed77fd132ec89f1f4894cd518dac6d9d571bb945901f58d694759ff4f4"
@@ -7327,6 +7492,11 @@
       "sha256": "4c333efee54c60a204848732601a554fcb1d19fa8db72cf5baebbe26734dadb8"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_video_trim.py",
+      "bytes": 5272,
+      "sha256": "508c33919cc8b64db847c043f1cb27098bde8b59667b5a047eea25a905f81565"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_web_apps.py",
       "bytes": 63342,
       "sha256": "3e1fafcbc298d794729c5407082a6715cdb49b3f77e864950136191c20ac0da0"
@@ -7360,6 +7530,11 @@
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_yt_media_stop.py",
       "bytes": 14772,
       "sha256": "19ca9d10da00ec53f43313c159f3dba54be1b675a0cdaa305abbeab12444049d"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_yt_potoken.py",
+      "bytes": 23732,
+      "sha256": "30b9b76122b09a5485f2c831eca605f0ac1ba01961c9bd8d4a8d55857bc900be"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_yttl_scroll.py",
@@ -8495,6 +8670,31 @@
       "path": "omni/native-title/patches/launch/README.md",
       "bytes": 4620,
       "sha256": "14b290916fd69df9c6fd5f8dfc6d449fb13cd42a532880428fd8859c6e0b4f13"
+    },
+    {
+      "path": "omni/native-title/patches/launch/ack/src/ack-title.inc",
+      "bytes": 4984,
+      "sha256": "de91b96b0ecd7892f7e8c3b0bee53d9ae1404fb84bc57ea31c4d15f15128cee2"
+    },
+    {
+      "path": "omni/native-title/patches/launch/ack/tools/apply_ack_title.py",
+      "bytes": 5307,
+      "sha256": "d7fa43cdddca27c20b1f36cbea15a8bc6f28eca663a8d7232d6bc0687c113f33"
+    },
+    {
+      "path": "omni/native-title/patches/launch/jank/src/OmniJank.h",
+      "bytes": 12819,
+      "sha256": "b1e46eecbd6e34cc837d82d07e8ca2ae34d63e3f1e4fad2501449658699c9cc9"
+    },
+    {
+      "path": "omni/native-title/patches/launch/jank/src/OmniPaintHold.h",
+      "bytes": 1575,
+      "sha256": "3e1d473167af8e7f73a3ac6700f061758ac3da5b6849fbb3449c8bdec9b59ec6"
+    },
+    {
+      "path": "omni/native-title/patches/launch/jank/src/painthold-block.inc",
+      "bytes": 3589,
+      "sha256": "169ad9fe1e35c38ebaff7d1608f7a0eb8039ccf405d3ddf3fae2a4a1c489ae1a"
     },
     {
       "path": "omni/native-title/patches/launch/rc5/README.md",
@@ -15833,8 +16033,8 @@
     },
     {
       "path": "omni/pages/bundle-clean4/whatsnew/whatsnew.json",
-      "bytes": 13477,
-      "sha256": "bdef21ead6a70c3183b50fde0d8e4012b7306d57107c61a611095e60adffad7b"
+      "bytes": 18331,
+      "sha256": "be6edfaf0dc2a6edfa23f9fa3e9708e00d6c08cf42f42b4fdd07601307fa0d9c"
     },
     {
       "path": "omni/pages/bundle-r46/accents/accents.css",
