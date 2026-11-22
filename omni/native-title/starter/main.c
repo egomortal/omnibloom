@@ -39,7 +39,11 @@ there, the title falls back to elfldr as before. Log: /data/omni/native/starter.
 #include "gpl/elfldr.h"
 
 #define STARTER_PORT 9031
-#define STARTER_VERSION "OMNI_STARTER_V3"
+#define STARTER_VERSION "OMNI_STARTER_V4"
+/* V4 (2026-11-20): "pt" request -> "pt <used> <total>
+", the kernel CPU page-table pool (sceKernelGetPageTableStats,
+   which a payload can call and the title cannot) for the title's page-table governor (OMNI_PT_BACKSTOP). */
+int sceKernelGetPageTableStats(int* cpuTotal, int* cpuAvailable, int* gpuTotal, int* gpuAvailable);
 #define NATIVE_DIR "/data/omni/native/"
 #define LOG_PATH NATIVE_DIR "starter.log"
 
@@ -213,6 +217,17 @@ int main(void)
         if (!got) { close(c); continue; }   // a probe (the title checks that we answer)
         if (got && line[got - 1] == '\r') line[--got] = 0;
         if (!strcmp(line, "quit")) { say("quit requested (a newer starter is taking over)"); close(c); return 0; }
+        if (!strcmp(line, "pt")) {   // V4: the kernel page-table pool, for the title's governor
+            int total = 0, avail = 0, gt = 0, ga = 0;
+            char out[64];
+            if (sceKernelGetPageTableStats(&total, &avail, &gt, &ga) == 0 && total > 0 && avail >= 0 && avail <= total)
+                snprintf(out, sizeof out, "pt %d %d\n", total - avail, total);
+            else
+                snprintf(out, sizeof out, "pt -1 0\n");
+            reply(c, out);
+            close(c);
+            continue;
+        }
         if (!strcmp(line, "version")) {   // V3: lets the title tell an older starter apart and replace it
             reply(c, STARTER_VERSION "\n");
             close(c);

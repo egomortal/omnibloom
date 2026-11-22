@@ -16,7 +16,7 @@ loads a page and the console's memory is tightest. The starter maps the engine f
   `/data/omni/native/`, one at a time, and logs to `/data/omni/native/starter.log`.
 - If it isn't installed or doesn't answer, Omni uses elfldr as before. `/data/omni/starter-off.flag` makes Omni use
   elfldr always.
-- Other requests: an empty line is a probe; `version` answers `OMNI_STARTER_V3`; `quit` ends it (a newer starter sends
+- Other requests: an empty line is a probe; `version` answers `OMNI_STARTER_V4`; `pt` answers the kernel page-table pool (used, total) for Omni's memory guard; `quit` ends it (a newer starter sends
   this to take over the port). A refused or failed request gets a one-line `omni-starter: ...` answer.
 
 **Safety checks (V3):**
@@ -29,7 +29,7 @@ loads a page and the console's memory is tightest. The starter maps the engine f
   starter answers it starts the current one, which tells the old one to quit.
 
 **Versions:** V1 chunked loading. V2 reaps finished engines (V1 left them as zombies), `quit`, takes over from an older
-starter. V3 the safety checks above. `stop/` is a one-off helper that ended a V1 starter (V1 has no `quit`).
+starter. V3 the safety checks above. V4 answers `pt` (Omni 0.5.4-bloom.4+ requires V4). `stop/` is a one-off helper that ended a V1 starter (V1 has no `quit`).
 
 **Build** (PS5 payload SDK at `/opt/ps5-payload-sdk`): `make` -> `build/omni-starter.elf`.
 
