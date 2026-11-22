@@ -1,4 +1,15 @@
 #!/bin/bash
+# 2026-11-21 vss3: = vss2 + apply_compositor_frame_guard.py (OMNI_COMPOSITOR_FRAME_GUARD_V1: late frame-done after invalidate)
+# 2026-11-21 vss2: = vss + apply_stack_min.py (OMNI_STACK_MIN_2M_V1: 2 MiB thread stack minimum, was 8) + apply_trace_lazy.py
+#   (OMNI_TRACE_LAZY_V1: 24 MiB trace buffer only when tracing) + memmap child V2 (map thread starts on the first frame)
+# 2026-11-20 vss: = pasremap + the FIXED memory-extra.h (cost-free sceKernelReserveVirtualRange reservations, OMNI v62)
+#   bind-mounted over /opt/omni-build/.../memory-extra.h INSIDE this build's private mount namespace only (the shared
+#   /opt copy is the old mmap(PROT_NONE) one: every WebKit reservation charged the page-table pool). OMNI_VSS_BIND_V1
+# 2026-11-20 pasremap: = mm + apply_pas_decommit_remap.py (OMNI_PAS_DECOMMIT_REMAP_V1: libpas decommit returns page tables)
+# 2026-11-20 mm: = lvs + apply_memmap_child.py (OMNI_MEMMAP_CHILD_V1, memmap-child.flag only)
+# 2026-11-20 lvs: = pagecap + apply_layers_video_sleep.py (OMNI_LAYERS_VIDEO_SLEEP_V1)
+# 2026-11-20 pagecap: = crfix + apply_pt_4k_pagecap.py (OMNI_PT_4K_PAGECAP_V1)
+# 2026-11-19: = build-omni-jscftl-child-ldo.sh + apply_compositor_suspend_fix.py (tab-close crash) + apply_hwclient_size_guard.py (video abort)
 # OMNI_JSCFTL_CHILD_V1 (2026-11-17): the launch child (a5083735, omni-gpupages-ls1b/out-rc6-a5083735) rebuilt with
 # JavaScriptCore's DFG and FTL tiers compiled in (-DENABLE_DFG_JIT=ON -DENABLE_FTL_JIT=ON), plus
 #   P1 OMNI_JSC_DFGFTL_V1         tiers per flag file (jsc-dfg.flag / jsc-ftl.flag), polling traps, 1+1 compiler threads,
@@ -71,6 +82,43 @@ grep -q 'OMNI_UBLOCK_MISSING_V1\|OMNI_UBLOCK_REFINE_V1' "$T/$UB" || CHANGED="$CH
 grep -q OMNI_UBLOCK_MISSING_V1 "$T/$UB" || { python3 "$S1/tools/apply_ublock_missing.py" --ublock "$T/$UB" > "$L/apply_ublock_missing.log" 2>&1 || fail "ublock missing: $(tail -1 "$L/apply_ublock_missing.log")"; }
 grep -q OMNI_UBLOCK_REFINE_V1 "$T/$UB" || { python3 "$S1/tools/apply_ublock_refine.py" --ublock "$T/$UB" > "$L/apply_ublock_refine.log" 2>&1 || fail "ublock refine: $(tail -1 "$L/apply_ublock_refine.log")"; }
 grep -q OMNI_UBLOCK_MISSING_V1 "$T/$UB" && grep -q OMNI_UBLOCK_REFINE_V1 "$T/$UB" || fail "ublock markers missing after apply"
+# layers default on (2026-11-18, OMNI_LAYERS_DEFAULT_ON_V1 tool): the child tree's async + surface .inc copies (not $S1/src);
+# always listed as changed files (the gate below expects them in the upper)
+python3 -I "$S1/tools/apply_layers_default_on.py" inc "$T/$CG" > "$L/apply_layers_default_on_inc.log" 2>&1 || fail "layers default on (inc): $(tail -1 "$L/apply_layers_default_on_inc.log")"
+CHANGED="$CHANGED $CG/ogp-s1b-async.inc $CG/ogp-s1-surface.inc"
+# latest frame (2026-11-18, apply_latest_frame.py): one waiting async-readback frame at most, its memory reused
+python3 -I "$S1/tools/apply_latest_frame.py" "$T/$CG" > "$L/apply_latest_frame.log" 2>&1 || fail "latest frame: $(tail -1 "$L/apply_latest_frame.log")"
+# OMNI_COMPOSITOR_SUSPEND_FIX_V1 (2026-11-19): tab-close crash (cross-thread stop of the armed compositor update timer)
+python3 -I "$S1/tools/apply_compositor_suspend_fix.py" "$T/$CG" > "$L/apply_compositor_suspend_fix.log" 2>&1 || fail "compositor suspend fix: $(tail -1 "$L/apply_compositor_suspend_fix.log")"
+CHANGED="$CHANGED $CG/CompositingRunLoop.cpp"
+# OMNI_HWCLIENT_SIZE_GUARD_V1 (2026-11-19): video client drops a picture with a bogus size instead of aborting
+python3 -I "$S1/tools/apply_hwclient_size_guard.py" "$T/engine" > "$L/apply_hwclient_size_guard.log" 2>&1 || fail "hwclient size guard: $(tail -1 "$L/apply_hwclient_size_guard.log")"
+CHANGED="$CHANGED engine/media/OmniHwClient.cpp"
+# OMNI_GPUPAGES_VIDEO_TRIM_V1 (2026-11-19): the layers readback ring is released while a 1440p+ hardware video plays
+python3 -I "$S1/tools/apply_video_trim.py" "$T/$CG" "$T/engine" > "$L/apply_video_trim.log" 2>&1 || fail "video trim: $(tail -1 "$L/apply_video_trim.log")"
+# OMNI_LAYERS_4K_CAP_V1 (2026-11-19): decodingInfo says no above 1440p while page layers are on (page-table pool)
+python3 -I "$S1/tools/apply_layers_4k_cap.py" "$T/engine" > "$L/apply_layers_4k_cap.log" 2>&1 || fail "layers 4k cap: $(tail -1 "$L/apply_layers_4k_cap.log")"
+CHANGED="$CHANGED engine/entry/OmniMSEPlayer.cpp engine/entry/OmniMSESource.h"
+# OMNI_RUNLOOP_STOP_FIX_V1 (2026-11-19): RunLoop::TimerBase::stop from another thread = start()'s locked stop, no crash
+python3 -I "$S1/tools/apply_runloop_stop_fix.py" "$T" > "$L/apply_runloop_stop_fix.log" 2>&1 || fail "runloop stop fix: $(tail -1 "$L/apply_runloop_stop_fix.log")"
+CHANGED="$CHANGED webkit/Source/WTF/wtf/generic/RunLoopGeneric.cpp"
+# OMNI_PT_4K_PAGECAP_V1 (2026-11-20): YouTube kept at 1440p while a 2160p decoder open would cross the page-table line
+python3 -I "$S1/tools/apply_pt_4k_pagecap.py" "$T/engine" > "$L/apply_pt_4k_pagecap.log" 2>&1 || fail "pt 4k pagecap: $(tail -1 "$L/apply_pt_4k_pagecap.log")"
+CHANGED="$CHANGED engine/entry/OmniBrowser.cpp"
+# OMNI_LAYERS_VIDEO_SLEEP_V1 (2026-11-20): page layers off while a 1440p+ hardware video plays (~265 page tables at 4K)
+python3 -I "$S1/tools/apply_layers_video_sleep.py" "$T/$CG" > "$L/apply_layers_video_sleep.log" 2>&1 || fail "layers video sleep: $(tail -1 "$L/apply_layers_video_sleep.log")"
+CHANGED="$CHANGED $CG/DrawingAreaCoordinatedGraphics.cpp"
+# OMNI_MEMMAP_CHILD_V1 (2026-11-20): engine-child memory map, test-only (memmap-child.flag)
+python3 -I "$S1/tools/apply_memmap_child.py" "$T/engine" > "$L/apply_memmap_child.log" 2>&1 || fail "memmap child: $(tail -1 "$L/apply_memmap_child.log")"
+# OMNI_PAS_DECOMMIT_REMAP_V1 (2026-11-20): libpas decommit re-reserves (page tables back), commit maps again
+python3 -I "$S1/tools/apply_pas_decommit_remap.py" "$T" > "$L/apply_pas_decommit_remap.log" 2>&1 || fail "pas decommit remap: $(tail -1 "$L/apply_pas_decommit_remap.log")"
+CHANGED="$CHANGED webkit/Source/bmalloc/libpas/src/libpas/pas_page_malloc.c"
+# OMNI_TRACE_LAZY_V1 (2026-11-21): media trace buffer allocated only when tracing (12 page tables per process)
+python3 -I "$S1/tools/apply_trace_lazy.py" "$T/engine" > "$L/apply_trace_lazy.log" 2>&1 || fail "trace lazy: $(tail -1 "$L/apply_trace_lazy.log")"
+CHANGED="$CHANGED engine/media/OmniHwService.cpp"
+# OMNI_COMPOSITOR_FRAME_GUARD_V1 (2026-11-21): frameComplete/displayUpdateFired return once the compositor is invalidated
+python3 -I "$S1/tools/apply_compositor_frame_guard.py" "$T/$CG" > "$L/apply_compositor_frame_guard.log" 2>&1 || fail "compositor frame guard: $(tail -1 "$L/apply_compositor_frame_guard.log")"
+CHANGED="$CHANGED $CG/ThreadedCompositorPlayStation.cpp"
 st "a5083735 recipe on state C: stage-1 files changed:${CHANGED:- none}; OMNI_UBLOCK_MISSING_V1 + OMNI_UBLOCK_REFINE_V1 present"
 # 2. P1-P4 (backups outside the tree) + marker audit
 export OMNI_PATCH_BACKUP_DIR="$L/backups"
@@ -176,8 +224,12 @@ cd "$NC" || fail "no link workspace"
 python3 "$NC/make_link_command.py" > "$L/link-command-child.log" 2>&1 || fail "child link command"
 rm -rf "$LK"; mkdir -p "$LK/s1obj"
 CF=(-std=c11 -O2 -Wall -Wextra -Wno-unused-parameter -fPIC "-I$SRCM/include" "-I$UPV/tooling/gpu-broker")
+mkdir -p "$LK/ldo" && cp "$S1/src/ogp-s1-child.c" "$LK/ldo/" && python3 -I "$S1/tools/apply_layers_default_on.py" child "$LK/ldo" > "$L/apply_layers_default_on_child.log" 2>&1 || fail "layers default on (child ctor)"
+python3 -I "$S1/tools/apply_stack_min.py" "$LK/ldo/ogp-s1-child.c" > "$L/apply_stack_min.log" 2>&1 || fail "stack min: $(tail -1 "$L/apply_stack_min.log")"
+grep -q OMNI_STACK_MIN_2M_V1 "$LK/ldo/ogp-s1-child.c" || fail "stack min marker missing"
 for x in ogp-s1-child ogp_dri_nodrm_stubs_weak ogp_payload_libc_weak; do
-  "$PSDK/bin/prospero-clang" "${CF[@]}" -c "$S1/src/$x.c" -o "$LK/s1obj/$x.o" >> "$L/s1obj.log" 2>&1 || fail "compile $x"
+  xs="$S1/src/$x.c"; [ "$x" = ogp-s1-child ] && xs="$LK/ldo/ogp-s1-child.c"   # layers default on: the patched copy
+  "$PSDK/bin/prospero-clang" "${CF[@]}" "-I$S1/src" -c "$xs" -o "$LK/s1obj/$x.o" >> "$L/s1obj.log" 2>&1 || fail "compile $x"
 done
 OGP_S1_MAP="$LK/child.map" python3 "$S1/tools/s1_link_inputs.py" "$LK/s1-link-inputs.json" "$MB" "$CP2" "$LK/s1obj" > "$L/s1-link-inputs.log" 2>&1 || fail "link inputs"
 python3 "$S1/tools/patch_child_build.py" "$NC/child_build.py" > "$L/patch-child-build.log" 2>&1 || fail "child_build patch"
@@ -281,6 +333,13 @@ chown -R builder:builder "$SRC" "$UP" "$WK" "$NC"; chown builder:builder "$BD"
 mount -t overlay overlay -o "lowerdir=$SRC:$S3,upperdir=$UP,workdir=$WK" "$T" 2>"$L/overlay.err" || { st "overlay failed ($(cat "$L/overlay.err"))"; exit 1; }
 trap 'cd /; umount "$T/build" 2>/dev/null; umount "$T" 2>/dev/null' EXIT
 mount --bind "$BD" "$T/build" || { st "build bind failed"; exit 1; }
+# OMNI_VSS_BIND_V1: this namespace only; fresh mtime so ninja rebuilds every file that includes it
+MXO=/opt/omni-build/omni-browser/engine/ports/memory-extra/include/memory-extra.h; MXN=/tmp/omni-vss-$$/memory-extra.h
+mkdir -p "${MXN%/*}" && cp "$T/engine/ports/memory-extra/include/memory-extra.h" "$MXN" && touch "$MXN" && chmod 644 "$MXN" || { st "vss header copy failed"; exit 1; }
+grep -q sceKernelReserveVirtualRange "$MXN" || { st "vss header is not the fixed one"; exit 1; }
+mount --bind "$MXN" "$MXO" || { st "vss header bind failed"; exit 1; }
+trap 'cd /; umount "$MXO" 2>/dev/null; umount "$T/build" 2>/dev/null; umount "$T" 2>/dev/null' EXIT
+st "vss: fixed memory-extra.h bound over $MXO in this namespace ($(sha256sum "$MXO" | cut -c1-12))"
 touch "$T/.jscftl-marker" && chown builder:builder "$T/.jscftl-marker" || { st "tree not writable"; exit 1; }
 st "overlay $T = $SRC + s3 (upper $UP); build dir $BD ($( [ -f "$BD/build.ninja" ] && echo 'kept: incremental' || echo 'fresh: full build'))"
 runuser -u builder -- env DIAG="${DIAG:-0}" bash "$V_INNER"

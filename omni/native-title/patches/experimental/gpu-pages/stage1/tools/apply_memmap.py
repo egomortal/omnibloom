@@ -21,8 +21,43 @@ p = Path(sys.argv[1]) / 'engine/media/OmniHwService.cpp'
 raw = p.read_bytes().decode('utf-8')
 nl = '\r\n' if '\r\n' in raw else '\n'
 s = raw.replace('\r\n', '\n')
+
+MARK2 = 'OMNI_MEMMAP_V2'
+
+
+def v2(s):
+    """OMNI_MEMMAP_V2 (2026-11-18): also list every direct-memory region (biggest first, up to 40) on passes 1, 4, 7...
+    so the non-GPU floor (524 MB on example.com) and the GPU paths' share (~289 MB) can be named by size."""
+    if MARK2 in s:
+        return s, False
+    a0 = '    uintptr_t addr = 0;\n    for (int guard = 0; guard < 400000; ++guard) {\n'
+    a1 = '        Row& r = rows[key];\n'
+    a2 = '    holeNote("memmap #%d total %llu MB in %llu regions, %llu 2MB-slots (OMNI_MEMMAP_V1)", pass,\n'
+    for a in (a0, a1, a2):
+        if s.count(a) != 1:
+            sys.exit('V2 anchor found %d times: %r' % (s.count(a), a[:60]))
+    s = s.replace(a0, '    struct DReg { uint64_t s, e, off; int prot; };   // ' + MARK2 + '\n    std::vector<DReg> dregs;\n' + a0, 1)
+    s = s.replace(a1, "        if (kind == 'D') { int64_t off = 0; int32_t prot = 0; memcpy(&off, info + 16, 8); memcpy(&prot, info + 24, 4);"
+                      " dregs.push_back({uint64_t(s), uint64_t(e), uint64_t(off), prot}); }   // " + MARK2 + '\n' + a1, 1)
+    s = s.replace(a2, '    if (pass % 3 == 1) {   // ' + MARK2 + ': each direct region, biggest first\n'
+                      '        std::sort(dregs.begin(), dregs.end(), [](const DReg& a, const DReg& b) { return a.e - a.s > b.e - b.s; });\n'
+                      '        for (size_t i = 0; i < dregs.size() && i < 40; ++i)\n'
+                      '            holeNote("memmap #%d D region %zu: %llu KB at %#llx prot %#x direct offset %#llx", pass, i,\n'
+                      '                (unsigned long long)((dregs[i].e - dregs[i].s) >> 10), (unsigned long long)dregs[i].s,'
+                      ' unsigned(dregs[i].prot), (unsigned long long)dregs[i].off);\n'
+                      '    }\n' + a2, 1)
+    return s, True
+
 if MARK in s:
-    print('already'); sys.exit(0)
+    s, changed = v2(s)
+    if not changed:
+        print('already'); sys.exit(0)
+    bak = p.with_name(p.name + '.before-memmap-v2')
+    if not bak.exists():
+        shutil.copy2(p, bak)
+    p.write_bytes(s.replace('\n', nl).encode('utf-8'))
+    print('applied V2 (upgrade)')
+    sys.exit(0)
 
 ANCHOR_FN = 'void holePunchShellPhase(int phase)\n{\n    diagnosticTrace(28,phase);\n'
 if s.count(ANCHOR_FN) != 1:
@@ -85,5 +120,6 @@ s = s.replace(ANCHOR_FN, BLOCK + ANCHOR_FN + HOOK, 1)
 bak = p.with_name(p.name + '.before-memmap')
 if not bak.exists():
     shutil.copy2(p, bak)
+s, _ = v2(s)
 p.write_bytes(s.replace('\n', nl).encode('utf-8'))
-print('applied')
+print('applied (V1 + V2)')

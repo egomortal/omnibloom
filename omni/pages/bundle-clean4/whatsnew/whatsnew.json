@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "id": "1964a8ce3e61cf04",
+ "id": "778ddaccd4195596",
  "release": "Unreleased (dev branch, not tested on a console yet unless noted)",
  "intro": "We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.",
  "groups": [
@@ -219,6 +219,76 @@
    "key": "browsing",
    "title": "Browsing",
    "items": [
+    {
+     "title": "4K HDR YouTube plays with layers on",
+     "text": "Before, a 4K video with page layers on pushed the console's kernel page-table pool (8,192 in all) past 7,000 and never played; now the peak is about 6,200 and 4K HDR plays. Page memory the engine frees now gives its page tables back, engine threads get 2 MiB stacks instead of 8 MiB, the 24 MiB video trace buffer is only made when tracing is on, and page layers pause while a large video plays. Off switches: /data/omni/decommit-remap-off.flag (freed memory), /data/omni/layers-video-sleep-off.flag (layer pause); stack size in KiB: /data/omni/gpu-pages-stack-kb.txt.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Memory guard for big videos",
+     "text": "When that pool gets close to full, Omni refuses to open one more video decoder (the player falls back), YouTube is asked for 1440p instead of 4K, and as a last step the page is stopped and reloaded once, instead of the console freezing. Off switches: /data/omni/pt-backstop-off.flag, /data/omni/pt-4k-pagecap-off.flag (1440p step-down), /data/omni/pt-watchdog-off.flag (page stop).",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Fewer 4K videos refused",
+     "text": "A 4K decoder is now counted at 260 page tables (was 450), 4K has its own line of 6,550 (was 6,400), and an open waits up to 3 s for a closing stream during a quality switch. Console: zero refusals in 5 runs (before: about 1 in 4). Settings: /data/omni/pt-gate-4k-cost.txt, /data/omni/pt-gate-4k-line.txt; wait off: /data/omni/pt-gate-wait-off.flag.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Fixed: a page could crash when a video started or stopped with layers on",
+     "text": "A late \"frame done\" message arrived after the drawing timer was gone. It is now ignored. Console: no such crash in the runs since.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "YouTube \"not attested\" stops, handled earlier",
+     "text": "Omni now remembers, across launches, how YouTube judged its playback tokens (in /data/omni/yt-attest-days.log). A token that looks like ones YouTube keeps rejecting is re-made right away instead of after the video stops, the in-page re-make is tried at most 3 times, and it is skipped when it has not worked for a week. Off switches: /data/omni/yt-potoken-off.flag (all of it), /data/omni/yt-potoken-early-off.flag (early check); /data/omni/yt-potoken-rescue.txt = on, off or auto.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Smoother scrolling, on by default",
+     "text": "Pages are now drawn as GPU layers and scroll on their own thread. On a movie-streaming site this gives about 2.6x more screen updates while scrolling, with fewer hitches. 20 of 20 console runs with layers on were clean thanks to the GPU guard. Off switches: /data/omni/gpu-pages-stage1-off.flag (all of it), /data/omni/gpu-pages-async-off.flag (scrolling thread), /data/omni/gpu-pages-asyncread-off.flag.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Leaner layers",
+     "text": "A finished page frame waiting for the browser is now replaced (and its memory reused) when a newer one is ready, instead of piling up. Page memory with 4K YouTube playing: about 1.05-1.18 GB, down from up to 1.44 GB, which had made the page run out of memory once in 13 runs. Off switch: /data/omni/gpu-pages-latest-frame-off.flag.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Fixed: closing or switching tabs crashed the other tab",
+     "text": "It showed \"This page stopped working\" and reloaded. With layers on, hiding or showing a tab stopped a drawing timer from the wrong thread, which the engine treated as fatal. It now stops that timer safely from any thread, the same way it already started it. Console-tested: no crashes in 4K video, movie-site playback, scrolling and plain-page runs.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Fixed: a video page could crash",
+     "text": "A video picture with an invalid size stopped the page. That one picture is now skipped.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "A crashed page reloads by itself once",
+     "text": "The first crash on a site reloads the tab with a short notice instead of showing the crash page. If the same site crashes again within 5 minutes, the crash page with its choices shows as before. The crash page no longer blames memory, since that is often not the cause.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
     {
      "title": "Faster JavaScript",
      "text": "Omni's JavaScript engine now uses its two optimizing compilers (DFG and FTL) by default. Console benchmark: 34.5 ms -> 12.7 ms on average (about 2.7x faster); YouTube's home page first appears in about 1.2 s instead of 1.8 s. Off switches: /data/omni/jsc-ftl-off.flag (FTL only), /data/omni/jsc-dfg-off.flag (both); the JavaScript JIT setting still turns all of it off.",

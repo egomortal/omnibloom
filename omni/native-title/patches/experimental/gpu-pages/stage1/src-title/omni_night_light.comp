@@ -1,0 +1,16 @@
+#version 450
+// SPDX-License-Identifier: GPL-3.0-or-later
+// OMNI_NIGHT_LIGHT_V1 (tools/apply_night_light_present.py): Night light, a warm tint over the composed canvas, in place.
+// out.rgb = M * canvas.rgb on the stored (gamma-encoded) values, clamped; alpha kept. M is row-major 3x3, one row per
+// vec4 (w unused). Recorded only while the shell sets a matrix (OmniNightLightShell.h); never while Night light is Off.
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(rgba8, set = 0, binding = 0) uniform image2D canvas;
+layout(push_constant) uniform P { vec4 r0, r1, r2; ivec4 size; } p;
+void main()
+{
+    ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+    if (xy.x >= p.size.x || xy.y >= p.size.y) return;
+    vec4 c = imageLoad(canvas, xy);
+    vec3 o = vec3(dot(p.r0.xyz, c.rgb), dot(p.r1.xyz, c.rgb), dot(p.r2.xyz, c.rgb));
+    imageStore(canvas, xy, vec4(clamp(o, 0.0, 1.0), c.a));
+}

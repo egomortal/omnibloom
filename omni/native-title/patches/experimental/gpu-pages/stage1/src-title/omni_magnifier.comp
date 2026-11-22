@@ -1,0 +1,54 @@
+#version 450
+// SPDX-License-Identifier: GPL-3.0-or-later
+// OMNI_MAGNIFIER_V1 (tools/apply_magnifier_present.py): the magnifier lens over the composed canvas.
+// One storage buffer holds two copies the present made from the canvas just before this dispatch:
+//   words [0, src.z * src.w)          the source region around the pointer (row length src.z), read only
+//   words [src.z * src.w, + dst.z*dst.w) the lens rectangle as it is now (row length dst.z), rewritten in place
+// Each invocation reads and writes its own lens word only, so there is no hazard; the present copies the lens words
+// back into the canvas afterwards. Inside the rounded rectangle: the source pixel under pointer + offset / zoom
+// (nearest: crisp text at 2x / 3x), a two-tone ring and a small crosshair where the pointer is; the edge is blended
+// over what was there (1 px coverage). Outside the canvas the source is a dark grey. Colours are neutral greys, so
+// the canvas channel order (RGBA / BGRA) does not matter.
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(std430, set = 0, binding = 0) buffer Px { uint px[]; } b;
+layout(push_constant) uniform P {
+    ivec4 src;      // x0, y0, w, h of the source region (canvas pixels)
+    ivec4 dst;      // x0, y0, w, h of the lens rectangle (canvas pixels, clipped to the canvas)
+    vec4 lens;      // lens centre x, y; half width, half height
+    vec4 look;      // pointer x, y (canvas pixels); zoom; corner radius
+    vec4 ring;      // ring width; crosshair arm, gap, half thickness (arm 0: no crosshair)
+    ivec4 canvas;   // canvas w, h, 0, 0
+} p;
+const vec3 kLight = vec3(0.96);
+const vec3 kDark = vec3(0.07);
+const vec3 kOutside = vec3(0.094);
+void main()
+{
+    ivec2 g = ivec2(gl_GlobalInvocationID.xy);
+    if (g.x >= p.dst.z || g.y >= p.dst.w) return;
+    ivec2 xy = p.dst.xy + g;
+    vec2 d = vec2(xy) + 0.5 - p.lens.xy;
+    vec2 q = abs(d) - (p.lens.zw - vec2(p.look.w));
+    float dist = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - p.look.w;   // < 0 inside the rounded rectangle
+    float cov = clamp(0.5 - dist, 0.0, 1.0);
+    if (cov <= 0.0) return;
+    uint di = uint(p.src.z * p.src.w + g.y * p.dst.z + g.x);
+    vec4 under = unpackUnorm4x8(b.px[di]);
+    ivec2 si = ivec2(floor(p.look.xy + d / p.look.z));
+    vec4 c;
+    if (si.x < 0 || si.y < 0 || si.x >= p.canvas.x || si.y >= p.canvas.y) c = vec4(kOutside, 1.0);
+    else {
+        ivec2 r = clamp(si - p.src.xy, ivec2(0), p.src.zw - ivec2(1));
+        c = unpackUnorm4x8(b.px[r.y * p.src.z + r.x]);
+    }
+    if (p.ring.y > 0.0) {   // the crosshair: the pointer's spot (the lens centre), arms with a dark outline
+        float ax = abs(d.x), ay = abs(d.y), L = p.ring.y, gap = p.ring.z, t = p.ring.w;
+        bool core = (ay <= t && ax >= gap && ax <= L) || (ax <= t && ay >= gap && ay <= L);
+        bool edge = (ay <= t + 1.0 && ax >= gap - 1.0 && ax <= L + 1.0) || (ax <= t + 1.0 && ay >= gap - 1.0 && ay <= L + 1.0);
+        if (core) c = vec4(kLight, 1.0); else if (edge) c = vec4(kDark, 1.0);
+    }
+    float bw = p.ring.x;
+    c = mix(c, vec4(kLight, 1.0), clamp(dist + bw + 0.5, 0.0, 1.0));
+    c = mix(c, vec4(kDark, 1.0), clamp(dist + bw * 0.35 + 0.5, 0.0, 1.0));
+    b.px[di] = packUnorm4x8(mix(under, c, cov));
+}

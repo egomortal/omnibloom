@@ -1,4 +1,16 @@
 #!/bin/bash
+# 2026-11-21 vss7: = vss6 + apply_pt_gate_4k_line.py (OMNI_PT_GATE_4K_LINE_V1: 4K gate line 6550, was 6400)
+# 2026-11-21 vss6: = vss5 + apply_pt_gate_wait.py (OMNI_PT_GATE_WAIT_V1: worker opens wait up to 3 s for a closing stream)
+# 2026-11-21 vss5: = vss4 + apply_yt_potoken.py (OMNI_YT_POTOKEN_V1, YouTube PO token pre-mint/re-mint/cache; design outputs/omni-ytattest/POTOKEN-DESIGN.md) + its text gate
+# 2026-11-21 vss4: = vss3 with the header bind keeping its original mtime (no 1,200-file rebuild each time)
+# 2026-11-21 vss3: = vss2 + apply_pt_gate_recal.py (OMNI_PT_GATE_RECAL_V1: 4K decoder estimate 160, was 450)
+# 2026-11-21 vss2: = vss + apply_shm_lazy_slots.py on $NE (OMNI_SHM_LAZY_SLOTS_V1: video picture slots mapped on first use)
+# 2026-11-21 vss: = wd + OMNI_VSS_BIND_V1 (fixed memory-extra.h bound over the /opt copy in this private namespace)
+#   + apply_pas_decommit_remap.py on $TT (libpas decommit returns page tables) + apply_trace_lazy.py on $NE (24 MiB trace
+#   buffer only when tracing); import gate also allows sceKernelReserveVirtualRange / sceKernelVirtualQuery (the fixed header)
+# 2026-11-20 wd: = lpprobe + apply_pt_watchdog.py (OMNI_PT_WATCHDOG_V1 + YouTube 1440p script in the title)
+# 2026-11-20 lpprobe: = ldo-gov + apply_lp_probe_title.py (OMNI_LP_PROBE_TITLE_V1, lpprobe.flag only)
+# 2026-11-19: = build-omni-gpupages-rc6-title-ldo.sh + apply_crash_autoreload.py + apply_pt_backstop.py
 # OMNI_GPUPAGES_RC6_V1 (2026-11-12): copy of build-omni-gpupages-ls1b-titlefix.sh that also applies the rc6 TITLE units after PROOF 1:
 # OmniYtGuard.h + the 4-anchor OmniBrowser.cpp edit (OMNI_YT_ATTEST_GUARD_V1 v2 + OMNI_NC_RESET_V1, ship mode, from build-omni-ytguard-title.sh)
 # and omni-jit-fix/apply_jit_default_on.py --title. The import gate allows exactly the 2 imports stage 1 adds (sceKernelUsleep,
@@ -116,6 +128,9 @@ python3 "$S1/tools/apply_quick_actions.py" "$TT" > "$LT_/apply_quick_actions.log
 st "OMNI_QUICK_ACTIONS_V1: $(paste -sd' ' "$LT_/apply_quick_actions.log")"
 python3 "$S1/tools/apply_search_tiles.py" "$TT" > "$LT_/apply_search_tiles.log" 2>&1 || { st "OMNI_SEARCH_TILES_V1 FAILED: $(tail -1 "$LT_/apply_search_tiles.log")"; exit 1; }
 st "OMNI_SEARCH_TILES_V1: $(paste -sd' ' "$LT_/apply_search_tiles.log")"
+# OMNI_PAS_DECOMMIT_REMAP_V1 (2026-11-21): libpas decommit re-reserves (page tables back), commit maps again
+python3 -I "$S1/tools/apply_pas_decommit_remap.py" "$TT" > "$LT_/apply_pas_decommit_remap.log" 2>&1 || { st "pas decommit remap FAILED: $(tail -1 "$LT_/apply_pas_decommit_remap.log")"; exit 1; }
+st "OMNI_PAS_DECOMMIT_REMAP_V1: $(tail -1 "$LT_/apply_pas_decommit_remap.log")"
 python3 "$S1/tools/apply_small_comforts.py" "$TT" > "$LT_/apply_small_comforts.log" 2>&1 || { st "OMNI_SMALL_COMFORTS_V1 FAILED: $(tail -1 "$LT_/apply_small_comforts.log")"; exit 1; }
 st "OMNI_SMALL_COMFORTS_V1: $(paste -sd' ' "$LT_/apply_small_comforts.log")"
 # 2026-11-16 overnight batch 2: uBlock content in subframes, YouTube TV mode + honest UA, reading list
@@ -313,6 +328,7 @@ st "OMNI_BOOKMARKLETS: $(paste -sd' ' "$LT_/bookmarklets.log" | cut -c1-300)"
 python3 "$S1/tools/apply_translate_plus.py" "$TT" > "$LT_/translate_plus.log" 2>&1 || { st "OMNI_TRANSLATE_PLUS FAILED: $(tail -1 "$LT_/translate_plus.log")"; exit 1; }
 st "OMNI_TRANSLATE_PLUS: $(paste -sd' ' "$LT_/translate_plus.log" | cut -c1-300)"
 python3 "$S1/tools/apply_yt_guard_recover.py" "$TT" > "$LT_/yt_guard_recover.log" 2>&1 || { st "OMNI_YT_GUARD_RECOVER FAILED: $(tail -1 "$LT_/yt_guard_recover.log")"; exit 1; }
+python3 "$S1/tools/apply_yt_potoken.py" "$TT" > "$LT_/yt_potoken.log" 2>&1 || { st "OMNI_YT_POTOKEN FAILED: $(tail -1 "$LT_/yt_potoken.log")"; exit 1; }
 st "OMNI_YT_GUARD_RECOVER: $(paste -sd' ' "$LT_/yt_guard_recover.log" | cut -c1-300)"
 python3 "$S1/tools/apply_auto_refresh.py" "$TT" > "$LT_/auto_refresh.log" 2>&1 || { st "OMNI_AUTO_REFRESH FAILED: $(tail -1 "$LT_/auto_refresh.log")"; exit 1; }
 st "OMNI_AUTO_REFRESH: $(paste -sd' ' "$LT_/auto_refresh.log" | cut -c1-300)"
@@ -355,6 +371,10 @@ st "OMNI_LINK_QR: $(paste -sd' ' "$LT_/link_qr.log" | cut -c1-300)"
 python3 "$S1/tools/apply_tab_autoclose.py" "$TT" > "$LT_/tab_autoclose.log" 2>&1 || { st "OMNI_TAB_AUTOCLOSE FAILED: $(tail -1 "$LT_/tab_autoclose.log")"; exit 1; }
 st "OMNI_TAB_AUTOCLOSE: $(paste -sd' ' "$LT_/tab_autoclose.log" | cut -c1-300)"
 python3 "$S1/tools/apply_crash_choices.py" "$TT" > "$LT_/crash_choices.log" 2>&1 || { st "OMNI_CRASH_CHOICES FAILED: $(tail -1 "$LT_/crash_choices.log")"; exit 1; }
+# OMNI_CRASH_AUTORELOAD_V1 (2026-11-19): first crash on a site reloads the shown tab too; honest crash texts
+python3 "$S1/tools/apply_crash_autoreload.py" "$TT" > "$LT_/crash_autoreload.log" 2>&1 || { st "OMNI_CRASH_AUTORELOAD FAILED: $(tail -1 "$LT_/crash_autoreload.log")"; exit 1; }
+python3 "$S1/tools/apply_pt_watchdog.py" "$TT" > "$LT_/pt_watchdog.log" 2>&1 || { st "OMNI_PT_WATCHDOG FAILED: $(tail -1 "$LT_/pt_watchdog.log")"; exit 1; }
+st "OMNI_PT_WATCHDOG_V1: $(tail -1 "$LT_/pt_watchdog.log")"
 st "OMNI_CRASH_CHOICES: $(paste -sd' ' "$LT_/crash_choices.log" | cut -c1-300)"
 python3 "$S1/tools/apply_lite_mode.py" "$TT" > "$LT_/lite_mode.log" 2>&1 || { st "OMNI_LITE_MODE FAILED: $(tail -1 "$LT_/lite_mode.log")"; exit 1; }
 st "OMNI_LITE_MODE: $(paste -sd' ' "$LT_/lite_mode.log" | cut -c1-300)"
@@ -416,6 +436,24 @@ python3 "$S1/tools/apply_gpu_mix.py" "$NE" > "$F/logs/apply_gpu_mix_pre.log" 2>&
 # OMNI_MEMMAP_V1 (2026-11-17): test-only title memory map (memmap.flag), engine/media -> must be pre-prep
 python3 "$S1/tools/apply_memmap.py" "$NE" > "$F/logs/apply_memmap.log" 2>&1 || { st "memmap FAILED: $(tail -1 "$F/logs/apply_memmap.log")"; exit 1; }
 st "memmap (pre-prep): $(tail -1 "$F/logs/apply_memmap.log")"
+# OMNI_TRACE_LAZY_V1 (2026-11-21): media trace buffer allocated only when tracing, engine/media -> pre-prep
+python3 -I "$S1/tools/apply_trace_lazy.py" "$NE/engine" > "$F/logs/apply_trace_lazy.log" 2>&1 || { st "trace lazy FAILED: $(tail -1 "$F/logs/apply_trace_lazy.log")"; exit 1; }
+st "trace lazy (pre-prep): $(tail -1 "$F/logs/apply_trace_lazy.log")"
+python3 -I "$S1/tools/apply_shm_lazy_slots.py" "$NE/engine" > "$F/logs/apply_shm_lazy_slots.log" 2>&1 || { st "shm lazy slots FAILED: $(tail -1 "$F/logs/apply_shm_lazy_slots.log")"; exit 1; }
+st "shm lazy slots (pre-prep): $(tail -1 "$F/logs/apply_shm_lazy_slots.log")"
+# OMNI_PT_BACKSTOP_V1 (2026-11-19): pace-queue picture buffers refused at >= 6400 used kernel page tables
+python3 "$S1/tools/apply_pt_backstop.py" "$NE" > "$F/logs/apply_pt_backstop.log" 2>&1 || { st "pt backstop FAILED: $(tail -1 "$F/logs/apply_pt_backstop.log")"; exit 1; }
+st "pt backstop (pre-prep): $(tail -1 "$F/logs/apply_pt_backstop.log")"
+python3 "$S1/tools/apply_pt_open_gate.py" "$NE" > "$F/logs/apply_pt_open_gate.log" 2>&1 || { st "pt open gate FAILED: $(tail -1 "$F/logs/apply_pt_open_gate.log")"; exit 1; }
+st "pt open gate (pre-prep): $(tail -1 "$F/logs/apply_pt_open_gate.log")"
+python3 -I "$S1/tools/apply_pt_gate_recal.py" "$NE/engine" > "$F/logs/apply_pt_gate_recal.log" 2>&1 || { st "pt gate recal FAILED: $(tail -1 "$F/logs/apply_pt_gate_recal.log")"; exit 1; }
+st "pt gate recal (pre-prep): $(tail -1 "$F/logs/apply_pt_gate_recal.log")"
+python3 -I "$S1/tools/apply_pt_gate_wait.py" "$NE/engine" > "$F/logs/apply_pt_gate_wait.log" 2>&1 || { st "pt gate wait FAILED: $(tail -1 "$F/logs/apply_pt_gate_wait.log")"; exit 1; }
+st "pt gate wait (pre-prep): $(tail -1 "$F/logs/apply_pt_gate_wait.log")"
+python3 -I "$S1/tools/apply_pt_gate_4k_line.py" "$NE/engine" > "$F/logs/apply_pt_gate_4k_line.log" 2>&1 || { st "pt gate 4k line FAILED: $(tail -1 "$F/logs/apply_pt_gate_4k_line.log")"; exit 1; }
+st "pt gate 4k line (pre-prep): $(tail -1 "$F/logs/apply_pt_gate_4k_line.log")"
+python3 "$S1/tools/apply_lp_probe_title.py" "$NE" > "$F/logs/apply_lp_probe_title.log" 2>&1 || { st "lp probe FAILED: $(tail -1 "$F/logs/apply_lp_probe_title.log")"; exit 1; }
+st "lp probe (pre-prep): $(tail -1 "$F/logs/apply_lp_probe_title.log")"
 st "pre-prep GPU patches: default-on $(tail -1 "$F/logs/apply_gpu_default_on_pre.log" | cut -c1-60); mix $(tail -1 "$F/logs/apply_gpu_mix_pre.log" | cut -c1-80)"
 python3 "$NE/tools/prep_launch.py" > "$F/logs/prep.log" 2>&1 || { st "prep FAILED: $(tail -2 "$F/logs/prep.log" | tr '\n' ' ' | cut -c1-500)"; exit 1; }
 # OMNI_PAGES_FROM_REPO_V1 (2026-11-16): the built-in pages come from the public repo's committed bundle (omni/pages/bundle-clean4 at
@@ -442,6 +480,8 @@ st "OMNI_MAGNIFIER_V1 present: $(tail -1 "$F/logs/apply_magnifier_present.log")"
 # OMNI_STARTER_V1/V3 (2026-11-15): engine processes through Omni's own starter (outputs/omni-starter), elfldr as the fallback
 python3 "$S1/tools/apply_starter.py" "$NE/src" > "$F/logs/apply_starter.log" 2>&1 || { st "starter launcher FAILED: $(tail -1 "$F/logs/apply_starter.log")"; exit 1; }
 st "OMNI_STARTER_V3: $(tail -1 "$F/logs/apply_starter.log")"
+python3 "$S1/tools/apply_starter_v4_req.py" "$NE/src" > "$F/logs/apply_starter_v4_req.log" 2>&1 || { st "starter v4 req FAILED: $(tail -1 "$F/logs/apply_starter_v4_req.log")"; exit 1; }
+st "OMNI_STARTER_V4_REQ: $(tail -1 "$F/logs/apply_starter_v4_req.log")"
 # OMNI_GPU_DEFAULT_ON_V1 (2026-11-17, moved here): GPU present + GPU video conversion on by default (off switches
 # gpu-present-off.flag / gpu-video-off.flag; headless self-tests keep the old flag rule). MUST run after prep_launch.py:
 # it puts a fresh OmniGpuPresent.cpp into $NE/src every build (before the move, g1/g3 shipped without the present edit).
@@ -456,14 +496,17 @@ python3 "$S1/tools/apply_gpu_mix.py" "$NE" > "$F/logs/apply_gpu_mix.log" 2>&1 ||
 st "OMNI_GPU_MIX_V1: $(tail -1 "$F/logs/apply_gpu_mix.log")"
 # OMNI_PATCH_MARKER_AUDIT_V1 (2026-11-17): every marker a step of this build reported as applied/already must still be in
 # the final sources (a re-copied file undid OMNI_GPU_DEFAULT_ON_V1 in g1/g3). Report-only; add --fatal after one clean run.
-python3 "$S1/tools/audit_patch_markers.py" --fatal "$F/steps.txt" "$TT/engine" "$NE/src" /home/builder/ogp-ls1b-objs/media "$NE/shader" > "$F/logs/marker-audit.txt" 2>&1 || { st "PATCH MARKER AUDIT FAILED: $(grep -m8 '^MISSING' "$F/logs/marker-audit.txt" | cut -d' ' -f2 | paste -sd' ')"; exit 1; }
+python3 "$S1/tools/audit_patch_markers.py" --fatal "$F/steps.txt" "$TT/engine" "$TT/webkit/Source/bmalloc/libpas/src/libpas" "$NE/src" /home/builder/ogp-ls1b-objs/media "$NE/shader" > "$F/logs/marker-audit.txt" 2>&1 || { st "PATCH MARKER AUDIT FAILED: $(grep -m8 '^MISSING' "$F/logs/marker-audit.txt" | cut -d' ' -f2 | paste -sd' ')"; exit 1; }
 st "OMNI_PATCH_MARKER_AUDIT_V1: $(head -1 "$F/logs/marker-audit.txt") $(grep -m8 '^MISSING' "$F/logs/marker-audit.txt" | cut -d' ' -f2 | paste -sd' ')"
 # OMNI_GPU_ONE_SUBMITTER_V1: a patched COPY of the broker owner (the shared broker-mem stays as it is), then the AGC
 # wraps + the lock in the title link (stage1/tools/apply_one_submitter.py)
 rm -rf "$F/broker-onesub" && cp -r "$O/omni-gpupages-ls1b/broker-mem" "$F/broker-onesub" \
   && python3 "$S1/tools/apply_one_submitter.py" broker "$F/broker-onesub/server.cpp" > "$F/logs/apply_one_submitter_broker.log" 2>&1 || { st "one submitter (broker) FAILED: $(tail -1 "$F/logs/apply_one_submitter_broker.log")"; exit 1; }
-OGP_BRK="$F/broker-onesub" python3 "$S1/tools/patch_title_build.py" "$NE/build.py" "$S1/src-title" > "$F/logs/patch-title-build.log" 2>&1 || { st "stage-1 title sources FAILED"; exit 1; }
-python3 "$S1/tools/apply_one_submitter.py" build "$NE/build.py" "$S1/src-title" > "$F/logs/apply_one_submitter_build.log" 2>&1 || { st "one submitter (title link) FAILED: $(tail -1 "$F/logs/apply_one_submitter_build.log")"; exit 1; }
+# layers default on (2026-11-18, apply_layers_default_on.py title): a patched COPY of src-title for the title link
+rm -rf "$F/src-title-ldo" && cp -r "$S1/src-title" "$F/src-title-ldo" && python3 "$S1/tools/apply_layers_default_on.py" title "$F/src-title-ldo/OmniGpuPagesService.cpp" > "$F/logs/apply_layers_default_on_title.log" 2>&1 || { st "layers default on (title) FAILED: $(tail -1 "$F/logs/apply_layers_default_on_title.log")"; exit 1; }
+st "layers default on (title service): $(tail -1 "$F/logs/apply_layers_default_on_title.log")"
+OGP_BRK="$F/broker-onesub" python3 "$S1/tools/patch_title_build.py" "$NE/build.py" "$F/src-title-ldo" > "$F/logs/patch-title-build.log" 2>&1 || { st "stage-1 title sources FAILED"; exit 1; }
+python3 "$S1/tools/apply_one_submitter.py" build "$NE/build.py" "$F/src-title-ldo" > "$F/logs/apply_one_submitter_build.log" 2>&1 || { st "one submitter (title link) FAILED: $(tail -1 "$F/logs/apply_one_submitter_build.log")"; exit 1; }
 st "one submitter (broker; title link): $(tail -1 "$F/logs/apply_one_submitter_broker.log"); $(tail -1 "$F/logs/apply_one_submitter_build.log")"
 rm -rf "$NE/build" "$NE/out"
 nice -n 19 python3 "$NE/build.py" > "$F/logs/title-build.log" 2>&1 || { st "title FAILED: $(grep -o 'undefined symbol: .*' "$F/logs/title-build.log" | sort -u | head -6 | tr '\n' ' ') $(tail -3 "$F/logs/title-build.log" | tr '\n' ' ' | cut -c1-600)"; exit 1; }
@@ -471,13 +514,14 @@ $LL/llvm-nm -D --undefined-only "$NE/build/llvm-pie.elf" | awk '{print $NF}' | s
 $LL/llvm-nm -D --undefined-only "$L/eboot/build/llvm-pie.elf" | awk '{print $NF}' | sort -u > "$F/merge/imports-launch.txt"
 comm -23 "$F/merge/imports-new.txt" "$F/merge/imports-launch.txt" > "$F/merge/imports-added.txt"; comm -13 "$F/merge/imports-new.txt" "$F/merge/imports-launch.txt" > "$F/merge/imports-dropped.txt"
 $LL/llvm-nm -D --undefined-only "$P/out/title/llvm-pie.elf" | awk '{print $NF}' | sort -u | comm -23 - "$F/merge/imports-launch.txt" > "$F/merge/imports-added-by-d983581f.txt"
-grep -vxE "sceKernelUsleep|sceVideoOutIsFlipPending" "$F/merge/imports-added.txt" > "$F/merge/imports-added-unexpected.txt"
+grep -vxE "sceKernelUsleep|sceVideoOutIsFlipPending|sceKernelReserveVirtualRange|sceKernelVirtualQuery" "$F/merge/imports-added.txt" > "$F/merge/imports-added-unexpected.txt"
 [ -s "$F/merge/imports-added-unexpected.txt" ] && { st "IMPORT GATE FAILED: imports beyond the launch title and the 2 stage-1 ones: $(tr '\n' ' ' < "$F/merge/imports-added-unexpected.txt" | cut -c1-600)"; exit 1; }
 st "IMPORT GATE PASS: $(wc -l < "$F/merge/imports-new.txt") dynamic imports, none beyond the launch title rc2's ($(wc -l < "$F/merge/imports-dropped.txt") fewer); d983581f had added: $(tr '\n' ' ' < "$F/merge/imports-added-by-d983581f.txt")"
 grep -o 'layout check[^;]*PASSED' "$F/logs/title-build.log" | head -1 | grep -q PASSED || { st "layout check did not PASS: stopping"; exit 1; }
 st "TITLE built: eboot.bin $(sha256sum "$NE/out/PPSA99732/eboot.bin" | cut -c1-64); layout check PASSED"
 grep -q -a "OMNI_YTGUARD_V1" "$NE/build/llvm-pie.elf" && grep -q -a "OMNI NCRESET" "$NE/build/llvm-pie.elf" && grep -q -a "JavaScript JIT (faster pages)" "$NE/build/llvm-pie.elf" && ! grep -q -a "faster, less safe" "$NE/build/llvm-pie.elf" || { st "rc6 text gates FAILED (guard / nc reset / JIT default)"; exit 1; }
 grep -q -a "OMNI_YTATTEST_V1" "$NE/build/llvm-pie.elf" && { st "probe text present in a ship title: stopping"; exit 1; }
+grep -q -a "OMNI YTPOT" "$NE/build/llvm-pie.elf" || { st "OMNI_YT_POTOKEN text missing from the title: stopping"; exit 1; }
 st "rc6 text gates PASS: guard, NC reset, JIT default-on present; no probe"
 # ---- 4. copy out + compare, then A back to state C(rc4)
 D="$P/out-titlefix-rc6"; rm -rf "$D"; mkdir -p "$D/title"
@@ -506,6 +550,12 @@ mount -t overlay overlay -o "lowerdir=/home/builder/s3,upperdir=$UPB,workdir=$WK
 mount -t overlay overlay -o "lowerdir=/home/builder/s3,upperdir=$UPT,workdir=$WKT" "$MNT" || { st "overlay T failed"; exit 1; }
 touch "$MNT/.s34d-marker" "$MNT/.launche-marker"; chown builder:builder "$MNT/.s34d-marker" "$MNT/.launche-marker"
 mount --bind "$EW" "$O/omni-gpupages-ls1b-eboot-bind" || { st "bind mount failed"; exit 1; }
+# OMNI_VSS_BIND_V1: fixed memory-extra.h over the shared /opt copy, THIS namespace only (original mtime: objects already built with it are kept)
+MXO=/opt/omni-build/omni-browser/engine/ports/memory-extra/include/memory-extra.h; MXN=/tmp/omni-vss-t$$/memory-extra.h
+mkdir -p "${MXN%/*}" && cp -p "/home/builder/s1/engine/ports/memory-extra/include/memory-extra.h" "$MXN" && chmod 644 "$MXN" || { st "vss header copy failed"; exit 1; }
+grep -q sceKernelReserveVirtualRange "$MXN" || { st "vss header is not the fixed one"; exit 1; }
+mount --bind "$MXN" "$MXO" || { st "vss header bind failed"; exit 1; }
+st "vss: fixed memory-extra.h bound over $MXO ($(sha256sum "$MXO" | cut -c1-12))"
 st "overlays: A on /home/builder/s1 ($UP), B on $MNB ($UPB, state C(rc4) sources), T on $MNT ($UPT, fresh); eboot workspace $EW bound"
 export V_UPA="$UP" V_UPB="$UPB" V_UPT="$UPT"
 exec runuser -u builder -- bash "$V_INNER"
