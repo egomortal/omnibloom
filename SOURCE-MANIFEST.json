@@ -1968,8 +1968,8 @@
     },
     {
       "path": "docs/research/ps5-4k-memory-page-tables.md",
-      "bytes": 4547,
-      "sha256": "d65efbadaa140860fcc9f1cba584ce6cebf22d1caaaccba30fa4f5cf1d7c9e19"
+      "bytes": 4627,
+      "sha256": "24b0485f7a855a5e20592791d0e668319d9ed8d535687b3877f7eb4979a0df2a"
     },
     {
       "path": "docs/site-v1/.nojekyll",
@@ -6188,13 +6188,13 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/research/memtrace_group.py",
-      "bytes": 921,
-      "sha256": "f23853e218808e40ba5f754f9bd78c7b7e4e61b3e1146c6ff5dab1ee53d56b8c"
+      "bytes": 934,
+      "sha256": "f4444e50a2609cd308d34775932cd03f8e924e510dc42402bf80814830f5a52d"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/research/ptprobe.c",
-      "bytes": 3817,
-      "sha256": "3f314294fb522392b11d855a2c378fa49b29145ab8379c54e64766718cdd1413"
+      "bytes": 3911,
+      "sha256": "7c597bea392a566c07f86fca2817bfe4177ed87f1386723d8eaa0267d4e5aa7a"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/OmniColourMatrixShader.h",
@@ -6243,8 +6243,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_memtrace.c",
-      "bytes": 3553,
-      "sha256": "e3eb6eec657afb6d3d02c31feb9646418fcede6c5ac1849a2d20d4a38e44454b"
+      "bytes": 3616,
+      "sha256": "ad4f7b305a0344bea9c9d1b1a9c9580f6a12e8f871c865bb26122483cd5d54a6"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/src-title/omni_night_light.comp",
@@ -6583,8 +6583,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_abr_ceiling.py",
-      "bytes": 3829,
-      "sha256": "16273fe6aad534241f485f70b09420fe5710697316c644b4410ae1e444579798"
+      "bytes": 3892,
+      "sha256": "b3a09ba96a06cb0e00bd1b1db98dd4270b19af1cf3d97d682b1aa48124ebd25c"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_access_input.py",
@@ -6993,8 +6993,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_memtrace.py",
-      "bytes": 3961,
-      "sha256": "49a012da0e2f6b9ea4c6d7ea4f4692b3259a0926267fbf0f51d4fdce72e7db67"
+      "bytes": 4030,
+      "sha256": "6865bd884ea8f8e8e33fe05ab780496a447e15dac5ef01739f8043f1134dff88"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_min_text.py",
