@@ -45,6 +45,7 @@ HELP = r'''
 #ifdef __PROSPERO__
 // OMNI_VSS_DIRECT_V1: back commits with direct memory (0 page tables) in the title. See tools/apply_vss_direct.py.
 #include <unistd.h>  // access
+#include <stdio.h>   // fopen (the /app0 switch)
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,8 +59,15 @@ int64_t sceKernelGetDirectMemorySize(void);
 static inline bool omni_vss_direct_on(void)
 {
     static int on = -1;
-    if (on < 0)
-        on = access("/data/omni/vss-direct.flag", F_OK) == 0 ? 1 : 0; // default OFF
+    if (on < 0) {
+        // default OFF. Bloom Preview 5: also /app0/vss-direct.flag (the package puts it in the title folder; the
+        // engine child ships without it), unless /data/omni/vss-direct-off.flag.
+        FILE* a = fopen("/app0/vss-direct.flag", "r");
+        FILE* o = a ? fopen("/data/omni/vss-direct-off.flag", "r") : NULL;
+        on = (access("/data/omni/vss-direct.flag", F_OK) == 0 || (a && !o)) ? 1 : 0;
+        if (a) fclose(a);
+        if (o) fclose(o);
+    }
     return on == 1;
 }
 // Commit one reserved 16 KiB-aligned piece with direct memory; false -> the caller uses the flexible path.

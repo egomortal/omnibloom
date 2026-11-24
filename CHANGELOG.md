@@ -11,8 +11,12 @@ We're in the final stretch of building out Omni's browser features: about 200 ne
   pool entries. All three JavaScript compiler tiers stay on, and 4K VP9/HDR still decodes on the hardware at 60 fps. If
   a page crashes, Omni releases the video decoder, restarts on its own and restores the tabs, and reopens the crashed
   site in a separate engine; repeat crashes within a minute stop the restarts. Private tabs and the network engine
-  stay separate. Switches: `/data/omni/inproc-web.flag` (in-app page engine), `/data/omni/vss-direct.flag` (direct
-  memory); the Bloom package installs both, delete one and restart Omni to turn it off.
+  stay separate. A start-up deadlock between MSE video and the console's video plane is fixed: when the first frames
+  arrived before the video's size was known, playback could hold at the first frame forever (in-app YouTube stalled in
+  most runs before the fix; on the console, 5 of 5 in-app 4K HDR runs then played through at 59.94 fps with no dropped
+  frames). The Bloom package puts the switches in Omni's title folder (`inproc-web.flag`, `vss-direct.flag`); to turn
+  one off, create `/data/omni/inproc-web-off.flag` or `/data/omni/vss-direct-off.flag` and restart Omni.
+  `/data/omni/inproc-web.flag` and `/data/omni/vss-direct.flag` still turn them on in other builds.
 - **4K HDR YouTube plays with layers on:** before, a 4K video with page layers on pushed the console's kernel
   page-table pool (8,192 in all) past 7,000 and never played; now the peak is about 6,200 and 4K HDR plays. Page memory
   the engine frees now gives its page tables back, engine threads get 2 MiB stacks instead of 8 MiB, the 24 MiB video

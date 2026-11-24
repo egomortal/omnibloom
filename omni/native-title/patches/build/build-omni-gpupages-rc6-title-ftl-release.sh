@@ -103,6 +103,8 @@ python3 "$S1/tools/apply_yttl_scroll.py" "$TT/engine/entry/OmniBrowser.cpp" > "$
 st "OMNI_YTTL_SCROLL_V1 (test-only, inert without scroll N): $(tail -1 "$LT_/apply_yttl_scroll.log")"
 python3 "$S1/tools/apply_media_health_fix.py" "$TT/engine/entry/OmniMediaDownloads.h" > "$LT_/apply_media_health.log" 2>&1 || { st "media health fix FAILED: $(tail -1 "$LT_/apply_media_health.log")"; exit 1; }
 st "OMNI_MEDIA_HEALTH_V2: $(tail -1 "$LT_/apply_media_health.log")"
+python3 "$S1/tools/apply_hole_link_early.py" "$TT/engine/entry/OmniMSEPlayer.cpp" > "$LT_/apply_hole_link_early.log" 2>&1 || { st "hole link early FAILED: $(tail -1 "$LT_/apply_hole_link_early.log")"; exit 1; }
+st "hole link early: $(tail -1 "$LT_/apply_hole_link_early.log")"
 python3 "$S1/tools/apply_l2_chords.py" "$TT" > "$LT_/apply_l2_chords.log" 2>&1 || { st "L2 chords FAILED: $(tail -1 "$LT_/apply_l2_chords.log")"; exit 1; }
 st "OMNI_L2_CHORDS_V1: $(paste -sd' ' "$LT_/apply_l2_chords.log")"
 python3 "$S1/tools/apply_media_switch.py" "$TT" > "$LT_/apply_media_switch.log" 2>&1 || { st "media switch fix FAILED: $(tail -1 "$LT_/apply_media_switch.log")"; exit 1; }
@@ -679,10 +681,13 @@ grep -q -a "OMNI_YTGUARD_V1" "$NE/build/llvm-pie.elf" && grep -q -a "OMNI NCRESE
 grep -q -a "OMNI_YTATTEST_V1" "$NE/build/llvm-pie.elf" && { st "probe text present in a ship title: stopping"; exit 1; }
 grep -q -a "OMNI YTPOT" "$NE/build/llvm-pie.elf" || { st "OMNI_YT_POTOKEN text missing from the title: stopping"; exit 1; }
 grep -q -a "OMNI_INPROC_NET_V1" "$NE/build/llvm-pie.elf" || { st "OMNI_INPROC_NET_V1 text missing from the title: stopping"; exit 1; }
-grep -q -a "OMNI TRACE \|OMNI NETPROBE\|OMNI CRASHTEST\|OMNI SHMCHECK" "$NE/build/llvm-pie.elf" && { st "RELEASE GATE: test-only text in the title: stopping"; exit 1; }
+grep -q -a "OMNI TRACE \|OMNI NETPROBE\|OMNI CRASHTEST\|OMNI SHMCHECK\|OMNI HOLEDIAG" "$NE/build/llvm-pie.elf" && { st "RELEASE GATE: test-only text in the title: stopping"; exit 1; }
 grep -q -a "inproc-hangprobe.flag" "$NE/build/llvm-pie.elf" || { st "RELEASE GATE: hang probe is not opt-in: stopping"; exit 1; }
 grep -q -a "A page crashed - Omni restarted and restored your tabs" "$NE/build/llvm-pie.elf" || { st "RELEASE GATE: crash safety missing: stopping"; exit 1; }
-st "RELEASE GATES PASS: no trace/probe/crash-test text; hang probe opt-in; crash safety present"
+for omniSw in /app0/inproc-web.flag /app0/vss-direct.flag /data/omni/inproc-web-off.flag /data/omni/vss-direct-off.flag; do
+    grep -q -a "$omniSw" "$NE/build/llvm-pie.elf" || { st "RELEASE GATE: switch $omniSw not read by the title: stopping"; exit 1; }
+done
+st "RELEASE GATES PASS: no trace/probe/crash-test text; hang probe opt-in; crash safety present; /app0 switches read"
 NFTL=$($LL/llvm-nm -C "$NE/build/llvm-pie.elf" | grep -c "JSC::FTL::"); NDFG=$($LL/llvm-nm -C "$NE/build/llvm-pie.elf" | grep -c "JSC::DFG::")
 [ "$NFTL" -gt 1000 ] && [ "$NDFG" -gt 1000 ] || { st "OMNI_TITLE_FTL_V1: DFG/FTL not in the title (DFG $NDFG, FTL $NFTL symbols): stopping"; exit 1; }
 grep -q -a "baseline + DFG + FTL + regexp, polling traps" "$NE/build/llvm-pie.elf" || { st "OMNI_TITLE_FTL_V1: in-process FTL env text missing: stopping"; exit 1; }

@@ -98,6 +98,10 @@ python3 "$S1/tools/apply_yttl_scroll.py" "$TT/engine/entry/OmniBrowser.cpp" > "$
 st "OMNI_YTTL_SCROLL_V1 (test-only, inert without scroll N): $(tail -1 "$LT_/apply_yttl_scroll.log")"
 python3 "$S1/tools/apply_media_health_fix.py" "$TT/engine/entry/OmniMediaDownloads.h" > "$LT_/apply_media_health.log" 2>&1 || { st "media health fix FAILED: $(tail -1 "$LT_/apply_media_health.log")"; exit 1; }
 st "OMNI_MEDIA_HEALTH_V2: $(tail -1 "$LT_/apply_media_health.log")"
+python3 "$S1/tools/apply_hole_link_early.py" "$TT/engine/entry/OmniMSEPlayer.cpp" > "$LT_/apply_hole_link_early.log" 2>&1 || { st "hole link early FAILED: $(tail -1 "$LT_/apply_hole_link_early.log")"; exit 1; }
+st "hole link early: $(tail -1 "$LT_/apply_hole_link_early.log")"
+python3 "$S1/tools/apply_hole_diag.py" "$TT/engine/entry/OmniMSEPlayer.cpp" > "$LT_/apply_hole_diag.log" 2>&1 || { st "hole diag FAILED: $(tail -1 "$LT_/apply_hole_diag.log")"; exit 1; }
+st "hole diag (test only): $(tail -1 "$LT_/apply_hole_diag.log")"
 python3 "$S1/tools/apply_l2_chords.py" "$TT" > "$LT_/apply_l2_chords.log" 2>&1 || { st "L2 chords FAILED: $(tail -1 "$LT_/apply_l2_chords.log")"; exit 1; }
 st "OMNI_L2_CHORDS_V1: $(paste -sd' ' "$LT_/apply_l2_chords.log")"
 python3 "$S1/tools/apply_media_switch.py" "$TT" > "$LT_/apply_media_switch.log" 2>&1 || { st "media switch fix FAILED: $(tail -1 "$LT_/apply_media_switch.log")"; exit 1; }

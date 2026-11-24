@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "id": "af088e585a8babe9",
+ "id": "cc38a1486d4785cf",
  "release": "Unreleased (dev branch, not tested on a console yet unless noted)",
  "intro": "We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.",
  "groups": [
@@ -221,7 +221,7 @@
    "items": [
     {
      "title": "Page engine inside Omni (Bloom Preview 5)",
-     "text": "Web pages now run inside Omni instead of in a separate engine program, so the console's kernel page-table pool (8,192 in all) holds about 740 fewer entries; 4K HDR YouTube peaks near 5,400 instead of about 6,100. The JavaScript heap and video layer images use direct memory, which costs no pool entries. All three JavaScript compiler tiers stay on, and 4K VP9/HDR still decodes on the hardware at 60 fps. If a page crashes, Omni releases the video decoder, restarts on its own and restores the tabs, and reopens the crashed site in a separate engine; repeat crashes within a minute stop the restarts. Private tabs and the network engine stay separate. Switches: /data/omni/inproc-web.flag (in-app page engine), /data/omni/vss-direct.flag (direct memory); the Bloom package installs both, delete one and restart Omni to turn it off.",
+     "text": "Web pages now run inside Omni instead of in a separate engine program, so the console's kernel page-table pool (8,192 in all) holds about 740 fewer entries; 4K HDR YouTube peaks near 5,400 instead of about 6,100. The JavaScript heap and video layer images use direct memory, which costs no pool entries. All three JavaScript compiler tiers stay on, and 4K VP9/HDR still decodes on the hardware at 60 fps. If a page crashes, Omni releases the video decoder, restarts on its own and restores the tabs, and reopens the crashed site in a separate engine; repeat crashes within a minute stop the restarts. Private tabs and the network engine stay separate. A start-up deadlock between MSE video and the console's video plane is fixed: when the first frames arrived before the video's size was known, playback could hold at the first frame forever (in-app YouTube stalled in most runs before the fix; on the console, 5 of 5 in-app 4K HDR runs then played through at 59.94 fps with no dropped frames). The Bloom package puts the switches in Omni's title folder (inproc-web.flag, vss-direct.flag); to turn one off, create /data/omni/inproc-web-off.flag or /data/omni/vss-direct-off.flag and restart Omni. /data/omni/inproc-web.flag and /data/omni/vss-direct.flag still turn them on in other builds.",
      "button": null,
      "where": null,
      "try": null
