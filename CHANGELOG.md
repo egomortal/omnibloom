@@ -5,6 +5,14 @@
 We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.
 
 ### Omni
+- **Page engine inside Omni (Bloom Preview 5):** web pages now run inside Omni instead of in a separate engine
+  program, so the console's kernel page-table pool (8,192 in all) holds about 740 fewer entries; 4K HDR YouTube peaks
+  near 5,400 instead of about 6,100. The JavaScript heap and video layer images use direct memory, which costs no
+  pool entries. All three JavaScript compiler tiers stay on, and 4K VP9/HDR still decodes on the hardware at 60 fps. If
+  a page crashes, Omni releases the video decoder, restarts on its own and restores the tabs, and reopens the crashed
+  site in a separate engine; repeat crashes within a minute stop the restarts. Private tabs and the network engine
+  stay separate. Switches: `/data/omni/inproc-web.flag` (in-app page engine), `/data/omni/vss-direct.flag` (direct
+  memory); the Bloom package installs both, delete one and restart Omni to turn it off.
 - **4K HDR YouTube plays with layers on:** before, a 4K video with page layers on pushed the console's kernel
   page-table pool (8,192 in all) past 7,000 and never played; now the peak is about 6,200 and 4K HDR plays. Page memory
   the engine frees now gives its page tables back, engine threads get 2 MiB stacks instead of 8 MiB, the 24 MiB video
