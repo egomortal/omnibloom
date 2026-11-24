@@ -33,8 +33,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 36606,
-      "sha256": "747c7b7e571bbabdc9d8d75d787d7ef7cc35f42c4de4127029e8ef5d95a95cc1"
+      "bytes": 37085,
+      "sha256": "4a188e9b721611503a1760c7144fc67d9ba3f2f46faf839b43d6b82b36a0b1ac"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -5888,13 +5888,13 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title-ftl-release.sh",
-      "bytes": 88236,
-      "sha256": "f37146bb4ea9bf84fd89f3902578bf752c1a08a3f3691d34950e2ef98dc7b10d"
+      "bytes": 88815,
+      "sha256": "071339d1c62b8d21b75fca9edd7892a3984fd065c8088c2dbe6bffea54fb1b67"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title-ftl.sh",
-      "bytes": 88445,
-      "sha256": "b32e5962d0e30c760e45a366159ecbfd8226b1a42de4f4bfc16c1a5c64702209"
+      "bytes": 88979,
+      "sha256": "2e4d08fd11e18803b15e1ca3cb385997b019f1ab18774c56af45357ecdc1a09a"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
@@ -6862,6 +6862,16 @@
       "sha256": "a3745c521febdea41074e4711b1ab91f5a7ff333b647d63c1c2867b2ce727bcf"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_hole_diag.py",
+      "bytes": 2884,
+      "sha256": "ca8421f3bb5a2762ba27fdd741dc552254cc96112b2617cadeaf58b74ff68e14"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_hole_link_early.py",
+      "bytes": 4478,
+      "sha256": "dfbed3b951f96df01758e9070d7529c109efb0c06bf6d5a06ba64a6a3671f0cb"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_https_only.py",
       "bytes": 48006,
       "sha256": "54278629e46b1c00a6e4a63684e5e1e8d0b2f1e22cfe6920e7106ae31b1e21fe"
@@ -6893,8 +6903,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_inproc_net.py",
-      "bytes": 12346,
-      "sha256": "6c735d8d24aacb859e3682400bbbd2b9a5b62ad6d7cee06a2bef1c9ead610c15"
+      "bytes": 12717,
+      "sha256": "3ead811a1b1ded4c482a07d0412debee705b3b75bd57b492053fb5b77b54e48e"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_inproc_net_wraps.py",
@@ -6933,8 +6943,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_inproc_webenv.py",
-      "bytes": 4383,
-      "sha256": "199431dd265ee567da243af0ec505275080f12a41e26d50393308d910c3caeef"
+      "bytes": 4656,
+      "sha256": "843bd9f7d5ae2d91fe2b412064066d474ba4daa9002fe5b0d12fffc84b518fb3"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_js_trim_fix.py",
@@ -7188,8 +7198,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_pixbuf_direct.py",
-      "bytes": 4885,
-      "sha256": "9adf8fe1f57666ce97d89139555b019a42acace05e53f4bd5dbeb359ab79297c"
+      "bytes": 5207,
+      "sha256": "f769b90df4b82b89b40b6c7320f3430083ae78ff12e2a07533e5e03734cc21f6"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_playback_speed.py",
@@ -7583,8 +7593,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_vss_direct.py",
-      "bytes": 8002,
-      "sha256": "66981d71e6e2436ce5581dcf05307d6d8cd81ef8f8c16f43b21d06da34dabb83"
+      "bytes": 8445,
+      "sha256": "04f321d3bfa113cc89d026203feefbac1cd837ada9736dc3daac7dc603947d23"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_vss_libpas.py",
@@ -16128,8 +16138,8 @@
     },
     {
       "path": "omni/pages/bundle-clean4/whatsnew/whatsnew.json",
-      "bytes": 19316,
-      "sha256": "8ffb6026afb1c51cd5b6b7f459ad0b4955ba79ce2ab3b6ed2966a071469f6475"
+      "bytes": 19775,
+      "sha256": "a243ca40aa8f6a53eacdc4965bba67aed529322ca8e8b2cf466cc28f5fbc67a9"
     },
     {
       "path": "omni/pages/bundle-r46/accents/accents.css",
