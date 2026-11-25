@@ -33,8 +33,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 37085,
-      "sha256": "4a188e9b721611503a1760c7144fc67d9ba3f2f46faf839b43d6b82b36a0b1ac"
+      "bytes": 38501,
+      "sha256": "a91eb0368b61cde5aa61f98170af1713e781e7ac26e529062284cefcf2d9caba"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -5888,18 +5888,23 @@
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title-ftl-release.sh",
-      "bytes": 88815,
-      "sha256": "071339d1c62b8d21b75fca9edd7892a3984fd065c8088c2dbe6bffea54fb1b67"
+      "bytes": 90083,
+      "sha256": "0bd29443f4ccaef3733cd3eefb9850fe19703d2c262768ec49a0737cbcac30bf"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title-ftl.sh",
-      "bytes": 88979,
-      "sha256": "2e4d08fd11e18803b15e1ca3cb385997b019f1ab18774c56af45357ecdc1a09a"
+      "bytes": 90247,
+      "sha256": "0a20c044abe280a05ac26d82ce4419cab10478a98824f8f9a4679449f1d21400"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-gpupages-rc6-title.sh",
       "bytes": 69231,
       "sha256": "887cb55f6b2561d9a04288f837d333791b8d49e1529d5774b41cab0f36bf6e13"
+    },
+    {
+      "path": "omni/native-title/patches/build/build-omni-jscftl-child-bp6.sh",
+      "bytes": 34789,
+      "sha256": "edd6b0e9513945aac3fc68408131499470354fedcb71135d714b7501dbe34f64"
     },
     {
       "path": "omni/native-title/patches/build/build-omni-jscftl-child.sh",
@@ -6642,6 +6647,11 @@
       "sha256": "a99e3dead6d2d5dbe2855249d061d2cd5d2abdae79c5eb8e9903e37483db4d7f"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_bars_pointer_top.py",
+      "bytes": 3767,
+      "sha256": "44fd6397bf37003e7452516ac5ee46c72fb39c9f1013f35f2ffc7ed287162c6b"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_bf_list.py",
       "bytes": 21927,
       "sha256": "9977861fc2db884a14692efffa034492085b8b1b7c77d9b445055a945c89df4a"
@@ -7087,9 +7097,34 @@
       "sha256": "15297e57b4e1cea1861b231584912c7d5f3628dea3543b92d440c68b8f229dbd"
     },
     {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_mse_fail_log.py",
+      "bytes": 1892,
+      "sha256": "d7480b7e76d61f8cccc514f5ec3f5b80b5b9a9f27ce3abf58ac113397d8e649d"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_mse_h264_large.py",
+      "bytes": 4896,
+      "sha256": "5f617497c58107c823fe9a3f5b0a138b46225eeaef4d2fef5dd671e14948cecb"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_mse_h264_probe.py",
+      "bytes": 1894,
+      "sha256": "dfbbaa57aba36de60e966d361d35352d2cdef59279817ee19cfce360c136e12e"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_mse_pump_diag.py",
+      "bytes": 5179,
+      "sha256": "8ba046b38987e5d3125687c158c53fce1826190af4d52f63bcf4c294835a01d2"
+    },
+    {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_mse_quota.py",
       "bytes": 2510,
       "sha256": "8b2123156c67c39018a339c4dba57d7c91669e42c4d52bb87960bafde35024fe"
+    },
+    {
+      "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_mse_track_quota.py",
+      "bytes": 3075,
+      "sha256": "7d3c49e2693770edd5b9c2b1177e17b4906ba7d9951eb7911360d9b1a2a3ad1f"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_net_probe.py",
@@ -16138,8 +16173,8 @@
     },
     {
       "path": "omni/pages/bundle-clean4/whatsnew/whatsnew.json",
-      "bytes": 19775,
-      "sha256": "a243ca40aa8f6a53eacdc4965bba67aed529322ca8e8b2cf466cc28f5fbc67a9"
+      "bytes": 21358,
+      "sha256": "0197241c0621e0d00087de89dbf53425a20bb7c0ba75cdcf371f24a0bd3a92f7"
     },
     {
       "path": "omni/pages/bundle-r46/accents/accents.css",
