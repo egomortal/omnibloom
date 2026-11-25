@@ -429,6 +429,16 @@ st "OMNI_SPARE_DEFER_V1: $(tail -1 "$LT_/apply_spare_defer.log")"
 # OMNI_SPARE_LAZY_V1 (2026-11-15): no reserve spare engine unless /data/omni/spare-reserve.flag (the idle 244 MB spare sat on every launch peak)
 python3 "$S1/tools/apply_spare_lazy.py" "$TT" > "$LT_/apply_spare_lazy.log" 2>&1 || { st "spare lazy FAILED: $(tail -1 "$LT_/apply_spare_lazy.log")"; exit 1; }
 st "OMNI_SPARE_LAZY_V1: $(tail -1 "$LT_/apply_spare_lazy.log")"
+python3 "$S1/tools/apply_bars_pointer_top.py" "$TT" > "$LT_/apply_bars_pointer_top.log" 2>&1 || { st "bars pointer top FAILED: $(tail -1 "$LT_/apply_bars_pointer_top.log")"; exit 1; }
+st "OMNI_BARS_POINTER_TOP_V1: $(tail -1 "$LT_/apply_bars_pointer_top.log")"
+python3 "$S1/tools/apply_mse_fail_log.py" "$TT" > "$LT_/apply_mse_fail_log.log" 2>&1 || { st "mse fail log FAILED: $(tail -1 "$LT_/apply_mse_fail_log.log")"; exit 1; }
+st "OMNI_MSE_FAIL_LOG_V1: $(tail -1 "$LT_/apply_mse_fail_log.log")"
+python3 "$S1/tools/apply_mse_h264_large.py" "$TT" > "$LT_/apply_mse_h264_large.log" 2>&1 || { st "mse h264 large FAILED: $(tail -1 "$LT_/apply_mse_h264_large.log")"; exit 1; }
+st "OMNI_MSE_H264_LARGE_V1: $(tail -1 "$LT_/apply_mse_h264_large.log")"
+python3 "$S1/tools/apply_mse_h264_probe.py" "$TT" > "$LT_/apply_mse_h264_probe.log" 2>&1 || { st "apply_mse_h264_probe FAILED: $(tail -1 "$LT_/apply_mse_h264_probe.log")"; exit 1; }
+st "OMNI_MSE_H264_PROBE_V1: $(tail -1 "$LT_/apply_mse_h264_probe.log")"
+python3 "$S1/tools/apply_mse_track_quota.py" "$TT" > "$LT_/apply_mse_track_quota.log" 2>&1 || { st "apply_mse_track_quota FAILED: $(tail -1 "$LT_/apply_mse_track_quota.log")"; exit 1; }
+st "OMNI_MSE_TRACK_QUOTA_V1: $(tail -1 "$LT_/apply_mse_track_quota.log")"
 CGT=$TT/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics; CGB=$TB/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics
 for f in ogp-s1-drawingarea.inc ogp-s1-surface.inc ogp-s1-policy.h ogp-s1b-async.inc; do
   cmp -s "$CGT/$f" "$CGB/$f" && echo "same-as-child $f $(sha256sum "$CGT/$f" | cut -c1-8)" || echo "DIFF-from-child $f T $(sha256sum "$CGT/$f" | cut -c1-8) C $(sha256sum "$CGB/$f" | cut -c1-8)"

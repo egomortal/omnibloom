@@ -5,6 +5,19 @@
 We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.
 
 ### Omni
+- **Movy and other sites that send sound and picture in one stream play (Bloom Preview 6):** page video (MSE) refused
+  H.264 above 1920x1080 pixels, so wider-than-16:9 streams such as movy's 2600x1080 films never started. H.264 is now
+  accepted up to 3840x2160 on the hardware decoder, as VP9 and HEVC already were, and the per-segment audio probe no
+  longer fails on such a stream. When a site puts video and audio in one SourceBuffer, the two shared one
+  128-sample queue, and audio (buffered about 3 s ahead) filled it, so the picture froze after the first segment while
+  the sound played on. Each track now has its own sample limit; the byte limit still caps the buffer. On the console,
+  movy's The Hunger Games played 112 of 115 s at its own 24 fps with 0.8% dropped frames. When a page video fails,
+  the reason is now logged once (`OMNI MSE: source failed: ...`). Off switches: `/data/omni/mse-h264-large-off.flag`
+  (back to the 1080p limit), `/data/omni/mse-shared-quota.flag` (the shared queue).
+- **Auto-hidden bars stay out of the way:** with Auto-hide on, moving the pointer or pressing Cross anywhere slid the
+  top bar in, which pushed a full-screen page (a player before playback, a site's own full screen) down and covered
+  the button being pressed. Now the pointer brings the bars back only at the top edge of the screen; other buttons,
+  scrolling and typing behave as before.
 - **Page engine inside Omni (Bloom Preview 5):** web pages now run inside Omni instead of in a separate engine
   program, so the console's kernel page-table pool (8,192 in all) holds about 740 fewer entries; 4K HDR YouTube peaks
   near 5,400 instead of about 6,100. The JavaScript heap and video layer images use direct memory, which costs no

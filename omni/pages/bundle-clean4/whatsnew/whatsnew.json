@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "id": "cc38a1486d4785cf",
+ "id": "16efec984b5bc465",
  "release": "Unreleased (dev branch, not tested on a console yet unless noted)",
  "intro": "We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.",
  "groups": [
@@ -219,6 +219,20 @@
    "key": "browsing",
    "title": "Browsing",
    "items": [
+    {
+     "title": "Movy and other sites that send sound and picture in one stream play (Bloom Preview 6)",
+     "text": "Page video (MSE) refused H.264 above 1920x1080 pixels, so wider-than-16:9 streams such as movy's 2600x1080 films never started. H.264 is now accepted up to 3840x2160 on the hardware decoder, as VP9 and HEVC already were, and the per-segment audio probe no longer fails on such a stream. When a site puts video and audio in one SourceBuffer, the two shared one 128-sample queue, and audio (buffered about 3 s ahead) filled it, so the picture froze after the first segment while the sound played on. Each track now has its own sample limit; the byte limit still caps the buffer. On the console, movy's The Hunger Games played 112 of 115 s at its own 24 fps with 0.8% dropped frames. When a page video fails, the reason is now logged once (OMNI MSE: source failed: ...). Off switches: /data/omni/mse-h264-large-off.flag (back to the 1080p limit), /data/omni/mse-shared-quota.flag (the shared queue).",
+     "button": null,
+     "where": null,
+     "try": null
+    },
+    {
+     "title": "Auto-hidden bars stay out of the way",
+     "text": "With Auto-hide on, moving the pointer or pressing Cross anywhere slid the top bar in, which pushed a full-screen page (a player before playback, a site's own full screen) down and covered the button being pressed. Now the pointer brings the bars back only at the top edge of the screen; other buttons, scrolling and typing behave as before.",
+     "button": null,
+     "where": null,
+     "try": null
+    },
     {
      "title": "Page engine inside Omni (Bloom Preview 5)",
      "text": "Web pages now run inside Omni instead of in a separate engine program, so the console's kernel page-table pool (8,192 in all) holds about 740 fewer entries; 4K HDR YouTube peaks near 5,400 instead of about 6,100. The JavaScript heap and video layer images use direct memory, which costs no pool entries. All three JavaScript compiler tiers stay on, and 4K VP9/HDR still decodes on the hardware at 60 fps. If a page crashes, Omni releases the video decoder, restarts on its own and restores the tabs, and reopens the crashed site in a separate engine; repeat crashes within a minute stop the restarts. Private tabs and the network engine stay separate. A start-up deadlock between MSE video and the console's video plane is fixed: when the first frames arrived before the video's size was known, playback could hold at the first frame forever (in-app YouTube stalled in most runs before the fix; on the console, 5 of 5 in-app 4K HDR runs then played through at 59.94 fps with no dropped frames). The Bloom package puts the switches in Omni's title folder (inproc-web.flag, vss-direct.flag); to turn one off, create /data/omni/inproc-web-off.flag or /data/omni/vss-direct-off.flag and restart Omni. /data/omni/inproc-web.flag and /data/omni/vss-direct.flag still turn them on in other builds.",
