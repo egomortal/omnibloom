@@ -638,8 +638,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 23435,
-      "sha256": "d39d4d5c5b9072116e2ce41ff45514a3674fcd0381f828fdde066bde666c1abe"
+      "bytes": 26003,
+      "sha256": "0e4591f9d0379f25268339509627179521eec97b6ab43fe1ddb30bc42a1311f5"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -658,8 +658,8 @@
     },
     {
       "path": "DEVELOPERS.md",
-      "bytes": 2724,
-      "sha256": "7b6d223a156ad7e808e56a61bead3549073651601289bfab20ac2b02e7a8e248"
+      "bytes": 4101,
+      "sha256": "e8ee8a30c941031a3980b5cc11939641da46f83503d2e920ed6952fb870209b6"
     },
     {
       "path": "docs/brand/feature-grid.png",
@@ -780,6 +780,46 @@
       "path": "docs/community/TRANSLATING.md",
       "bytes": 4966,
       "sha256": "6230d45d90813688d3f24963a66fea0ff33aec77135a9731aa394c15f916136b"
+    },
+    {
+      "path": "docs/dev/architecture.md",
+      "bytes": 10269,
+      "sha256": "9ff293eaa9abeeae790a60be30147a6b076d1aa24de3108c7a43b0acfe9f5b57"
+    },
+    {
+      "path": "docs/dev/engine-and-memory.md",
+      "bytes": 14688,
+      "sha256": "2e59f5f96bb7a3648eb6ac9fc03eb971bd3afb6337072c253b30bec0f929fb3b"
+    },
+    {
+      "path": "docs/dev/features.md",
+      "bytes": 15372,
+      "sha256": "7b95ff2bb684b69ee37e72298bd6944839767356c6a82987805ab08fbc743c09"
+    },
+    {
+      "path": "docs/dev/omni-title-build.md",
+      "bytes": 12400,
+      "sha256": "db917073a659fb25bbe44d36d64a3da6128cac959d20e54cb37b5e1217442286"
+    },
+    {
+      "path": "docs/dev/README.md",
+      "bytes": 2473,
+      "sha256": "8bfbb698c1408d1c985e743849c1907b350c236de2cc8d09fda5dc55be3c15a5"
+    },
+    {
+      "path": "docs/dev/release-process.md",
+      "bytes": 7581,
+      "sha256": "81b337f35dc15c1669d68abc17c74cdfacc884b8ce76f78eb3fa1572d548fc8c"
+    },
+    {
+      "path": "docs/dev/setup-internals.md",
+      "bytes": 10460,
+      "sha256": "1aa207b8ef9ff3db61a798220468d8ea080a4cf7924a62967ff8c77f6521df46"
+    },
+    {
+      "path": "docs/dev/troubleshooting.md",
+      "bytes": 7016,
+      "sha256": "930f3c7138e00202c98bd1f67105ce99a94d49c3f9fd238d5d5bc95d845ed20c"
     },
     {
       "path": "docs/drafts/announcements.md",
@@ -5313,8 +5353,8 @@
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_yttl_scroll.py",
-      "bytes": 2453,
-      "sha256": "e387019dc27786a250f3d8ca073b20be3ae5ceb99e175d01817444c3de11072e"
+      "bytes": 3485,
+      "sha256": "c2ce0389f0540042c526f152778fce409a1527dd9c087c24dcf1aa1ed2062a0e"
     },
     {
       "path": "omni/native-title/patches/experimental/gpu-pages/stage1/tools/apply_zerocopy_present.py",
@@ -6658,38 +6698,38 @@
     },
     {
       "path": "omni/native-title/src/NativeDiagnostics.cpp",
-      "bytes": 7567,
-      "sha256": "087fff1c4a69af560392e526dad1374a126c5f43af342b9ccddfc93acd11247c"
+      "bytes": 8223,
+      "sha256": "d5e1f77553b7e18834fba17295104dddbf47aebe3b063936ebe04b7abf6d465f"
     },
     {
       "path": "omni/native-title/src/NativeEmutls.cpp",
-      "bytes": 7232,
-      "sha256": "24b1c0df66ddf9b57f7e4349981bc53477e193c2ed70476e94912081a7bcadaf"
+      "bytes": 7984,
+      "sha256": "be7ba4d92956d8b70c50dca3a978c3804647b1b898dc43d87cd0a1ebb8a1e971"
     },
     {
       "path": "omni/native-title/src/NativeFilesBroker.cpp",
-      "bytes": 370,
-      "sha256": "a1e6056ee3471066bdb05f434977bd9a811341ce287cfb9b2a8e7d13dd4e7c54"
+      "bytes": 575,
+      "sha256": "94e6bd47ce595e892ff0e7e7760064440d3f3ab7aeb15e39012594ee2daf9e6b"
     },
     {
       "path": "omni/native-title/src/NativeLauncherState.cpp",
-      "bytes": 5989,
-      "sha256": "73e7a8a5629f8dafa55ed971534457c0913aaf4e9a827a4eb714b08ae3fc3e93"
+      "bytes": 7242,
+      "sha256": "7346398eb6641912b95b672265fb324ef1805632e87990c873065d5610eaa327"
     },
     {
       "path": "omni/native-title/src/NativeLibc.cpp",
-      "bytes": 7178,
-      "sha256": "0c7ea38db6ef8d27501844dfa9f03f68ae5f0e9eab7c641cbed9b8f1295e10e4"
+      "bytes": 7916,
+      "sha256": "dc7da9c844e1cd17bfb0944656422967c62aa20ea87494e20720af73769bf570"
     },
     {
       "path": "omni/native-title/src/NativePosix.cpp",
-      "bytes": 2263,
-      "sha256": "db8f854ecdf0a980d1fca89078b72bae53db55977acf29048ccfd155a7b8e7b3"
+      "bytes": 3090,
+      "sha256": "091e495b05fb62bb12a914eb43696f254cde7291d5100b1c707bb4ebd26ec0ef"
     },
     {
       "path": "omni/native-title/src/NativeShm.cpp",
-      "bytes": 6082,
-      "sha256": "733d70e73e1367818b7c123c2234121311aecf5da08f730f645ab4870fcb2e64"
+      "bytes": 6778,
+      "sha256": "0c69be24e44826f2d90dd74ebef298be87a707b74669ed8dbaa15a7dd4b00b0a"
     },
     {
       "path": "omni/native-title/src/OmniGpuPresent.cpp",
@@ -18078,8 +18118,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 10988,
-      "sha256": "b34976c1bd344ef340f8ef332af5ecf19baae07bd91bbf15c678d4c163cffbf5"
+      "bytes": 11117,
+      "sha256": "78cf870b3b4e145b033c530083ea021cf3bf48a11c9cd667abd59b2a2fad3819"
     },
     {
       "path": "ROADMAP.md",
