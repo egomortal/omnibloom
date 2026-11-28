@@ -16,15 +16,29 @@ or edits a file**, including docs.
 
 Format (check the bytes; it matters):
 
-- JSON with a 2-space indent and **CRLF** line endings, ending in `}` and CRLF.
+- JSON with a 2-space indent and LF line endings, ending in `}` and a newline. (Manifests before v0.5.3 used CRLF.)
+- **The rows describe a Windows checkout.** Sizes and hashes are those of the files as Git for Windows checks them
+  out with its default `core.autocrlf=true`, so text files have CRLF line endings. Git stores them with LF, so on an
+  LF checkout (Linux, macOS, or `core.autocrlf=false`) `build_release.py` stops with `Changed input: ...`. Generate
+  and check the manifest in a CRLF checkout.
 - Shape: `{"schema": 1, "files": [{"path": ..., "bytes": ..., "sha256": ...}, ...]}`, with keys in that order.
 - One row for every file except anything under `.git` or `__pycache__`, and except the manifest itself
   (`source_files` in `tools/build_release.py`).
 - Rows are in the order `source_files()` returns on Windows. That is a case-insensitive sort by path part (Python's
   `sorted()` of `PureWindowsPath`).
 
-The tool never writes the manifest (`docs/BUILD.md`). Regenerate it with a few lines of Python from the repository
-root:
+The tool never writes the manifest (`docs/BUILD.md`). Commit your other changes first, then make a temporary CRLF
+checkout of that commit and regenerate the manifest there:
+
+```sh
+git -c core.autocrlf=true worktree add --detach ../manifest-check HEAD
+cd ../manifest-check
+```
+
+Pass `-c core.autocrlf=true` on the command line as shown. `git config` inside a worktree changes the setting for
+**every** worktree of the repository.
+
+Then, from the root of that checkout:
 
 ```python
 import hashlib, json
@@ -39,10 +53,10 @@ files.sort(key=lambda p: PureWindowsPath(p.relative_to(root).as_posix()))
 rows = [{'path': p.relative_to(root).as_posix(), 'bytes': p.stat().st_size,
          'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in files]
 text = json.dumps({'schema': 1, 'files': rows}, indent=2)
-Path('SOURCE-MANIFEST.json').write_bytes((text + '\n').replace('\n', '\r\n').encode('utf-8'))
+Path('SOURCE-MANIFEST.json').write_bytes((text + '\n').encode('utf-8'))
 ```
 
-Then check it:
+Then check it in the same checkout:
 
 ```sh
 python tools/build_release.py
@@ -50,8 +64,9 @@ python tools/build_release.py
 
 Success prints `"sourceVerified": true`. Failure prints `BUILD STOPPED: ...` and exits 2.
 
-Make the manifest refresh its own commit, or the last part of your commit, so a reviewer can see what changed.
-Hash files as they are checked out. If git converts line endings on your machine, the hashes will not match.
+Copy the new `SOURCE-MANIFEST.json` back into your working tree, commit it as its own commit, and remove the
+temporary checkout (`git worktree remove ../manifest-check`). Compared with the previous manifest, only the rows of
+the files you changed should differ.
 
 ## 2. Build the console package
 
