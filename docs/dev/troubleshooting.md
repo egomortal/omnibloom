@@ -63,7 +63,7 @@ changing one.
 | `crash-diagnostics.flag` | more crash detail | `omni/engine/entry/OmniMain.cpp` |
 | `inproc-web-off.flag` | run pages in the separate engine process instead of the in-app page engine | [engine-and-memory.md](engine-and-memory.md#in-app-page-engine) |
 | `pt-gentle-off.flag`, `pt-watchdog-line.txt` | page-table guard: gentle steps off / the line (default 6600) | [engine-and-memory.md](engine-and-memory.md#page-table-guard) |
-| `media-buffer-mb.txt`, `media-buffer-off.flag` | video buffer budget (not in the daily build yet) | [engine-and-memory.md](engine-and-memory.md#bigger-media-buffer) |
+| `media-buffer-mb.txt`, `media-buffer-off.flag` | video buffer budget (default 1024 MiB) | [engine-and-memory.md](engine-and-memory.md#bigger-media-buffer) |
 | `video-hdr-preference.txt` | HDR Off / Auto / On | `setup/omnibloom_setup/config.py` (`OMNI_HDR_PREF`) |
 
 (`patches/` above means `omni/native-title/patches/`.)

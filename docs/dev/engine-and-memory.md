@@ -2,12 +2,14 @@
 
 This page covers Omni's newest work on how pages run and how memory is kept safe:
 
-| Feature | Marker | Status (2026-11-27) |
+| Feature | Marker | Status (2026-11-28) |
 |---|---|---|
 | [In-app page engine](#in-app-page-engine) | `OMNI_INPROC_NET_V1` and the `OMNI_INPROC_*` patches | **on by default** in the owner's daily build since 2026-11-26 |
 | [Page-table guard](#page-table-guard) | `OMNI_PT_WATCHDOG_V1`, `OMNI_PT_GENTLE_V1` | **on** in the daily build |
-| [Bigger media buffer](#bigger-media-buffer) | `OMNI_MEDIA_BUFFER_V1` | built and tested, **not** in the daily build yet (the owner has not decided) |
-| [In-app network engine](#in-app-network-engine-experimental) | `OMNI_INPROC_NET_V1` (network role) | **experimental, off by default, not working yet** |
+| [Bigger media buffer](#bigger-media-buffer) | `OMNI_MEDIA_BUFFER_V1` | built and measured on the console |
+| [In-app network engine](#in-app-network-engine-experimental) | `OMNI_INPROC_NET_V1` (network role) | **experimental, off by default** |
+
+Start with [The two page-table pools](#the-two-page-table-pools): it explains why these features matter.
 
 For each feature: what it does, why it exists, how to turn it off and where the code is.
 
@@ -18,6 +20,39 @@ technical description; this page is the plain version.
 
 **Switches.** All switch files live in `/data/omni/` on the console. Omni reads most of them once, at start, so restart
 Omni after changing one.
+
+---
+
+## The two page-table pools
+
+Page tables are the kernel's records of which memory belongs to which program. Every program needs some, and big pages
+(4K video, heavy sites) need more. All numbers below were **measured on the console** (2026-11-27 and 28).
+
+The PS5 has **two kinds** of page-table pools:
+
+| Pool | Size | Who uses it | What happens when it fills |
+|---|---|---|---|
+| **An app's own pool** | 16,384 page tables (64 MB), one pool per app | each app launched normally from the home screen. Omni is one. | that app runs out of room; the console keeps going |
+| **The system pool** | 8,192 page tables, shared | the PS5's own processes, and helper programs started outside an app: homebrew payloads, and Omni's separate engine processes | **the whole console freezes**, at about 6,770 in use |
+
+What we measured during 4K YouTube:
+
+- **Omni's own pool:** from 834 to 2,152 of 16,384 (13%).
+- **The system pool:** flat, at about 5,010 of 8,192.
+
+So the memory Omni uses for itself never touches the pool that freezes the console. What Omni adds to the system pool
+comes from its **helper processes**: the separate page engine and network engine, when they run as their own programs.
+
+This is why the [in-app page engine](#in-app-page-engine) made such a difference. With the page engine inside Omni, its
+memory moved out of the system pool and into Omni's own pool, which has plenty of room.
+
+### Things that do not work
+
+So nobody spends time on them again:
+
+- **Raising the pool in the app's settings file** (`kernel.cpuPageTableSize` in the title's parameters) does not change
+  the system pool. Omni's own pool already has plenty of room, so there is nothing to gain there either.
+- **Making the system pool bigger** would mean patching the PS5's kernel, which the hypervisor protects.
 
 ---
 
@@ -37,9 +72,11 @@ channel are now in the same program.
 
 - **Less memory.** A separate engine process is a whole loaded copy of the engine. The in-app engine needs no spare
   copies waiting in reserve.
-- **More headroom before the console hangs.** On the same 4K HDR YouTube video, the separate engine reached 6,221 to
-  6,718 page tables. In-app stayed under 6,000, which is at least about 770 below the hang point (see
-  [Page-table guard](#page-table-guard)).
+- **The console stays far from freezing.** A separate page engine is a helper process, so its page tables come from
+  the shared system pool, the one that freezes the console when it fills (see
+  [The two page-table pools](#the-two-page-table-pools)). In-app, the page engine's memory counts against Omni's own,
+  much larger pool instead. Measured on the same 4K HDR YouTube video: with the separate engine, the system pool reached
+  6,221 to 6,718, close to the freeze point of about 6,770. In-app, normal 4K use sits about 1,200 below it.
 - **Fewer moving parts.** There is no child process to start, wait for, or lose.
 
 ### How to turn it off
@@ -89,16 +126,21 @@ may not be released in time. The next video then plays with the software decoder
 
 ### What it does
 
-It watches one number, the console's **page-table count**, and steps in before the console hangs.
+It watches one number, the page-table count of the console's **system pool**, and steps in before the console
+freezes.
 
-Page tables are the kernel's records of which memory belongs to which program. The console has a fixed pool of 8,192.
-When more than about 6,770 are in use, the whole console hangs (the lowest hang seen was 6,771). Big pages, such as
-4K YouTube, can push the count there.
+The system pool holds 8,192 page tables and is shared by the PS5's own processes and by helper programs started
+outside an app (see [The two page-table pools](#the-two-page-table-pools)). When more than about 6,770 are in use,
+the whole console freezes (the lowest freeze seen was at 6,771). Omni's own pool is separate, and much larger, so the
+guard does not need to watch it.
+
+With the in-app page engine, normal 4K use sits about 1,200 below the freeze point (measured), so the guard rarely
+has to act. It is still the safety net for heavy pages, and for the separate engine, which uses the system pool.
 
 ### Why
 
-Earlier fixes each closed one road to the hang: a gate on opening video decoders, a queue ceiling, a 1440p cap on
-YouTube. The hang kept finding another road. So the guard now watches the number itself, whatever the cause.
+Earlier fixes each closed one road to the freeze: a gate on opening video decoders, a queue ceiling, a 1440p cap on
+YouTube. The freeze kept finding another road. So the guard now watches the number itself, whatever the cause.
 
 ### How it works
 
@@ -127,7 +169,7 @@ pressure, it presets YouTube's own remembered quality to 1440p, so the first pic
 |---|---|
 | `/data/omni/pt-watchdog-line.txt` | the line, from 6000 to 7200 (default 6600) |
 | `/data/omni/pt-gentle-off.flag` | turns off the gentle steps; the first watchdog version (stop the shown tab only) runs instead |
-| `/data/omni/pt-watchdog-off.flag` | turns the watchdog off completely. **Not recommended:** the console can hang |
+| `/data/omni/pt-watchdog-off.flag` | turns the watchdog off completely. **Not recommended:** the console can freeze |
 
 ### Where the code is
 
@@ -147,11 +189,12 @@ pressure, it presets YouTube's own remembered quality to 1440p, so the first pic
 
 ## Bigger media buffer
 
-**Status: built and tested on the console, but not in the daily build yet. The owner has not decided.**
+**Status: built and measured on the console.**
 
 ### What it does
 
-It gives the title's video players one memory **budget** for buffering video ahead.
+It gives the title's video players one memory **budget** for buffering video ahead: up to 1 GB by default, and up to
+20 minutes ahead where Omni does the downloading itself (plain video files and HLS streams Omni plays itself).
 
 Before, the in-app video player kept only 32 MiB per stream, about 10 s of 4K HDR. Every small network dip could cause
 a stall. Now:
@@ -172,9 +215,12 @@ under the line.
 
 Small buffers stall on every network dip. A bigger buffer rides them out.
 
-Note: the site's own player decides how far ahead it asks for. In tests, YouTube stopped at about 17 s ahead and
-another site at about 30 s, whatever the budget. The budget no longer cuts them short, but 20 minutes ahead needs the
-player itself to ask for that much.
+What we measured:
+
+- **Where Omni downloads:** an HLS stream was fetched 20 minutes ahead within 30 seconds, with no extra page tables.
+- **Sites with their own player** (YouTube included) still choose how far ahead they fetch. The budget no longer cuts
+  them short, but it cannot make them ask for more. YouTube fetches about 17 seconds ahead at 4K. YouTube's servers
+  set this, and it is the same in every browser. Another site stopped at about 30 seconds.
 
 ### How to turn it off or change it
 
@@ -195,8 +241,9 @@ child is unchanged.
 
 ## In-app network engine (experimental)
 
-**Experimental, off by default and not working yet: YouTube stalls.** It is documented here only so you know what the
-switch is. Do not turn it on for normal use.
+**Experimental and off by default.** It is documented here only so you know what the switch is. Do not turn it on for
+normal use. In-app, the network engine shares Omni's main thread with the rest of the browser, so it can drop video
+frames during heavy video.
 
 Besides pages, WebKit runs the network (downloads, cookies, storage) in another process. This experiment moves that
 role into the title too, through the same launcher seam as the in-app page engine (`apply_inproc_net.py`).

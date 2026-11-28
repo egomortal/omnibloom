@@ -1,5 +1,40 @@
 # Changelog
 
+## Unreleased
+
+### Why Omni no longer pushes the console toward a freeze (measured on the console)
+- **The PS5 has two kinds of page-table pools.** Page tables are the kernel's records of which memory belongs to
+  which program.
+  - Every app launched normally, Omni included, gets its **own** pool of 16,384 page tables (64 MB).
+  - The console's **system** pool holds 8,192 and is shared by the PS5's own processes and by helper programs started
+    outside an app: homebrew payloads, and Omni's separate engine processes.
+  - Filling the system pool is what freezes the console, at about 6,770.
+- **Measured during 4K YouTube:** Omni's own pool went from 834 to 2,152 of 16,384 (13%), while the system pool stayed
+  flat at about 5,010. Omni's own memory does not touch the pool that freezes the console; what it adds there comes
+  from its helper processes.
+- **The page engine now runs inside Omni by default.** Its memory moved out of the system pool into Omni's own pool.
+  Normal 4K use now sits about 1,200 page tables below the freeze point. The separate engine is still there:
+  `/data/omni/inproc-web-off.flag` switches back to it.
+- **The page-table guard stays on** as the safety net. It watches the system pool and, before it gets close, steps in
+  gently: first it discards background tabs, then it lowers YouTube's quality, then it reloads the page.
+- **What does not help, so nobody repeats it:** raising the page-table pool in the app's settings file
+  (`kernel.cpuPageTableSize`) does not change the system pool, and Omni's own pool already has plenty of room.
+  Making the system pool bigger would mean patching the kernel, which the hypervisor protects.
+
+### Bigger video buffer
+- **Up to 1 GB of video buffered, and up to 20 minutes ahead** where Omni does the downloading itself (plain video
+  files and HLS streams Omni plays). **Measured:** an HLS stream was fetched 20 minutes ahead within 30 seconds, with no
+  extra page tables. Set the size with `/data/omni/media-buffer-mb.txt`; turn it off with
+  `/data/omni/media-buffer-off.flag`.
+- **Sites with their own player** (YouTube included) still choose how far ahead they fetch. YouTube fetches about
+  17 seconds ahead at 4K in every browser; YouTube's servers set that.
+
+### Experimental
+- **In-app networking** (the network engine inside Omni too) is experimental and **off by default**. It shares Omni's
+  main thread, so it can drop frames during heavy video.
+
+Details for developers: [docs/dev/engine-and-memory.md](docs/dev/engine-and-memory.md).
+
 ## Coming next (dev branch, not released)
 
 We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release. The list grows in the `v0.5.2-dev` branch's CHANGELOG.md.
