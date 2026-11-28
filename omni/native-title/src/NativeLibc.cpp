@@ -1,3 +1,7 @@
+// Missing C library functions for the PS5 title. Omni's engine was first built as a homebrew payload,
+// whose own C library had these. A title gets its C library from the console instead, and that one
+// lacks them, so they are written out here. Used by: the title build only.
+//
 // omni-native-s0: libc functions the payload SDK's static libc.a gave Omni and that no system
 // module (and no SDK platform ps5_ function) provides to a title. Explicit, minimal versions;
 // all names are kept local to the title (build.py's local map). SPDX-License-Identifier: GPL-3.0-or-later
@@ -34,7 +38,8 @@ int ___mb_cur_max(void) { return __mb_cur_max; }
 // OpenSSL's ASYNC fibres (libcrypto async.c) only; Omni (curl) never starts an ASYNC job.
 int _setjmp(void*) { return 0; }
 [[noreturn]] void _longjmp(void*, int) { omni_native_log("libc: _longjmp called (OpenSSL ASYNC fibre): not available in the title"); abort(); }
-unsigned int if_nametoindex(const char*) { errno = ENXIO; return 0; }
+unsigned int if_nametoindex(const char*) { errno = ENXIO; return 0; }   // no network interface names here
+// Make a unique temporary file, then apply close-on-exec if asked.
 int mkostemp(char* path, int flags)
 {
     int fd = mkstemps(path, 0); // the SDK platform's ps5_mkstemps (RADV link recipe)
@@ -78,6 +83,8 @@ int pipe2(int fds[2], int flags)
 #include <sys/socket.h>
 extern "C" void* dlsym(void*, const char*);
 namespace {
+// optionalExport<F>("name"): look a function up in the modules the console has loaded. Returns null
+// when the console does not export it, so each wrapper below can use its own fallback.
 template<typename F> F optionalExport(const char* name)
 {
     static_assert(sizeof(F) == sizeof(void*));
@@ -108,6 +115,8 @@ bool globMatch(const char* p, const char* s)
     return !*s;
 }
 }
+// The wrappers. Each one: use the console's own function when it exists, otherwise a small safe
+// fallback (an error code, or a simple local version).
 extern "C" {
 int __wrap_isatty(int fd)
 {

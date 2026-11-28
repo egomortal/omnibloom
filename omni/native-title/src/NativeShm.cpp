@@ -29,6 +29,8 @@ extern "C" int __real_shm_open(const char*, int, mode_t);
 extern "C" int __real_close(int);
 extern "C" int __real_dup(int);
 
+// Bookkeeping: a fixed table of open descriptors, each pointing at a named object with a reference
+// count. Fixed sizes, so nothing is allocated while WebKit is in the middle of sending memory.
 namespace {
 struct OmniShmEntry { int fd; int name; };      // name: index into names, -1 = free
 struct OmniShmName { char path[48]; int refs; };
@@ -62,6 +64,9 @@ int omniShmNameOf(int fd)             // lock held
 }
 }
 
+// Wrapper for opening shared memory: named objects pass straight through. An anonymous request gets a unique name
+// instead, so it can be opened again later (see omniShmReopen). If that fails for any reason, the
+// original anonymous call is made, so behaviour never gets worse than without this file.
 extern "C" int __wrap_shm_open(const char* path, int flags, mode_t mode)
 {
     if (path != SHM_ANON) return __real_shm_open(path, flags, mode);
@@ -98,6 +103,8 @@ static int omniShmReopen(int fd)
     return copy;
 }
 
+// close() wrapper: forget a tracked descriptor, and remove the object's name when its last
+// descriptor in this process closes. Untracked descriptors (almost all) skip the lock entirely.
 extern "C" int __wrap_close(int fd)
 {
     if (omniShmLive.load(std::memory_order_relaxed) > 0) {

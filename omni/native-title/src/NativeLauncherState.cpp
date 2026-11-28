@@ -1,3 +1,11 @@
+// The title's launcher: how the PS5 title starts WebKit's helper processes (the page engine and the
+// network engine). Used by: the title build (build.py). It also pulls in NativeDiagnostics.cpp,
+// NativeShm.cpp and NativePosix.cpp, which are compiled as part of this file.
+//
+// How a child starts: the title opens a TCP connection to the ELF loader on 127.0.0.1:9021 and sends
+// one line, "file:<path>\n". The loader starts that ELF. Whatever the loader writes back is copied to
+// the title's log by a small background thread.
+//
 // omni-native-s0: UI-side launcher state for the native title (from the 2026-10-20
 // omni-browser/tools/native-title/NativeLauncherState.cpp, OMNI_NATIVE_LAUNCHER_V1).
 // Differences: omni_child_bootstrap() answers OMNI_ROLE_FIRST (the title is always the UI process),
@@ -5,6 +13,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "launcher-common.h"
 extern "C" void omni_native_log(const char*, ...);
+// The launcher's shared folder (where start "tickets" are written) and the hooks WebKit's launcher
+// calls. The title is always the UI process, so it never listens for a parent and never bootstraps
+// as a child.
 namespace { std::string directory; }
 std::string& omni_launcher_dir_ref() { return directory; }
 extern "C" void omni_launcher_set_dir(const char* value) { directory = value ? value : ""; }
@@ -24,6 +35,8 @@ extern "C" int omni_child_bootstrap(char**, int, int* count) { if (count) *count
 #include <string.h>
 #include <dirent.h>
 #include <time.h>
+// nativeDrain(): a detached thread that copies the loader's reply into the log (stderr) until the
+// loader closes the connection. It waits for `ready` so it never reads before the request is sent.
 struct NativeDrain { int fd; std::atomic<bool> ready{false}; };
 static void* nativeDrain(void* value) {
  auto* state=static_cast<NativeDrain*>(value);
@@ -44,6 +57,8 @@ static const char* nativeChildPath(const char* path) {
  if(!logged.exchange(1))omni_native_log("children: engine %s",use?kChild:(path?path:"(null)"));
  return use?kChild:path;
 }
+// nativeSpawn(): start one helper process through the ELF loader (port 9021). Returns 0 on success or
+// a negative errno. Refuses once the title is closing, so no orphan child is left behind.
 static int nativeSpawn(const char* path) {
  path=nativeChildPath(path);
  if(g_childrenStopped.load(std::memory_order_acquire)){omni_native_log("children: spawn %s refused: title is leaving",path);return -ECANCELED;}
@@ -62,6 +77,7 @@ static int nativeSpawn(const char* path) {
  omni_native_log("children: spawn %s -> %d",path,e?-e:0);
  return e?-e:0;
 }
+// Runs before main(): makes WebKit's launcher use nativeSpawn() for every child it starts.
 __attribute__((constructor)) static void installNativeSpawner(){omni_launcher_set_spawner(nativeSpawn);}
 
 // s0b: called on every route out of the title before LoadExec. 1) refuse further spawns (the

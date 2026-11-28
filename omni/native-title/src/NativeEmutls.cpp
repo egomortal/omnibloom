@@ -17,6 +17,11 @@
 // their destructors (POSIX: up to PTHREAD_DESTRUCTOR_ITERATIONS rounds; a value set again in a destructor gets
 // another round). The libc.a copy is weak; this strong definition replaces it in the title link.
 //===----------------------------------------------------------------------------------------===//
+//
+// In plain words: "thread_local" variables need per-thread storage. The PS5 title has no built-in
+// support, so the compiler calls __emutls_get_address() and this file hands out per-thread memory.
+// The one Omni change makes that memory live one round longer when a thread ends, so C++ destructors
+// that still use it run first. Used by: the title build only.
 #include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -41,6 +46,7 @@ static pthread_mutex_t emutls_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_key_t emutls_pthread_key;
 typedef unsigned int gcc_word __attribute__((mode(word)));
 
+// Aligned allocation on top of malloc: the real pointer is kept just before the aligned one.
 static inline void* emutls_memalign_alloc(size_t align, size_t size)
 {
     const size_t extra = align - 1 + sizeof(void*);
@@ -100,6 +106,7 @@ static inline void* emutls_allocate_object(__emutls_control* control)
     else memset(base, 0, size);
     return base;
 }
+// Each thread_local variable gets a number the first time any thread uses it (under a lock, once).
 static inline uintptr_t emutls_get_index(__emutls_control* control)
 {
     uintptr_t index = __atomic_load_n(&control->object.index, __ATOMIC_ACQUIRE);
@@ -127,6 +134,7 @@ static inline uintptr_t emutls_new_data_array_size(uintptr_t index)
     return ((index + header_words + 15) & ~uintptr_t(15)) - header_words;
 }
 static inline uintptr_t emutls_asize(uintptr_t n) { return n * sizeof(void*) + kHeaderBytes; }
+// This thread's table of variables, created or grown (in steps of 16) so `index` fits.
 static inline emutls_address_array* emutls_get_address_array(uintptr_t index)
 {
     emutls_address_array* array = emutls_getspecific();
@@ -146,6 +154,7 @@ static inline emutls_address_array* emutls_get_address_array(uintptr_t index)
     }
     return array;
 }
+// The entry point the compiler calls: this thread's copy of one variable, made on first use.
 __attribute__((visibility("default"))) void* __emutls_get_address(__emutls_control* control)
 {
     uintptr_t index = emutls_get_index(control);

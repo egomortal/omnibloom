@@ -20,6 +20,9 @@ extern "C" char __ehdr_start __attribute__((weak));
 extern "C" int32_t sceKernelAvailableFlexibleMemorySize(size_t*);
 extern "C" int32_t sceKernelConfiguredFlexibleMemorySize(size_t*);
 
+// Helpers: collect up to 24 return addresses (omniStackStep/omniLogStack) and print the console's
+// flexible memory, configured and free (omniLogFlexible). omniNewHandler reports the first three
+// failed allocations, then lets operator new fail the normal way.
 namespace {
 struct OmniStack { uintptr_t pcs[24]; int count; };
 
@@ -86,6 +89,7 @@ static void omniNativeDiagDup(int fd)
     errno = saved;
 }
 
+// Runs before main(): install the allocation-failure handler and log the memory picture at start.
 __attribute__((constructor)) static void omniInstallNativeDiagnostics()
 {
     std::set_new_handler(omniNewHandler);
@@ -114,6 +118,9 @@ extern "C" [[noreturn]] void __wrap___cxa_throw(void* exception, void* type, voi
 // 64 MiB or more (first 16), and any failure with its size, free flexible memory and the
 // caller's stack. A failure then aborts, as the uncaught std::bad_alloc did.
 #include <stdlib.h>
+// omniNewImpl(): the one allocation path behind every operator new below. It allocates (aligned if
+// needed), logs very large requests, and on failure either returns null (nothrow forms) or logs and
+// aborts.
 namespace {
 std::atomic<int> omniBigAllocations { 0 };
 void* omniNewImpl(size_t size, size_t alignment, bool nothrow)
@@ -133,6 +140,7 @@ void* omniNewImpl(size_t size, size_t alignment, bool nothrow)
     abort();
 }
 }
+// Every form of new and delete, all routed to omniNewImpl() and free().
 void* operator new(size_t size) { return omniNewImpl(size, 0, false); }
 void* operator new[](size_t size) { return omniNewImpl(size, 0, false); }
 void* operator new(size_t size, const std::nothrow_t&) noexcept { return omniNewImpl(size, 0, true); }
