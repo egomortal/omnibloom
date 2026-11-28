@@ -8,6 +8,7 @@ New here? Read these plain-language pages first. Each one points at the files th
 - [Architecture overview](docs/dev/architecture.md): Omni, Bloom Core, the Downloads worker, the USB files broker, Master Control, the JDownloader engine and Setup, and how they talk
 - [Building the Omni title](docs/dev/omni-title-build.md): the engine tree, the `apply_*.py` patch scripts and their `OMNI_*_V1` markers, the build scripts, the import gate, the overlay states, and how to write a patch
 - [Feature guides](docs/dev/features.md): controller shortcuts and Media downloads, the quick-access row and the Quick bar, dark mode, add-ons, the YouTube guard, GPU page drawing
+- [In-app engine, memory guard and media buffer](docs/dev/engine-and-memory.md): the page engine inside the title, the page-table guard, the media buffer budget, the experimental in-app network engine
 - [Setup internals](docs/dev/setup-internals.md): catalog, packages, install roots, autoload, receipts, Repair, the one-button flow, fake-console tests
 - [Release process](docs/dev/release-process.md): `SOURCE-MANIFEST.json`, `make_package.py`, `build_release.py`, `RELEASE-MANIFEST.json`, the Setup CI
 - [Troubleshooting](docs/dev/troubleshooting.md): logs, flag files and hub status on the console

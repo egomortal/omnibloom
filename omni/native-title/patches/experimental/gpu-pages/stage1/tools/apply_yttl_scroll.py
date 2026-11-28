@@ -1,3 +1,17 @@
+#!/usr/bin/env python3
+"""OMNI_YTTL_SCROLL_V1: a test-only scroll driver for the YouTube timeline test runner (OMNI_YT_TIMELINE_V1).
+
+What: adds a `scroll N` line to the runner's config file, /data/omni/yt-timeline.txt. With it, once a test page has
+finished loading and 2 s more have passed, the runner scrolls the page N pixels per frame tick (N is 0 to 200):
+3 s down, then 3 s up, over and over. It scrolls through the shell's own scroll(), the same path as the right stick
+and the mouse wheel.
+Why: so a timeline run can measure smoothness and video playback while the page is scrolling, not only while it
+sits still.
+Switch: there is no flag. Without a `scroll N` line (or with N = 0) the hook does nothing, so it is safe in every
+build. Later patches anchor on its lines, so keep it in the title recipe.
+Not idempotent: there is no "already applied" check, so a second run on the same file stops with "anchor count 0".
+Run it once, on a fresh tree.
+usage: apply_yttl_scroll.py <engine/entry/OmniBrowser.cpp>"""
 import sys
 p = sys.argv[1]
 b = open(p, 'rb').read(); nl = b'\r\n' if b'\r\n' in b else b'\n'

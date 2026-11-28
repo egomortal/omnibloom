@@ -146,9 +146,9 @@ comment, for example `// OMNI_DARK_STANDARD_V1`.
 `omni/native-title/patches/README.md` states the rule: "Every step is idempotent (each patch carries a marker and
 refuses an anchor that does not match exactly once)."
 
-There is **no shared helper module**. Every script carries its own few lines. One known exception:
-`patches/experimental/gpu-pages/stage1/tools/apply_media_health_fix.py` has no marker check, so a second run fails
-with "anchor count 0" instead of printing "already".
+There is **no shared helper module**. Every script carries its own few lines. Two known exceptions in
+`patches/experimental/gpu-pages/stage1/tools/`: `apply_media_health_fix.py` and `apply_yttl_scroll.py` have no marker
+check, so a second run fails with "anchor count 0" instead of printing "already". Run them once, on a fresh tree.
 
 ## How to write a new patch
 

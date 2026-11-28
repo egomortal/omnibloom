@@ -13,6 +13,7 @@ Please fix the page in the same pull request.
 | [Architecture](architecture.md) | see the pieces (Omni, Bloom Core, Downloads, the USB files broker, Master Control, JDownloader, Setup) and how they talk |
 | [Building the Omni title](omni-title-build.md) | understand how the PS5 title is built from an engine tree plus patch scripts, or write a new patch |
 | [Feature guides](features.md) | change the controller shortcuts, the Quick bar, dark mode, add-ons, the YouTube guard or GPU page drawing |
+| [In-app engine, memory guard and media buffer](engine-and-memory.md) | understand the in-app page engine, the page-table guard, the media buffer budget and the experimental in-app network engine |
 | [Setup internals](setup-internals.md) | change Omnibloom Setup: catalog, packages, install roots, autoload, receipts, Repair, tests |
 | [Release process](release-process.md) | cut a release: packages, `SOURCE-MANIFEST.json`, `RELEASE-MANIFEST.json`, the Setup CI |
 | [Troubleshooting](troubleshooting.md) | find logs, flag files and status on the console |
