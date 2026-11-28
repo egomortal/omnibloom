@@ -37,7 +37,7 @@ Repository: <https://github.com/egomortal/omnibloom> (the old `omni-browser` lin
 
 - **Using it?** See [FEATURES.md](FEATURES.md) for what works, what's being tested and what's coming.
 - **Something not working?** See [KNOWN-ISSUES.md](KNOWN-ISSUES.md) for current problems and their workarounds.
-- **Developer?** See [DEVELOPERS.md](DEVELOPERS.md) and [docs/BUILD.md](docs/BUILD.md).
+- **Developer?** Start with the [developer guide](docs/dev/README.md) (architecture, building Omni, features, Setup, releases, troubleshooting), then [DEVELOPERS.md](DEVELOPERS.md) and [docs/BUILD.md](docs/BUILD.md).
 - **Before asking for a feature or firmware support,** please read my [personal notes](personal%20notes.md).
 
 ## Controller shortcuts
