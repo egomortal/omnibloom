@@ -394,6 +394,7 @@ python3 "$S1/tools/apply_crash_choices.py" "$TT" > "$LT_/crash_choices.log" 2>&1
 # OMNI_CRASH_AUTORELOAD_V1 (2026-11-19): first crash on a site reloads the shown tab too; honest crash texts
 python3 "$S1/tools/apply_crash_autoreload.py" "$TT" > "$LT_/crash_autoreload.log" 2>&1 || { st "OMNI_CRASH_AUTORELOAD FAILED: $(tail -1 "$LT_/crash_autoreload.log")"; exit 1; }
 python3 "$S1/tools/apply_pt_watchdog.py" "$TT" > "$LT_/pt_watchdog.log" 2>&1 || { st "OMNI_PT_WATCHDOG FAILED: $(tail -1 "$LT_/pt_watchdog.log")"; exit 1; }
+python3 "$S1/tools/apply_pt_gentle.py" "$TT" > "$LT_/pt_gentle.log" 2>&1 || { st "OMNI_PT_GENTLE FAILED: $(tail -1 "$LT_/pt_gentle.log")"; exit 1; }
 st "OMNI_PT_WATCHDOG_V1: $(tail -1 "$LT_/pt_watchdog.log")"
 st "OMNI_CRASH_CHOICES: $(paste -sd' ' "$LT_/crash_choices.log" | cut -c1-300)"
 python3 "$S1/tools/apply_lite_mode.py" "$TT" > "$LT_/lite_mode.log" 2>&1 || { st "OMNI_LITE_MODE FAILED: $(tail -1 "$LT_/lite_mode.log")"; exit 1; }
@@ -439,6 +440,18 @@ python3 "$S1/tools/apply_mse_h264_probe.py" "$TT" > "$LT_/apply_mse_h264_probe.l
 st "OMNI_MSE_H264_PROBE_V1: $(tail -1 "$LT_/apply_mse_h264_probe.log")"
 python3 "$S1/tools/apply_mse_track_quota.py" "$TT" > "$LT_/apply_mse_track_quota.log" 2>&1 || { st "apply_mse_track_quota FAILED: $(tail -1 "$LT_/apply_mse_track_quota.log")"; exit 1; }
 st "OMNI_MSE_TRACK_QUOTA_V1: $(tail -1 "$LT_/apply_mse_track_quota.log")"
+python3 "$S1/tools/apply_hls_h264_large.py" "$TT" > "$LT_/apply_hls_h264_large.log" 2>&1 || { st "apply_hls_h264_large FAILED: $(tail -1 "$LT_/apply_hls_h264_large.log")"; exit 1; }
+st "OMNI_HLS_H264_LARGE_V1: $(tail -1 "$LT_/apply_hls_h264_large.log")"
+python3 "$S1/tools/apply_audio_ac3_mp3.py" "$TT" > "$LT_/apply_audio_ac3_mp3.log" 2>&1 || { st "apply_audio_ac3_mp3 FAILED: $(tail -1 "$LT_/apply_audio_ac3_mp3.log")"; exit 1; }
+st "OMNI_AUDIO_AC3_MP3_V1: $(tail -1 "$LT_/apply_audio_ac3_mp3.log")"
+python3 "$S1/tools/apply_audio_mp2.py" "$TT" > "$LT_/apply_audio_mp2.log" 2>&1 || { st "apply_audio_mp2 FAILED: $(tail -1 "$LT_/apply_audio_mp2.log")"; exit 1; }
+st "OMNI_AUDIO_MP2_V1: $(tail -1 "$LT_/apply_audio_mp2.log")"
+python3 "$S1/tools/apply_hw_codec_switch.py" "$TT" > "$LT_/apply_hw_codec_switch.log" 2>&1 || { st "apply_hw_codec_switch FAILED: $(tail -1 "$LT_/apply_hw_codec_switch.log")"; exit 1; }
+st "OMNI_HW_CODEC_SWITCH_V1: $(tail -1 "$LT_/apply_hw_codec_switch.log")"
+python3 "$S1/tools/apply_hw_queue_family.py" "$TT" > "$LT_/apply_hw_queue_family.log" 2>&1 || { st "apply_hw_queue_family FAILED: $(tail -1 "$LT_/apply_hw_queue_family.log")"; exit 1; }
+st "OMNI_HW_QUEUE_FAMILY_V1: $(tail -1 "$LT_/apply_hw_queue_family.log")"
+python3 "$S1/tools/apply_media_buffer.py" "$TT" > "$LT_/apply_media_buffer.log" 2>&1 || { st "apply_media_buffer FAILED: $(tail -1 "$LT_/apply_media_buffer.log")"; exit 1; }
+st "OMNI_MEDIA_BUFFER_V1: $(paste -sd' ' "$LT_/apply_media_buffer.log")"
 CGT=$TT/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics; CGB=$TB/webkit/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics
 for f in ogp-s1-drawingarea.inc ogp-s1-surface.inc ogp-s1-policy.h ogp-s1b-async.inc; do
   cmp -s "$CGT/$f" "$CGB/$f" && echo "same-as-child $f $(sha256sum "$CGT/$f" | cut -c1-8)" || echo "DIFF-from-child $f T $(sha256sum "$CGT/$f" | cut -c1-8) C $(sha256sum "$CGB/$f" | cut -c1-8)"

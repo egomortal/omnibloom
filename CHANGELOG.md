@@ -5,6 +5,26 @@
 We're in the final stretch of building out Omni's browser features: about 200 new features are being added on the dev branch over the coming days. After that, work moves to refinement: testing on the console, fixing what turns up, and polishing before the next release. Until then, these features are in development and not yet in a release.
 
 ### Omni
+- **Video buffers up to 20 minutes ahead (Omni 0.5.5):** Omni's own media players (native HLS streams and plain video
+  files) now fetch up to 20 minutes ahead instead of a few seconds, so a slow or uneven connection no longer stops the
+  picture. Page video (MSE) may hold up to 1 GiB instead of 32 MiB; sites' own players still decide how far ahead they
+  ask for (YouTube about 17 s, movy about 30 s). The buffer lives in direct memory and costs no kernel page tables
+  (on the console the page-table peak stayed the same as normal 4K playback). Size in MiB (64-4096):
+  `/data/omni/media-buffer-mb.txt`; off switch `/data/omni/media-buffer-off.flag`.
+- **Native HLS above 1080p (Omni 0.5.5):** HLS streams that Omni plays itself now pick H.264 variants up to 3840x2160
+  on the hardware decoder (they stopped at 1080p, and a stream with only larger variants did not play). Off switch
+  `/data/omni/hls-h264-large-off.flag`.
+- **More audio formats (Omni 0.5.5):** AC-3, E-AC-3 (Dolby Digital / Digital Plus), MP3 and MPEG Layer II audio now
+  play in MP4 files, page video and HLS streams; surround is mixed down to stereo. Before, such a stream had no sound or
+  did not start. Off switch `/data/omni/audio-ac3-mp3-off.flag`.
+- **Switching between YouTube and H.264 sites keeps the hardware decoder (Omni 0.5.5):** after an H.264 video, the
+  next VP9 video (and the other way round) could not get the hardware decoder and fell back to software. The two
+  codecs now use separate decoder queues. Off switch `/data/omni/hw-queue-family-off.flag`.
+- **Gentler memory guard (Omni 0.5.5):** when the console's page-table pool gets close to full, Omni now steps down
+  gently: it first closes a background tab, then lowers the video quality, and only as a last step reloads the page.
+  Off switch `/data/omni/pt-gentle-off.flag`.
+- **The page engine runs inside Omni in the stable app (Omni 0.5.5):** what Bloom Preview 5 and 6 tested is now the
+  normal setup (see "Page engine inside Omni" below); the off switches are the same.
 - **Movy and other sites that send sound and picture in one stream play (Bloom Preview 6):** page video (MSE) refused
   H.264 above 1920x1080 pixels, so wider-than-16:9 streams such as movy's 2600x1080 films never started. H.264 is now
   accepted up to 3840x2160 on the hardware decoder, as VP9 and HEVC already were, and the per-segment audio probe no
